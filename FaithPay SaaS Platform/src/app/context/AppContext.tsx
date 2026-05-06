@@ -325,6 +325,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>(mockTenants);
 
   const fetchTenants = useCallback(async () => {
+    // 백엔드(Supabase)가 아직 연결되지 않았으므로 임시로 mockTenants를 사용합니다.
+    // 네트워크 에러(ERR_NAME_NOT_RESOLVED)를 방지하기 위해 API 호출을 주석 처리합니다.
+    return;
+    /*
     try {
       const response = await tenantAPI.getTenants();
       if (response.success && response.data) {
@@ -335,6 +339,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }
+    */
   }, []);
 
   const updateTenantBanners = useCallback(async (tenantId: string, bannerImages: string[]) => {
