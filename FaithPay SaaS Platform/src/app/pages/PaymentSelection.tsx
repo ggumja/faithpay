@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, donationFormData } = useApp();
+  const { currentTenant, donationFormData, currentAdmin } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState<string>('card');
   const [agreed, setAgreed] = useState(false);
@@ -25,6 +25,11 @@ export default function PaymentSelection() {
   }
 
   const handlePayment = () => {
+    if (donationFormData.isRecurring && !currentAdmin) {
+      toast.error('정기결제는 회원 로그인 후 이용 가능합니다.');
+      return;
+    }
+
     if (!agreed) {
       toast.error('결제 진행에 동의해주세요');
       return;
@@ -230,13 +235,23 @@ export default function PaymentSelection() {
             </CardContent>
           </Card>
 
+          {/* Recurring Payment Login Warning */}
+          {donationFormData.isRecurring && !currentAdmin && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-lg flex flex-col items-center mb-4">
+              <p className="mb-2 font-medium">정기결제(카드등록)는 회원 전용 서비스입니다.</p>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/login')} className="mt-1">
+                로그인 / 회원가입하기
+              </Button>
+            </div>
+          )}
+
           {/* Submit Button */}
           <Button
             className="w-full h-14 text-lg font-semibold"
             onClick={handlePayment}
-            disabled={!agreed}
+            disabled={!agreed || (donationFormData.isRecurring && !currentAdmin)}
             style={
-              agreed
+              (agreed && !(donationFormData.isRecurring && !currentAdmin))
                 ? { backgroundColor: currentTenant.primaryColor }
                 : {}
             }
