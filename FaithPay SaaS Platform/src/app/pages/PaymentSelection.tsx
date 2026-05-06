@@ -165,29 +165,30 @@ export default function PaymentSelection() {
                           placeholder="**** **** **** ****"
                           value={cardNumber}
                           onChange={(e) => setCardNumber(e.target.value)}
+                          autoComplete="cc-number"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label htmlFor="expiry">유효기간</Label>
-                          <Input id="expiry" placeholder="MM/YY" />
+                          <Input id="expiry" placeholder="MM/YY" autoComplete="cc-exp" />
                         </div>
                         {donationFormData.isRecurring ? (
                           <div className="space-y-2">
                             <Label htmlFor="password">비밀번호 앞 2자리</Label>
-                            <Input id="password" placeholder="**" type="password" maxLength={2} />
+                            <Input id="password" placeholder="**" type="password" maxLength={2} autoComplete="new-password" data-lpignore="true" />
                           </div>
                         ) : (
                           <div className="space-y-2">
                             <Label htmlFor="cvc">CVC</Label>
-                            <Input id="cvc" placeholder="***" type="password" maxLength={3} />
+                            <Input id="cvc" placeholder="***" type="password" maxLength={3} autoComplete="cc-csc" />
                           </div>
                         )}
                       </div>
                       {donationFormData.isRecurring && (
                         <div className="space-y-2">
                           <Label htmlFor="birth">생년월일 (6자리) 또는 사업자번호 (10자리)</Label>
-                          <Input id="birth" placeholder="YYMMDD 또는 1234567890" maxLength={10} />
+                          <Input id="birth" placeholder="YYMMDD 또는 1234567890" maxLength={10} autoComplete="off" />
                         </div>
                       )}
                     </div>
