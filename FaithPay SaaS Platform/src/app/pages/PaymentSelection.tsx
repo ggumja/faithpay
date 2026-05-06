@@ -110,43 +110,49 @@ export default function PaymentSelection() {
             </CardHeader>
             <CardContent className="space-y-4">
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                {/* Simple Payment */}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <RadioGroupItem value="simple" id="simple" />
-                    <Label htmlFor="simple" className="flex-1 cursor-pointer font-semibold">
-                      간편결제
-                    </Label>
-                  </div>
-                  {paymentMethod === 'simple' && (
-                    <div className="grid grid-cols-3 gap-3 ml-6">
-                      <Button variant="outline" className="h-16 flex-col">
-                        <Smartphone className="h-5 w-5 mb-1" />
-                        <span className="text-xs">카카오페이</span>
-                      </Button>
-                      <Button variant="outline" className="h-16 flex-col">
-                        <Wallet className="h-5 w-5 mb-1" />
-                        <span className="text-xs">네이버페이</span>
-                      </Button>
-                      <Button variant="outline" className="h-16 flex-col">
-                        <Smartphone className="h-5 w-5 mb-1" />
-                        <span className="text-xs">토스페이</span>
-                      </Button>
+                {!donationFormData.isRecurring && (
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <RadioGroupItem value="simple" id="simple" />
+                      <Label htmlFor="simple" className="flex-1 cursor-pointer font-semibold">
+                        간편결제
+                      </Label>
                     </div>
-                  )}
-                </div>
+                    {paymentMethod === 'simple' && (
+                      <div className="grid grid-cols-3 gap-3 ml-6">
+                        <Button variant="outline" className="h-16 flex-col">
+                          <Smartphone className="h-5 w-5 mb-1" />
+                          <span className="text-xs">카카오페이</span>
+                        </Button>
+                        <Button variant="outline" className="h-16 flex-col">
+                          <Wallet className="h-5 w-5 mb-1" />
+                          <span className="text-xs">네이버페이</span>
+                        </Button>
+                        <Button variant="outline" className="h-16 flex-col">
+                          <Smartphone className="h-5 w-5 mb-1" />
+                          <span className="text-xs">토스페이</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Credit Card */}
-                <div className="border rounded-lg p-4">
+                <div className={`border rounded-lg p-4 ${donationFormData.isRecurring ? 'border-blue-500 bg-blue-50/30' : ''}`}>
                   <div className="flex items-center space-x-2 mb-3">
                     <RadioGroupItem value="card" id="card" />
                     <Label htmlFor="card" className="flex-1 cursor-pointer font-semibold">
                       <CreditCard className="h-4 w-4 inline mr-2" />
-                      신용/체크카드
+                      {donationFormData.isRecurring ? '신용카드 자동결제 (카드등록)' : '신용/체크카드'}
                     </Label>
                   </div>
                   {paymentMethod === 'card' && (
-                    <div className="ml-6 space-y-3">
+                    <div className="ml-6 space-y-4">
+                      {donationFormData.isRecurring && (
+                        <div className="bg-blue-100 p-3 rounded-md text-sm text-blue-800">
+                          정기결제를 위해 결제 수단을 안전하게 등록합니다. 등록된 카드로 매월/매주 자동 결제됩니다.
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="cardNumber">카드번호</Label>
                         <Input
@@ -161,35 +167,49 @@ export default function PaymentSelection() {
                           <Label htmlFor="expiry">유효기간</Label>
                           <Input id="expiry" placeholder="MM/YY" />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cvc">CVC</Label>
-                          <Input id="cvc" placeholder="***" type="password" maxLength={3} />
-                        </div>
+                        {donationFormData.isRecurring ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="password">비밀번호 앞 2자리</Label>
+                            <Input id="password" placeholder="**" type="password" maxLength={2} />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label htmlFor="cvc">CVC</Label>
+                            <Input id="cvc" placeholder="***" type="password" maxLength={3} />
+                          </div>
+                        )}
                       </div>
+                      {donationFormData.isRecurring && (
+                        <div className="space-y-2">
+                          <Label htmlFor="birth">생년월일 (6자리) 또는 사업자번호 (10자리)</Label>
+                          <Input id="birth" placeholder="YYMMDD 또는 1234567890" maxLength={10} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Virtual Account */}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <RadioGroupItem value="bank" id="bank" />
-                    <Label htmlFor="bank" className="flex-1 cursor-pointer font-semibold">
-                      <Building2 className="h-4 w-4 inline mr-2" />
-                      가상계좌 (무통장입금)
-                    </Label>
-                  </div>
-                  {paymentMethod === 'bank' && (
-                    <div className="ml-6">
-                      <p className="text-sm text-muted-foreground">
-                        입금 계좌는 결제 완료 후 안내됩니다
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        * 24시간 내 입금 시 자동으로 완료됩니다
-                      </p>
+                {!donationFormData.isRecurring && (
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <RadioGroupItem value="bank" id="bank" />
+                      <Label htmlFor="bank" className="flex-1 cursor-pointer font-semibold">
+                        <Building2 className="h-4 w-4 inline mr-2" />
+                        가상계좌 (무통장입금)
+                      </Label>
                     </div>
-                  )}
-                </div>
+                    {paymentMethod === 'bank' && (
+                      <div className="ml-6">
+                        <p className="text-sm text-muted-foreground">
+                          입금 계좌는 결제 완료 후 안내됩니다
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          * 24시간 내 입금 시 자동으로 완료됩니다
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </RadioGroup>
             </CardContent>
           </Card>
