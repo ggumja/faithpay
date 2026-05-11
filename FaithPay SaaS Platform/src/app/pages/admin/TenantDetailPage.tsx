@@ -435,11 +435,11 @@ export default function TenantDetailPage() {
                     <SelectValue placeholder="PG 제공자 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="toss">토스페이먼츠 (추천)</SelectItem>
+                    <SelectItem value="nanopay">나노페이 (NANO)</SelectItem>
+                    <SelectItem value="toss">토스페이먼츠</SelectItem>
                     <SelectItem value="portone">포트원 (구 아임포트)</SelectItem>
                     <SelectItem value="nice">NICE페이먼츠</SelectItem>
                     <SelectItem value="kg">KG이니시스</SelectItem>
-                    <SelectItem value="nanopay">나노페이 (NANO)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
