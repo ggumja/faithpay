@@ -35,6 +35,8 @@ interface PaymentConfig {
   apiKey: string;
   secretKey: string;
   mid: string;
+  loginId?: string;
+  iv?: string;
   isActive: boolean;
 }
 
@@ -58,9 +60,12 @@ export default function TenantDetailPage() {
   const [mid, setMid] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
+  const [loginId, setLoginId] = useState('');
+  const [iv, setIv] = useState('');
   const [isActive, setIsActive] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showIv, setShowIv] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -115,6 +120,8 @@ export default function TenantDetailPage() {
           setMid(result.data.mid || '');
           setApiKey(result.data.apiKey || '');
           setSecretKey(result.data.secretKey || '');
+          setLoginId(result.data.loginId || '');
+          setIv(result.data.iv || '');
           setIsActive(result.data.isActive || false);
         }
       }
@@ -189,6 +196,8 @@ export default function TenantDetailPage() {
             mid,
             apiKey,
             secretKey,
+            loginId,
+            iv,
             isActive,
           }),
         }
@@ -404,6 +413,7 @@ export default function TenantDetailPage() {
                     <SelectItem value="portone">포트원 (구 아임포트)</SelectItem>
                     <SelectItem value="nice">NICE페이먼츠</SelectItem>
                     <SelectItem value="kg">KG이니시스</SelectItem>
+                    <SelectItem value="nanopay">나노페이 (NANO)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -411,20 +421,20 @@ export default function TenantDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="mid" className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  가맹점 식별번호 (MID) <span className="text-red-500">*</span>
+                  {pgProvider === 'nanopay' ? '가맹점 코드 (shopcode)' : '가맹점 식별번호 (MID)'} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="mid"
                   value={mid}
                   onChange={(e) => setMid(e.target.value)}
-                  placeholder="예: toss_mid_12345"
+                  placeholder={pgProvider === 'nanopay' ? "예: 240000006" : "예: toss_mid_12345"}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="apiKey" className="flex items-center gap-2">
                   <Key className="h-4 w-4" />
-                  API Key (Client Key) <span className="text-red-500">*</span>
+                  API Key {pgProvider !== 'nanopay' && '(Client Key)'} <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -432,7 +442,7 @@ export default function TenantDetailPage() {
                     type={showApiKey ? 'text' : 'password'}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="토스페이먼츠 API Key 입력"
+                    placeholder={pgProvider === 'nanopay' ? "API Key 입력" : "토스페이먼츠 API Key 입력"}
                     className="pr-10"
                   />
                   <Button
@@ -454,7 +464,7 @@ export default function TenantDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="secretKey" className="flex items-center gap-2">
                   <Lock className="h-4 w-4" />
-                  Secret Key <span className="text-red-500">*</span>
+                  {pgProvider === 'nanopay' ? '암호화 KEY (Secret)' : 'Secret Key'} <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -462,7 +472,7 @@ export default function TenantDetailPage() {
                     type={showSecretKey ? 'text' : 'password'}
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
-                    placeholder="토스페이먼츠 Secret Key 입력"
+                    placeholder={pgProvider === 'nanopay' ? "암호화 KEY 입력" : "토스페이먼츠 Secret Key 입력"}
                     className="pr-10"
                   />
                   <Button
@@ -480,6 +490,73 @@ export default function TenantDetailPage() {
                   </Button>
                 </div>
               </div>
+
+              {pgProvider === 'nanopay' && (
+                <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-100">
+                  <div className="space-y-2">
+                    <Label htmlFor="loginId" className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      로그인 ID (loginId) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="loginId"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
+                      placeholder="예: smbtestshop"
+                      className="bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="iv" className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      초기화 벡터 (IV) <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="iv"
+                        type={showIv ? 'text' : 'password'}
+                        value={iv}
+                        onChange={(e) => setIv(e.target.value)}
+                        placeholder="IV 값 입력"
+                        className="pr-10 bg-white"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowIv(!showIv)}
+                      >
+                        {showIv ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-white border-purple-200 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+                      onClick={() => {
+                        setMid('240000006');
+                        setLoginId('smbtestshop');
+                        setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
+                        setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
+                        setIv('vgqTyX5tBqnMXB68');
+                        toast.success('나노페이 테스트 계정 정보가 입력되었습니다.');
+                      }}
+                    >
+                      나노페이 테스트 계정 정보 채우기
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-lg">
                 <input

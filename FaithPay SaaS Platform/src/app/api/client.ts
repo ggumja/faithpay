@@ -185,6 +185,13 @@ export const paymentAPI = {
       body: JSON.stringify(payload),
     });
   },
+
+  async cancelPayment(tenantId: string, donationId: string): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/payment/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId, donationId }),
+    });
+  },
 };
 
 // ==================== DONATION ITEMS API ====================

@@ -247,6 +247,60 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
   }
 });
 
+// 결제 취소 처리
+app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
+  try {
+    const { tenantId, donationId } = await c.req.json();
+    
+    // DB에서 거래 내역 조회
+    const donation = await db.getDonationById(tenantId, donationId);
+    if (!donation) {
+      return c.json({ success: false, error: 'Donation not found' }, 404);
+    }
+    
+    if (donation.paymentStatus !== 'completed' || !donation.transactionId) {
+      return c.json({ success: false, error: 'Invalid donation status for cancellation' }, 400);
+    }
+
+    const NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    const NANO_API_URL = "http://dev3.nanopay.co.kr/api/payment/cancel.io";
+    
+    const payload = {
+      ver: "smbtest",
+      loginId: "smbtestshop",
+      shopcode: "240000006",
+      payMethod: "card", // 혹은 DB에 저장된 paymentMethod 연동
+      cancelAmt: donation.amount.toString(),
+      tranNo: donation.transactionId,
+    };
+
+    const response = await fetch(NANO_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
+        'API_KEY': NANO_API_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (result.resultCode === "0000") {
+      // 결제 취소 성공, DB 업데이트
+      const updatedDonation = await db.updateDonation(tenantId, donationId, {
+        paymentStatus: 'cancelled'
+      });
+      return c.json({ success: true, data: updatedDonation });
+    } else {
+      return c.json({ success: false, error: result.resultMsg, data: result }, 400);
+    }
+  } catch (error) {
+    console.error('Error processing cancellation:', error);
+    return c.json({ success: false, error: 'Failed to process cancellation' }, 500);
+  }
+});
+
 // ==================== DONATION ITEMS ROUTES ====================
 
 // 봉헌 항목 조회

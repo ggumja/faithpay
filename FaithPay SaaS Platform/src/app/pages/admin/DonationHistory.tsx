@@ -33,9 +33,11 @@ import {
   ChevronRight,
   Eye,
   Receipt,
+  Loader2,
 } from 'lucide-react';
+import { donationAPI, paymentAPI } from '../../api/client';
 
-// Mock donation data
+// Mock donation data removed, will fetch real data
 const mockDonations = [
   {
     id: 'FP2026001',
@@ -140,6 +142,10 @@ export default function DonationHistory() {
   const location = useLocation();
   const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
+  const [donations, setDonations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -155,7 +161,24 @@ export default function DonationHistory() {
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  useEffect(() => {
+    const fetchDonations = async () => {
+      if (currentTenant) {
+        setIsLoading(true);
+        try {
+          const res = await donationAPI.getByTenant(currentTenant.id);
+          if (res.success && res.data) {
+            setDonations(res.data);
+          }
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchDonations();
+  }, [currentTenant]);
 
   if (!currentTenant) {
     return <div>Loading...</div>;
@@ -177,21 +200,28 @@ export default function DonationHistory() {
   const currentPath = location.pathname;
 
   // Filter donations
-  const filteredDonations = mockDonations.filter((donation) => {
+  const filteredDonations = donations.filter((donation) => {
+    const nameStr = donation.donorName || '';
+    const phoneStr = donation.donorPhone || '';
+    
     const matchesSearch =
-      donation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      nameStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
       donation.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      donation.phone.includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || donation.status === statusFilter;
-    const matchesMethod = methodFilter === 'all' || donation.method === methodFilter;
+      phoneStr.includes(searchTerm);
+      
+    const matchesStatus = statusFilter === 'all' || donation.paymentStatus === statusFilter;
+    const matchesMethod = methodFilter === 'all' || donation.paymentMethod === methodFilter;
     
     let matchesDate = true;
-    if (startDate && endDate) {
-      matchesDate = donation.date >= startDate && donation.date <= endDate;
-    } else if (startDate) {
-      matchesDate = donation.date >= startDate;
-    } else if (endDate) {
-      matchesDate = donation.date <= endDate;
+    if (startDate || endDate) {
+      const dDate = new Date(donation.createdAt).toISOString().split('T')[0];
+      if (startDate && endDate) {
+        matchesDate = dDate >= startDate && dDate <= endDate;
+      } else if (startDate) {
+        matchesDate = dDate >= startDate;
+      } else if (endDate) {
+        matchesDate = dDate <= endDate;
+      }
     }
 
     return matchesSearch && matchesStatus && matchesMethod && matchesDate;
@@ -205,8 +235,8 @@ export default function DonationHistory() {
 
   // Statistics
   const totalAmount = filteredDonations.reduce((sum, d) => sum + d.amount, 0);
-  const completedCount = filteredDonations.filter((d) => d.status === 'completed').length;
-  const pendingCount = filteredDonations.filter((d) => d.status === 'pending').length;
+  const completedCount = filteredDonations.filter((d) => d.paymentStatus === 'completed').length;
+  const pendingCount = filteredDonations.filter((d) => d.paymentStatus === 'pending').length;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -216,6 +246,8 @@ export default function DonationHistory() {
         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">대기중</Badge>;
       case 'failed':
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">실패</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">취소됨</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -232,6 +264,30 @@ export default function DonationHistory() {
 
   const handlePrintReceipt = (donation: any) => {
     alert(`${donation.id} 영수증 출력 (데모)`);
+  };
+
+  const handleCancelPayment = async (donationId: string) => {
+    if (!window.confirm('정말 결제를 취소하시겠습니까?')) return;
+    
+    setIsCancelling(true);
+    try {
+      const res = await paymentAPI.cancelPayment(currentTenant.id, donationId);
+      if (res.success) {
+        alert('결제가 취소되었습니다.');
+        setSelectedDonation(null);
+        // refresh data
+        const refreshRes = await donationAPI.getByTenant(currentTenant.id);
+        if (refreshRes.success && refreshRes.data) {
+          setDonations(refreshRes.data);
+        }
+      } else {
+        alert(`취소 실패: ${res.error}`);
+      }
+    } catch (e) {
+      alert('취소 중 오류가 발생했습니다.');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   return (
@@ -346,6 +402,7 @@ export default function DonationHistory() {
                       <SelectItem value="completed">완료</SelectItem>
                       <SelectItem value="pending">대기중</SelectItem>
                       <SelectItem value="failed">실패</SelectItem>
+                      <SelectItem value="cancelled">취소됨</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -422,62 +479,74 @@ export default function DonationHistory() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {currentDonations.length === 0 ? (
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                          </TableCell>
+                        </TableRow>
+                      ) : currentDonations.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                             조회된 봉헌 내역이 없습니다
                           </TableCell>
                         </TableRow>
                       ) : (
-                        currentDonations.map((donation) => (
-                          <TableRow key={donation.id}>
-                            <TableCell className="font-mono text-sm">
-                              {donation.id}
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <div>{donation.date}</div>
-                                <div className="text-muted-foreground text-xs">
-                                  {donation.time}
+                        currentDonations.map((donation) => {
+                          const createdDate = new Date(donation.createdAt);
+                          const dateStr = createdDate.toLocaleDateString();
+                          const timeStr = createdDate.toLocaleTimeString();
+
+                          return (
+                            <TableRow key={donation.id}>
+                              <TableCell className="font-mono text-sm">
+                                {donation.id}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>{dateStr}</div>
+                                  <div className="text-muted-foreground text-xs">
+                                    {timeStr}
+                                  </div>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{donation.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {donation.phone}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{donation.donorName}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {donation.donorPhone}
+                                  </div>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{donation.item}</TableCell>
-                            <TableCell className="text-right font-semibold">
-                              {donation.amount.toLocaleString()}원
-                            </TableCell>
-                            <TableCell>{donation.method}</TableCell>
-                            <TableCell>{getStatusBadge(donation.status)}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-2 justify-center">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleViewDetail(donation)}
-                                  title="상세보기"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handlePrintReceipt(donation)}
-                                  title="영수증 출력"
-                                >
-                                  <Receipt className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                              </TableCell>
+                              <TableCell>{donation.itemName}</TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {donation.amount.toLocaleString()}원
+                              </TableCell>
+                              <TableCell>{donation.paymentMethod}</TableCell>
+                              <TableCell>{getStatusBadge(donation.paymentStatus)}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-2 justify-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewDetail(donation)}
+                                    title="상세보기"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handlePrintReceipt(donation)}
+                                    title="영수증 출력"
+                                  >
+                                    <Receipt className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -544,15 +613,15 @@ export default function DonationHistory() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">봉헌자</p>
-                        <p className="font-semibold">{selectedDonation.name}</p>
+                        <p className="font-semibold">{selectedDonation.donorName}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">연락처</p>
-                        <p className="font-semibold">{selectedDonation.phone}</p>
+                        <p className="font-semibold">{selectedDonation.donorPhone}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">봉헌 항목</p>
-                        <p className="font-semibold">{selectedDonation.item}</p>
+                        <p className="font-semibold">{selectedDonation.itemName}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">금액</p>
@@ -562,28 +631,37 @@ export default function DonationHistory() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">결제 방법</p>
-                        <p className="font-semibold">{selectedDonation.method}</p>
+                        <p className="font-semibold">{selectedDonation.paymentMethod}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">상태</p>
-                        <div className="mt-1">{getStatusBadge(selectedDonation.status)}</div>
+                        <div className="mt-1">{getStatusBadge(selectedDonation.paymentStatus)}</div>
                       </div>
                       <div className="col-span-2">
                         <p className="text-sm text-muted-foreground">봉헌 일시</p>
                         <p className="font-semibold">
-                          {selectedDonation.date} {selectedDonation.time}
+                          {new Date(selectedDonation.createdAt).toLocaleString()}
                         </p>
                       </div>
                     </div>
 
-                    {selectedDonation.prayer && (
+                    {selectedDonation.prayerText && (
                       <div className="pt-4 border-t">
                         <p className="text-sm text-muted-foreground mb-2">기도 제목</p>
-                        <p className="p-3 bg-slate-50 rounded-lg">{selectedDonation.prayer}</p>
+                        <p className="p-3 bg-slate-50 rounded-lg">{selectedDonation.prayerText}</p>
                       </div>
                     )}
 
                     <div className="flex gap-3 pt-4">
+                      {selectedDonation.paymentStatus === 'completed' && selectedDonation.paymentMethod === 'card' && (
+                        <Button 
+                          variant="destructive" 
+                          onClick={() => handleCancelPayment(selectedDonation.id)}
+                          disabled={isCancelling}
+                        >
+                          {isCancelling ? '취소 중...' : '결제 취소'}
+                        </Button>
+                      )}
                       <Button
                         className="flex-1"
                         onClick={() => handlePrintReceipt(selectedDonation)}

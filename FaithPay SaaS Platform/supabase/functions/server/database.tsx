@@ -45,6 +45,8 @@ export interface PaymentConfig {
   apiKey: string;
   secretKey: string;
   mid: string;
+  loginId?: string;
+  iv?: string;
   isActive: boolean;
   updatedAt: string;
 }
