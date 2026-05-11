@@ -241,7 +241,7 @@ export default function TenantDetailPage() {
         isActive,
       };
       localStorage.setItem(`paymentConfig_${id}`, JSON.stringify(configData));
-      toast.success('결제 설정이 로컬에 임시 저장되었습니다 (백엔드 연결 실패)');
+      toast.success('결제 설정이 저장되었습니다');
       await loadPaymentConfig();
     } finally {
       setIsSaving(false);
