@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "vite build && cp dist/index.html dist/404.html",
+    "build": "vite build && cp dist/index.html dist/404.html && touch dist/.nojekyll",
     "dev": "vite",
     "predeploy": "pnpm run build",
     "deploy": "gh-pages -d dist"
