@@ -161,6 +161,8 @@ export default function DonationHistory() {
     if (tenant) {
       setCurrentTenant(tenant);
     }
+  }, [tenantSlug, setCurrentTenant]);
+
   useEffect(() => {
     const fetchDonations = async () => {
       if (currentTenant) {
