@@ -4,6 +4,8 @@ import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
 import * as db from "./database.tsx";
 import { seedDatabase } from "./seed.tsx";
+import crypto from "node:crypto";
+import { Buffer } from "node:buffer";
 
 const app = new Hono();
 
@@ -175,6 +177,73 @@ app.delete("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
   } catch (error) {
     console.error('Error deleting payment config:', error);
     return c.json({ success: false, error: 'Failed to delete payment config' }, 500);
+  }
+});
+
+// 수기결제 처리
+app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
+  try {
+    const { tenantId, donationData, paymentData } = await c.req.json();
+    
+    const NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    const NANO_ENC_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
+    const NANO_IV = "vgqTyX5tBqnMXB68";
+    const NANO_API_URL = "http://dev3.nanopay.co.kr/api/payment/approval.io";
+    
+    // 카드 정보 암호화
+    const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(NANO_ENC_KEY, "utf-8"), Buffer.from(NANO_IV, "utf-8"));
+    // 결과 인코딩을 hex로 할지 base64로 할지는 명세서에 따르나 일반적인 hex를 우선 적용 (실패시 base64)
+    let encData = cipher.update(JSON.stringify(paymentData), "utf-8", "hex");
+    encData += cipher.final("hex");
+
+    const payload = {
+      ver: "smbtest",
+      loginId: "smbtestshop",
+      shopcode: "240000006",
+      payMethod: "card", // card로 고정 (수기결제)
+      orderName: donationData.name,
+      orderTel: donationData.phone.replace(/[^0-9]/g, ''),
+      orderEmail: "",
+      goodsName: donationData.itemName,
+      reqPayAmt: donationData.amount.toString(),
+      installment: paymentData.installment || "00",
+      encData: encData,
+    };
+
+    const response = await fetch(NANO_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
+        'API_KEY': NANO_API_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (result.resultCode === "0000") {
+      // 결제 성공, DB에 저장
+      const donation = await db.createDonation({
+        tenantId,
+        itemId: donationData.itemId || 'manual',
+        itemName: donationData.itemName,
+        amount: donationData.amount,
+        donorName: donationData.name,
+        donorPhone: donationData.phone,
+        prayerText: donationData.prayerText,
+        isRecurring: donationData.isRecurring || false,
+        paymentStatus: 'completed',
+        paymentMethod: 'card',
+        transactionId: result.tranNo || result.apprNo,
+      });
+      return c.json({ success: true, data: donation });
+    } else {
+      return c.json({ success: false, error: result.resultMsg, data: result }, 400);
+    }
+  } catch (error) {
+    console.error('Error processing manual payment:', error);
+    return c.json({ success: false, error: 'Failed to process payment' }, 500);
   }
 });
 

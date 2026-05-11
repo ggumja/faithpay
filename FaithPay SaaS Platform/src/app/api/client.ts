@@ -178,6 +178,13 @@ export const paymentAPI = {
       method: 'DELETE',
     });
   },
+
+  async processManual(payload: any): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/payment/process/manual', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 // ==================== DONATION ITEMS API ====================

@@ -8,8 +8,10 @@ import { Label } from '../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
-import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet } from 'lucide-react';
+import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { paymentAPI } from '../api/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
@@ -19,12 +21,17 @@ export default function PaymentSelection() {
   const [paymentMethod, setPaymentMethod] = useState<string>('card');
   const [agreed, setAgreed] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [password, setPassword] = useState('');
+  const [birth, setBirth] = useState('');
+  const [installment, setInstallment] = useState('00');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (!currentTenant || !donationFormData) {
     return null;
   }
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (donationFormData.isRecurring && !currentAdmin) {
       toast.error('정기결제는 회원 로그인 후 이용 가능합니다.');
       return;
@@ -35,12 +42,56 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 결제 처리 시뮬레이션
+    if (paymentMethod !== 'card') {
+      toast.success('결제가 진행 중입니다...');
+      setTimeout(() => {
+        navigate(`/${tenantSlug}/complete`);
+      }, 1500);
+      return;
+    }
+
+    if (!cardNumber || !expiry || !password || !birth) {
+      toast.error('카드 정보를 모두 입력해주세요.');
+      return;
+    }
+
+    const cleanExpiry = expiry.replace(/[^0-9]/g, '');
+    if (cleanExpiry.length !== 4) {
+      toast.error('유효기간은 4자리(MMYY)로 입력해주세요.');
+      return;
+    }
+    const expMm = cleanExpiry.substring(0, 2);
+    const expYy = cleanExpiry.substring(2, 4);
+
+    setIsProcessing(true);
     toast.success('결제가 진행 중입니다...');
-    
-    setTimeout(() => {
-      navigate(`/${tenantSlug}/complete`);
-    }, 1500);
+
+    try {
+      const response = await paymentAPI.processManual({
+        tenantId: currentTenant.id,
+        donationData: donationFormData,
+        paymentData: {
+          cardNo: cardNumber.replace(/[^0-9]/g, ''),
+          cardExpYy: expYy,
+          cardExpMm: expMm,
+          cardPw: password,
+          cardHolderYmd: birth,
+          installment: installment,
+        }
+      });
+
+      if (response.success) {
+        toast.success('결제가 완료되었습니다.');
+        navigate(`/${tenantSlug}/complete`);
+      } else {
+        toast.error(`결제 실패: ${response.error || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('결제 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -171,24 +222,44 @@ export default function PaymentSelection() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label htmlFor="expiry">유효기간</Label>
-                          <Input id="expiry" placeholder="MM/YY" autoComplete="cc-exp" />
+                          <Input id="expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" autoComplete="cc-exp" />
                         </div>
-                        {donationFormData.isRecurring ? (
-                          <div className="space-y-2">
-                            <Label htmlFor="password">비밀번호 앞 2자리</Label>
-                            <Input id="password" placeholder="**" type="password" maxLength={2} autoComplete="new-password" data-lpignore="true" />
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label htmlFor="cvc">CVC</Label>
-                            <Input id="cvc" placeholder="***" type="password" maxLength={3} autoComplete="cc-csc" />
-                          </div>
-                        )}
-                      </div>
-                      {donationFormData.isRecurring && (
                         <div className="space-y-2">
-                          <Label htmlFor="birth">생년월일 (6자리) 또는 사업자번호 (10자리)</Label>
-                          <Input id="birth" placeholder="YYMMDD 또는 1234567890" maxLength={10} autoComplete="off" />
+                          <Label htmlFor="password">비밀번호 앞 2자리</Label>
+                          <Input id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="**" type="password" maxLength={2} autoComplete="new-password" data-lpignore="true" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="birth">생년월일 (6자리) 또는 사업자번호 (10자리)</Label>
+                        <Input id="birth" value={birth} onChange={(e) => setBirth(e.target.value)} placeholder="YYMMDD 또는 1234567890" maxLength={10} autoComplete="off" />
+                      </div>
+                      {!donationFormData.isRecurring && (
+                        <div className="space-y-2">
+                          <Label htmlFor="installment">할부 개월 수</Label>
+                          <Select 
+                            value={installment} 
+                            onValueChange={setInstallment}
+                            disabled={donationFormData.amount < 50000}
+                          >
+                            <SelectTrigger id="installment">
+                              <SelectValue placeholder="할부 개월 수 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="00">일시불</SelectItem>
+                              {donationFormData.amount >= 50000 && (
+                                <>
+                                  {[...Array(11)].map((_, i) => {
+                                    const months = i + 2;
+                                    const value = months.toString().padStart(2, '0');
+                                    return <SelectItem key={value} value={value}>{months}개월</SelectItem>;
+                                  })}
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {donationFormData.amount < 50000 && (
+                            <p className="text-xs text-muted-foreground mt-1">50,000원 이상 결제 시 할부 결제가 가능합니다.</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -250,14 +321,21 @@ export default function PaymentSelection() {
           <Button
             className="w-full h-14 text-lg font-semibold"
             onClick={handlePayment}
-            disabled={!agreed || (donationFormData.isRecurring && !currentAdmin)}
+            disabled={!agreed || (donationFormData.isRecurring && !currentAdmin) || isProcessing}
             style={
               (agreed && !(donationFormData.isRecurring && !currentAdmin))
                 ? { backgroundColor: currentTenant.primaryColor }
                 : {}
             }
           >
-            {donationFormData.amount.toLocaleString()}원 결제하기
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              `${donationFormData.amount.toLocaleString()}원 결제하기`
+            )}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
