@@ -428,6 +428,7 @@ export default function TenantDetailPage() {
                   value={mid}
                   onChange={(e) => setMid(e.target.value)}
                   placeholder={pgProvider === 'nanopay' ? "예: 240000006" : "예: toss_mid_12345"}
+                  autoComplete="off"
                 />
               </div>
 
@@ -444,6 +445,7 @@ export default function TenantDetailPage() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder={pgProvider === 'nanopay' ? "API Key 입력" : "토스페이먼츠 API Key 입력"}
                     className="pr-10"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
@@ -474,6 +476,7 @@ export default function TenantDetailPage() {
                     onChange={(e) => setSecretKey(e.target.value)}
                     placeholder={pgProvider === 'nanopay' ? "암호화 KEY 입력" : "토스페이먼츠 Secret Key 입력"}
                     className="pr-10"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
@@ -504,6 +507,7 @@ export default function TenantDetailPage() {
                       onChange={(e) => setLoginId(e.target.value)}
                       placeholder="예: smbtestshop"
                       className="bg-white"
+                      autoComplete="off"
                     />
                   </div>
 
@@ -520,6 +524,7 @@ export default function TenantDetailPage() {
                         onChange={(e) => setIv(e.target.value)}
                         placeholder="IV 값 입력"
                         className="pr-10 bg-white"
+                        autoComplete="new-password"
                       />
                       <Button
                         type="button"
