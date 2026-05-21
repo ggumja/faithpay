@@ -85,7 +85,7 @@ export default function TenantHome() {
             }}
           >내 내역</button>
           <button
-            onClick={() => navigate(`/${tenantSlug}/donate`)}
+            onClick={() => navigate(`/${tenantSlug}/donate`, { state: { selectedItem: donationItems[0] } })}
             style={{
               height: 36, padding: '0 16px', borderRadius: 999,
               border: 0, background: ft.heroGradient, color: '#fff',
@@ -162,7 +162,7 @@ export default function TenantHome() {
           display: 'flex', gap: 12,
         }}>
           <button
-            onClick={() => navigate(`/${tenantSlug}/donate`)}
+            onClick={() => navigate(`/${tenantSlug}/donate`, { state: { selectedItem: donationItems[0] } })}
             style={{
               flex: 1, height: 56, borderRadius: 14,
               background: ft.heroGradient, color: '#fff',
