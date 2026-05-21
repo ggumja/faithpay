@@ -2,6 +2,72 @@
 @import './tailwind.css';
 @import './theme.css';
 
+/* =========================================================================
+   FaithPay — Wanted Design System tokens
+   ========================================================================= */
+:root {
+  --font-ui: "Pretendard Variable", "Pretendard", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-display: "Wanted Sans Variable", "Wanted Sans", "Pretendard Variable", "Pretendard", sans-serif;
+
+  /* Neutral */
+  --fp-neutral-99: #fcfcfc;
+  --fp-neutral-95: #f4f4f5;
+  --fp-neutral-90: #e8e8ea;
+  --fp-neutral-70: #c2c4c8;
+  --fp-neutral-30: #70737c;
+  --fp-neutral-15: #2e2f33;
+  --fp-neutral-5: #17181b;
+
+  /* Semantic */
+  --fp-fg-primary: rgb(23, 23, 25);
+  --fp-fg-secondary: rgba(46, 47, 51, 0.88);
+  --fp-fg-tertiary: rgba(55, 56, 60, 0.61);
+  --fp-fg-disabled: rgba(55, 56, 60, 0.28);
+  --fp-bg-base: #ffffff;
+  --fp-bg-subtle: #f7f7f8;
+  --fp-bg-muted: #f4f4f5;
+  --fp-border-subtle: rgba(112, 115, 124, 0.08);
+  --fp-border-default: rgba(112, 115, 124, 0.16);
+  --fp-border-strong: rgba(112, 115, 124, 0.22);
+  --fp-border-bold: rgba(112, 115, 124, 0.52);
+
+  /* Shadows */
+  --fp-shadow-1: 0 1px 2px 0 rgba(23,23,23,0.06), 0 1px 3px 0 rgba(23,23,23,0.07);
+  --fp-shadow-2: 0 2px 6px -1px rgba(23,23,23,0.07), 0 4px 12px 0 rgba(0,0,0,0.08);
+  --fp-shadow-3: 0 6px 16px -2px rgba(0,0,0,0.08), 0 12px 32px -4px rgba(0,0,0,0.10);
+
+  /* Motion */
+  --fp-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --fp-dur-fast: 120ms;
+  --fp-dur-base: 180ms;
+  --fp-dur-slow: 280ms;
+}
+
+body {
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  word-break: keep-all;
+}
+
+@keyframes fp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fp-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes fp-pop-in {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fp-ring-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
 /* Slick Carousel Custom Styles */
 .slick-dots {
   bottom: 20px;

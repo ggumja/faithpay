@@ -1,22 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router';
 import { useApp, DonationItem } from '../context/AppContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
-import { Checkbox } from '../components/ui/checkbox';
+import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
+import { Motif, MotifLarge } from '../components/Motif';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Progress } from '../components/ui/progress';
-import { ArrowLeft, ArrowRight, Heart, User, Phone, MessageSquare, Calendar as CalendarIcon, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FamilyMember {
   name: string;
   birthDate: string;
   calendar: string;
+}
+
+function fmt(n: number) {
+  return new Intl.NumberFormat('ko-KR').format(n || 0);
 }
 
 export default function DonationFlow() {
@@ -26,11 +24,7 @@ export default function DonationFlow() {
   const { currentTenant, setDonationFormData } = useApp();
 
   const [step, setStep] = useState(1);
-  const [selectedItem, setSelectedItem] = useState<DonationItem | null>(
-    location.state?.selectedItem || null
-  );
-  
-  // Form data
+  const [selectedItem] = useState<DonationItem | null>(location.state?.selectedItem || null);
   const [amount, setAmount] = useState<number>(0);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -41,61 +35,37 @@ export default function DonationFlow() {
   const [recurringDay, setRecurringDay] = useState<number>(5);
 
   useEffect(() => {
-    if (!currentTenant) {
-      navigate('/');
-    }
+    if (!currentTenant) navigate('/');
   }, [currentTenant, navigate]);
 
-  if (!currentTenant || !selectedItem) {
-    return null;
-  }
+  if (!currentTenant || !selectedItem) return null;
 
-  const progress = (step / 4) * 100;
+  const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
+  const totalSteps = 4;
 
-  const handleAmountClick = (value: number) => {
-    setAmount(value);
-  };
+  const chips = [10000, 50000, 100000, 300000, 500000, 1000000];
 
-  const addFamilyMember = () => {
-    setFamilyMembers([...familyMembers, { name: '', birthDate: '', calendar: 'solar' }]);
-  };
-
-  const removeFamilyMember = (index: number) => {
-    setFamilyMembers(familyMembers.filter((_, i) => i !== index));
-  };
-
-  const updateFamilyMember = (index: number, field: keyof FamilyMember, value: string) => {
+  const addFamilyMember = () => setFamilyMembers([...familyMembers, { name: '', birthDate: '', calendar: 'solar' }]);
+  const removeFamilyMember = (i: number) => setFamilyMembers(familyMembers.filter((_, idx) => idx !== i));
+  const updateFamilyMember = (i: number, field: keyof FamilyMember, value: string) => {
     const updated = [...familyMembers];
-    updated[index][field] = value;
+    updated[i][field] = value;
     setFamilyMembers(updated);
   };
 
   const handleNext = () => {
-    if (step === 1 && amount === 0) {
-      toast.error('금액을 입력해주세요');
-      return;
-    }
-    if (step === 2) {
-      if (!name || !phone) {
-        toast.error('이름과 전화번호를 입력해주세요');
-        return;
-      }
-    }
-    if (step < 4) {
-      setStep(step + 1);
-    }
+    if (step === 1 && amount < 1000) { toast.error('1,000원 이상 입력해주세요'); return; }
+    if (step === 2 && (!name || !phone)) { toast.error('이름과 전화번호를 입력해주세요'); return; }
+    if (step < totalSteps) setStep(step + 1);
   };
 
   const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    } else {
-      navigate(-1);
-    }
+    if (step > 1) setStep(step - 1);
+    else navigate(-1);
   };
 
   const handleSubmit = () => {
-    const formData = {
+    setDonationFormData({
       itemId: selectedItem.id,
       itemName: selectedItem.name,
       amount,
@@ -106,332 +76,312 @@ export default function DonationFlow() {
       familyMembers: familyMembers.length > 0 ? familyMembers : undefined,
       isRecurring,
       recurringDay: isRecurring ? recurringDay : undefined,
-    };
-    
-    setDonationFormData(formData);
+    });
     navigate(`/${tenantSlug}/payment`);
   };
 
+  const prayerPlaceholder =
+    currentTenant.religionType === 'buddhist' ? '축원 내용을 적어주세요' :
+    currentTenant.religionType === 'catholic' ? '지향을 적어주세요 (예: 부모님 강복)' :
+    '기도 제목을 적어주세요';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div
-        className="text-white py-8 px-4"
-        style={{
-          background: `linear-gradient(135deg, ${currentTenant.primaryColor} 0%, ${currentTenant.primaryColor}dd 100%)`,
-        }}
-      >
-        <div className="container mx-auto max-w-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              className="text-white hover:bg-white/20"
-              onClick={handleBack}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              이전
-            </Button>
-            <span className="text-sm font-medium">
-              {step} / 4 단계
-            </span>
+    <div style={{ minHeight: '100vh', background: 'var(--fp-bg-subtle)', fontFamily: 'var(--font-ui)' }}>
+      {/* Hero header */}
+      <div style={{
+        background: ft.heroGradient,
+        padding: '0 20px',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Large motif background */}
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 160, height: 160, opacity: 0.12, color: '#fff' }}>
+          <MotifLarge kind={ft.motif} color="#fff" opacity={1} />
+        </div>
+
+        {/* App bar */}
+        <div style={{ height: 52, display: 'flex', alignItems: 'center', position: 'relative', zIndex: 2 }}>
+          <button
+            onClick={handleBack}
+            style={{
+              width: 44, height: 44, border: 0, background: 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
+            <svg width="11" height="20" viewBox="0 0 11 20" fill="none">
+              <path d="M10 1L1 10l9 9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div style={{
+            flex: 1, textAlign: 'center',
+            fontSize: 17, fontWeight: 700, letterSpacing: '-0.014em', color: '#fff',
+          }}>{selectedItem.name}</div>
+          <div style={{ width: 44 }} />
+        </div>
+
+        {/* Step indicator */}
+        <div style={{ padding: '0 4px 24px', position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div key={i} style={{
+                flex: 1, height: 3, borderRadius: 999,
+                background: i < step ? '#fff' : 'rgba(255,255,255,0.25)',
+                transition: 'background 300ms var(--fp-ease-standard)',
+              }} />
+            ))}
           </div>
-          <Progress value={progress} className="h-2 bg-white/30" />
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.031em', fontWeight: 700 }}>
+            {step} / {totalSteps} 단계
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="container mx-auto max-w-2xl px-4 py-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div
-                className="p-2 rounded-full"
-                style={{ backgroundColor: `${currentTenant.primaryColor}20` }}
-              >
-                <Heart className="h-5 w-5" style={{ color: currentTenant.primaryColor }} />
-              </div>
-              <div>
-                <CardTitle>{selectedItem.name}</CardTitle>
-                <CardDescription>{selectedItem.description}</CardDescription>
-              </div>
+      {/* Step content */}
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 20px 40px' }}>
+        <div style={{
+          background: '#fff',
+          border: '1px solid var(--fp-border-strong)',
+          borderRadius: 20,
+          overflow: 'hidden',
+          animation: 'fp-slide-up 200ms var(--fp-ease-standard)',
+        }}>
+          {/* Type badge */}
+          <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '5px 10px', borderRadius: 999,
+              background: ft.primaryBg, color: ft.primary,
+              fontSize: 12, fontWeight: 700, letterSpacing: '0.019em',
+            }}>
+              <Motif kind={ft.motif} size={12} color={ft.primary} />
+              {selectedItem.name}
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="space-y-6">
-            {/* Step 1: Amount */}
+          <div style={{ padding: '16px 20px 24px' }}>
+            {/* ── Step 1: 금액 입력 ── */}
             {step === 1 && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">금액을 선택해주세요</h3>
-                  
-                  {selectedItem.amountType === 'fixed' && selectedItem.fixedAmount ? (
-                    <div className="text-center p-8 bg-slate-50 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-2">고정 금액</p>
-                      <p className="text-4xl font-bold" style={{ color: currentTenant.primaryColor }}>
-                        {selectedItem.fixedAmount.toLocaleString()}원
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-3 gap-3 mb-4">
-                        <Button
-                          variant="outline"
-                          onClick={() => setAmount(amount + 1000)}
-                        >
-                          +1천원
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setAmount(amount + 5000)}
-                        >
-                          +5천원
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setAmount(amount + 10000)}
-                        >
-                          +1만원
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setAmount(amount + 50000)}
-                        >
-                          +5만원
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setAmount(amount + 100000)}
-                        >
-                          +10만원
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setAmount(0)}
-                        >
-                          초기화
-                        </Button>
-                      </div>
-                      
-                      <div className="text-center p-6 bg-slate-50 rounded-lg mb-4">
-                        <p className="text-sm text-muted-foreground mb-2">선택한 금액</p>
-                        <p className="text-4xl font-bold" style={{ color: currentTenant.primaryColor }}>
-                          {amount.toLocaleString()}원
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>직접 입력</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="number"
-                            placeholder="금액을 입력하세요"
-                            value={amount || ''}
-                            onChange={(e) => setAmount(Number(e.target.value))}
-                          />
-                          <span className="flex items-center text-muted-foreground">원</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
+                  얼마를 봉헌하시겠어요?
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
+                  {selectedItem.description}
+                </p>
 
-                {selectedItem.amountType === 'fixed' && selectedItem.fixedAmount && (
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      setAmount(selectedItem.fixedAmount!);
-                      handleNext();
-                    }}
-                    style={{ backgroundColor: currentTenant.primaryColor }}
-                  >
-                    다음 단계
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                {selectedItem.amountType === 'fixed' && selectedItem.fixedAmount ? (
+                  <div style={{
+                    background: ft.heroGradientSoft,
+                    border: `1px solid ${ft.primaryBgStrong}`,
+                    borderRadius: 16, padding: '28px 20px',
+                    textAlign: 'center' as const,
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: ft.primaryDark, opacity: 0.75, marginBottom: 8, letterSpacing: '0.019em' }}>
+                      고정 봉헌 금액
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 800, letterSpacing: '-0.027em', color: ft.primaryDark }}>
+                      {fmt(selectedItem.fixedAmount)}<span style={{ fontSize: 20, fontWeight: 700, marginLeft: 4 }}>원</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Amount display */}
+                    <div style={{
+                      background: ft.heroGradientSoft,
+                      border: `1px solid ${ft.primaryBgStrong}`,
+                      borderRadius: 16, padding: '24px 20px',
+                      marginBottom: 18,
+                    }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: ft.primaryDark, opacity: 0.7, marginBottom: 8, letterSpacing: '0.019em' }}>봉헌 금액</div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, color: ft.primaryDark }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 800, letterSpacing: '-0.027em' }}>
+                          {amount > 0 ? fmt(amount) : '0'}
+                        </span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, opacity: 0.7 }}>원</span>
+                      </div>
+                      {amount >= 10000 && (
+                        <div style={{ fontSize: 12, color: ft.primaryDark, opacity: 0.65, marginTop: 6, letterSpacing: '0.019em' }}>
+                          일금 {Math.floor(amount / 10000)}만{amount % 10000 ? ` ${fmt(amount % 10000)}` : ''}원정
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick chips */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginBottom: 18 }}>
+                      {chips.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setAmount((amount || 0) + c)}
+                          style={{
+                            height: 40, padding: '0 14px', borderRadius: 999,
+                            background: '#fff', color: 'var(--fp-fg-primary)',
+                            border: '1px solid var(--fp-border-strong)',
+                            fontSize: 13, fontWeight: 600, letterSpacing: '0.019em',
+                            cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >+ {fmt(c)}원</button>
+                      ))}
+                      <button
+                        onClick={() => setAmount(0)}
+                        style={{
+                          height: 40, padding: '0 14px', borderRadius: 999,
+                          border: '1px solid var(--fp-border-strong)', background: '#fff',
+                          color: 'var(--fp-fg-secondary)', fontSize: 13, fontWeight: 600,
+                          cursor: 'pointer', letterSpacing: '0.019em', fontFamily: 'var(--font-ui)',
+                        }}
+                      >↺ 초기화</button>
+                    </div>
+
+                    {/* Direct input */}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 6, letterSpacing: '-0.014em' }}>직접 입력</div>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        height: 52, padding: '0 16px',
+                        background: 'var(--fp-bg-muted)', borderRadius: 12,
+                        border: '1px solid transparent',
+                      }}>
+                        <input
+                          type="number"
+                          value={amount || ''}
+                          onChange={(e) => setAmount(Number(e.target.value))}
+                          placeholder="금액을 입력하세요"
+                          style={{
+                            flex: 1, border: 0, background: 'transparent', outline: 'none',
+                            fontSize: 16, fontWeight: 600, letterSpacing: '0.006em',
+                            color: 'var(--fp-fg-primary)', fontFamily: 'var(--font-ui)',
+                          }}
+                        />
+                        <span style={{ color: 'var(--fp-fg-tertiary)', fontSize: 14, fontWeight: 600 }}>원</span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
 
-            {/* Step 2: Personal Info */}
+            {/* ── Step 2: 신원 정보 ── */}
             {step === 2 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold mb-4">신원 정보를 입력해주세요</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="name">
-                    <User className="h-4 w-4 inline mr-2" />
-                    성명 *
-                  </Label>
-                  <Input
-                    id="name"
-                    placeholder="홍길동"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
+                  신원 정보를 입력해주세요
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
+                  영수증 발급을 위해 필요합니다
+                </p>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    <Phone className="h-4 w-4 inline mr-2" />
-                    전화번호 *
-                  </Label>
-                  <Input
-                    id="phone"
-                    placeholder="010-1234-5678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <FPInput label="성명 *" value={name} onChange={setName} placeholder="홍길동" />
+                  <FPInput label="전화번호 *" value={phone} onChange={setPhone} placeholder="010-1234-5678" type="tel" />
 
-                {currentTenant.religionType === 'catholic' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="baptismName">세례명</Label>
-                    <Input
-                      id="baptismName"
-                      placeholder="프란치스코"
-                      value={baptismName}
-                      onChange={(e) => setBaptismName(e.target.value)}
-                    />
-                  </div>
-                )}
+                  {currentTenant.religionType === 'catholic' && (
+                    <FPInput label="세례명" value={baptismName} onChange={setBaptismName} placeholder="프란치스코" />
+                  )}
 
-                {currentTenant.religionType === 'buddhist' && (
-                  <div className="space-y-4">
-                    <Label>가족 정보 (불교)</Label>
-                    {familyMembers.map((member, index) => (
-                      <Card key={index} className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <Label>가족 {index + 1}</Label>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFamilyMember(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                  {currentTenant.religionType === 'buddhist' && (
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 8, letterSpacing: '-0.014em' }}>
+                        가족 정보 <span style={{ fontWeight: 500, color: 'var(--fp-fg-tertiary)' }}>(선택)</span>
+                      </div>
+                      {familyMembers.map((member, i) => (
+                        <div key={i} style={{ background: ft.primaryBg, borderRadius: 12, padding: '14px', marginBottom: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: ft.primaryDark }}>가족 {i + 1}</span>
+                            <button onClick={() => removeFamilyMember(i)} style={{ background: 'transparent', border: 0, cursor: 'pointer', color: 'var(--fp-fg-tertiary)' }}>
+                              <Trash2 size={16} />
+                            </button>
                           </div>
-                          <Input
-                            placeholder="이름"
-                            value={member.name}
-                            onChange={(e) => updateFamilyMember(index, 'name', e.target.value)}
-                          />
-                          <Input
-                            placeholder="생년월일 (예: 1990-01-01)"
-                            value={member.birthDate}
-                            onChange={(e) => updateFamilyMember(index, 'birthDate', e.target.value)}
-                          />
-                          <Select
-                            value={member.calendar}
-                            onValueChange={(value) => updateFamilyMember(index, 'calendar', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="solar">양력</SelectItem>
-                              <SelectItem value="lunar">음력</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <input placeholder="이름" value={member.name} onChange={(e) => updateFamilyMember(i, 'name', e.target.value)}
+                              style={inputStyle} />
+                            <input placeholder="생년월일 (예: 1990-01-01)" value={member.birthDate} onChange={(e) => updateFamilyMember(i, 'birthDate', e.target.value)}
+                              style={inputStyle} />
+                            <Select value={member.calendar} onValueChange={(v) => updateFamilyMember(i, 'calendar', v)}>
+                              <SelectTrigger style={{ height: 44 }}><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="solar">양력</SelectItem>
+                                <SelectItem value="lunar">음력</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      </Card>
-                    ))}
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={addFamilyMember}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      가족 추가
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 3: Prayer/Message */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold mb-4">
-                  {currentTenant.terminology.prayer}
-                  {selectedItem.enablePrayerField ? '' : ' (선택사항)'}
-                </h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="prayer">
-                    <MessageSquare className="h-4 w-4 inline mr-2" />
-                    {currentTenant.terminology.prayer}
-                  </Label>
-                  <Textarea
-                    id="prayer"
-                    placeholder={
-                      currentTenant.religionType === 'protestant'
-                        ? '가족의 건강과 평안을 기원합니다...'
-                        : currentTenant.religionType === 'buddhist'
-                        ? '자녀의 학업 성취를 발원합니다...'
-                        : '선종하신 분들을 기억하며...'
-                    }
-                    value={prayerText}
-                    onChange={(e) => setPrayerText(e.target.value)}
-                    rows={6}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    관리자가 {currentTenant.terminology.prayer}을(를) 확인하고 인쇄할 수 있습니다
-                  </p>
+                      ))}
+                      <button
+                        onClick={addFamilyMember}
+                        style={{
+                          width: '100%', height: 44, borderRadius: 12,
+                          border: `1.5px dashed ${ft.primaryBgStrong}`,
+                          background: 'transparent', color: ft.primary,
+                          fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          fontFamily: 'var(--font-ui)',
+                        }}
+                      >
+                        <Plus size={16} /> 가족 추가
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Step 4: Recurring */}
+            {/* ── Step 3: 기도/메모 ── */}
+            {step === 3 && (
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
+                  {currentTenant.terminology.prayer}
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
+                  {selectedItem.enablePrayerField ? '관리자가 확인하고 인쇄할 수 있습니다' : '선택사항입니다'}
+                </p>
+                <textarea
+                  value={prayerText}
+                  onChange={(e) => setPrayerText(e.target.value)}
+                  placeholder={prayerPlaceholder}
+                  rows={6}
+                  style={{
+                    ...inputStyle,
+                    resize: 'vertical' as const,
+                    lineHeight: 1.6, paddingTop: 12, paddingBottom: 12,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* ── Step 4: 결제 방식 ── */}
             {step === 4 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold mb-4">결제 방식을 선택해주세요</h3>
-                
-                <RadioGroup
-                  value={isRecurring ? 'recurring' : 'onetime'}
-                  onValueChange={(value) => setIsRecurring(value === 'recurring')}
-                >
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
+                  결제 방식을 선택해주세요
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
+                  정기 설정 시 매월 자동으로 봉헌됩니다
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {selectedItem.allowOneTime && (
-                    <div className="flex items-center space-x-2 border rounded-lg p-4">
-                      <RadioGroupItem value="onetime" id="onetime" />
-                      <Label htmlFor="onetime" className="flex-1 cursor-pointer">
-                        <div>
-                          <p className="font-semibold">단발 {currentTenant.terminology.donation}</p>
-                          <p className="text-sm text-muted-foreground">
-                            한 번만 {currentTenant.terminology.donation}합니다
-                          </p>
-                        </div>
-                      </Label>
-                    </div>
+                    <RecurringOption
+                      id="onetime" label={`단발 ${currentTenant.terminology.donation}`}
+                      desc={`한 번만 ${currentTenant.terminology.donation}합니다`}
+                      selected={!isRecurring} onClick={() => setIsRecurring(false)}
+                      ft={ft}
+                    />
                   )}
-                  
                   {selectedItem.allowRecurring && (
-                    <div className="flex items-center space-x-2 border rounded-lg p-4">
-                      <RadioGroupItem value="recurring" id="recurring" />
-                      <Label htmlFor="recurring" className="flex-1 cursor-pointer">
-                        <div>
-                          <p className="font-semibold">정기 {currentTenant.terminology.donation}</p>
-                          <p className="text-sm text-muted-foreground">
-                            매월 자동으로 {currentTenant.terminology.donation}합니다
-                          </p>
-                        </div>
-                      </Label>
-                    </div>
+                    <RecurringOption
+                      id="recurring" label={`정기 ${currentTenant.terminology.donation}`}
+                      desc="매월 자동으로 봉헌합니다"
+                      selected={isRecurring} onClick={() => setIsRecurring(true)}
+                      ft={ft}
+                    />
                   )}
-                </RadioGroup>
+                </div>
 
                 {isRecurring && (
-                  <div className="space-y-2 mt-4">
-                    <Label>
-                      <CalendarIcon className="h-4 w-4 inline mr-2" />
-                      결제일 선택
-                    </Label>
-                    <Select
-                      value={recurringDay.toString()}
-                      onValueChange={(value) => setRecurringDay(Number(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 8 }}>결제일 선택</div>
+                    <Select value={recurringDay.toString()} onValueChange={(v) => setRecurringDay(Number(v))}>
+                      <SelectTrigger style={{ height: 52 }}><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="5">매월 5일</SelectItem>
                         <SelectItem value="15">매월 15일</SelectItem>
@@ -441,44 +391,122 @@ export default function DonationFlow() {
                   </div>
                 )}
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
-                  <h4 className="font-semibold mb-2">최종 확인</h4>
-                  <div className="space-y-1 text-sm">
-                    <p>• {currentTenant.terminology.donation} 항목: {selectedItem.name}</p>
-                    <p>• 금액: {amount.toLocaleString()}원</p>
-                    <p>• 성명: {name}</p>
-                    <p>• 전화번호: {phone}</p>
-                    {isRecurring && <p>• 정기 결제: 매월 {recurringDay}일</p>}
+                {/* Summary */}
+                <div style={{
+                  background: ft.primaryBg,
+                  border: `1px solid ${ft.primaryBgStrong}`,
+                  borderRadius: 12, padding: '16px 16px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 999, background: ft.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: ft.primaryDark }}>최종 확인</span>
                   </div>
+                  {[
+                    [`${currentTenant.terminology.donation} 항목`, selectedItem.name],
+                    ['금액', `${fmt(amount)}원`],
+                    ['성명', name],
+                    ['전화번호', phone],
+                    ...(isRecurring ? [['결제', `매월 ${recurringDay}일 정기`]] : []),
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 13 }}>
+                      <span style={{ color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em' }}>{k}</span>
+                      <span style={{ fontWeight: 700, letterSpacing: '-0.014em', color: ft.primaryDark }}>{v}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Navigation Buttons */}
-            {step < 4 && selectedItem.amountType === 'flexible' && (
-              <Button
-                className="w-full"
-                onClick={handleNext}
-                style={{ backgroundColor: currentTenant.primaryColor }}
-              >
-                다음 단계
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
-
-            {step === 4 && (
-              <Button
-                className="w-full"
-                onClick={handleSubmit}
-                style={{ backgroundColor: currentTenant.primaryColor }}
-              >
-                결제하기
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+          {/* Bottom CTA */}
+          <div style={{ padding: '0 20px 24px' }}>
+            <button
+              onClick={step < totalSteps ? handleNext : handleSubmit}
+              disabled={step === 1 && selectedItem.amountType === 'flexible' && amount < 1000}
+              style={{
+                width: '100%', height: 56, borderRadius: 14,
+                background: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? '#e8e8ea' : ft.heroGradient,
+                color: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'rgba(55,56,60,0.28)' : '#fff',
+                border: 0, fontSize: 16, fontWeight: 700, letterSpacing: '0.006em',
+                cursor: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'not-allowed' : 'pointer',
+                fontFamily: 'var(--font-ui)',
+                transition: 'all 120ms var(--fp-ease-standard)',
+              }}
+            >
+              {step === 1 && selectedItem.amountType === 'fixed'
+                ? '다음 단계'
+                : step === 1
+                ? (amount >= 1000 ? `${fmt(amount)}원 봉헌하기` : '1,000원 이상 입력해주세요')
+                : step < totalSteps ? '다음 단계'
+                : '결제하기'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', height: 52, padding: '0 16px',
+  background: 'var(--fp-bg-muted)', borderRadius: 12,
+  border: '1px solid transparent', outline: 'none',
+  fontSize: 15, fontWeight: 600, letterSpacing: '0.006em',
+  color: 'var(--fp-fg-primary)', fontFamily: 'var(--font-ui)',
+  boxSizing: 'border-box',
+};
+
+function FPInput({ label, value, onChange, placeholder, type = 'text' }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string;
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 6, letterSpacing: '-0.014em' }}>{label}</div>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={inputStyle}
+      />
+    </div>
+  );
+}
+
+function RecurringOption({ label, desc, selected, onClick, ft }: {
+  id: string; label: string; desc: string;
+  selected: boolean; onClick: () => void;
+  ft: any;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%', textAlign: 'left',
+        background: selected ? ft.primary : '#fff',
+        border: `1.5px solid ${selected ? ft.primary : 'var(--fp-border-strong)'}`,
+        borderRadius: 14, padding: '16px 16px',
+        display: 'flex', alignItems: 'center', gap: 12,
+        cursor: 'pointer', fontFamily: 'var(--font-ui)',
+        transition: 'all 160ms var(--fp-ease-standard)',
+        color: selected ? '#fff' : 'var(--fp-fg-primary)',
+      }}
+    >
+      <div style={{
+        width: 22, height: 22, borderRadius: 999, flexShrink: 0,
+        border: `2px solid ${selected ? '#fff' : 'var(--fp-border-bold)'}`,
+        background: selected ? '#fff' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {selected && <div style={{ width: 10, height: 10, borderRadius: 999, background: ft.primary }} />}
+      </div>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.014em' }}>{label}</div>
+        <div style={{ fontSize: 13, marginTop: 2, color: selected ? 'rgba(255,255,255,0.78)' : 'var(--fp-fg-tertiary)', letterSpacing: '0.019em' }}>{desc}</div>
+      </div>
+    </button>
   );
 }
