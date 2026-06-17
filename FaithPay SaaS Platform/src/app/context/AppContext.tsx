@@ -431,16 +431,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const addTenant = useCallback(async (tenant: Omit<Tenant, 'createdAt' | 'updatedAt'>) => {
+  const addTenant = useCallback(async (newTenantData: Omit<Tenant, 'createdAt' | 'updatedAt'>) => {
+    // 1. Build a complete Tenant object with fallback fields
+    const newId = newTenantData.id || (mockTenants.length + 1).toString();
+    const newTenant: Tenant = {
+      id: newId,
+      logoUrl: newTenantData.logoUrl || 'https://images.unsplash.com/photo-1620495137036-fccf4af581bf?w=200',
+      bannerImages: newTenantData.bannerImages && newTenantData.bannerImages.length > 0
+        ? newTenantData.bannerImages
+        : ['https://images.unsplash.com/photo-1772878490426-e1c25eff4dba?w=1200'],
+      description: newTenantData.description || '새로운 단체입니다.',
+      schedule: newTenantData.schedule || [],
+      terminology: {
+        donation: newTenantData.terminology?.donation || (newTenantData.religionType === 'protestant' ? '헌금' : newTenantData.religionType === 'buddhist' ? '보시' : '봉헌'),
+        member: newTenantData.terminology?.member || (newTenantData.religionType === 'protestant' ? '성도' : newTenantData.religionType === 'buddhist' ? '불자' : '교우'),
+        prayer: newTenantData.terminology?.prayer || (newTenantData.religionType === 'protestant' ? '기도제목' : newTenantData.religionType === 'buddhist' ? '발원문' : '미사지향'),
+      },
+      ...newTenantData,
+    };
+
+    // 2. Add to in-memory mockTenants array
+    mockTenants.push(newTenant);
+
+    // 3. Save to localStorage
+    localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+
+    // 4. Update state
+    setTenants([...mockTenants]);
+    toast.success('단체가 추가되었습니다');
+
+    // 5. Try network API call
     try {
-      const response = await tenantAPI.addTenant(tenant);
+      const response = await tenantAPI.addTenant(newTenant);
       if (response.success && response.data) {
-        setTenants(prevTenants => [...prevTenants, response.data!]);
-      } else {
-        console.error('Failed to add tenant:', response.error);
+        const idx = mockTenants.findIndex(t => t.id === response.data!.id || t.id === newId);
+        if (idx !== -1) {
+          mockTenants[idx] = response.data!;
+          localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+          setTenants([...mockTenants]);
+        }
       }
     } catch (error) {
-      console.error('Failed to add tenant:', error);
+      console.error('Failed to add tenant on server, kept local version:', error);
     }
   }, []);
 
