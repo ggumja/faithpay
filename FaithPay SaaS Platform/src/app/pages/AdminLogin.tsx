@@ -182,38 +182,9 @@ export default function AdminLogin() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {mockAdmins.map((admin) => {
-                  // 통합관리자는 tenant가 없음
+                  // 통합관리자는 데모 목록에서 숨김
                   if (admin.role === 'system_admin') {
-                    return (
-                      <Card
-                        key={admin.id}
-                        className="cursor-pointer hover:border-purple-500 border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 transition-colors"
-                        onClick={() => handleQuickLogin(admin.email)}
-                      >
-                        <CardContent className="pt-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <Shield className="w-5 h-5 text-purple-600" />
-                                <h4 className="font-semibold text-purple-900">{admin.name}</h4>
-                                <Badge className="bg-purple-600 hover:bg-purple-600">
-                                  {getRoleName(admin.role)}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-purple-700 mb-1 font-semibold">
-                                FaithPay 통합 관리 시스템
-                              </p>
-                              <p className="text-xs text-muted-foreground font-mono">
-                                {admin.email}
-                              </p>
-                            </div>
-                            <Button variant="outline" size="sm" className="border-purple-300">
-                              선택
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
+                    return null;
                   }
 
                   const tenant = mockTenants.find((t) => t.id === admin.tenantId);
