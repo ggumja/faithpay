@@ -111,7 +111,7 @@ export default function TenantHome() {
                 backgroundPosition: 'center',
                 position: 'relative',
               }}>
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 100%)' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 100%)' }} />
               </div>
             </div>
           ))}
