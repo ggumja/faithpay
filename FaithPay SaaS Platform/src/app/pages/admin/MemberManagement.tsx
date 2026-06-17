@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useNavigate } from 'react-router';
 import { useApp, mockTenants } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -81,7 +81,8 @@ const members = [
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
-  const { currentTenant, setCurrentTenant } = useApp();
+  const navigate = useNavigate();
+  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -93,6 +94,24 @@ export default function MemberManagement() {
 
   if (!currentTenant) {
     return null;
+  }
+
+  if (!currentAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Card className="max-w-md w-full mx-4">
+          <CardHeader>
+            <CardTitle>접근 권한 없음</CardTitle>
+            <CardDescription>관리자 로그인이 필요합니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-end pt-4">
+            <Button onClick={() => navigate('/admin/login')}>
+              로그인 페이지로 이동
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const currentPath = `/${tenantSlug}/admin/members`;
