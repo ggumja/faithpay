@@ -16,6 +16,7 @@ import {
   Eye,
   Image as ImageIcon,
   X,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -121,6 +122,44 @@ export default function BannerManagement() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드할 수 있습니다');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('파일 크기는 5MB 이하여야 합니다');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+
+      const newBanner: BannerItem = {
+        id: `banner-${Date.now()}`,
+        url: dataUrl,
+        order: banners.length,
+      };
+
+      const updatedBanners = [...banners, newBanner];
+      setBanners(updatedBanners);
+      toast.success('배너 이미지가 업로드 되었습니다');
+
+      if (currentTenant) {
+        const bannerUrls = updatedBanners.map(b => b.url);
+        updateTenantBanners(currentTenant.id, bannerUrls);
+        setCurrentTenant({ ...currentTenant, bannerImages: bannerUrls });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDeleteBanner = (id: string) => {
     setBannerToDelete(id);
     setDeleteDialogOpen(true);
@@ -216,34 +255,50 @@ export default function BannerManagement() {
                 <CardHeader>
                   <CardTitle>새 배너 추가</CardTitle>
                   <CardDescription>
-                    배너 이미지 URL을 입력하여 추가하세요 (권장 크기: 1200x500px)
+                    이미지 파일을 직접 업로드하거나 배너 이미지 URL을 입력하여 추가하세요 (권장 크기: 1200x500px)
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <Label htmlFor="banner-url" className="sr-only">
-                        배너 이미지 URL
-                      </Label>
-                      <Input
-                        id="banner-url"
-                        placeholder="https://images.unsplash.com/photo-..."
-                        value={newBannerUrl}
-                        onChange={(e) => setNewBannerUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAddBanner();
-                          }
-                        }}
+                <CardContent className="space-y-6">
+                  {/* File Upload Zone */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-slate-50 transition-colors relative cursor-pointer group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" style={{ color: currentTenant.primaryColor }} />
+                      <p className="text-sm font-medium">이미지 파일 드래그 또는 클릭</p>
+                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF (최대 5MB)</p>
                     </div>
-                    <Button
-                      onClick={handleAddBanner}
-                      style={{ backgroundColor: currentTenant.primaryColor }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      추가
-                    </Button>
+
+                    <div className="flex flex-col justify-center border rounded-lg p-6 bg-slate-50/50">
+                      <Label htmlFor="banner-url" className="mb-2 text-sm font-medium">
+                        또는 이미지 URL 입력
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="banner-url"
+                          placeholder="https://images.unsplash.com/photo-..."
+                          value={newBannerUrl}
+                          onChange={(e) => setNewBannerUrl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleAddBanner();
+                            }
+                          }}
+                          className="bg-white"
+                        />
+                        <Button
+                          onClick={handleAddBanner}
+                          style={{ backgroundColor: currentTenant.primaryColor }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          추가
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

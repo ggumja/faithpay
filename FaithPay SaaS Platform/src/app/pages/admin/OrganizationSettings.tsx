@@ -21,6 +21,7 @@ import {
   MapPin,
   Clock,
   Info,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
@@ -43,6 +44,7 @@ export default function OrganizationSettings() {
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -56,6 +58,7 @@ export default function OrganizationSettings() {
       setAddress(tenant.address);
       setPhone(tenant.contact.phone);
       setEmail(tenant.contact.email);
+      setLogoUrl(tenant.logoUrl || '');
       setSchedules([...tenant.schedule]);
     }
   }, [tenantSlug, setCurrentTenant]);
@@ -140,6 +143,7 @@ export default function OrganizationSettings() {
       name: name.trim(),
       description: description.trim(),
       address: address.trim(),
+      logoUrl: logoUrl.trim(),
       contact: {
         phone: phone.trim(),
         email: email.trim(),
@@ -155,6 +159,31 @@ export default function OrganizationSettings() {
       setIsSaving(false);
       toast.success('단체 정보가 저장되었습니다');
     }, 500);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드할 수 있습니다');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('로고 파일 크기는 2MB 이하여야 합니다');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+
+      setLogoUrl(dataUrl);
+      toast.success('로고 이미지가 업로드 되었습니다');
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -240,6 +269,47 @@ export default function OrganizationSettings() {
                   <p className="text-xs text-muted-foreground">
                     메인 페이지에 표시될 단체 소개 문구입니다
                   </p>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="space-y-4">
+                  <Label>로고 이미지 설정</Label>
+                  <div className="flex flex-col md:flex-row gap-6 items-start">
+                    {/* Preview */}
+                    <div className="flex-shrink-0 w-24 h-24 rounded-lg border bg-slate-50 flex items-center justify-center overflow-hidden">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="단체 로고" className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 w-full space-y-4">
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 hover:bg-slate-50 transition-colors relative cursor-pointer group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <Upload className="h-5 w-5 text-muted-foreground mb-1 group-hover:text-primary transition-colors" style={{ color: currentTenant.primaryColor }} />
+                        <p className="text-xs font-medium">로고 이미지 파일 선택 또는 드래그</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">최대 2MB (1:1 비율 권장)</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="logo-url" className="text-xs">또는 이미지 URL 직접 입력</Label>
+                        <Input
+                          id="logo-url"
+                          value={logoUrl}
+                          onChange={(e) => setLogoUrl(e.target.value)}
+                          placeholder="https://example.com/logo.png"
+                          className="text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
