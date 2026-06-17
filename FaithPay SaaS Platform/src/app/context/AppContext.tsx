@@ -88,7 +88,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const mockTenants: Tenant[] = [
+const defaultTenants: Tenant[] = [
   {
     id: '1',
     slug: 'joyful-church',
@@ -177,6 +177,9 @@ export const mockTenants: Tenant[] = [
     },
   },
 ];
+
+const savedTenants = typeof window !== 'undefined' ? localStorage.getItem('faithpay_tenants') : null;
+export const mockTenants: Tenant[] = savedTenants ? JSON.parse(savedTenants) : defaultTenants;
 
 export const mockDonationItems: Record<string, DonationItem[]> = {
   'protestant': [
@@ -343,36 +346,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateTenantBanners = useCallback(async (tenantId: string, bannerImages: string[]) => {
+    // 1. Update the in-memory mockTenants array so any other files importing it get the update
+    const mockIndex = mockTenants.findIndex(t => t.id === tenantId);
+    if (mockIndex !== -1) {
+      mockTenants[mockIndex] = { ...mockTenants[mockIndex], bannerImages };
+    }
+    
+    // 2. Save to localStorage
+    localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+
+    // 3. Update React state
+    setTenants([...mockTenants]);
+
+    // 4. Try network API call as background update
     try {
       const response = await tenantAPI.updateTenantBanners(tenantId, bannerImages);
       if (response.success && response.data) {
-        setTenants(prevTenants =>
-          prevTenants.map(tenant =>
-            tenant.id === tenantId ? { ...tenant, bannerImages: response.data!.bannerImages } : tenant
-          )
-        );
-      } else {
-        console.error('Failed to update tenant banners:', response.error);
+        const mockIdx = mockTenants.findIndex(t => t.id === tenantId);
+        if (mockIdx !== -1) {
+          mockTenants[mockIdx] = { ...mockTenants[mockIdx], bannerImages: response.data!.bannerImages };
+          localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+          setTenants([...mockTenants]);
+        }
       }
     } catch (error) {
-      console.error('Failed to update tenant banners:', error);
+      console.error('Failed to update tenant banners on server, using local fallback:', error);
     }
   }, []);
 
   const updateTenantInfo = useCallback(async (tenantId: string, tenant: Tenant) => {
+    // 1. Update the in-memory mockTenants array
+    const mockIndex = mockTenants.findIndex(t => t.id === tenantId);
+    if (mockIndex !== -1) {
+      mockTenants[mockIndex] = { ...mockTenants[mockIndex], ...tenant };
+    }
+    
+    // 2. Save to localStorage
+    localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+
+    // 3. Update React state
+    setTenants([...mockTenants]);
+
+    // 4. Try network API call
     try {
       const response = await tenantAPI.updateTenantInfo(tenantId, tenant);
       if (response.success && response.data) {
-        setTenants(prevTenants =>
-          prevTenants.map(t =>
-            t.id === tenantId ? { ...t, ...response.data } : t
-          )
-        );
-      } else {
-        console.error('Failed to update tenant info:', response.error);
+        const mockIdx = mockTenants.findIndex(t => t.id === tenantId);
+        if (mockIdx !== -1) {
+          mockTenants[mockIdx] = { ...mockTenants[mockIdx], ...response.data };
+          localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+          setTenants([...mockTenants]);
+        }
       }
     } catch (error) {
-      console.error('Failed to update tenant info:', error);
+      console.error('Failed to update tenant info on server, using local fallback:', error);
     }
   }, []);
 
