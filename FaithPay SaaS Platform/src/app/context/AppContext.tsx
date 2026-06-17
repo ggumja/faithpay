@@ -356,37 +356,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [currentTenant]);
 
   const fetchTenants = useCallback(async () => {
-    // 백엔드(Supabase)가 아직 연결되지 않았으므로 임시로 mockTenants를 사용합니다.
-    // 네트워크 에러(ERR_NAME_NOT_RESOLVED)를 방지하기 위해 API 호출을 주석 처리합니다.
-    return;
-    /*
     try {
       const response = await tenantAPI.getTenants();
       if (response.success && response.data) {
-        setTenants(response.data);
+        const dbTenants = response.data;
+        mockTenants.length = 0;
+        mockTenants.push(...dbTenants);
+        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+        setTenants(dbTenants);
       } else {
         console.error('Failed to fetch tenants:', response.error);
+        toast.error('DB에서 단체 목록을 불러오지 못했습니다: ' + response.error);
       }
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
+      toast.error('DB 서버와 연결할 수 없습니다. 로컬 데이터를 사용합니다.');
     }
-    */
   }, []);
 
+  React.useEffect(() => {
+    fetchTenants();
+  }, [fetchTenants]);
+
   const updateTenantBanners = useCallback(async (tenantId: string, bannerImages: string[]) => {
-    // 1. Update the in-memory mockTenants array so any other files importing it get the update
-    const mockIndex = mockTenants.findIndex(t => t.id === tenantId);
-    if (mockIndex !== -1) {
-      mockTenants[mockIndex] = { ...mockTenants[mockIndex], bannerImages };
-    }
-    
-    // 2. Save to localStorage
-    localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-
-    // 3. Update React state
-    setTenants([...mockTenants]);
-
-    // 4. Try network API call as background update
     try {
       const response = await tenantAPI.updateTenantBanners(tenantId, bannerImages);
       if (response.success && response.data) {
@@ -395,27 +387,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           mockTenants[mockIdx] = { ...mockTenants[mockIdx], bannerImages: response.data!.bannerImages };
           localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
           setTenants([...mockTenants]);
+          toast.success('배너가 DB에 저장되었습니다.');
         }
+      } else {
+        toast.error('DB 배너 저장 실패: ' + response.error);
       }
     } catch (error) {
-      console.error('Failed to update tenant banners on server, using local fallback:', error);
+      console.error('Failed to update tenant banners on server:', error);
+      toast.error('DB 배너 저장 중 에러가 발생했습니다.');
     }
   }, []);
 
   const updateTenantInfo = useCallback(async (tenantId: string, tenant: Tenant) => {
-    // 1. Update the in-memory mockTenants array
-    const mockIndex = mockTenants.findIndex(t => t.id === tenantId);
-    if (mockIndex !== -1) {
-      mockTenants[mockIndex] = { ...mockTenants[mockIndex], ...tenant };
-    }
-    
-    // 2. Save to localStorage
-    localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-
-    // 3. Update React state
-    setTenants([...mockTenants]);
-
-    // 4. Try network API call
     try {
       const response = await tenantAPI.updateTenantInfo(tenantId, tenant);
       if (response.success && response.data) {
@@ -424,15 +407,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           mockTenants[mockIdx] = { ...mockTenants[mockIdx], ...response.data };
           localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
           setTenants([...mockTenants]);
+          toast.success('단체 정보가 DB에 저장되었습니다.');
         }
+      } else {
+        toast.error('DB 정보 저장 실패: ' + response.error);
       }
     } catch (error) {
-      console.error('Failed to update tenant info on server, using local fallback:', error);
+      console.error('Failed to update tenant info on server:', error);
+      toast.error('DB 정보 저장 중 에러가 발생했습니다.');
     }
   }, []);
 
   const addTenant = useCallback(async (newTenantData: Omit<Tenant, 'createdAt' | 'updatedAt'>) => {
-    // 1. Build a complete Tenant object with fallback fields
     const newId = newTenantData.id || (mockTenants.length + 1).toString();
     const newTenant: Tenant = {
       id: newId,
@@ -450,29 +436,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...newTenantData,
     };
 
-    // 2. Add to in-memory mockTenants array
-    mockTenants.push(newTenant);
-
-    // 3. Save to localStorage
-    localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-
-    // 4. Update state
-    setTenants([...mockTenants]);
-    toast.success('단체가 추가되었습니다');
-
-    // 5. Try network API call
     try {
       const response = await tenantAPI.addTenant(newTenant);
       if (response.success && response.data) {
-        const idx = mockTenants.findIndex(t => t.id === response.data!.id || t.id === newId);
-        if (idx !== -1) {
-          mockTenants[idx] = response.data!;
-          localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-          setTenants([...mockTenants]);
-        }
+        mockTenants.push(response.data!);
+        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+        setTenants([...mockTenants]);
+        toast.success('단체가 DB에 성공적으로 등록되었습니다.');
+      } else {
+        toast.error('DB 단체 등록 실패: ' + response.error);
       }
     } catch (error) {
-      console.error('Failed to add tenant on server, kept local version:', error);
+      console.error('Failed to add tenant on server:', error);
+      toast.error('DB 단체 등록 중 에러가 발생했습니다.');
     }
   }, []);
 
