@@ -60,20 +60,7 @@ export default function TenantHome() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: 56,
       }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'transparent', border: 0, cursor: 'pointer',
-            fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-primary)',
-            letterSpacing: '0.019em', fontFamily: 'var(--font-ui)',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M5 12l6-6M5 12l6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          돌아가기
-        </button>
+        <div />
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={() => navigate(`/${tenantSlug}/my-donations`)}
