@@ -17,6 +17,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { LayoutDashboard, Heart, Users, MessageSquare, FileText, Settings, DollarSign, Menu, Printer, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { AdminSidebar } from '../../components/AdminSidebar';
 
 // Mock prayer data
 const prayerRequests = [
@@ -62,51 +63,7 @@ const prayerRequests = [
   },
 ];
 
-interface SidebarProps {
-  tenantSlug?: string;
-  currentPath: string;
-}
 
-function Sidebar({ tenantSlug, currentPath }: SidebarProps) {
-  const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: '대시보드', path: `/admin` },
-    { id: 'donations', icon: Heart, label: '봉헌 내역', path: `/admin/donations` },
-    { id: 'prayers', icon: MessageSquare, label: '기도문 관리', path: `/admin/prayers` },
-    { id: 'menu', icon: FileText, label: '봉헌 메뉴', path: `/admin/menu` },
-    { id: 'members', icon: Users, label: '회원 관리', path: `/admin/members` },
-    { id: 'settlement', icon: DollarSign, label: '정산', path: `/admin/settlement` },
-    { id: 'settings', icon: Settings, label: '설정', path: `/admin/settings` },
-  ];
-
-  return (
-    <div className="w-64 bg-white border-r min-h-screen p-6">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          FaithPay
-        </h2>
-        <p className="text-sm text-muted-foreground">관리자 대시보드</p>
-      </div>
-      
-      <nav className="space-y-2">
-        {menuItems.map((item) => {
-          const fullPath = `/${tenantSlug}${item.path}`;
-          const isActive = currentPath === fullPath;
-          return (
-            <Link key={item.id} to={fullPath}>
-              <Button
-                variant={isActive ? 'default' : 'ghost'}
-                className="w-full justify-start"
-              >
-                <item.icon className="h-4 w-4 mr-3" />
-                {item.label}
-              </Button>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
-  );
-}
 
 export default function PrayerManagement() {
   const { tenantSlug } = useParams();
@@ -160,7 +117,7 @@ export default function PrayerManagement() {
     <div className="flex min-h-screen bg-slate-50">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar tenantSlug={tenantSlug} currentPath={currentPath} />
+        <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
       </div>
 
       {/* Mobile Menu */}
@@ -172,7 +129,7 @@ export default function PrayerManagement() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0">
-            <Sidebar tenantSlug={tenantSlug} currentPath={currentPath} />
+            <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
           </SheetContent>
         </Sheet>
       </div>
