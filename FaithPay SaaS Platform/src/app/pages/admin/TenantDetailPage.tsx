@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
 
 interface PaymentConfig {
   tenantId: string;
