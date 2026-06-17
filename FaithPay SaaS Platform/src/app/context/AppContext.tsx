@@ -322,10 +322,38 @@ export const mockAdmins: AdminUser[] = [
 ];
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('faithpay_current_tenant');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
   const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(null);
-  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('faithpay_current_admin');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
   const [tenants, setTenants] = useState<Tenant[]>(mockTenants);
+
+  React.useEffect(() => {
+    if (currentAdmin) {
+      localStorage.setItem('faithpay_current_admin', JSON.stringify(currentAdmin));
+    } else {
+      localStorage.removeItem('faithpay_current_admin');
+    }
+  }, [currentAdmin]);
+
+  React.useEffect(() => {
+    if (currentTenant) {
+      localStorage.setItem('faithpay_current_tenant', JSON.stringify(currentTenant));
+    } else {
+      localStorage.removeItem('faithpay_current_tenant');
+    }
+  }, [currentTenant]);
 
   const fetchTenants = useCallback(async () => {
     // 백엔드(Supabase)가 아직 연결되지 않았으므로 임시로 mockTenants를 사용합니다.
