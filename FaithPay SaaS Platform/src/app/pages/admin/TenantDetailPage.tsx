@@ -435,7 +435,7 @@ export default function TenantDetailPage() {
                     <SelectValue placeholder="PG 제공자 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="nanopay">나노페이 (NANO)</SelectItem>
+                    <SelectItem value="nanopay">나노PG (NANO)</SelectItem>
                     <SelectItem value="toss">토스페이먼츠</SelectItem>
                     <SelectItem value="portone">포트원 (구 아임포트)</SelectItem>
                     <SelectItem value="nice">NICE페이먼츠</SelectItem>
@@ -580,10 +580,10 @@ export default function TenantDetailPage() {
                         setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
                         setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
                         setIv('vgqTyX5tBqnMXB68');
-                        toast.success('나노페이 테스트 계정 정보가 입력되었습니다.');
+                        toast.success('나노PG 테스트 계정 정보가 입력되었습니다.');
                       }}
                     >
-                      나노페이 테스트 계정 정보 채우기
+                      나노PG 테스트 계정 정보 채우기
                     </Button>
                   </div>
                 </div>
