@@ -395,7 +395,9 @@ export default function TenantDetailPage() {
                   <CreditCard className="h-5 w-5 text-green-600" />
                   결제 정보 설정
                 </CardTitle>
-                <CardDescription>토스페이먼츠 API 키를 설정합니다</CardDescription>
+                <CardDescription>
+                  {pgProvider === 'nanopay' ? '나노PG API 키 및 설정을 관리합니다' : '토스페이먼츠 API 키를 설정합니다'}
+                </CardDescription>
               </div>
               {paymentConfig && (
                 <Badge
@@ -623,19 +625,35 @@ export default function TenantDetailPage() {
                 </Label>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex gap-2">
-                  <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-900">
-                    <p className="font-medium mb-1">토스페이먼츠 API 키 발급 안내</p>
-                    <ul className="text-xs space-y-1 text-blue-800">
-                      <li>• 토스페이먼츠 개발자센터에서 API 키를 발급받으세요</li>
-                      <li>• 테스트 환경에서는 테스트 키를, 운영 환경에서는 실제 키를 사용하세요</li>
-                      <li>• Secret Key는 안전하게 보관하고 노출되지 않도록 주의하세요</li>
-                    </ul>
+              {pgProvider === 'nanopay' ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex gap-2">
+                    <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-medium mb-1">나노PG API 키 및 설정 안내</p>
+                      <ul className="text-xs space-y-1 text-blue-800">
+                        <li>• 나노페이 계약 후 발급받으신 가맹점 코드(shopcode)와 API Key, 암호화 KEY, IV를 정확히 입력해주세요</li>
+                        <li>• ver 값은 테스트 가맹점인 경우 'smbtest'를, 실 가맹점인 경우 알맞은 버전 정보를 입력해야 합니다</li>
+                        <li>• Key 값들이 유출되지 않도록 각별히 유의해 주시기 바랍니다</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex gap-2">
+                    <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-medium mb-1">토스페이먼츠 API 키 발급 안내</p>
+                      <ul className="text-xs space-y-1 text-blue-800">
+                        <li>• 토스페이먼츠 개발자센터에서 API 키를 발급받으세요</li>
+                        <li>• 테스트 환경에서는 테스트 키를, 운영 환경에서는 실제 키를 사용하세요</li>
+                        <li>• Secret Key는 안전하게 보관하고 노출되지 않도록 주의하세요</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Separator className="my-4" />

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, donationFormData, currentAdmin } = useApp();
+  const { currentTenant, setCurrentTenant, tenants, donationFormData, currentAdmin } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState<string>('card');
   const [agreed, setAgreed] = useState(false);
@@ -29,6 +29,15 @@ export default function PaymentSelection() {
 
   const [pgProvider, setPgProvider] = useState<string>('');
   const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
+
+  useEffect(() => {
+    if (tenantSlug) {
+      const tenant = tenants.find(t => t.slug === tenantSlug);
+      if (tenant) {
+        setCurrentTenant(tenant);
+      }
+    }
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   useEffect(() => {
     if (currentTenant) {
