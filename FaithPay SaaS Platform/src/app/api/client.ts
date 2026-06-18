@@ -186,6 +186,18 @@ export const paymentAPI = {
     });
   },
 
+  async processCertRequest(payload: {
+    tenantId: string;
+    donationData: any;
+    deviceType: 'pc' | 'mobile';
+    payWay: 'card' | 'vbank' | 'dbank';
+  }): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/payment/process/cert/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   async cancelPayment(tenantId: string, donationId: string): Promise<APIResponse<any>> {
     return fetchAPI<any>('/payment/cancel', {
       method: 'POST',

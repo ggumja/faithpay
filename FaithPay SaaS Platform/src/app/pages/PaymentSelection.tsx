@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -10,7 +10,7 @@ import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
 import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { paymentAPI } from '../api/client';
+import { paymentAPI, donationAPI } from '../api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 export default function PaymentSelection() {
@@ -27,9 +27,55 @@ export default function PaymentSelection() {
   const [installment, setInstallment] = useState('00');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [pgProvider, setPgProvider] = useState<string>('');
+  const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
+
+  useEffect(() => {
+    if (currentTenant) {
+      paymentAPI.getConfig(currentTenant.id).then(res => {
+        if (res.success && res.data) {
+          setPgProvider(res.data.pgProvider || '');
+        }
+      });
+    }
+  }, [currentTenant]);
+
   if (!currentTenant || !donationFormData) {
     return null;
   }
+
+  const pollDonationStatus = (donationId: string) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) { // 3 minutes timeout
+        clearInterval(interval);
+        toast.error('결제 확인 시간이 초과되었습니다.');
+        setIsProcessing(false);
+        return;
+      }
+      
+      try {
+        const donationsRes = await donationAPI.getByTenant(currentTenant.id);
+        if (donationsRes.success && donationsRes.data) {
+          const donation = donationsRes.data.find(d => d.id === donationId);
+          if (donation) {
+            if (donation.paymentStatus === 'completed') {
+              clearInterval(interval);
+              toast.success('결제가 완료되었습니다.');
+              navigate(`/${tenantSlug}/complete`);
+            } else if (donation.paymentStatus === 'failed') {
+              clearInterval(interval);
+              toast.error('결제에 실패하였습니다.');
+              setIsProcessing(false);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling donation status:', error);
+      }
+    }, 3000); // 3 seconds
+  };
 
   const handlePayment = async () => {
     if (donationFormData.isRecurring && !currentAdmin) {
@@ -50,6 +96,55 @@ export default function PaymentSelection() {
       return;
     }
 
+    // 나노 PG 인증결제 처리
+    if (pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
+      setIsProcessing(true);
+      toast.info('결제창을 요청하고 있습니다...');
+      
+      try {
+        const deviceType = window.innerWidth <= 768 ? 'mobile' : 'pc';
+        const response = await paymentAPI.processCertRequest({
+          tenantId: currentTenant.id,
+          donationData: donationFormData,
+          deviceType,
+          payWay: 'card'
+        });
+
+        if (response.success) {
+          toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
+          
+          if (response.isJson && response.data?.nextUrl) {
+            window.open(response.data.nextUrl, 'NanopayPayment', 'width=650,height=650,scrollbars=yes');
+          } else if (response.html) {
+            const paymentWindow = window.open('', 'NanopayPayment', 'width=650,height=650,scrollbars=yes');
+            if (paymentWindow) {
+              paymentWindow.document.write(response.html);
+              paymentWindow.document.close();
+            } else {
+              toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
+              setIsProcessing(false);
+              return;
+            }
+          } else {
+            toast.error('결제 페이지 정보를 받지 못했습니다.');
+            setIsProcessing(false);
+            return;
+          }
+          
+          pollDonationStatus(response.donationId);
+        } else {
+          toast.error(`결제창 요청 실패: ${response.error || '알 수 없는 오류'}`);
+          setIsProcessing(false);
+        }
+      } catch (error) {
+        console.error('Cert payment request error:', error);
+        toast.error('결제 처리 중 오류가 발생했습니다.');
+        setIsProcessing(false);
+      }
+      return;
+    }
+
+    // 수기결제 카드 입력값 검증
     if (!cardNumber || !expiry || !password || !birth) {
       toast.error('카드 정보를 모두 입력해주세요.');
       return;
@@ -204,63 +299,92 @@ export default function PaymentSelection() {
                   </div>
                   {paymentMethod === 'card' && (
                     <div className="ml-6 space-y-4">
-                      {donationFormData.isRecurring && (
-                        <div className="bg-blue-100 p-3 rounded-md text-sm text-blue-800">
-                          정기결제를 위해 결제 수단을 안전하게 등록합니다. 등록된 카드로 매월/매주 자동 결제됩니다.
+                      {pgProvider === 'nanopay' && !donationFormData.isRecurring && (
+                        <div className="flex gap-2 p-1 bg-slate-100 rounded-md">
+                          <button
+                            type="button"
+                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${cardPaymentType === 'cert' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                            onClick={() => setCardPaymentType('cert')}
+                          >
+                            일반 결제창 (인증결제)
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${cardPaymentType === 'manual' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                            onClick={() => setCardPaymentType('manual')}
+                          >
+                            직접 입력 (수기결제)
+                          </button>
                         </div>
                       )}
-                      <div className="space-y-2">
-                        <Label htmlFor="cardNumber">카드번호</Label>
-                        <Input
-                          id="cardNumber"
-                          placeholder="**** **** **** ****"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value)}
-                          autoComplete="cc-number"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="expiry">유효기간</Label>
-                          <Input id="expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" autoComplete="cc-exp" />
+                      
+                      {pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring ? (
+                        <div className="bg-slate-50 p-4 rounded-lg border border-dashed border-slate-300 text-center text-sm text-slate-600 space-y-2">
+                          <CreditCard className="h-8 w-8 mx-auto text-slate-400 animate-pulse" />
+                          <p className="font-semibold">안전한 카드 결제창이 호출됩니다</p>
+                          <p className="text-xs text-slate-500">결제 완료 버튼을 누르시면 카드사별 안심클릭/App카드 결제 팝업창이 열립니다.</p>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="password">비밀번호 앞 2자리</Label>
-                          <Input id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="**" type="password" maxLength={2} autoComplete="new-password" data-lpignore="true" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="birth">생년월일 (6자리) 또는 사업자번호 (10자리)</Label>
-                        <Input id="birth" value={birth} onChange={(e) => setBirth(e.target.value)} placeholder="YYMMDD 또는 1234567890" maxLength={10} autoComplete="off" />
-                      </div>
-                      {!donationFormData.isRecurring && (
-                        <div className="space-y-2">
-                          <Label htmlFor="installment">할부 개월 수</Label>
-                          <Select 
-                            value={installment} 
-                            onValueChange={setInstallment}
-                            disabled={donationFormData.amount < 50000}
-                          >
-                            <SelectTrigger id="installment">
-                              <SelectValue placeholder="할부 개월 수 선택" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="00">일시불</SelectItem>
-                              {donationFormData.amount >= 50000 && (
-                                <>
-                                  {[...Array(11)].map((_, i) => {
-                                    const months = i + 2;
-                                    const value = months.toString().padStart(2, '0');
-                                    return <SelectItem key={value} value={value}>{months}개월</SelectItem>;
-                                  })}
-                                </>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {donationFormData.amount < 50000 && (
-                            <p className="text-xs text-muted-foreground mt-1">50,000원 이상 결제 시 할부 결제가 가능합니다.</p>
+                      ) : (
+                        <>
+                          {donationFormData.isRecurring && (
+                            <div className="bg-blue-100 p-3 rounded-md text-sm text-blue-800">
+                              정기결제를 위해 결제 수단을 안전하게 등록합니다. 등록된 카드로 매월/매주 자동 결제됩니다.
+                            </div>
                           )}
-                        </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="cardNumber">카드번호</Label>
+                            <Input
+                              id="cardNumber"
+                              placeholder="**** **** **** ****"
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              autoComplete="cc-number"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor="expiry">유효기간</Label>
+                              <Input id="expiry" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" autoComplete="cc-exp" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="password">비밀번호 앞 2자리</Label>
+                              <Input id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="**" type="password" maxLength={2} autoComplete="new-password" data-lpignore="true" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="birth">생년월일 (6자리) 또는 사업자번호 (10자리)</Label>
+                            <Input id="birth" value={birth} onChange={(e) => setBirth(e.target.value)} placeholder="YYMMDD 또는 1234567890" maxLength={10} autoComplete="off" />
+                          </div>
+                          {!donationFormData.isRecurring && (
+                            <div className="space-y-2">
+                              <Label htmlFor="installment">할부 개월 수</Label>
+                              <Select 
+                                value={installment} 
+                                onValueChange={setInstallment}
+                                disabled={donationFormData.amount < 50000}
+                              >
+                                <SelectTrigger id="installment">
+                                  <SelectValue placeholder="할부 개월 수 선택" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="00">일시불</SelectItem>
+                                  {donationFormData.amount >= 50000 && (
+                                    <>
+                                      {[...Array(11)].map((_, i) => {
+                                        const months = i + 2;
+                                        const value = months.toString().padStart(2, '0');
+                                        return <SelectItem key={value} value={value}>{months}개월</SelectItem>;
+                                      })}
+                                    </>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              {donationFormData.amount < 50000 && (
+                                <p className="text-xs text-muted-foreground mt-1">50,000원 이상 결제 시 할부 결제가 가능합니다.</p>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

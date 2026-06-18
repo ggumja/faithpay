@@ -185,10 +185,29 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
   try {
     const { tenantId, donationData, paymentData } = await c.req.json();
     
-    const NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-    const NANO_ENC_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
-    const NANO_IV = "vgqTyX5tBqnMXB68";
-    const NANO_API_URL = "http://dev3.nanopay.co.kr/api/payment/approval.io";
+    // DB에서 테넌트 결제 설정 조회
+    const config = await db.getPaymentConfig(tenantId);
+    
+    // 기본 테스트 계정 정보 (기본값)
+    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let NANO_ENC_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
+    let NANO_IV = "vgqTyX5tBqnMXB68";
+    let shopcode = "240000006";
+    let loginId = "smbtestshop";
+    let ver = "smbtest";
+    
+    if (config && config.pgProvider === 'nanopay' && config.isActive) {
+      NANO_API_KEY = config.apiKey || NANO_API_KEY;
+      NANO_ENC_KEY = config.secretKey || NANO_ENC_KEY;
+      NANO_IV = config.iv || NANO_IV;
+      shopcode = config.mid || shopcode;
+      loginId = config.loginId || loginId;
+    }
+
+    const isTest = shopcode === "240000006" || ver === "smbtest";
+    const NANO_API_URL = isTest 
+      ? "http://dev3.nanopay.co.kr/api/payment/approval.io"
+      : "https://pay.nanopay.co.kr/api/payment/approval.io";
     
     // 카드 정보 암호화
     const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(NANO_ENC_KEY, "utf-8"), Buffer.from(NANO_IV, "utf-8"));
@@ -197,9 +216,9 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
     encData += cipher.final("hex");
 
     const payload = {
-      ver: "smbtest",
-      loginId: "smbtestshop",
-      shopcode: "240000006",
+      ver: ver,
+      loginId: loginId,
+      shopcode: shopcode,
       payMethod: "card", // card로 고정 (수기결제)
       orderName: donationData.name,
       orderTel: donationData.phone.replace(/[^0-9]/g, ''),
@@ -262,13 +281,30 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       return c.json({ success: false, error: 'Invalid donation status for cancellation' }, 400);
     }
 
-    const NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-    const NANO_API_URL = "http://dev3.nanopay.co.kr/api/payment/cancel.io";
+    // DB에서 테넌트 결제 설정 조회
+    const config = await db.getPaymentConfig(tenantId);
+    
+    // 기본 테스트 계정 정보 (기본값)
+    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let shopcode = "240000006";
+    let loginId = "smbtestshop";
+    let ver = "smbtest";
+    
+    if (config && config.pgProvider === 'nanopay') {
+      NANO_API_KEY = config.apiKey || NANO_API_KEY;
+      shopcode = config.mid || shopcode;
+      loginId = config.loginId || loginId;
+    }
+    
+    const isTest = shopcode === "240000006" || ver === "smbtest";
+    const NANO_API_URL = isTest
+      ? "http://dev3.nanopay.co.kr/api/payment/cancel.io"
+      : "https://pay.nanopay.co.kr/api/payment/cancel.io";
     
     const payload = {
-      ver: "smbtest",
-      loginId: "smbtestshop",
-      shopcode: "240000006",
+      ver: ver,
+      loginId: loginId,
+      shopcode: shopcode,
       payMethod: "card", // 혹은 DB에 저장된 paymentMethod 연동
       cancelAmt: donation.amount.toString(),
       tranNo: donation.transactionId,
@@ -298,6 +334,137 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
   } catch (error) {
     console.error('Error processing cancellation:', error);
     return c.json({ success: false, error: 'Failed to process cancellation' }, 500);
+  }
+});
+
+// 인증결제 요청 처리
+app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
+  try {
+    const { tenantId, donationData, deviceType, payWay } = await c.req.json();
+    
+    // DB에서 테넌트 결제 설정 조회
+    const config = await db.getPaymentConfig(tenantId);
+    
+    // 기본 테스트 계정 정보 (기본값)
+    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let shopcode = "240000006";
+    let loginId = "smbtestshop";
+    let ver = "smbtest";
+    
+    if (config && config.pgProvider === 'nanopay' && config.isActive) {
+      NANO_API_KEY = config.apiKey || NANO_API_KEY;
+      shopcode = config.mid || shopcode;
+      loginId = config.loginId || loginId;
+    }
+
+    const isTest = shopcode === "240000006" || ver === "smbtest";
+    const baseUrl = isTest ? "http://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
+    
+    const isMobile = deviceType === 'mobile';
+    const NANO_API_URL = isMobile
+      ? `${baseUrl}/api/payment/cert/mobile/request.io`
+      : `${baseUrl}/api/payment/cert/pc/request.io`;
+      
+    // 임시 거래 내역 생성 (pending 상태)
+    const tempDonationId = crypto.randomUUID();
+    const tempDonation = await db.createDonation({
+      id: tempDonationId,
+      tenantId,
+      itemId: donationData.itemId || 'cert',
+      itemName: donationData.itemName,
+      amount: donationData.amount,
+      donorName: donationData.name,
+      donorPhone: donationData.phone,
+      prayerText: donationData.prayerText || '',
+      isRecurring: donationData.isRecurring || false,
+      paymentStatus: 'pending',
+      paymentMethod: payWay || 'card',
+      transactionId: '',
+    });
+
+    // 콜백 주소 (Supabase Edge Function의 콜백 URL)
+    const host = c.req.header('host') || 'localhost:54321';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const receiveUrl = `${protocol}://${host}/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
+
+    const payload = {
+      ver: ver,
+      loginId: loginId,
+      shopcode: shopcode,
+      orderName: donationData.name,
+      orderTel: donationData.phone.replace(/[^0-9]/g, ''),
+      orderEmail: "",
+      payWay: payWay || "card",
+      goodsName: donationData.itemName,
+      reqPayAmt: donationData.amount.toString(),
+      receiveUrl: receiveUrl,
+      compOrderNo: tempDonationId,
+      compOrderMem: donationData.name,
+    };
+
+    console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
+
+    const response = await fetch(NANO_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
+        'API_KEY': NANO_API_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const result = await response.json();
+      console.log("Nanopay Cert Request Result (JSON):", result);
+      return c.json({ success: true, isJson: true, data: result, donationId: tempDonationId });
+    } else {
+      const resultText = await response.text();
+      console.log("Nanopay Cert Request Result (HTML/Text):", resultText);
+      return c.json({ success: true, isJson: false, html: resultText, donationId: tempDonationId });
+    }
+  } catch (error) {
+    console.error('Error initiating certified payment:', error);
+    return c.json({ success: false, error: 'Failed to initiate certified payment' }, 500);
+  }
+});
+
+// 인증결제 콜백 결과 처리
+app.post("/make-server-d0d82cc7/payment/process/cert/callback", async (c) => {
+  try {
+    const body = await c.req.json();
+    console.log("Nanopay Cert Callback Received:", body);
+
+    const { resultCode, resultMsg, shopcode, compOrderNo, tranNo, payWay } = body;
+    const donationId = compOrderNo;
+    
+    const donations = await db.getAllDonations();
+    const donation = donations.find(d => d.id === donationId);
+    
+    if (!donation) {
+      console.error("Donation not found for ID:", donationId);
+      return c.json({ resultCode: "9999", resultMsg: "Donation record not found" });
+    }
+    
+    if (resultCode === "0000") {
+      await db.updateDonation(donation.tenantId, donation.id, {
+        paymentStatus: 'completed',
+        transactionId: tranNo,
+        paymentMethod: payWay || 'card',
+      });
+      console.log(`✅ Certified payment successful for donation: ${donation.id}`);
+      return c.json({ resultCode: "0000", resultMsg: "Success" });
+    } else {
+      await db.updateDonation(donation.tenantId, donation.id, {
+        paymentStatus: 'failed',
+      });
+      console.log(`❌ Certified payment failed for donation: ${donation.id}, error: ${resultMsg}`);
+      return c.json({ resultCode: "0000", resultMsg: "Failure processed" });
+    }
+  } catch (error) {
+    console.error('Error processing certified payment callback:', error);
+    return c.json({ resultCode: "9999", resultMsg: "Server error" });
   }
 });
 
