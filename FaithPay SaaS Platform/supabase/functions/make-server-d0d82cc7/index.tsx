@@ -388,33 +388,27 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     // 콜백 주소 (Supabase Edge Function의 콜백 URL) - 고정 HTTPS 외부 주소 사용
     const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
+    // 한글 인코딩 깨짐을 대비해 특수문자 제거 및 안전한 텍스트 처리
+    const cleanOrderName = (donationData.name || "Test").replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, "");
+    const cleanGoodsName = (donationData.itemName || "Donation").replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, "");
+
     const payload = {
       ver: ver,
       loginId: loginId,
       shopcode: shopcode,
-      orderName: donationData.name,
-      orderTel: donationData.phone.replace(/[^0-9]/g, ''),
+      orderName: cleanOrderName,
+      orderTel: (donationData.phone || "01000000000").replace(/[^0-9]/g, ''),
       orderEmail: "",
       payWay: payWay || "card",
-      goodsName: donationData.itemName,
+      goodsName: cleanGoodsName,
       reqPayAmt: donationData.amount.toString(),
       receiveUrl: receiveUrl,
       compOrderNo: tempDonationId,
-      compOrderMem: donationData.name,
+      compOrderMem: cleanOrderName,
     };
 
     console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver);
     console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
-
-    const response = await fetch(NANO_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'API_KEY': NANO_API_KEY,
-        'api_key': NANO_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
 
     const debugInfo = {
       NANO_API_KEY,
@@ -425,6 +419,24 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       NANO_API_URL,
       payload
     };
+
+    // Body 인코딩 깨짐 방지용 Raw Bytes 변환
+    const encoder = new TextEncoder();
+    const bodyBytes = encoder.encode(JSON.stringify(payload));
+
+    const response = await fetch(NANO_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'API_KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY,
+        'apiKey': NANO_API_KEY,
+        'ApiKey': NANO_API_KEY,
+        'X-API-KEY': NANO_API_KEY,
+        'x-api-key': NANO_API_KEY
+      },
+      body: bodyBytes
+    });
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
