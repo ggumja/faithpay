@@ -233,7 +233,8 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
         'API_KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY
       },
@@ -315,7 +316,8 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
         'API_KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY
       },
@@ -385,8 +387,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       transactionId: '',
     });
 
-    // 콜백 주소 (Supabase Edge Function의 콜백 URL) - 고정 HTTPS 외부 주소 사용
-    const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
+    // 콜백 주소 (Supabase Edge Function의 콜백 URL) - 테스트 서버 호환을 위해 http로 전달 시도
+    const receiveUrl = `http://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
     // 한글 인코딩 깨짐을 대비해 특수문자 제거 및 안전한 텍스트 처리
     const cleanOrderName = (donationData.name || "Test").replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, "");
@@ -427,7 +429,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
         'API_KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY,
         'apiKey': NANO_API_KEY,
