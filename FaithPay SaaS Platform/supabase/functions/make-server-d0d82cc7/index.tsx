@@ -235,7 +235,8 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
       headers: {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
-        'API_KEY': NANO_API_KEY
+        'API_KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY
       },
       body: JSON.stringify(payload)
     });
@@ -317,7 +318,8 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       headers: {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
-        'API_KEY': NANO_API_KEY
+        'API_KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY
       },
       body: JSON.stringify(payload)
     });
@@ -405,6 +407,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       compOrderMem: donationData.name,
     };
 
+    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver);
     console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
 
     const response = await fetch(NANO_API_URL, {
@@ -412,7 +415,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       headers: {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
-        'API_KEY': NANO_API_KEY
+        'API_KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY
       },
       body: JSON.stringify(payload)
     });
