@@ -368,8 +368,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       ? `${baseUrl}/api/payment/cert/mobile/request.io`
       : `${baseUrl}/api/payment/cert/pc/request.io`;
       
-    // 임시 거래 내역 생성 (pending 상태)
-    const tempDonationId = crypto.randomUUID();
+    // 임시 거래 내역 생성 (pending 상태) - 특수기호(-) 없이 순수 숫자로 구성된 고유 ID 생성 (타임스탬프 13자리 + 랜덤 5자리 = 총 18자리)
+    const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();
     const tempDonation = await db.createDonation({
       id: tempDonationId,
       tenantId,
