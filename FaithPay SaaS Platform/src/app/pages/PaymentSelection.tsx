@@ -119,6 +119,7 @@ export default function PaymentSelection() {
           payWay: 'card'
         });
 
+        console.log("Nanopay API Response:", response);
         if (response.success) {
           toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
           

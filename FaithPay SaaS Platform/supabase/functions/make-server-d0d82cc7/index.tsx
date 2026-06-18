@@ -416,15 +416,25 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       body: JSON.stringify(payload)
     });
 
+    const debugInfo = {
+      NANO_API_KEY,
+      shopcode,
+      loginId,
+      ver,
+      receiveUrl,
+      NANO_API_URL,
+      payload
+    };
+
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const result = await response.json();
       console.log("Nanopay Cert Request Result (JSON):", result);
-      return c.json({ success: true, isJson: true, data: result, donationId: tempDonationId });
+      return c.json({ success: true, isJson: true, data: result, donationId: tempDonationId, debug: debugInfo });
     } else {
       const resultText = await response.text();
       console.log("Nanopay Cert Request Result (HTML/Text):", resultText);
-      return c.json({ success: true, isJson: false, html: resultText, donationId: tempDonationId });
+      return c.json({ success: true, isJson: false, html: resultText, donationId: tempDonationId, debug: debugInfo });
     }
   } catch (error) {
     console.error('Error initiating certified payment:', error);
