@@ -236,7 +236,9 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
         'API_KEY': NANO_API_KEY,
-        'api_key': NANO_API_KEY
+        'API-KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY,
+        'api-key': NANO_API_KEY
       },
       body: JSON.stringify(payload)
     });
@@ -319,7 +321,9 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
         'API_KEY': NANO_API_KEY,
-        'api_key': NANO_API_KEY
+        'API-KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY,
+        'api-key': NANO_API_KEY
       },
       body: JSON.stringify(payload)
     });
@@ -432,7 +436,9 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
         'API_KEY': NANO_API_KEY,
+        'API-KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY,
+        'api-key': NANO_API_KEY,
         'apiKey': NANO_API_KEY,
         'ApiKey': NANO_API_KEY,
         'X-API-KEY': NANO_API_KEY,
