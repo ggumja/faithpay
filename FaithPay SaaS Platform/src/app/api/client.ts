@@ -163,7 +163,20 @@ export const tenantAPI = {
 
 export const paymentAPI = {
   async getConfig(tenantId: string): Promise<APIResponse<PaymentConfig>> {
-    return fetchAPI<PaymentConfig>(`/payment/${tenantId}`);
+    try {
+      const res = await fetchAPI<PaymentConfig>(`/payment/${tenantId}`);
+      if (res.success && res.data) {
+        return res;
+      }
+      throw new Error(res.error || 'Config not found');
+    } catch (e) {
+      console.warn('getConfig failed, falling back to localStorage:', e);
+      const local = localStorage.getItem(`paymentConfig_${tenantId}`);
+      if (local) {
+        return { success: true, data: JSON.parse(local) };
+      }
+      return { success: false, error: 'Config not found' };
+    }
   },
 
   async saveConfig(
