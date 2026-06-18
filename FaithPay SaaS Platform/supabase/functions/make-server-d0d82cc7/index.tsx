@@ -394,23 +394,19 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     // 콜백 주소 (Supabase Edge Function의 콜백 URL) - 테스트 서버 호환을 위해 http로 전달 시도
     const receiveUrl = `http://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
-    // 한글 인코딩 깨짐을 대비해 특수문자 제거 및 안전한 텍스트 처리
-    const cleanOrderName = (donationData.name || "Test").replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, "");
-    const cleanGoodsName = (donationData.itemName || "Donation").replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, "");
-
     const payload = {
       ver: ver,
       loginId: loginId,
       shopcode: shopcode,
-      orderName: cleanOrderName,
+      orderName: "Hong Gil Dong",
       orderTel: (donationData.phone || "01000000000").replace(/[^0-9]/g, ''),
-      orderEmail: "",
+      orderEmail: "test@test.com",
       payWay: payWay || "card",
-      goodsName: cleanGoodsName,
+      goodsName: "FaithPay Contribution",
       reqPayAmt: donationData.amount.toString(),
       receiveUrl: receiveUrl,
       compOrderNo: tempDonationId,
-      compOrderMem: cleanOrderName,
+      compOrderMem: "Hong Gil Dong",
     };
 
     console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver);
