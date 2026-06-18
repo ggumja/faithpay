@@ -233,8 +233,7 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'CharSet': 'UTF-8',
+        'Content-Type': 'application/json; charset=utf-8',
         'API_KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY
       },
@@ -316,8 +315,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'CharSet': 'UTF-8',
+        'Content-Type': 'application/json; charset=utf-8',
         'API_KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY
       },
@@ -387,10 +385,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       transactionId: '',
     });
 
-    // 콜백 주소 (Supabase Edge Function의 콜백 URL)
-    const host = c.req.header('host') || 'localhost:54321';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const receiveUrl = `${protocol}://${host}/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
+    // 콜백 주소 (Supabase Edge Function의 콜백 URL) - 고정 HTTPS 외부 주소 사용
+    const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
     const payload = {
       ver: ver,
@@ -413,8 +409,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'CharSet': 'UTF-8',
+        'Content-Type': 'application/json; charset=utf-8',
         'API_KEY': NANO_API_KEY,
         'api_key': NANO_API_KEY
       },
