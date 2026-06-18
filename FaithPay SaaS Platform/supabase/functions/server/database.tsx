@@ -47,6 +47,7 @@ export interface PaymentConfig {
   mid: string;
   loginId?: string;
   iv?: string;
+  ver?: string;
   isActive: boolean;
   updatedAt: string;
 }

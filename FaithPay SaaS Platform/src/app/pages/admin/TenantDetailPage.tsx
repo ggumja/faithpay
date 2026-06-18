@@ -37,6 +37,7 @@ interface PaymentConfig {
   mid: string;
   loginId?: string;
   iv?: string;
+  ver?: string;
   isActive: boolean;
 }
 
@@ -62,6 +63,7 @@ export default function TenantDetailPage() {
   const [secretKey, setSecretKey] = useState('');
   const [loginId, setLoginId] = useState('');
   const [iv, setIv] = useState('');
+  const [ver, setVer] = useState('');
   const [isActive, setIsActive] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
@@ -122,6 +124,7 @@ export default function TenantDetailPage() {
           setSecretKey(result.data.secretKey || '');
           setLoginId(result.data.loginId || '');
           setIv(result.data.iv || '');
+          setVer(result.data.ver || '');
           setIsActive(result.data.isActive || false);
         }
       }
@@ -138,6 +141,7 @@ export default function TenantDetailPage() {
         setSecretKey(parsed.secretKey || '');
         setLoginId(parsed.loginId || '');
         setIv(parsed.iv || '');
+        setVer(parsed.ver || '');
         setIsActive(parsed.isActive || false);
       }
     }
@@ -211,6 +215,7 @@ export default function TenantDetailPage() {
             secretKey,
             loginId,
             iv,
+            ver,
             isActive,
           }),
         }
@@ -238,6 +243,7 @@ export default function TenantDetailPage() {
         secretKey,
         loginId,
         iv,
+        ver,
         isActive,
       };
       localStorage.setItem(`paymentConfig_${id}`, JSON.stringify(configData));
@@ -567,6 +573,20 @@ export default function TenantDetailPage() {
                       </Button>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ver" className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      버전 (ver) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="ver"
+                      value={ver}
+                      onChange={(e) => setVer(e.target.value)}
+                      placeholder="예: smbtest 또는 1.0"
+                      className="bg-white"
+                      autoComplete="off"
+                    />
+                  </div>
                   
                   <div className="flex justify-end mt-4">
                     <Button
@@ -580,6 +600,7 @@ export default function TenantDetailPage() {
                         setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
                         setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
                         setIv('vgqTyX5tBqnMXB68');
+                        setVer('smbtest');
                         toast.success('나노PG 테스트 계정 정보가 입력되었습니다.');
                       }}
                     >

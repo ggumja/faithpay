@@ -202,6 +202,7 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
       NANO_IV = config.iv || NANO_IV;
       shopcode = config.mid || shopcode;
       loginId = config.loginId || loginId;
+      ver = config.ver || ver;
     }
 
     const isTest = shopcode === "240000006" || ver === "smbtest";
@@ -294,6 +295,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       NANO_API_KEY = config.apiKey || NANO_API_KEY;
       shopcode = config.mid || shopcode;
       loginId = config.loginId || loginId;
+      ver = config.ver || ver;
     }
     
     const isTest = shopcode === "240000006" || ver === "smbtest";
@@ -355,6 +357,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       NANO_API_KEY = config.apiKey || NANO_API_KEY;
       shopcode = config.mid || shopcode;
       loginId = config.loginId || loginId;
+      ver = config.ver || ver;
     }
 
     const isTest = shopcode === "240000006" || ver === "smbtest";
