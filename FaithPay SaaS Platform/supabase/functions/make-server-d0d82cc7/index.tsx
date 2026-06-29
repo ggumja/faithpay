@@ -189,9 +189,9 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-    let NANO_ENC_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
-    let NANO_IV = "vgqTyX5tBqnMXB68";
+    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
+    let NANO_ENC_KEY = "Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6";
+    let NANO_IV = "Nx5Lq7Kv4W8Jp6Mu";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
@@ -289,7 +289,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
@@ -354,7 +354,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
@@ -367,7 +367,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     }
 
     const isTest = shopcode === "240000006" || ver === "smbtest";
-    const baseUrl = isTest ? "http://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
+    const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     
     const isMobile = deviceType === 'mobile';
     const NANO_API_URL = isMobile
@@ -391,8 +391,13 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       transactionId: '',
     });
 
-    // 콜백 주소 (Supabase Edge Function의 콜백 URL) - 테스트 서버 호환을 위해 http로 전달 시도
-    const receiveUrl = `http://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
+    // 콜백 주소 (Supabase Edge Function의 콜백 URL)
+    const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
+
+    // 타임스탬프 및 해시 값 생성 (v2.2 규격 추가 파라미터)
+    const timestamp = Date.now().toString();
+    const hashInput = `${ver}|${loginId}|${shopcode}|${timestamp}|${NANO_API_KEY}`;
+    const hashValue = crypto.createHash("sha256").update(hashInput).digest("hex");
 
     const payload = {
       ver: ver,
@@ -407,6 +412,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       receiveUrl: receiveUrl,
       compOrderNo: tempDonationId,
       compOrderMem: "Hong Gil Dong",
+      timestamp: timestamp,
+      hashValue: hashValue,
     };
 
     console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver);
