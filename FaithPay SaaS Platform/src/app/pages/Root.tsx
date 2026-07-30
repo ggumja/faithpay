@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
-import { Shield, Repeat, Smartphone, BarChart3, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
+import { Shield, Repeat, Smartphone, BarChart3, ArrowRight, CheckCircle, Heart } from 'lucide-react';
 
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  * macrostructure: Bento Grid + Hero Visual Split · nav: N1b Canonical SaaS · footer: Ft5 Statement
- * genre: modern-minimal (rich-visual warm-community inflection) · theme: Hum
+ * genre: modern-minimal (authentic editorial photographic warm-community inflection) · theme: Hum
  * paper-band: light (> 85%) · display-style: rounded humanist sans · accent-hue: warm amber (48°)
  * audience: 종교단체 운영진 · use-case: 서비스 신청하기 · tone: 따뜻·공동체
  */
@@ -19,14 +19,14 @@ const ROOT_CSS = `
   .rp-hero-container {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 48px;
     align-items: center;
   }
 
   .rp-hero-title {
-    font-size: clamp(32px, 5.5vw, 64px);
+    font-size: clamp(34px, 5.5vw, 64px);
     font-weight: 900;
-    line-height: 1.1;
+    line-height: 1.12;
     letter-spacing: -0.04em;
     color: var(--hm-warm-ink);
     overflow-wrap: anywhere;
@@ -36,19 +36,21 @@ const ROOT_CSS = `
   .rp-hero-img-wrap {
     position: relative;
     width: 100%;
-    max-width: 560px;
+    max-width: 520px;
     margin: 0 auto;
   }
 
   .rp-hero-img {
     width: 100%;
     height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
     border-radius: 24px;
-    box-shadow: 0 20px 50px -10px oklch(0.14 0.025 50 / 0.15), 0 0 0 1px var(--hm-warm-border);
+    box-shadow: 0 20px 50px -10px oklch(0.14 0.025 50 / 0.18), 0 0 0 1px var(--hm-warm-border);
     transition: transform 300ms ease;
   }
   .rp-hero-img-wrap:hover .rp-hero-img {
-    transform: translateY(-4px) scale(1.01);
+    transform: translateY(-4px);
   }
 
   /* Bento grid */
@@ -62,7 +64,7 @@ const ROOT_CSS = `
   .rp-dash-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 36px;
+    gap: 44px;
     align-items: center;
   }
 
@@ -90,10 +92,10 @@ const ROOT_CSS = `
   /* ── Buttons ── */
   .rp-btn-primary {
     display: inline-flex; align-items: center; gap: 8px;
-    height: 48px; padding: 0 24px;
+    height: 50px; padding: 0 26px;
     background: var(--hm-warm-amber);
     color: white; border: none; border-radius: 12px;
-    font-family: inherit; font-size: 14px; font-weight: 700;
+    font-family: inherit; font-size: 14.5px; font-weight: 700;
     cursor: pointer; white-space: nowrap;
     box-shadow: 0 4px 20px var(--hm-warm-amber-glow);
     transition: background 180ms, transform 150ms, box-shadow 180ms;
@@ -104,10 +106,10 @@ const ROOT_CSS = `
 
   .rp-btn-ghost {
     display: inline-flex; align-items: center; gap: 6px;
-    height: 48px; padding: 0 24px;
+    height: 50px; padding: 0 24px;
     background: transparent; color: var(--hm-warm-ink-2);
     border: 1.5px solid var(--hm-warm-border); border-radius: 12px;
-    font-family: inherit; font-size: 14px; font-weight: 600;
+    font-family: inherit; font-size: 14.5px; font-weight: 600;
     cursor: pointer; white-space: nowrap;
     transition: border-color 180ms, color 180ms, background 180ms;
   }
@@ -185,7 +187,7 @@ const ROOT_CSS = `
   }
   @media (min-width: 1024px) {
     .rp-hero-container { grid-template-columns: 1fr 1fr; }
-    .rp-dash-grid { grid-template-columns: 1.1fr 0.9fr; }
+    .rp-dash-grid { grid-template-columns: 1.05fr 0.95fr; }
     .rp-bento { grid-template-columns: repeat(3, 1fr); }
     .rp-bento-large { grid-column: span 2; }
   }
@@ -314,7 +316,7 @@ export default function Root() {
         </div>
       </nav>
 
-      {/* ══ HERO WITH GENERATED ILLUSTRATION ═══════════════════════ */}
+      {/* ══ HERO WITH AUTHENTIC EDITORIAL PHOTOGRAPH ═══════════════ */}
       <section style={{
         maxWidth: 1160, margin: '0 auto',
         padding: 'clamp(56px, 8vw, 96px) clamp(16px, 4vw, 40px) clamp(48px, 6vw, 80px)',
@@ -323,21 +325,21 @@ export default function Root() {
           {/* Left Hero Text */}
           <div className="rp-up rp-d1">
             <div className="rp-chip" style={{ marginBottom: 24 }}>
-              <Sparkles size={13} /> 종교 단체 전용 온라인 스마트 봉헌 플랫폼
+              <Heart size={13} fill="var(--hm-warm-amber)" color="var(--hm-warm-amber)" /> 정성을 담는 스마트 종교 봉헌 서비스
             </div>
 
             <h1 className="rp-hero-title">
-              따뜻한 마음을 전하는<br />
-              <span style={{ color: 'var(--hm-warm-amber)' }}>스마트 온라인 봉헌</span>
+              마음으로 드리는<br />
+              <span style={{ color: 'var(--hm-warm-amber)' }}>진정성 있는 온라인 봉헌</span>
             </h1>
 
             <p style={{
-              fontSize: 'clamp(15px, 2vw, 17px)',
+              fontSize: 'clamp(15px, 2vw, 17.5px)',
               color: 'var(--hm-warm-ink-2)', lineHeight: 1.75,
               margin: '20px 0 36px', maxWidth: 480,
             }}>
-              기독교 · 불교 · 천주교 교인들을 위한 간편하고 안전한 모바일 봉헌 서비스.<br />
-              복잡한 절차 없이 5분 만에 우리 단체 전용 봉헌 페이지를 개설하세요.
+              기독교 · 불교 · 천주교 교인을 위한 따뜻하고 정갈한 봉헌 플랫폼.<br />
+              복잡한 절차 없이 5분 만에 우리 단체 전용 공간을 개설하세요.
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -370,14 +372,13 @@ export default function Root() {
             </div>
           </div>
 
-          {/* Right Hero Image (Gemini Generated Illustration) */}
+          {/* Right Hero Image (Authentic Editorial Photography) */}
           <div className="rp-hero-img-wrap rp-up rp-d2">
             <img
               src="/faithpay/images/hero-illustration.png"
-              alt="FaithPay 스마트 모바일 봉헌 서비스 일러스트"
+              alt="진정성을 담은 두 손과 따뜻한 봉헌의 모습"
               className="rp-hero-img"
               onError={(e) => {
-                // 루트 경로 폴백 지원
                 (e.currentTarget as HTMLImageElement).src = '/images/hero-illustration.png';
               }}
             />
@@ -448,7 +449,7 @@ export default function Root() {
         </div>
       </section>
 
-      {/* ══ DASHBOARD VISUAL SHOWCASE ══════════════════════════════ */}
+      {/* ══ DASHBOARD VISUAL SHOWCASE (REALISTIC LIFESTYLE) ═════════ */}
       <section id="dashboard" style={{
         background: 'linear-gradient(180deg, var(--hm-warm-paper) 0%, var(--hm-warm-paper-2) 100%)',
         borderTop: '1px solid var(--hm-warm-border)',
@@ -457,11 +458,11 @@ export default function Root() {
       }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div className="rp-dash-grid">
-            {/* Dashboard Mockup Image */}
+            {/* Dashboard Real Photo */}
             <div style={{ position: 'relative' }}>
               <img
                 src="/faithpay/images/dashboard-mockup.png"
-                alt="FaithPay SaaS 관리자 대시보드 화면"
+                alt="실제 데스크 환경에서 활용되는 FaithPay 관리자 시스템"
                 style={{
                   width: '100%',
                   height: 'auto',
@@ -597,21 +598,21 @@ export default function Root() {
         </div>
       </section>
 
-      {/* ══ FINAL CTA WITH BANNER IMAGE ══════════════════════════════ */}
+      {/* ══ FINAL CTA WITH AUTHENTIC SANCTUARY PHOTO ═════════════════ */}
       <section style={{
         position: 'relative',
         padding: 'clamp(80px, 10vw, 120px) clamp(16px, 4vw, 40px)',
         textAlign: 'center',
         overflow: 'hidden',
       }}>
-        {/* Background Image Banner */}
+        {/* Authentic Sanctuary Background Image */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
         }}>
           <img
             src="/faithpay/images/community-banner.png"
-            alt="공동체 배경"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, filter: 'blur(3px)' }}
+            alt="평화로운 성소와 햇살"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, filter: 'blur(1px)' }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = '/images/community-banner.png';
             }}
