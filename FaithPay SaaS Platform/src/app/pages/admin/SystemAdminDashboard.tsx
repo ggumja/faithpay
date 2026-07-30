@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import TenantApprovalModal from '../../components/TenantApprovalModal';
 import GlobalBroadcastModal from '../../components/GlobalBroadcastModal';
+import TenantStatsPage from './TenantStatsPage';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
