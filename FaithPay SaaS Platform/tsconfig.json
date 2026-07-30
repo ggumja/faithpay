@@ -14,6 +14,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* PWA — virtual:pwa-register 타입 지원 */
+    "types": ["vite-plugin-pwa/client"],
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
