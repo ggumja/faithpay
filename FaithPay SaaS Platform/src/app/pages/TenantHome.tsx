@@ -5,7 +5,6 @@ import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { useTenantPWA } from '../hooks/useTenantPWA';
 import { InstallBanner } from '../components/pwa/InstallBanner';
-import { TenantBannerCarousel } from '../components/TenantBannerCarousel';
 import {
   ArrowLeft, MapPin, Phone, Mail, Clock, ChevronRight,
   Shield, Repeat, Landmark, Heart, Search, Star
@@ -130,6 +129,18 @@ export default function TenantHome() {
   // PWA 멀티 테넌트 훅 — 테넌트별 동적 manifest 주입 + 설치 프롬프트 관리
   const { canInstall, install } = useTenantPWA(currentTenant);
 
+  // 히어로 배경 배너 슬라이더 상태
+  const [bannerIndex, setBannerIndex] = useState(0);
+
+  useEffect(() => {
+    const banners = currentTenant?.bannerImages || [];
+    if (banners.length <= 1) return;
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [currentTenant]);
+
   useEffect(() => {
     const t = mockTenants.find(t => t.slug === tenantSlug);
     if (t) setCurrentTenant(t);
@@ -236,27 +247,53 @@ export default function TenantHome() {
       </header>
 
       {/* ── Hero ── */}
-      <section ref={heroRef} style={{ position: 'relative', overflow: 'hidden', background: ft.heroGradient }}>
+      <section ref={heroRef} style={{ position: 'relative', overflow: 'hidden', background: ft.heroGradient, minHeight: 380 }}>
+        {/* Background Banner Slider */}
+        {currentTenant.bannerImages && currentTenant.bannerImages.length > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+            {currentTenant.bannerImages.map((bannerUrl, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  opacity: idx === bannerIndex ? 1 : 0,
+                  transition: 'opacity 800ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  backgroundImage: `url(${bannerUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+            ))}
+            {/* Dark overlay for optimal text readability */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.68) 100%)',
+              backdropFilter: 'blur(2px)',
+            }} />
+          </div>
+        )}
+
         {/* Background motif */}
-        <div style={{ position: 'absolute', right: -40, top: -20, width: '40%', height: '130%', opacity: 0.07, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', right: -40, top: -20, width: '40%', height: '130%', opacity: 0.08, pointerEvents: 'none', zIndex: 1 }}>
           <MotifLarge kind={ft.motif} color="white" opacity={1} />
         </div>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 100% at 25% 60%, oklch(1 0 0 / 0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(40px, 7vw, 72px) clamp(16px, 4vw, 24px) clamp(36px, 5vw, 60px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(44px, 7vw, 76px) clamp(16px, 4vw, 24px) clamp(40px, 5vw, 64px)', position: 'relative', zIndex: 2 }}>
           <div className="th-hero-grid">
             {/* Left copy */}
             <div className="th-animate th-hero-copy">
               {/* Greeting badge */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'oklch(1 0 0 / 0.10)', border: '1px solid oklch(1 0 0 / 0.18)', borderRadius: 6, padding: '4px 12px', marginBottom: 18 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'oklch(1 0 0 / 0.14)', border: '1px solid oklch(1 0 0 / 0.22)', borderRadius: 6, padding: '4px 12px', marginBottom: 18, backdropFilter: 'blur(8px)' }}>
                 <Motif kind={ft.motif} size={11} color="white" />
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'oklch(1 0 0 / 0.80)', letterSpacing: '0.04em' }}>{ft.greeting}</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'oklch(1 0 0 / 0.90)', letterSpacing: '0.04em' }}>{ft.greeting}</span>
               </div>
 
-              <h1 style={{ fontSize: 'clamp(26px, 5vw, 52px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: 12 }}>
+              <h1 style={{ fontSize: 'clamp(28px, 5vw, 54px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: 14, textShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
                 {currentTenant.name}
               </h1>
-              <p style={{ fontSize: 'clamp(13px, 2vw, 15px)', color: 'oklch(1 0 0 / 0.65)', lineHeight: 1.7, maxWidth: 480, marginBottom: 24, fontWeight: 400 }}>
+              <p style={{ fontSize: 'clamp(14px, 2vw, 16px)', color: 'oklch(1 0 0 / 0.85)', lineHeight: 1.7, maxWidth: 500, marginBottom: 26, fontWeight: 400, textShadow: '0 1px 6px rgba(0,0,0,0.3)' }}>
                 {currentTenant.description}
               </p>
 
@@ -264,18 +301,18 @@ export default function TenantHome() {
               <div className="th-hero-cta" style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 22 }}>
                 <button
                   onClick={() => navigate(`/${currentTenant.slug}/donate`)}
-                  style={{ height: 44, padding: '0 20px', background: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 12px oklch(0 0 0 / 0.20)', transition: 'transform 150ms, box-shadow 150ms', whiteSpace: 'nowrap' }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px oklch(0 0 0 / 0.25)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 12px oklch(0 0 0 / 0.20)'; }}
+                  style={{ height: 46, padding: '0 22px', background: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 16px oklch(0 0 0 / 0.25)', transition: 'transform 150ms, box-shadow 150ms', whiteSpace: 'nowrap' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 22px oklch(0 0 0 / 0.30)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px oklch(0 0 0 / 0.25)'; }}
                 >
                   <Motif kind={ft.motif} size={14} color={ft.primary} />
                   {currentTenant.terminology.donation}하기
                 </button>
                 <button
                   onClick={() => { document.getElementById('items-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  style={{ height: 44, padding: '0 20px', background: 'oklch(1 0 0 / 0.10)', border: '1px solid oklch(1 0 0 / 0.20)', borderRadius: 8, fontSize: 14, fontWeight: 500, color: 'oklch(1 0 0 / 0.80)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'background 150ms', whiteSpace: 'nowrap' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'oklch(1 0 0 / 0.16)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'oklch(1 0 0 / 0.10)')}
+                  style={{ height: 46, padding: '0 20px', background: 'oklch(1 0 0 / 0.15)', border: '1px solid oklch(1 0 0 / 0.25)', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, transition: 'background 150ms', whiteSpace: 'nowrap', backdropFilter: 'blur(8px)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'oklch(1 0 0 / 0.25)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'oklch(1 0 0 / 0.15)')}
                 >
                   항목 보기 <ChevronRight size={14} />
                 </button>
@@ -285,36 +322,60 @@ export default function TenantHome() {
               <div className="th-trust-badges" style={{ gap: 16, flexWrap: 'wrap' }}>
                 {[['ISMS-P', '정보보호 인증'], ['PCI-DSS', '결제 보안'], ['SSL', '256-bit']].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Shield size={11} color="oklch(1 0 0 / 0.45)" />
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'oklch(1 0 0 / 0.45)', letterSpacing: '0.03em' }}>{k}</span>
-                    <span style={{ fontSize: 10, color: 'oklch(1 0 0 / 0.30)' }}>{v}</span>
+                    <Shield size={11} color="oklch(1 0 0 / 0.70)" />
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'oklch(1 0 0 / 0.80)', letterSpacing: '0.03em' }}>{k}</span>
+                    <span style={{ fontSize: 10, color: 'oklch(1 0 0 / 0.55)' }}>{v}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Right — quick stats (flex row on mobile, column on tablet+) */}
+            {/* Right — quick stats */}
             <div className="th-animate th-delay-2 th-hero-stats">
               {[
                 { label: '봉헌 항목', value: `${allItems.length}가지` },
                 { label: '정기 후원', value: `${allItems.filter(i => i.allowRecurring).length}가지` },
                 { label: ft.name, value: ft.placeNoun },
               ].map(({ label, value }) => (
-                <div key={label} className="th-hero-stat" style={{ background: 'oklch(1 0 0 / 0.08)', border: '1px solid oklch(1 0 0 / 0.12)', borderRadius: 10, padding: '14px 16px', backdropFilter: 'blur(8px)' }}>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'oklch(1 0 0 / 0.45)', letterSpacing: '0.04em', marginBottom: 4, whiteSpace: 'nowrap' }}>{label}</div>
+                <div key={label} className="th-hero-stat" style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: 12, padding: '14px 18px', backdropFilter: 'blur(12px)' }}>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'rgba(255, 255, 255, 0.65)', letterSpacing: '0.04em', marginBottom: 4, whiteSpace: 'nowrap' }}>{label}</div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>{value}</div>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Banner Carousel Indicator Dots inside Hero */}
+          {currentTenant.bannerImages && currentTenant.bannerImages.length > 1 && (
+            <div style={{
+              display: 'flex',
+              gap: 6,
+              justifyContent: 'center',
+              marginTop: 24,
+            }}>
+              {currentTenant.bannerImages.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBannerIndex(i)}
+                  aria-label={`${i + 1}번 배너 선택`}
+                  style={{
+                    width: i === bannerIndex ? 20 : 6,
+                    height: 6,
+                    borderRadius: 3,
+                    background: i === bannerIndex ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    transition: 'all 250ms ease',
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ── Tenant Banner Carousel ── */}
-      <TenantBannerCarousel
-        bannerImages={currentTenant.bannerImages}
-        tenantName={currentTenant.name}
-      />
+      {/* 하단에 노출되던 기존 캐러셀 삭제 */}
 
       {/* ── Body (responsive grid) ── */}
       <div className="th-body">
