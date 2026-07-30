@@ -1,0 +1,10 @@
+{
+  "buildCommand": "pnpm --prefix \"FaithPay SaaS Platform\" run build",
+  "outputDirectory": "FaithPay SaaS Platform/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

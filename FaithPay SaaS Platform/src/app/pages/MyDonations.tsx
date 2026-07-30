@@ -121,9 +121,9 @@ export default function MyDonations() {
         {!isAuthenticated ? (
           <Card className="shadow-md border-none">
             <CardHeader>
-              <CardTitle>조회하기</CardTitle>
+              <CardTitle>{currentTenant.name} 내역 조회</CardTitle>
               <CardDescription>
-                헌금 시 입력하셨던 휴대폰 번호를 입력하여 내역을 확인하세요.
+                {currentTenant.name}에서 {currentTenant.terminology.donation} 시 입력하셨던 휴대폰 번호를 입력하시면 본 단체의 내역을 확인하실 수 있습니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

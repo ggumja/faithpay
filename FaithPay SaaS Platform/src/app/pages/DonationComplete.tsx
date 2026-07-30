@@ -185,14 +185,23 @@ export default function DonationComplete() {
           </button>
         </section>
 
-        <button
-          onClick={() => navigate(`/${tenantSlug}`)}
-          className="w-full h-14 rounded-xl text-white font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 mt-2 shadow-md"
-          style={{ background: ft.heroGradient }}
-        >
-          <Motif kind={ft.motif} size={18} color="#fff" />
-          홈으로 돌아가기
-        </button>
+        <div className="flex flex-col gap-2 mt-2">
+          <button
+            onClick={() => navigate(`/${tenantSlug}/my-donations`)}
+            className="w-full h-12 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold text-xs tracking-wide transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+          >
+            내 {currentTenant.terminology.donation} 내역 보기
+          </button>
+
+          <button
+            onClick={() => navigate(`/${tenantSlug}`)}
+            className="w-full h-14 rounded-xl text-white font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-md"
+            style={{ background: ft.heroGradient }}
+          >
+            <Motif kind={ft.motif} size={18} color="#fff" />
+            홈으로 돌아가기
+          </button>
+        </div>
 
       </main>
     </div>

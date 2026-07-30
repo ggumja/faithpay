@@ -221,6 +221,14 @@ export default function TenantHome() {
         {/* Right */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button
+            onClick={() => navigate(`/${currentTenant.slug}/my-donations`)}
+            style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 12, color: C.ink2, fontFamily: 'inherit', fontWeight: 500, padding: '5px 10px', borderRadius: 6, transition: 'all 150ms', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobaltBorder; e.currentTarget.style.color = C.cobalt; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.ink2; }}
+          >
+            내 {currentTenant.terminology.donation} 내역
+          </button>
+          <button
             onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}
             style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 12, color: C.ink3, fontFamily: 'inherit', fontWeight: 500, padding: '5px 10px', borderRadius: 6, transition: 'all 150ms', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobaltBorder; e.currentTarget.style.color = C.cobalt; }}
