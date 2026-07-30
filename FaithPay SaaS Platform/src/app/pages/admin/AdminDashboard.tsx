@@ -41,17 +41,90 @@ const recentDonations = [
   { id: 'FP1201', name: '정수진', item: '건축헌금', amount: 500000, time: '16:00', status: '완료' },
 ];
 
+import { donationAPI } from '../../api/client';
+
 export default function AdminDashboard() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
+  const [dbDonations, setDbDonations] = useState<any[]>([]);
+  const [totalMonthlyAmount, setTotalMonthlyAmount] = useState<number>(0);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [memberCount, setMemberCount] = useState<number>(0);
+  const [pendingPrayerCount, setPendingPrayerCount] = useState<number>(0);
+
+  // 현재 시스템 시계 기준 최근 3개월 동적 라벨 생성
+  const now = new Date();
+  const currentMonthNum = now.getMonth() + 1; // e.g. 7월
+  const prevMonthNum = currentMonthNum === 1 ? 12 : currentMonthNum - 1;
+  const prevPrevMonthNum = prevMonthNum === 1 ? 12 : prevMonthNum - 1;
+
+  const mLabel3 = `${currentMonthNum}월(당월)`;
+  const mLabel2 = `${prevMonthNum}월`;
+  const mLabel1 = `${prevPrevMonthNum}월`;
+
+  const [chartData, setChartData] = useState<{ month: string; amount: number }[]>([
+    { month: mLabel1, amount: 0 },
+    { month: mLabel2, amount: 0 },
+    { month: mLabel3, amount: 0 },
+  ]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   useEffect(() => {
     const tenant = mockTenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
+      // Supabase DB 비동기 수납 실데이터 조율
+      donationAPI.getByTenant(tenant.id).then((res) => {
+        if (res.success && res.data) {
+          const list = res.data;
+          setDbDonations(list);
+
+          // 1. 전체 수납 총액 & 건수 계산
+          const totalSum = list.reduce((acc, d) => acc + (d.amount || 0), 0);
+          setTotalMonthlyAmount(totalSum);
+          setTotalCount(list.length);
+
+          // 2. 신도 수 & 기도문 미인쇄 건수 실제 DB 계산
+          const prayers = list.filter(d => d.prayerText && d.prayerText.trim().length > 0);
+          setPendingPrayerCount(prayers.length);
+
+          const uniqueDonors = new Set(list.filter(d => d.donorPhone).map(d => d.donorPhone));
+          setMemberCount(uniqueDonors.size);
+
+          // 3. 현재 시계 동적 최근 3개월 DB 수납액 그룹화 계산
+          const monthlySums: Record<string, number> = {};
+          monthlySums[mLabel1] = 0;
+          monthlySums[mLabel2] = 0;
+          monthlySums[mLabel3] = 0;
+
+          list.forEach(item => {
+            if (item.createdAt) {
+              const itemDate = new Date(item.createdAt);
+              const m = itemDate.getMonth() + 1;
+              if (m === currentMonthNum) monthlySums[mLabel3] += item.amount || 0;
+              else if (m === prevMonthNum) monthlySums[mLabel2] += item.amount || 0;
+              else if (m === prevPrevMonthNum) monthlySums[mLabel1] += item.amount || 0;
+              else monthlySums[mLabel3] += item.amount || 0;
+            } else {
+              monthlySums[mLabel3] += item.amount || 0;
+            }
+          });
+
+          setChartData([
+            { month: mLabel1, amount: monthlySums[mLabel1] },
+            { month: mLabel2, amount: monthlySums[mLabel2] },
+            { month: mLabel3, amount: monthlySums[mLabel3] },
+          ]);
+        }
+      }).catch((err) => {
+        console.warn('DB load notice in AdminDashboard:', err);
+      }).finally(() => {
+        setIsLoading(false);
+      });
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, setCurrentTenant, currentMonthNum, prevMonthNum, prevPrevMonthNum]);
 
   if (!currentTenant) {
     return null;
@@ -122,13 +195,13 @@ export default function AdminDashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">84,215,000원</div>
+                <div className="text-2xl font-bold">{totalMonthlyAmount.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-600 font-semibold">+15%</span> vs 전월
+                  총 <span className="text-green-600 font-semibold">{totalCount}건</span> 결제 접수
                 </p>
                 <div className="mt-2">
                   <TrendingUp className="h-4 w-4 inline text-green-600 mr-1" />
-                  <span className="text-sm text-green-600 font-medium">증가 추세</span>
+                  <span className="text-sm text-green-600 font-medium">DB 실시간 동기화 완료</span>
                 </div>
               </CardContent>
             </Card>
@@ -139,9 +212,9 @@ export default function AdminDashboard() {
                 <UserPlus className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">42명</div>
+                <div className="text-2xl font-bold">{memberCount}명</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-600 font-semibold">+5%</span> vs 전월
+                  <span className="text-green-600 font-semibold">DB 데이터 동기화</span>
                 </p>
                 <Button variant="link" className="mt-2 p-0 h-auto" asChild>
                   <Link to={`/${tenantSlug}/admin/members`}>
@@ -158,7 +231,7 @@ export default function AdminDashboard() {
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">12건</div>
+                <div className="text-2xl font-bold">{pendingPrayerCount}건</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   미인쇄 항목
                 </p>
@@ -177,11 +250,11 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>월별 봉헌액 추이</CardTitle>
-                <CardDescription>최근 3개월</CardDescription>
+                <CardDescription>DB 수납 데이터 실시간 반영</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyData}>
+                  <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -195,11 +268,11 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>누적 봉헌액</CardTitle>
-                <CardDescription>최근 3개월</CardDescription>
+                <CardDescription>DB 수납 데이터 실시간 반영</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyData}>
+                  <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -235,24 +308,32 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentDonations.map((donation) => (
-                    <TableRow key={donation.id}>
-                      <TableCell className="font-mono">{donation.id}</TableCell>
-                      <TableCell className="font-medium">{donation.name}</TableCell>
-                      <TableCell>{donation.item}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {donation.amount.toLocaleString()}원
-                      </TableCell>
-                      <TableCell>{donation.time}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={donation.status === '완료' ? 'default' : 'secondary'}
-                        >
-                          {donation.status}
-                        </Badge>
+                  {dbDonations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        접수된 봉헌 내역이 없습니다. (신도 페이지에서 테스트 결제를 진행해보세요)
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    dbDonations.slice(0, 10).map((donation) => (
+                      <TableRow key={donation.id}>
+                        <TableCell className="font-mono text-xs">{donation.id}</TableCell>
+                        <TableCell className="font-medium">{donation.donorName}</TableCell>
+                        <TableCell>{donation.itemName}</TableCell>
+                        <TableCell className="text-right font-semibold text-emerald-600">
+                          {donation.amount.toLocaleString()}원
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {donation.createdAt ? new Date(donation.createdAt).toLocaleString('ko-KR') : '방금 전'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="default">
+                            {donation.paymentStatus === 'completed' ? '완료' : donation.paymentStatus}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

@@ -170,10 +170,25 @@ export default function DonationHistory() {
         try {
           const res = await donationAPI.getByTenant(currentTenant.id);
           if (res.success && res.data) {
-            setDonations(res.data);
+            const mapped = res.data.map(d => ({
+              id: d.id,
+              date: d.createdAt ? d.createdAt.split('T')[0] : '2026-03-28',
+              time: d.createdAt ? d.createdAt.split('T')[1]?.slice(0, 5) : '14:30',
+              name: d.donorName,
+              phone: d.donorPhone,
+              item: d.itemName,
+              amount: d.amount,
+              method: d.paymentMethod || '카드',
+              status: d.paymentStatus || 'completed',
+              prayer: d.prayerText || '',
+            }));
+            setDonations(mapped);
+          } else {
+            setDonations([]);
           }
         } catch (error) {
           console.error(error);
+          setDonations([]);
         } finally {
           setIsLoading(false);
         }
