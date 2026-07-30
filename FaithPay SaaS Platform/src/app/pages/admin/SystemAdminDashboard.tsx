@@ -21,16 +21,22 @@ import {
   CheckCircle,
   AlertCircle,
   Settings,
+  Megaphone,
+  Key,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import AddTenantDialog from '../../components/AddTenantDialog';
-import TenantStatsPage from './TenantStatsPage';
+import TenantApprovalModal from '../../components/TenantApprovalModal';
+import GlobalBroadcastModal from '../../components/GlobalBroadcastModal';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
-  const { currentAdmin, setCurrentAdmin, tenants, addTenant, fetchTenants } = useApp();
+  const { currentAdmin, setCurrentAdmin, tenants, addTenant, updateTenantInfo } = useApp();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState('tenants');
+
+  // 모달 상태
+  const [selectedTenantForApproval, setSelectedTenantForApproval] = useState<Tenant | null>(null);
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
 
   useEffect(() => {
     // 통합관리자 권한 확인
@@ -96,8 +102,16 @@ export default function SystemAdminDashboard() {
                 <p className="text-sm text-muted-foreground">시스템 관리자</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                className="border-purple-300 bg-purple-50 text-purple-900 font-bold hover:bg-purple-100"
+                onClick={() => setIsBroadcastOpen(true)}
+              >
+                <Megaphone className="h-4 w-4 mr-1.5 text-purple-600" />
+                전체 공지 & 점검 발송
+              </Button>
+              <div className="text-right border-l pl-3">
                 <p className="text-sm font-semibold">{currentAdmin.name}</p>
                 <Badge variant="secondary" className="text-xs">
                   통합관리자
@@ -256,17 +270,31 @@ export default function SystemAdminDashboard() {
                                 )}
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTenantSelect(tenant.id);
-                                  }}
-                                >
-                                  <Settings className="h-4 w-4 mr-2" />
-                                  설정
-                                </Button>
+                                <div className="flex justify-center gap-1.5">
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedTenantForApproval(tenant);
+                                    }}
+                                  >
+                                    <Key className="h-3.5 w-3.5 mr-1" />
+                                    입점 심사/승인
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTenantSelect(tenant.id);
+                                    }}
+                                  >
+                                    <Settings className="h-4 w-4 mr-1" />
+                                    설정
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -275,23 +303,6 @@ export default function SystemAdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Add Tenant Button */}
-                <Button
-                  size="lg"
-                  onClick={() => setIsAddDialogOpen(true)}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  단체 추가
-                </Button>
-
-                {/* Add Tenant Dialog */}
-                <AddTenantDialog
-                  isOpen={isAddDialogOpen}
-                  onClose={() => setIsAddDialogOpen(false)}
-                  onAddTenant={handleAddTenant}
-                />
               </>
             )}
 
@@ -301,6 +312,26 @@ export default function SystemAdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* 입점 심사 및 비밀번호 생성 발송 모달 */}
+      {selectedTenantForApproval && (
+        <TenantApprovalModal
+          tenant={selectedTenantForApproval}
+          onApprove={(tenantId, tempPassword) => {
+            updateTenantInfo(tenantId, { ...selectedTenantForApproval, status: 'active' });
+            setSelectedTenantForApproval(null);
+          }}
+          onReject={(tenantId) => {
+            setSelectedTenantForApproval(null);
+          }}
+          onClose={() => setSelectedTenantForApproval(null)}
+        />
+      )}
+
+      {/* 전체 공지 및 시스템 점검 모달 */}
+      {isBroadcastOpen && (
+        <GlobalBroadcastModal onClose={() => setIsBroadcastOpen(false)} />
+      )}
     </div>
   );
 }

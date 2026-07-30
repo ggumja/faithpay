@@ -152,6 +152,20 @@ export const tenantAPI = {
     });
   },
 
+  async approveTenant(id: string, tempPassword?: string): Promise<APIResponse<{ tenant: Tenant; tempPassword: string }>> {
+    return fetchAPI<{ tenant: Tenant; tempPassword: string }>(`/tenants/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ tempPassword }),
+    });
+  },
+
+  async updateStatus(id: string, status: 'active' | 'pending' | 'suspended'): Promise<APIResponse<Tenant>> {
+    return fetchAPI<Tenant>(`/tenants/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
+
   async delete(id: string): Promise<APIResponse<void>> {
     return fetchAPI<void>(`/tenants/${id}`, {
       method: 'DELETE',
