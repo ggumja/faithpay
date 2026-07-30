@@ -13,6 +13,7 @@ import {
   DollarSign,
   LogOut,
   Image,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -93,14 +94,25 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
 
       <Separator className="my-4" />
 
-      <Button
-        variant="ghost"
-        className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-        onClick={handleLogout}
-      >
-        <LogOut className="h-4 w-4 mr-3" />
-        로그아웃
-      </Button>
+      <div className="space-y-1">
+        <Button
+          variant="outline"
+          className="w-full justify-between font-semibold border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800"
+          onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
+        >
+          <span>신도 페이지 보기</span>
+          <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4 mr-3" />
+          로그아웃
+        </Button>
+      </div>
     </div>
   );
 }
