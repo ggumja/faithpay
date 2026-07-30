@@ -21,10 +21,17 @@ export default function DonationFlow() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentTenant, setDonationFormData } = useApp();
+  const { currentTenant, setDonationFormData, getTenantDonationItems } = useApp();
 
   const [step, setStep] = useState(1);
-  const [selectedItem] = useState<DonationItem | null>(location.state?.selectedItem || null);
+  const [selectedItem] = useState<DonationItem | null>(() => {
+    if (location.state?.selectedItem) return location.state.selectedItem;
+    if (currentTenant) {
+      const items = getTenantDonationItems(currentTenant);
+      if (items && items.length > 0) return items[0];
+    }
+    return null;
+  });
   const [amount, setAmount] = useState<number>(0);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');

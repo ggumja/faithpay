@@ -238,7 +238,11 @@ export default function TenantHome() {
           </button>
           <button
             className="hm-btn-primary"
-            onClick={() => navigate(`/${currentTenant.slug}/donate`)}
+            onClick={() => {
+              const items = getTenantDonationItems(currentTenant);
+              const firstItem = items && items.length > 0 ? items[0] : undefined;
+              navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
+            }}
             style={{ height: 34, padding: '0 14px', fontSize: 13, borderRadius: 8, whiteSpace: 'nowrap' }}
           >{currentTenant.terminology.donation}하기</button>
         </div>
@@ -307,7 +311,11 @@ export default function TenantHome() {
               {/* CTA buttons */}
               <div className="th-hero-cta" style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 22 }}>
                 <button
-                  onClick={() => navigate(`/${currentTenant.slug}/donate`)}
+                  onClick={() => {
+                    const items = getTenantDonationItems(currentTenant);
+                    const firstItem = items && items.length > 0 ? items[0] : undefined;
+                    navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
+                  }}
                   style={{ height: 46, padding: '0 22px', background: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 16px oklch(0 0 0 / 0.25)', transition: 'transform 150ms, box-shadow 150ms', whiteSpace: 'nowrap' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 22px oklch(0 0 0 / 0.30)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px oklch(0 0 0 / 0.25)'; }}
@@ -435,7 +443,6 @@ export default function TenantHome() {
             </div>
           )}
         </main>
-
         {/* ── Sidebar ── */}
         <aside className="th-sidebar">
           {/* Quick donate CTA */}
@@ -447,13 +454,17 @@ export default function TenantHome() {
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'oklch(1 0 0 / 0.55)', letterSpacing: '0.05em', marginBottom: 6 }}>온라인 {currentTenant.terminology.donation}</div>
               <p style={{ fontSize: 14, fontWeight: 700, color: 'white', lineHeight: 1.4, marginBottom: 14 }}>{ft.tagline}</p>
               <button
-                onClick={() => navigate(`/${currentTenant.slug}/donate`)}
-                style={{ width: '100%', height: 40, background: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'opacity 150ms' }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+                onClick={() => {
+                  const items = getTenantDonationItems(currentTenant);
+                  const firstItem = items && items.length > 0 ? items[0] : undefined;
+                  navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
+                }}
+                style={{ width: '100%', height: 38, background: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'opacity 150ms' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                <Motif kind={ft.motif} size={14} color={ft.primary} />
-                {currentTenant.terminology.donation}하기
+                <Motif kind={ft.motif} size={13} color={ft.primary} />
+                <span>{currentTenant.terminology.donation}하기</span>
               </button>
             </div>
           </div>
