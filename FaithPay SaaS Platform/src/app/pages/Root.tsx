@@ -36,17 +36,17 @@ const ROOT_CSS = `
   .rp-hero-img-wrap {
     position: relative;
     width: 100%;
-    max-width: 520px;
+    max-width: 580px;
     margin: 0 auto;
   }
 
   .rp-hero-img {
     width: 100%;
     height: auto;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
-    border-radius: 24px;
-    box-shadow: 0 20px 50px -10px oklch(0.14 0.025 50 / 0.18), 0 0 0 1px var(--hm-warm-border);
+    border-radius: 20px;
+    box-shadow: 0 16px 44px -10px oklch(0.14 0.025 50 / 0.15), 0 0 0 1px var(--hm-warm-border);
     transition: transform 300ms ease;
   }
   .rp-hero-img-wrap:hover .rp-hero-img {
