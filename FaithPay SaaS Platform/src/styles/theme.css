@@ -1,7 +1,297 @@
+/* Hallmark · macrostructure: H2-Split Diptych · nav: N1 Standard · footer: Ft3 Index
+ * genre: developer-tool / SaaS · theme: Cobalt-01-Light (studied-DNA)
+ * paper-band: light (L > 95%) · display-style: heavy grotesque sans · accent-hue: cobalt blue (264°)
+ * audience: 봉헌자 + 단체 관리자 · use-case: 단체 선택 → 봉헌 · tone: sacred-precision
+ * pre-emit critique: P5 H5 E5 S5 R4 V5
+ * studied: yes · DNA-source: https://www.usehallmark.com/examples/cobalt-01/
+ */
+
+
+
+:root {
+  /* ── Cobalt-01 Light Palette ── */
+  /* Paper — clean white */
+  --hm-paper:        oklch(1.00 0.000 0);       /* pure white */
+  --hm-paper-2:      oklch(0.97 0.005 250);     /* off-white card surface */
+  --hm-paper-3:      oklch(0.94 0.007 250);     /* slightly deeper panel */
+
+  /* Ink — dark navy on white */
+  --hm-ink:          oklch(0.12 0.025 260);     /* deep navy heading */
+  --hm-ink-2:        oklch(0.32 0.020 258);     /* secondary text */
+  --hm-ink-3:        oklch(0.58 0.012 255);     /* muted / placeholder */
+
+  /* Cobalt accent — signature blue (works on light) */
+  --hm-accent:       oklch(0.55 0.22 264);      /* #2563EB cobalt on white */
+  --hm-accent-bright:oklch(0.62 0.22 264);      /* brighter hover */
+  --hm-accent-dim:   oklch(0.45 0.20 264);      /* pressed / active */
+  --hm-accent-bg:    oklch(0.96 0.025 258);     /* pale cobalt tint */
+  --hm-accent-border:oklch(0.55 0.22 264 / 0.22); /* cobalt border on light */
+  --hm-accent-glow:  oklch(0.55 0.22 264 / 0.18); /* soft cobalt glow */
+
+  /* Border & surface (light mode) */
+  --hm-border:       oklch(0.12 0.015 260 / 0.09); /* subtle dark border */
+  --hm-border-accent:oklch(0.55 0.22 264 / 0.25);
+  --hm-night:        oklch(0.10 0.025 260);     /* used for dark hero strips only */
+  --hm-night-border: oklch(1 0 0 / 0.08);
+
+  /* ── Hum — Warm Amber (Landing page / Root.tsx) ── */
+  --hm-warm-paper:        oklch(0.99 0.006 80);
+  --hm-warm-paper-2:      oklch(0.96 0.012 75);
+  --hm-warm-paper-3:      oklch(0.92 0.018 70);
+  --hm-warm-paper-deep:   oklch(0.17 0.022 50);
+  --hm-warm-amber:        oklch(0.62 0.18 48);
+  --hm-warm-amber-dim:    oklch(0.52 0.19 46);
+  --hm-warm-amber-bg:     oklch(0.97 0.025 78);
+  --hm-warm-amber-border: oklch(0.62 0.18 48 / 0.20);
+  --hm-warm-amber-glow:   oklch(0.62 0.18 48 / 0.30);
+  --hm-warm-ink:          oklch(0.14 0.025 50);
+  --hm-warm-ink-2:        oklch(0.34 0.022 55);
+  --hm-warm-ink-3:        oklch(0.58 0.014 60);
+  --hm-warm-border:       oklch(0.14 0.015 55 / 0.09);
+  --hm-warm-border-2:     oklch(0.14 0.015 55 / 0.05);
+
+  /* Status */
+  --hm-success:      oklch(0.55 0.17 148);
+  --hm-danger:       oklch(0.52 0.20 27);
+
+  /* ── Typography — Cobalt-01 ── */
+  --font-display:    'Inter', 'Pretendard Variable', system-ui, sans-serif;
+  --font-body:       'Inter', 'Pretendard', system-ui, sans-serif;
+  --font-mono:       'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
+
+  /* ── Gradients ── */
+  /* Hero section — subtle light blue tint instead of dark */
+  --hm-hero-gradient: linear-gradient(145deg,
+    oklch(0.97 0.012 255) 0%,
+    oklch(0.95 0.018 260) 50%,
+    oklch(0.97 0.010 255) 100%
+  );
+
+  /* Cobalt CTA gradient */
+  --hm-cobalt-gradient: linear-gradient(135deg,
+    oklch(0.52 0.23 264) 0%,
+    oklch(0.58 0.21 258) 100%
+  );
+
+  /* Cobalt accent strip */
+  --hm-gold-gradient: linear-gradient(90deg,
+    oklch(0.50 0.22 264) 0%,
+    oklch(0.62 0.20 258) 50%,
+    oklch(0.50 0.22 264) 100%
+  );
+
+  /* ── Spacing — 4pt scale ── */
+  --sp-1: 4px;  --sp-2: 8px;   --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px;  --sp-8: 32px; --sp-10: 40px;
+  --sp-12: 48px;--sp-16: 64px; --sp-20: 80px;--sp-24: 96px;
+
+  /* ── Motion ── */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast:      150ms;
+  --dur-base:      220ms;
+  --dur-slow:      380ms;
+}
+
+
+
+/* ── Base: font wiring ── */
+html {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+body {
+  overflow-x: clip;
+}
+
+.font-display {
+  font-family: var(--font-display) !important;
+}
+
+/* ── Hallmark utility classes ── */
+
+/* Cobalt-01 card — dark panel with subtle cobalt glow on hover */
+.hm-card {
+  background: var(--hm-paper-2);
+  border: 1px solid var(--hm-border);
+  border-radius: 12px;
+  transition: box-shadow var(--dur-base) var(--ease-standard),
+              transform var(--dur-base) var(--ease-standard),
+              border-color var(--dur-base) var(--ease-standard);
+}
+.hm-card:hover {
+  box-shadow: 0 0 0 1px var(--hm-accent-border),
+              0 8px 32px -8px var(--hm-accent-glow);
+  border-color: var(--hm-accent-border);
+  transform: translateY(-2px);
+}
+
+/* Dark surface panel */
+.hm-card-night {
+  background: var(--hm-night);
+  border: 1px solid var(--hm-night-border);
+  border-radius: 12px;
+}
+
+/* Cobalt accent line */
+.hm-gold-line {
+  height: 1px;
+  background: var(--hm-gold-gradient);
+  border-radius: 999px;
+}
+
+/* Primary CTA — cobalt blue (Cobalt-01 signature) */
+.hm-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 44px;
+  padding: 0 var(--sp-6);
+  border-radius: 8px;
+  border: none;
+  background: var(--hm-cobalt-gradient);
+  color: oklch(1 0 0);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: box-shadow var(--dur-fast) var(--ease-standard),
+              filter var(--dur-fast) var(--ease-standard),
+              transform var(--dur-fast) var(--ease-standard);
+}
+.hm-btn-primary:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 4px 20px var(--hm-accent-glow);
+  transform: translateY(-1px);
+}
+.hm-btn-primary:active {
+  transform: translateY(0);
+  filter: brightness(0.95);
+}
+.hm-btn-primary:focus-visible {
+  outline: 2px solid var(--hm-accent);
+  outline-offset: 3px;
+}
+.hm-btn-primary:disabled {
+  opacity: 0.40;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Ghost CTA — cobalt outline */
+.hm-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 44px;
+  padding: 0 var(--sp-6);
+  border-radius: 8px;
+  border: 1px solid var(--hm-border);
+  background: transparent;
+  color: var(--hm-ink-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
+}
+.hm-btn-ghost:hover {
+  background: var(--hm-accent-bg);
+  border-color: var(--hm-accent-border);
+  color: var(--hm-accent);
+}
+.hm-btn-ghost:focus-visible {
+  outline: 2px solid var(--hm-accent);
+  outline-offset: 3px;
+}
+
+/* Cobalt chip — monospace label style */
+.hm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--hm-accent-bg);
+  border: 1px solid var(--hm-accent-border);
+  color: var(--hm-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* Chip on dark bg — monospace terminal style */
+.hm-chip-dark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--hm-accent-bg);
+  border: 1px solid var(--hm-accent-border);
+  color: var(--hm-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* ── Animations ── */
+@keyframes hm-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes hm-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hm-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.hm-animate-fade-up {
+  animation: hm-fade-up var(--dur-slow) var(--ease-standard) both;
+}
+.hm-animate-fade-in {
+  animation: hm-fade-in var(--dur-slow) var(--ease-standard) both;
+}
+.hm-animate-scale-in {
+  animation: hm-scale-in var(--dur-base) var(--ease-spring) both;
+}
+
+/* Stagger delays */
+.hm-delay-1 { animation-delay: 80ms; }
+.hm-delay-2 { animation-delay: 160ms; }
+.hm-delay-3 { animation-delay: 240ms; }
+.hm-delay-4 { animation-delay: 320ms; }
+
+/* ── Responsive safety ── */
+@media (max-width: 375px) {
+  h1, h2, h3 { overflow-wrap: anywhere; min-width: 0; }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
   --font-size: 16px;
+
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
