@@ -2,7 +2,6 @@
   "name": "faithpay-monorepo",
   "private": true,
   "scripts": {
-    "postinstall": "pnpm --prefix \"FaithPay SaaS Platform\" install",
     "build": "pnpm --prefix \"FaithPay SaaS Platform\" run build",
     "dev": "pnpm --prefix \"FaithPay SaaS Platform\" run dev"
   }
