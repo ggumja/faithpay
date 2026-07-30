@@ -43,7 +43,7 @@ export default function DonationFlow() {
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
   const totalSteps = 4;
 
-  const chips = [10000, 50000, 100000, 300000, 500000, 1000000];
+  const chips = [1000, 5000, 10000, 50000, 100000, 500000];
 
   const addFamilyMember = () => setFamilyMembers([...familyMembers, { name: '', birthDate: '', calendar: 'solar' }]);
   const removeFamilyMember = (i: number) => setFamilyMembers(familyMembers.filter((_, idx) => idx !== i));
@@ -189,23 +189,28 @@ export default function DonationFlow() {
                     </div>
 
                     {/* Quick amount increment chips */}
-                    <div className="flex flex-wrap gap-2">
-                      {chips.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => setAmount((amount || 0) + c)}
-                          className="h-10 px-4 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap"
-                        >
-                          + {fmt(c)}원
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setAmount(0)}
-                        className="h-10 px-4 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs"
-                      >
-                        ↺ 초기화
-                      </button>
-                    </div>
+                    {(() => {
+                      const chips = [1000, 5000, 10000, 50000, 100000, 500000];
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {chips.map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => setAmount((amount || 0) + c)}
+                              className="h-10 px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap"
+                            >
+                              + {fmt(c)}원
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setAmount(0)}
+                            className="h-10 px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                          >
+                            ↺ 초기화
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                     {/* Direct keyboard input field */}
                     <div>
