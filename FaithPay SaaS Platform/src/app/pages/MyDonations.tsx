@@ -55,6 +55,8 @@ const mockHistory: (DonationFormData & { id: string; date: string; status: strin
   }
 ];
 
+import TaxReceiptModal from '../components/TaxReceiptModal';
+
 export default function MyDonations() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
@@ -64,6 +66,7 @@ export default function MyDonations() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [history, setHistory] = useState<typeof mockHistory>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
 
   useEffect(() => {
     const tenant = mockTenants.find((t) => t.slug === tenantSlug);
@@ -207,16 +210,23 @@ export default function MyDonations() {
                           </div>
                         </div>
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm" 
-                          className="text-muted-foreground h-8 px-2"
+                          className="h-8 px-2.5 font-semibold text-slate-700 hover:text-slate-900 border-slate-300"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDownloadReceipt(item.id);
+                            setSelectedReceiptData({
+                              receiptId: item.id,
+                              donorName: item.name,
+                              donorPhone: item.phone,
+                              amount: item.amount,
+                              itemName: item.itemName,
+                              date: item.date,
+                            });
                           }}
                         >
-                          <Download className="h-4 w-4 mr-1" />
-                          확인서
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          기부금 영수증 PDF
                         </Button>
                       </div>
                     </div>
@@ -233,8 +243,7 @@ export default function MyDonations() {
                 </div>
               </CardHeader>
               <CardContent className="text-sm text-amber-700">
-                기부금 영수증 발급을 원하시는 경우 하단의 버튼을 눌러 신청해 주세요. 
-                법적 증빙 서류는 관리자 승인 후 다운로드 가능합니다.
+                기부금 영수증 발급을 원하시는 경우 각 항목 옆의 <strong>[기부금 영수증 PDF]</strong> 버튼을 누르시면 국세청 표준 양식 영수증을 즉시 출력/저장하실 수 있습니다.
               </CardContent>
               <CardFooter>
                 <Button 
@@ -242,7 +251,7 @@ export default function MyDonations() {
                   className="w-full bg-white border-amber-200 text-amber-800 hover:bg-amber-100 font-bold"
                   onClick={() => navigate(`/${tenantSlug}/tax-receipt`)}
                 >
-                  기부금 영수증 신청하기
+                  국세청 자동 간소화 제출 신청하기
                 </Button>
               </CardFooter>
             </Card>
@@ -257,6 +266,15 @@ export default function MyDonations() {
           </div>
         )}
       </div>
+
+      {/* 국세청 표준 기부금 영수증 모달 */}
+      {selectedReceiptData && currentTenant && (
+        <TaxReceiptModal
+          tenant={currentTenant}
+          data={selectedReceiptData}
+          onClose={() => setSelectedReceiptData(null)}
+        />
+      )}
     </div>
   );
 }

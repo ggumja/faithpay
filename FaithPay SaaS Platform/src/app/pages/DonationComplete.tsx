@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
+import TaxReceiptModal from '../components/TaxReceiptModal';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Share2, Download } from 'lucide-react';
@@ -31,7 +32,9 @@ export default function DonationComplete() {
     '정성 어린 봉헌에 감사드립니다.';
 
   const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('ko-KR', {
+  const [showTaxReceipt, setShowTaxReceipt] = useState(false);
+
+  const formattedDate = new Date().toLocaleString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
   });
@@ -177,11 +180,11 @@ export default function DonationComplete() {
             <span>공유하기</span>
           </button>
           <button
-            onClick={() => toast.info('영수증 PDF 저장 기능은 실제 환경에서 지원됩니다.')}
+            onClick={() => setShowTaxReceipt(true)}
             className="h-13 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs"
           >
             <Download size={16} /> 
-            <span>PDF 저장</span>
+            <span>PDF 영수증 발급</span>
           </button>
         </section>
 
@@ -204,6 +207,23 @@ export default function DonationComplete() {
         </div>
 
       </main>
+
+      {/* 국세청 표준 기부금 영수증 출력 모달 */}
+      {showTaxReceipt && (
+        <TaxReceiptModal
+          tenant={currentTenant}
+          data={{
+            receiptId: receiptId,
+            donorName: donationFormData.name,
+            donorPhone: donationFormData.phone,
+            donorIdNumber: '880101-1******',
+            amount: donationFormData.amount,
+            itemName: donationFormData.itemName,
+            date: formattedDate,
+          }}
+          onClose={() => setShowTaxReceipt(false)}
+        />
+      )}
     </div>
   );
 }

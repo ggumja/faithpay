@@ -233,7 +233,7 @@ export default function DonationFlow() {
               <div className="flex flex-col gap-6">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
-                    신원 정보를 입력해주세요
+                    이름과 전화번호를 입력해주세요
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                     안전한 연말정산 기부금 영수증 발급을 위해 사용됩니다.
