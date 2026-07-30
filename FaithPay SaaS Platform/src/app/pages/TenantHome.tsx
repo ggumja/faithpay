@@ -5,6 +5,7 @@ import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { useTenantPWA } from '../hooks/useTenantPWA';
 import { InstallBanner } from '../components/pwa/InstallBanner';
+import { TenantBannerCarousel } from '../components/TenantBannerCarousel';
 import {
   ArrowLeft, MapPin, Phone, Mail, Clock, ChevronRight,
   Shield, Repeat, Landmark, Heart, Search, Star
@@ -308,6 +309,12 @@ export default function TenantHome() {
           </div>
         </div>
       </section>
+
+      {/* ── Tenant Banner Carousel ── */}
+      <TenantBannerCarousel
+        bannerImages={currentTenant.bannerImages}
+        tenantName={currentTenant.name}
+      />
 
       {/* ── Body (responsive grid) ── */}
       <div className="th-body">

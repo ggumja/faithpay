@@ -48,7 +48,7 @@ interface BannerItem {
 export default function BannerManagement() {
   const { tenantSlug } = useParams();
   const location = useLocation();
-  const { currentTenant, setCurrentTenant, currentAdmin, updateTenantBanners } = useApp();
+  const { currentTenant, setCurrentTenant, currentAdmin, updateTenantBanners, tenants } = useApp();
   const [banners, setBanners] = useState<BannerItem[]>([]);
   const [newBannerUrl, setNewBannerUrl] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -57,18 +57,18 @@ export default function BannerManagement() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug) || mockTenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
-      // 배너 이미지를 BannerItem으로 변환
-      const bannerItems: BannerItem[] = tenant.bannerImages.map((url, index) => ({
+      const bannerList = tenant.bannerImages || [];
+      const bannerItems: BannerItem[] = bannerList.map((url, index) => ({
         id: `banner-${index}`,
         url,
         order: index,
       }));
       setBanners(bannerItems);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   if (!currentTenant) {
     return <div>Loading...</div>;
