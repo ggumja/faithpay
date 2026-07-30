@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
 
 /* =========================================================================
    FaithPay — Wanted Design System tokens
@@ -92,4 +94,30 @@ body {
 .slick-prev:before,
 .slick-next:before {
   display: none;
+}
+
+/* =========================================================================
+   FaithPay Premium Utilities
+   ========================================================================= */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .glass-panel {
+  background: rgba(23, 24, 27, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hover-lift {
+  transition: transform 250ms var(--fp-ease-standard), box-shadow 250ms var(--fp-ease-standard), border-color 250ms var(--fp-ease-standard);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--fp-shadow-3);
 }

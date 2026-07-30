@@ -171,16 +171,16 @@ function MenuItemForm({ item, onSave, onClose, terminology }: MenuItemFormProps)
 export default function DonationMenuManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { currentTenant, setCurrentTenant, currentAdmin, tenants, getTenantDonationItems, saveDonationItem, deleteDonationItem } = useApp();
   const [editingItem, setEditingItem] = useState<DonationItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug) || mockTenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   if (!currentTenant) {
     return null;
@@ -195,7 +195,7 @@ export default function DonationMenuManagement() {
             <CardDescription>관리자 로그인이 필요합니다.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-end pt-4">
-            <Button onClick={() => navigate('/admin/login')}>
+            <Button onClick={() => navigate(tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login')}>
               로그인 페이지로 이동
             </Button>
           </CardContent>
@@ -205,9 +205,14 @@ export default function DonationMenuManagement() {
   }
 
   const currentPath = `/${tenantSlug}/admin/menu`;
-  const donationItems = mockDonationItems[currentTenant.religionType] || [];
+  const donationItems = getTenantDonationItems(currentTenant);
 
   const handleSave = (itemData: Partial<DonationItem>) => {
+    saveDonationItem(currentTenant.slug, currentTenant.religionType, {
+      ...itemData,
+      id: editingItem?.id,
+    });
+
     if (editingItem) {
       toast.success('봉헌 항목이 수정되었습니다');
     } else {
@@ -218,6 +223,7 @@ export default function DonationMenuManagement() {
   };
 
   const handleDelete = (itemId: string) => {
+    deleteDonationItem(currentTenant.slug, currentTenant.religionType, itemId);
     toast.success('봉헌 항목이 삭제되었습니다');
   };
 

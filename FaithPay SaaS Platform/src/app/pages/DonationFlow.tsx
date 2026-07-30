@@ -4,7 +4,7 @@ import { useApp, DonationItem } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FamilyMember {
@@ -86,191 +86,161 @@ export default function DonationFlow() {
     '기도 제목을 적어주세요';
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--fp-bg-subtle)', fontFamily: 'var(--font-ui)' }}>
-      {/* Hero header */}
-      <div style={{
-        background: ft.heroGradient,
-        padding: '0 20px',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        {/* Large motif background */}
-        <div style={{ position: 'absolute', top: -20, right: -20, width: 160, height: 160, opacity: 0.12, color: '#fff' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--hm-paper)', fontFamily: 'var(--font-body)', color: 'var(--hm-ink)', paddingBottom: 64 }}>
+      {/* Hero Header Banner */}
+      <section style={{ position: 'relative', overflow: 'hidden', padding: '20px 16px', background: ft.heroGradient }}>
+        {/* Large background motif */}
+        <div style={{ position: 'absolute', top: -16, right: -16, width: 160, height: 160, opacity: 0.10, pointerEvents: 'none' }}>
           <MotifLarge kind={ft.motif} color="#fff" opacity={1} />
         </div>
 
-        {/* App bar */}
-        <div style={{ height: 52, display: 'flex', alignItems: 'center', position: 'relative', zIndex: 2 }}>
+        {/* Top App bar */}
+        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10, marginBottom: 20 }}>
           <button
             onClick={handleBack}
-            style={{
-              width: 44, height: 44, border: 0, background: 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            }}
+            style={{ width: 40, height: 40, borderRadius: '50%', background: 'oklch(1 0 0 / 0.14)', border: '1px solid oklch(1 0 0 / 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', transition: 'background 150ms ease' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'oklch(1 0 0 / 0.24)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'oklch(1 0 0 / 0.14)')}
           >
-            <svg width="11" height="20" viewBox="0 0 11 20" fill="none">
-              <path d="M10 1L1 10l9 9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ArrowLeft size={18} color="#fff" />
           </button>
-          <div style={{
-            flex: 1, textAlign: 'center',
-            fontSize: 17, fontWeight: 700, letterSpacing: '-0.014em', color: '#fff',
-          }}>{selectedItem.name}</div>
-          <div style={{ width: 44 }} />
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>
+            {selectedItem.name}
+          </h2>
+          <div style={{ width: 40 }} />
         </div>
 
-        {/* Step indicator */}
-        <div style={{ padding: '0 4px 24px', position: 'relative', zIndex: 2 }}>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+        {/* Progress stepper */}
+        <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative', zIndex: 10 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {Array.from({ length: totalSteps }).map((_, i) => (
-              <div key={i} style={{
-                flex: 1, height: 3, borderRadius: 999,
-                background: i < step ? '#fff' : 'rgba(255,255,255,0.25)',
-                transition: 'background 300ms var(--fp-ease-standard)',
-              }} />
+              <div
+                key={i}
+                style={{ flex: 1, height: 3, borderRadius: 999, transition: 'background 300ms ease', background: i < step ? 'white' : 'oklch(1 0 0 / 0.25)' }}
+              />
             ))}
           </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.031em', fontWeight: 700 }}>
+          <span style={{ fontSize: 10, color: 'oklch(1 0 0 / 0.68)', fontWeight: 800, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
             {step} / {totalSteps} 단계
-          </div>
+          </span>
         </div>
-      </div>
+      </section>
 
-      {/* Step content */}
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 20px 40px' }}>
-        <div style={{
-          background: '#fff',
-          border: '1px solid var(--fp-border-strong)',
-          borderRadius: 20,
-          overflow: 'hidden',
-          animation: 'fp-slide-up 200ms var(--fp-ease-standard)',
-        }}>
-          {/* Type badge */}
-          <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '5px 10px', borderRadius: 999,
-              background: ft.primaryBg, color: ft.primary,
-              fontSize: 12, fontWeight: 700, letterSpacing: '0.019em',
-            }}>
+      {/* Main Flow Content Card */}
+      <main style={{ maxWidth: 640, margin: '0 auto', padding: '28px 16px 0' }}>
+        <div className="hm-card hm-animate-scale-in" style={{ background: 'white', overflow: 'hidden' }}>
+          
+          {/* Header Title Badge */}
+          <div className="px-6 pt-6 flex items-center gap-2">
+            <span 
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+              style={{ background: ft.primaryBg, color: ft.primary }}
+            >
               <Motif kind={ft.motif} size={12} color={ft.primary} />
-              {selectedItem.name}
-            </div>
+              <span>{selectedItem.name}</span>
+            </span>
           </div>
 
-          <div style={{ padding: '16px 20px 24px' }}>
+          {/* Form Step Dispatch */}
+          <div className="p-6">
             {/* ── Step 1: 금액 입력 ── */}
             {step === 1 && (
               <div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
+                <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
                   얼마를 봉헌하시겠어요?
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium">
                   {selectedItem.description}
                 </p>
 
                 {selectedItem.amountType === 'fixed' && selectedItem.fixedAmount ? (
-                  <div style={{
-                    background: ft.heroGradientSoft,
-                    border: `1px solid ${ft.primaryBgStrong}`,
-                    borderRadius: 16, padding: '28px 20px',
-                    textAlign: 'center' as const,
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: ft.primaryDark, opacity: 0.75, marginBottom: 8, letterSpacing: '0.019em' }}>
+                  <div 
+                    className="border rounded-2xl p-8 text-center"
+                    style={{ background: ft.heroGradientSoft, borderColor: ft.primaryBgStrong }}
+                  >
+                    <span className="text-xs font-bold opacity-75 block mb-1.5" style={{ color: ft.primaryDark }}>
                       고정 봉헌 금액
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 800, letterSpacing: '-0.027em', color: ft.primaryDark }}>
-                      {fmt(selectedItem.fixedAmount)}<span style={{ fontSize: 20, fontWeight: 700, marginLeft: 4 }}>원</span>
-                    </div>
+                    </span>
+                    <h4 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: ft.primaryDark }}>
+                      {fmt(selectedItem.fixedAmount)}<span className="text-lg font-bold ml-1">원</span>
+                    </h4>
                   </div>
                 ) : (
-                  <>
-                    {/* Amount display */}
-                    <div style={{
-                      background: ft.heroGradientSoft,
-                      border: `1px solid ${ft.primaryBgStrong}`,
-                      borderRadius: 16, padding: '24px 20px',
-                      marginBottom: 18,
-                    }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: ft.primaryDark, opacity: 0.7, marginBottom: 8, letterSpacing: '0.019em' }}>봉헌 금액</div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, color: ft.primaryDark }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 800, letterSpacing: '-0.027em' }}>
+                  <div className="flex flex-col gap-6">
+                    {/* Amount Display Board */}
+                    <div 
+                      className="border rounded-2xl p-6"
+                      style={{ background: ft.heroGradientSoft, borderColor: ft.primaryBgStrong }}
+                    >
+                      <span className="text-xs font-bold opacity-70 block mb-2" style={{ color: ft.primaryDark }}>
+                        봉헌 금액
+                      </span>
+                      <div className="flex items-baseline gap-1" style={{ color: ft.primaryDark }}>
+                        <span className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight">
                           {amount > 0 ? fmt(amount) : '0'}
                         </span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, opacity: 0.7 }}>원</span>
+                        <span className="font-display text-lg font-bold opacity-70">원</span>
                       </div>
                       {amount >= 10000 && (
-                        <div style={{ fontSize: 12, color: ft.primaryDark, opacity: 0.65, marginTop: 6, letterSpacing: '0.019em' }}>
+                        <div className="text-xs font-semibold opacity-60 mt-2 tracking-wide" style={{ color: ft.primaryDark }}>
                           일금 {Math.floor(amount / 10000)}만{amount % 10000 ? ` ${fmt(amount % 10000)}` : ''}원정
                         </div>
                       )}
                     </div>
 
-                    {/* Quick chips */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginBottom: 18 }}>
+                    {/* Quick amount increment chips */}
+                    <div className="flex flex-wrap gap-2">
                       {chips.map((c) => (
                         <button
                           key={c}
                           onClick={() => setAmount((amount || 0) + c)}
-                          style={{
-                            height: 40, padding: '0 14px', borderRadius: 999,
-                            background: '#fff', color: 'var(--fp-fg-primary)',
-                            border: '1px solid var(--fp-border-strong)',
-                            fontSize: 13, fontWeight: 600, letterSpacing: '0.019em',
-                            cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >+ {fmt(c)}원</button>
+                          className="h-10 px-4 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap"
+                        >
+                          + {fmt(c)}원
+                        </button>
                       ))}
                       <button
                         onClick={() => setAmount(0)}
-                        style={{
-                          height: 40, padding: '0 14px', borderRadius: 999,
-                          border: '1px solid var(--fp-border-strong)', background: '#fff',
-                          color: 'var(--fp-fg-secondary)', fontSize: 13, fontWeight: 600,
-                          cursor: 'pointer', letterSpacing: '0.019em', fontFamily: 'var(--font-ui)',
-                        }}
-                      >↺ 초기화</button>
+                        className="h-10 px-4 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                      >
+                        ↺ 초기화
+                      </button>
                     </div>
 
-                    {/* Direct input */}
+                    {/* Direct keyboard input field */}
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 6, letterSpacing: '-0.014em' }}>직접 입력</div>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        height: 52, padding: '0 16px',
-                        background: 'var(--fp-bg-muted)', borderRadius: 12,
-                        border: '1px solid transparent',
-                      }}>
+                      <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
+                        직접 입력
+                      </label>
+                      <div className="flex items-center gap-2 h-13 px-4 bg-zinc-100 dark:bg-zinc-850 rounded-xl border border-transparent focus-within:border-zinc-350 dark:focus-within:border-zinc-700 transition-colors">
                         <input
                           type="number"
                           value={amount || ''}
                           onChange={(e) => setAmount(Number(e.target.value))}
                           placeholder="금액을 입력하세요"
-                          style={{
-                            flex: 1, border: 0, background: 'transparent', outline: 'none',
-                            fontSize: 16, fontWeight: 600, letterSpacing: '0.006em',
-                            color: 'var(--fp-fg-primary)', fontFamily: 'var(--font-ui)',
-                          }}
+                          className="flex-1 bg-transparent border-0 outline-none text-base font-extrabold text-zinc-900 dark:text-zinc-100"
                         />
-                        <span style={{ color: 'var(--fp-fg-tertiary)', fontSize: 14, fontWeight: 600 }}>원</span>
+                        <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">원</span>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}
 
             {/* ── Step 2: 신원 정보 ── */}
             {step === 2 && (
-              <div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
-                  신원 정보를 입력해주세요
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
-                  영수증 발급을 위해 필요합니다
-                </p>
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
+                    신원 정보를 입력해주세요
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                    안전한 연말정산 기부금 영수증 발급을 위해 사용됩니다.
+                  </p>
+                </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="flex flex-col gap-4">
                   <FPInput label="성명 *" value={name} onChange={setName} placeholder="홍길동" />
                   <FPInput label="전화번호 *" value={phone} onChange={setPhone} placeholder="010-1234-5678" type="tel" />
 
@@ -279,45 +249,65 @@ export default function DonationFlow() {
                   )}
 
                   {currentTenant.religionType === 'buddhist' && (
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 8, letterSpacing: '-0.014em' }}>
-                        가족 정보 <span style={{ fontWeight: 500, color: 'var(--fp-fg-tertiary)' }}>(선택)</span>
-                      </div>
-                      {familyMembers.map((member, i) => (
-                        <div key={i} style={{ background: ft.primaryBg, borderRadius: 12, padding: '14px', marginBottom: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: ft.primaryDark }}>가족 {i + 1}</span>
-                            <button onClick={() => removeFamilyMember(i)} style={{ background: 'transparent', border: 0, cursor: 'pointer', color: 'var(--fp-fg-tertiary)' }}>
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <input placeholder="이름" value={member.name} onChange={(e) => updateFamilyMember(i, 'name', e.target.value)}
-                              style={inputStyle} />
-                            <input placeholder="생년월일 (예: 1990-01-01)" value={member.birthDate} onChange={(e) => updateFamilyMember(i, 'birthDate', e.target.value)}
-                              style={inputStyle} />
+                    <div className="mt-2">
+                      <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2.5 uppercase tracking-wide">
+                        가족 정보 <span className="font-medium text-zinc-400">(선택)</span>
+                      </label>
+                      
+                      <div className="flex flex-col gap-3">
+                        {familyMembers.map((member, i) => (
+                          <div 
+                            key={i} 
+                            className="rounded-2xl p-4 border flex flex-col gap-3 relative"
+                            style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-extrabold" style={{ color: ft.primaryDark }}>
+                                가족 {i + 1}
+                              </span>
+                              <button 
+                                onClick={() => removeFamilyMember(i)} 
+                                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <input 
+                                placeholder="이름" 
+                                value={member.name} 
+                                onChange={(e) => updateFamilyMember(i, 'name', e.target.value)}
+                                className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
+                              />
+                              <input 
+                                placeholder="생년월일 (1990-01-01)" 
+                                value={member.birthDate} 
+                                onChange={(e) => updateFamilyMember(i, 'birthDate', e.target.value)}
+                                className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
+                              />
+                            </div>
+                            
                             <Select value={member.calendar} onValueChange={(v) => updateFamilyMember(i, 'calendar', v)}>
-                              <SelectTrigger style={{ height: 44 }}><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-11 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-xs font-semibold rounded-xl">
+                                <SelectValue />
+                              </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="solar">양력</SelectItem>
-                                <SelectItem value="lunar">음력</SelectItem>
+                                <SelectItem value="solar" className="text-xs">양력</SelectItem>
+                                <SelectItem value="lunar" className="text-xs">음력</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+
                       <button
                         onClick={addFamilyMember}
-                        style={{
-                          width: '100%', height: 44, borderRadius: 12,
-                          border: `1.5px dashed ${ft.primaryBgStrong}`,
-                          background: 'transparent', color: ft.primary,
-                          fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                          fontFamily: 'var(--font-ui)',
-                        }}
+                        className="w-full h-12 rounded-xl border border-dashed text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-3"
+                        style={{ borderColor: ft.primaryBgStrong, color: ft.primary }}
                       >
-                        <Plus size={16} /> 가족 추가
+                        <Plus size={14} /> 
+                        <span>가족 구성원 추가</span>
                       </button>
                     </div>
                   )}
@@ -328,135 +318,143 @@ export default function DonationFlow() {
             {/* ── Step 3: 기도/메모 ── */}
             {step === 3 && (
               <div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
+                <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
                   {currentTenant.terminology.prayer}
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
-                  {selectedItem.enablePrayerField ? '관리자가 확인하고 인쇄할 수 있습니다' : '선택사항입니다'}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium">
+                  {selectedItem.enablePrayerField ? '작성하신 마음의 편지는 단체 관리자가 확인할 수 있습니다.' : '선택사항입니다. 적지 않으셔도 괜찮습니다.'}
                 </p>
                 <textarea
                   value={prayerText}
                   onChange={(e) => setPrayerText(e.target.value)}
                   placeholder={prayerPlaceholder}
                   rows={6}
-                  style={{
-                    ...inputStyle,
-                    resize: 'vertical' as const,
-                    lineHeight: 1.6, paddingTop: 12, paddingBottom: 12,
-                  }}
+                  className="w-full p-4 bg-zinc-100 dark:bg-zinc-850 rounded-xl border border-transparent focus:border-zinc-350 dark:focus:border-zinc-700 outline-none text-sm font-semibold leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-450 dark:placeholder:text-zinc-550"
                 />
               </div>
             )}
 
             {/* ── Step 4: 결제 방식 ── */}
             {step === 4 && (
-              <div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.024em', margin: '0 0 6px' }}>
-                  결제 방식을 선택해주세요
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', margin: '0 0 20px' }}>
-                  정기 설정 시 매월 자동으로 봉헌됩니다
-                </p>
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
+                    결제 방식을 선택해주세요
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium font-sans">
+                    정기 봉헌 설정 시 지정하신 매월 결제일에 자동으로 봉헌됩니다.
+                  </p>
+                </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                <div className="flex flex-col gap-3">
                   {selectedItem.allowOneTime && (
                     <RecurringOption
-                      id="onetime" label={`단발 ${currentTenant.terminology.donation}`}
-                      desc={`한 번만 ${currentTenant.terminology.donation}합니다`}
-                      selected={!isRecurring} onClick={() => setIsRecurring(false)}
+                      id="onetime" 
+                      label={`일회성 단발 ${currentTenant.terminology.donation}`}
+                      desc={`이번 한 번만 ${currentTenant.terminology.donation}을 완료합니다.`}
+                      selected={!isRecurring} 
+                      onClick={() => setIsRecurring(false)}
                       ft={ft}
                     />
                   )}
                   {selectedItem.allowRecurring && (
                     <RecurringOption
-                      id="recurring" label={`정기 ${currentTenant.terminology.donation}`}
-                      desc="매월 자동으로 봉헌합니다"
-                      selected={isRecurring} onClick={() => setIsRecurring(true)}
+                      id="recurring" 
+                      label={`매월 정기 ${currentTenant.terminology.donation}`}
+                      desc="매월 자동으로 따뜻한 봉헌을 이어갑니다."
+                      selected={isRecurring} 
+                      onClick={() => setIsRecurring(true)}
                       ft={ft}
                     />
                   )}
                 </div>
 
                 {isRecurring && (
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 8 }}>결제일 선택</div>
+                  <div className="animate-fade-in">
+                    <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
+                      정기 결제일 선택
+                    </label>
                     <Select value={recurringDay.toString()} onValueChange={(v) => setRecurringDay(Number(v))}>
-                      <SelectTrigger style={{ height: 52 }}><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-12 border-zinc-200 dark:border-zinc-800 text-sm font-semibold rounded-xl bg-zinc-50 dark:bg-zinc-900">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="5">매월 5일</SelectItem>
-                        <SelectItem value="15">매월 15일</SelectItem>
-                        <SelectItem value="25">매월 25일</SelectItem>
+                        <SelectItem value="5" className="text-sm">매월 5일</SelectItem>
+                        <SelectItem value="15" className="text-sm">매월 15일</SelectItem>
+                        <SelectItem value="25" className="text-sm">매월 25일</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
 
-                {/* Summary */}
-                <div style={{
-                  background: ft.primaryBg,
-                  border: `1px solid ${ft.primaryBgStrong}`,
-                  borderRadius: 12, padding: '16px 16px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                    <div style={{ width: 16, height: 16, borderRadius: 999, background: ft.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>
+                {/* Offering details summary block */}
+                <div 
+                  className="rounded-2xl p-5 border"
+                  style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
+                >
+                  <div className="flex items-center gap-2 mb-4 border-b pb-3" style={{ borderColor: ft.primaryBgStrong }}>
+                    <div 
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-white" 
+                      style={{ background: ft.primary }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24">
+                        <path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      </svg>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: ft.primaryDark }}>최종 확인</span>
+                    <span className="text-sm font-extrabold" style={{ color: ft.primaryDark }}>
+                      봉헌 신청 정보 확인
+                    </span>
                   </div>
-                  {[
-                    [`${currentTenant.terminology.donation} 항목`, selectedItem.name],
-                    ['금액', `${fmt(amount)}원`],
-                    ['성명', name],
-                    ['전화번호', phone],
-                    ...(isRecurring ? [['결제', `매월 ${recurringDay}일 정기`]] : []),
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 13 }}>
-                      <span style={{ color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em' }}>{k}</span>
-                      <span style={{ fontWeight: 700, letterSpacing: '-0.014em', color: ft.primaryDark }}>{v}</span>
-                    </div>
-                  ))}
+                  <div className="flex flex-col gap-3">
+                    {[
+                      [`${currentTenant.terminology.donation} 종류`, selectedItem.name],
+                      ['금액', `${fmt(amount)}원`],
+                      ['성명', name],
+                      ['연락처', phone],
+                      ...(isRecurring ? [['결제 주기', `매월 ${recurringDay}일 정기`]] : []),
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex justify-between items-center text-xs">
+                        <span className="text-zinc-500 dark:text-zinc-400 font-medium">{k}</span>
+                        <span className="font-extrabold" style={{ color: ft.primaryDark }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Bottom CTA */}
-          <div style={{ padding: '0 20px 24px' }}>
+          {/* Bottom Actions CTA Button */}
+          <div style={{ padding: '0 24px 24px' }}>
             <button
               onClick={step < totalSteps ? handleNext : handleSubmit}
               disabled={step === 1 && selectedItem.amountType === 'flexible' && amount < 1000}
               style={{
-                width: '100%', height: 56, borderRadius: 14,
-                background: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? '#e8e8ea' : ft.heroGradient,
-                color: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'rgba(55,56,60,0.28)' : '#fff',
-                border: 0, fontSize: 16, fontWeight: 700, letterSpacing: '0.006em',
-                cursor: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-ui)',
-                transition: 'all 120ms var(--fp-ease-standard)',
+                width: '100%', height: 52, borderRadius: 14,
+                border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 700,
+                letterSpacing: '0.02em', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'filter 150ms ease, transform 150ms ease',
+                color: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'var(--hm-ink-3)' : 'white',
+                background: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'var(--hm-paper-2)' : ft.heroGradient,
               }}
+              onMouseEnter={e => { if (!(step === 1 && selectedItem.amountType === 'flexible' && amount < 1000)) { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+              onMouseLeave={e => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = ''; }}
             >
               {step === 1 && selectedItem.amountType === 'fixed'
                 ? '다음 단계'
                 : step === 1
                 ? (amount >= 1000 ? `${fmt(amount)}원 봉헌하기` : '1,000원 이상 입력해주세요')
                 : step < totalSteps ? '다음 단계'
-                : '결제하기'}
+                : '결제 신청하기'}
             </button>
           </div>
+
         </div>
-      </div>
+      </main>
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', height: 52, padding: '0 16px',
-  background: 'var(--fp-bg-muted)', borderRadius: 12,
-  border: '1px solid transparent', outline: 'none',
-  fontSize: 15, fontWeight: 600, letterSpacing: '0.006em',
-  color: 'var(--fp-fg-primary)', fontFamily: 'var(--font-ui)',
-  boxSizing: 'border-box',
-};
 
 function FPInput({ label, value, onChange, placeholder, type = 'text' }: {
   label: string; value: string; onChange: (v: string) => void;
@@ -464,13 +462,17 @@ function FPInput({ label, value, onChange, placeholder, type = 'text' }: {
 }) {
   return (
     <div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fp-fg-secondary)', marginBottom: 6, letterSpacing: '-0.014em' }}>{label}</div>
+      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--hm-ink-3)', marginBottom: 8, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+        {label}
+      </label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={inputStyle}
+        style={{ width: '100%', height: 48, padding: '0 16px', background: 'var(--hm-paper-2)', border: '1px solid oklch(0.14 0.015 260 / 0.10)', borderRadius: 12, outline: 'none', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)', color: 'var(--hm-ink)', transition: 'border-color 150ms ease', boxSizing: 'border-box' }}
+        onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.12 265)')}
+        onBlur={e => (e.target.style.borderColor = 'oklch(0.14 0.015 260 / 0.10)')}
       />
     </div>
   );
@@ -484,29 +486,32 @@ function RecurringOption({ label, desc, selected, onClick, ft }: {
   return (
     <button
       onClick={onClick}
+      className="w-full text-left border rounded-xl p-5 flex items-center gap-4 cursor-pointer transition-all duration-200"
       style={{
-        width: '100%', textAlign: 'left',
-        background: selected ? ft.primary : '#fff',
-        border: `1.5px solid ${selected ? ft.primary : 'var(--fp-border-strong)'}`,
-        borderRadius: 14, padding: '16px 16px',
-        display: 'flex', alignItems: 'center', gap: 12,
-        cursor: 'pointer', fontFamily: 'var(--font-ui)',
-        transition: 'all 160ms var(--fp-ease-standard)',
-        color: selected ? '#fff' : 'var(--fp-fg-primary)',
+        borderColor: selected ? ft.primary : 'var(--border)',
+        color: selected ? '#fff' : 'inherit',
+        background: selected ? ft.primary : 'var(--card)',
       }}
     >
-      <div style={{
-        width: 22, height: 22, borderRadius: 999, flexShrink: 0,
-        border: `2px solid ${selected ? '#fff' : 'var(--fp-border-bold)'}`,
-        background: selected ? '#fff' : 'transparent',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {selected && <div style={{ width: 10, height: 10, borderRadius: 999, background: ft.primary }} />}
+      <div 
+        className="w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+        style={{
+          borderColor: selected ? '#fff' : 'rgba(112, 115, 124, 0.4)',
+          background: selected ? '#fff' : 'transparent',
+        }}
+      >
+        {selected && <div className="w-2.5 h-2.5 rounded-full" style={{ background: ft.primary }} />}
       </div>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.014em' }}>{label}</div>
-        <div style={{ fontSize: 13, marginTop: 2, color: selected ? 'rgba(255,255,255,0.78)' : 'var(--fp-fg-tertiary)', letterSpacing: '0.019em' }}>{desc}</div>
+        <h4 className="text-sm font-extrabold tracking-tight">{label}</h4>
+        <p 
+          className="text-xs mt-0.5 font-medium transition-colors"
+          style={{ color: selected ? 'rgba(255,255,255,0.78)' : 'var(--fp-fg-tertiary)' }}
+        >
+          {desc}
+        </p>
       </div>
     </button>
   );
 }
+

@@ -85,6 +85,9 @@ interface AppContextType {
   updateTenantBanners: (tenantId: string, bannerImages: string[]) => Promise<void>;
   updateTenantInfo: (tenantId: string, tenant: Tenant) => Promise<void>;
   addTenant: (tenant: Omit<Tenant, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  getTenantDonationItems: (tenant: Tenant) => DonationItem[];
+  saveDonationItem: (tenantId: string, religionType: string, itemData: Partial<DonationItem>) => void;
+  deleteDonationItem: (tenantId: string, religionType: string, itemId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -331,6 +334,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const [tenants, setTenants] = useState<Tenant[]>(mockTenants);
 
+  // 로컬 브라우저 구형 샘플 배너 캐시 자동 클리닝 마이그레이션
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedTenants = localStorage.getItem('faithpay_tenants');
+      if (savedTenants) {
+        const parsed: Tenant[] = JSON.parse(savedTenants);
+        // 구형 unsplash 예시 이미지 URL이 포함되어 있다면 캐시 정리
+        const hasOutdatedBanner = parsed.some(t =>
+          t.bannerImages?.some(url => url.includes('unsplash.com'))
+        );
+        if (hasOutdatedBanner) {
+          localStorage.removeItem('faithpay_tenants');
+          localStorage.removeItem('faithpay_current_tenant');
+          console.log('Outdated sample banner cache cleared automatically.');
+        }
+      }
+    } catch (e) {
+      console.warn('Cache check failed:', e);
+    }
+  }, []);
+
   React.useEffect(() => {
     if (currentAdmin) {
       localStorage.setItem('faithpay_current_admin', JSON.stringify(currentAdmin));
@@ -451,6 +476,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 테넌트별 봉헌 항목 상태 및 localStorage 초기화
+  const [allDonationItems, setAllDonationItems] = useState<Record<string, DonationItem[]>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('faithpay_donation_items');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse faithpay_donation_items:', e);
+        }
+      }
+    }
+    return mockDonationItems;
+  });
+
+  const getTenantDonationItems = useCallback((tenant: Tenant): DonationItem[] => {
+    // 1. tenantId 기반 항목 검색
+    if (allDonationItems[tenant.id]) {
+      return allDonationItems[tenant.id];
+    }
+    // 2. slug 기반 검색
+    if (allDonationItems[tenant.slug]) {
+      return allDonationItems[tenant.slug];
+    }
+    // 3. 종교유형 기반 검색 (기본값)
+    return allDonationItems[tenant.religionType] || mockDonationItems[tenant.religionType] || [];
+  }, [allDonationItems]);
+
+  const saveDonationItem = useCallback((tenantIdOrSlug: string, religionType: string, itemData: Partial<DonationItem>) => {
+    setAllDonationItems(prev => {
+      const currentList = prev[tenantIdOrSlug] || prev[religionType] || mockDonationItems[religionType] || [];
+      let updatedList: DonationItem[];
+
+      if (itemData.id) {
+        // 기존 수정
+        updatedList = currentList.map(item => item.id === itemData.id ? { ...item, ...itemData } as DonationItem : item);
+      } else {
+        // 신규 추가
+        const newItem: DonationItem = {
+          id: `item-${Date.now()}`,
+          name: itemData.name || '새 항목',
+          description: itemData.description || '',
+          amountType: itemData.amountType || 'flexible',
+          fixedAmount: itemData.fixedAmount,
+          allowRecurring: itemData.allowRecurring ?? true,
+          allowOneTime: itemData.allowOneTime ?? true,
+          enablePrayerField: itemData.enablePrayerField ?? true,
+          enabled: itemData.enabled ?? true,
+        };
+        updatedList = [...currentList, newItem];
+      }
+
+      const nextState = {
+        ...prev,
+        [tenantIdOrSlug]: updatedList,
+        [religionType]: updatedList, // 종교유형 키에도 함께 연동
+      };
+
+      try {
+        localStorage.setItem('faithpay_donation_items', JSON.stringify(nextState));
+      } catch (e) {
+        console.warn('Failed to save faithpay_donation_items:', e);
+      }
+
+      // mockDonationItems 메모리 참조도 업데이트
+      mockDonationItems[religionType] = updatedList;
+
+      return nextState;
+    });
+  }, []);
+
+  const deleteDonationItem = useCallback((tenantIdOrSlug: string, religionType: string, itemId: string) => {
+    setAllDonationItems(prev => {
+      const currentList = prev[tenantIdOrSlug] || prev[religionType] || mockDonationItems[religionType] || [];
+      const updatedList = currentList.filter(item => item.id !== itemId);
+
+      const nextState = {
+        ...prev,
+        [tenantIdOrSlug]: updatedList,
+        [religionType]: updatedList,
+      };
+
+      try {
+        localStorage.setItem('faithpay_donation_items', JSON.stringify(nextState));
+      } catch (e) {
+        console.warn('Failed to save faithpay_donation_items:', e);
+      }
+
+      mockDonationItems[religionType] = updatedList;
+
+      return nextState;
+    });
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -465,6 +584,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateTenantBanners,
         updateTenantInfo,
         addTenant,
+        getTenantDonationItems,
+        saveDonationItem,
+        deleteDonationItem,
       }}
     >
       {children}

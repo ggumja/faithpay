@@ -1,0 +1,336 @@
+--- Page 1 ---
+ 
+ 
+ 
+인증결제 연동 API 안내 
+V2.2 
+ 
+㈜나노솔루션  
+--- Page 2 ---
+ 
+목차 
+ 
+1. 공통 .................................................................................................................................................... 3 
+2. PC ....................................................................................................................................................... 3 
+2.1 요청 ......................................................................................................................................................................... 3 
+2.2 응답 ......................................................................................................................................................................... 4 
+3. 모바일 ................................................................................................................................................ 5 
+3.3 요청 ......................................................................................................................................................................... 5 
+3.4 응답 ......................................................................................................................................................................... 6 
+4. 취소 .................................................................................................................................................... 7 
+5. 환불 .................................................................................................................................................... 7 
+6. 가상계좌 입금 결과 NOTI .............................................................................................................. 8 
+7. 별첨 .................................................................................................................................................... 9 
+ 카드코드 .................................................................................................................................................................... 9 
+ 은행코드 .................................................................................................................................................................... 9 
+ 
+  
+--- Page 3 ---
+1. 공통 
+⚫ 프로토콜 : HTTPS/HTTP 
+⚫ HTTP Method : POST 
+⚫ URL  
+테스트 http://dev3.nanopay.co.kr 
+운영 https://pay.nanopay.co.kr 
+⚫ Headers 
+Header Value 
+Content-Type application/json 
+CharSet UTF-8 
+API_KEY *필수 
+⚫ 승인 결과는 요청시 전달 된 receiveUrl로 json 데이터 전송 
+⚫ 테스트 환경에서는 가상계좌 입금통보 불가 
+- 테스트 필요시 담당자에게 요청 
+⚫ 가상계좌 결제 요청 후 입금 완료 되면 등록 된 noti URL로 josn 데이터 전송 
+- noti URL은 담당자를 통해 등록 필수 
+ 
+2. PC 
+2.1 요청 
+⚫ URL : /api/payment/cert/pc/request.io 
+⚫ 요청 
+필드 필드명 타입 필수 비고 
+ver 버전 String △  
+loginId 사용자 ID String O  
+shopcode 가맹점코드 String O  
+orderName 주문자명 String O  
+orderTel 주문자 전화번호 String O  
+orderEmail 주문자 이메일 String   
+payWay 결제수단 String O 카드|간편결제 : card 
+가상계좌 : vbank 
+--- Page 4 ---
+실시간계좌이체 : dbank 
+goodsName 상품명 String O  
+reqPayAmt 결제금액 String O  
+receiveUrl 응답 받을 url String O 결과 응답을 전송 받을 url 필수 입력 
+compOrderNo 업체주문번호 String   
+compOrderMem 업체주문자정보 String   
+ 
+2.2 응답 
+⚫ URL : /api/payment/cert/pc/result.io 
+⚫ 방화벽 확인 - IP : 175.45.194.132:443 
+⚫ 응답 
+파라메터명 구분 자료형 비고 
+공통 
+resultCode 결과코드 String 성공 : 0000, 실패 : 그 외 
+resultMsg 결과메세지 String  
+shopcode 가맹점코드  String  
+compOrderNo 업체주문번호 String  
+compOrderMem 업체회원아이디 or 회원번호 String  
+goodsName 주문 상품명 String  
+reqPayAmt 요청금액 String  
+orderName 주문자명 String  
+orderTel 주문자 연락처 String  
+orderEmail 주문자 이메일 String  
+tranNo 거래번호 String  
+apprDate 결제일자 String  
+apprTime 결제시간 String  
+payWay 결제수단 String  
+receiveUrl 결과 전송 url String  
+카드결제 
+apprNo 승인번호 String  
+cardNo 카드번호 String 간편결제시 반환 X 
+installment 할부개월수 String  
+cardSrc 간편결제코드 String 간편결제시 반환 
+C : PAYCO 
+O : KAKAOPAY 
+L : LPAY  
+--- Page 5 ---
+V : TOSSPAY  
+K : 국민앱카드 
+cardcode 카드사코드 String *별첨 참조 
+가상계좌 
+vactNo 가상계좌 채번 번호 String  
+vactBankCode 가상계좌 은행코드 String  
+vactBankNm 가상계좌 은행명 String  
+vactNm 가상계좌 계좌주명 String  
+vactInputNm 입금자명 String  
+expDate 입금기한일자 String yyyymmdd 
+expTime 입금기한시간 String hhmmss 
+➔ 가상계좌 결제시 현금영수증 정보는 입금완료 후 NOTI 데이터로 전달 됩니다. 
+실시간 계좌이체 
+acctBankCode 계좌이체 은행코드 String  
+cshrType 현금영수증 발행타입 String 0 : 소득공제용 
+1 : 지출증빙용 
+현급영수증 발급시에만 반환 
+cshrApprNo 현금영수증 승인번호 String 현급영수증 발급시에만 반환 
+cshrResult 현금영수증 결과메세지 String 현급영수증 발급시에만 반환 
+ 
+3. 모바일 
+3.3 요청 
+⚫ URL : /api/payment/cert/mobile/request.io 
+⚫ 요청 
+필드 필드명 타입 필수 비고 
+ver 버전 String △  
+loginId 사용자 ID String O  
+shopcode 가맹점코드 String O  
+orderName 주문자명 String O  
+orderTel 주문자 전화번호 String O  
+orderEmail 주문자 이메일 String   
+payWay 결제수단 String O 카드|간편결제 : card 
+가상계좌 : vbank 
+실시간계좌이체 : dbank 
+goodsName 상품명 String O  
+reqPayAmt 결제금액 String O  
+--- Page 6 ---
+receiveUrl 응답 받을 url String O 결과 응답을 전송 받을 url 필수 입력 
+compOrderNo 업체주문번호 String   
+compOrderMem 업체주문자정보 String   
+ 
+3.4 응답 
+⚫ URL : /api/payment/cert/mobile/result.io 
+⚫ 방화벽 확인 - IP : 175.45.194.132:443 
+⚫ 응답 
+파라메터명 구분 자료형 비고 
+공통 
+resultCode 결과코드 String 성공 : 0000, 실패 : 그 외 
+resultMsg 결과메세지 String  
+shopcode 가맹점코드  String  
+compOrderNo 업체주문번호 String  
+compOrderMem 업체회원아이디 or 회원번호 String  
+goodsName 주문 상품명 String  
+reqPayAmt 요청금액 String  
+orderName 주문자명 String  
+orderTel 주문자 연락처 String  
+orderEmail 주문자 이메일 String  
+tranNo 거래번호 String  
+apprDate 결제일자 String  
+apprTime 결제시간 String  
+payWay 결제수단 String  
+receiveUrl 결과 전송 url String  
+카드결제 
+apprNo 승인번호 String  
+cardNo 카드번호 String 간편결제시 반환 X 
+installment 할부개월수 String  
+cardSrc 간편결제코드 String 간편결제시 반환 
+C : PAYCO 
+O : KAKAOPAY 
+L : LPAY  
+V : TOSSPAY  
+K : 국민앱카드 
+cardcode 카드사코드 String *별첨 참조 
+--- Page 7 ---
+가상계좌 
+vactNo 가상계좌 채번 번호 String  
+vactBankCode 가상계좌 은행코드 String  
+vactBankNm 가상계좌 은행명 String  
+vactNm 가상계좌 계좌주명 String  
+vactInputNm 입금자명 String  
+expDate 입금기한일자 String yyyymmdd 
+expTime 입금기한시간 String hhmmss 
+➔ 가상계좌 결제시 현금영수증 정보는 입금완료 후 NOTI 데이터로 전달 됩니다. 
+실시간 계좌이체 
+acctBankCode 계좌이체 은행코드 String  
+cshrType 현금영수증 발행타입 String 0 : 소득공제용 
+1 : 지출증빙용 
+현급영수증 발급시에만 반환 
+cshrApprNo 현금영수증 승인번호 String 현급영수증 발급시에만 반환 
+cshrResult 현금영수증 결과메세지 String 현급영수증 발급시에만 반환 
+ 
+4. 취소 
+⚫ 수기결제 연동 API 취소 부분 참조 
+ 
+5. 환불 
+⚫ URL : /api/payment/refund.io 
+⚫ 가상계좌 결제건 해당 
+⚫ 요청 
+필드 필드명 타입 필수 비고 
+ver App 버전 String △ 앱 결제시 필수 
+loginId 사용자 ID String O  
+shopcode 가맹점코드 String O  
+payWay 결제수단 String O 가상계좌 : vbank 
+cancelAmt 취소금액 String O 부분취소 불가 
+tranNo 원거래번호 String O 결제요청시 응답받은 거래번호 
+inputTranNo 입금완료 거래번호 String O 가상계좌 입금 후 NOTI된 거래번호 
+compOrderNo 원거래 업체 주문번호 String   
+ 
+--- Page 8 ---
+⚫ 응답 
+필드 필드명 타입 비고 
+resultCode 결과코드 String 성공 : 0000, 실패 : 그 외 
+resultMsg 결과메세지 String  
+shopcode 가맹점코드 String  
+cancelDate 취소일자 String yyyymmdd 
+cancelTime 취소시간 String hhmmss 
+cancelAmt 취소금액 String  
+apprTranNo 원거래번호 String  
+compOrderNo 원거래 업체 주문번호 String  
+⚫ 응답 예시 
+{ 
+    "resultCode": "0000", 
+    "resultMsg": "정상", 
+    "shopcode": "230000002", 
+    "cancelDate": "20240904", 
+    "cancelTime": "155242", 
+    "cancelAmt": "1004", 
+    "apprTranNo": "2409040000019", 
+    "compOrderNo": "" 
+} 
+ 
+6. 가상계좌 입금 결과 NOTI 
+⚫ 방화벽 확인 - IP : 175.45.194.132:443 
+⚫ NOTI 받을 url 을 담당자에게 전달하여 등록 후 개시  
+⚫ 정상처리 결과 미응답시 최대 10 회까지 재전송 
+⚫ NOTI 데이터 
+파라메터명 구분 자료형 비고 
+shopcode 가맹점코드 String  
+tranNo 거래번호 String 결제요청시 거래번호 
+inputDate 입금일자 String  
+inputTime 입금시간 String  
+inputTranNo 입금통지 거래번호 String 가상계좌 환불 요청시 필수 
+inputBank 입금은행명 String  
+--- Page 9 ---
+inputNm 입금 예금주명 String  
+inputAmt 입금 금액 String  
+cashrDate 현금영수증발급일자 String 
+yyyymmdd 
+현급영수증 발급시에만 전달 
+cashrTime 현금영수증발급시간 Int 
+hhmmss 
+현급영수증 발급시에만 전달 
+cashrNo 현금영수증 발급번호 String 현급영수증 발급시에만 전달 
+ 
+⚫ NOTI 응답 
+필드 필드명 타입 비고 
+resultCode 응답 성공여부 전달 String Noti 수신 성공시 ‘00’ 전달 
+ 
+7. 별첨 
+ 카드코드 
+ 
+카드코드 카드사명 
+01 비씨 
+02 국민 
+03 외환(하나) 
+04 삼성 
+05 신한 
+06 현대 
+07 롯데 
+08 농협 
+09 하나 
+11 우리 
+99 해외 
+ 
+ 은행코드 
+은행코드 은행명 
+002 산업은행 
+003 기업은행 
+004 국민은행 
+005 외환은행 
+--- Page 10 ---
+007 수협중앙회 
+011 농협중앙회 
+012 농협회원조합 
+020 우리은행 
+023 SC 제일은행 
+027 한국씨티은행 
+031 대구은행 
+032 부산은행 
+034 광주은행 
+035 제주은행 
+037 전북은행 
+039 경남은행 
+045 새마을금고연합회 
+048 신협중앙회 
+050 상호저축은행 
+052 모건스탠리은행 
+054 HSBC 은행 
+055 도이치은행 
+056 알비에스은행 
+057 제이피모간체이스은행 
+058 미즈호코퍼레이트은행 
+059 미쓰비시도쿄 UFJ 은행 
+060 BOA 은행 
+064 산림조합중앙회 
+071 우체국 
+081 하나은행 
+088 신한은행 
+089 케이뱅크 
+090 카카오뱅크 
+092 토스뱅크 
+209 유안타증권 
+218 현대증권 
+230 미래에셋증권 
+238 대우증권 
+240 삼성증권 
+243 한국투자증권 
+247 우리투자증권 
+261 교보증권 
+262 하이투자증권 
+--- Page 11 ---
+263 HMC 투자증권 
+264 키움증권 
+265 이트레이드증권 
+266 에스케이증권 
+267 대신증권 
+268 솔로몬투자증권 
+269 한화증권 
+270 하나대투증권 
+271 토스증권 
+278 신한금융투자 
+279 동부증권 
+280 유진투자증권 
+287 메리츠종합금융증권 
+288 카카오증권 
+289 엔에이치투자증권 
+290 부국증권 
+291 신영증권 
+292 엘아이지투자증권 
+ 

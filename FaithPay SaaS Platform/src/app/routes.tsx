@@ -34,6 +34,10 @@ export const router = createBrowserRouter([
         Component: AdminLogin,
       },
       {
+        path: "/:tenantSlug/admin/login",
+        Component: AdminLogin,
+      },
+      {
         path: "/system/admin",
         Component: SystemAdminDashboard,
       },

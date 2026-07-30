@@ -120,7 +120,7 @@ const RESPONSIVE_CSS = `
 export default function TenantHome() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant } = useApp();
+  const { currentTenant, setCurrentTenant, getTenantDonationItems } = useApp();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recurring' | 'onetime'>('all');
   const heroRef = useRef<HTMLDivElement>(null);
@@ -167,7 +167,7 @@ export default function TenantHome() {
   }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-  const allItems: DonationItem[] = mockDonationItems[currentTenant.religionType] || [];
+  const allItems: DonationItem[] = getTenantDonationItems(currentTenant);
 
   const filtered = allItems.filter(item => {
     const q = search.toLowerCase();
@@ -541,12 +541,7 @@ function DonationItemRow({ item, ft, terminology, icon, delay, onClick }: RowPro
         transform: hovered ? 'translateY(-1px)' : 'none',
       } as React.CSSProperties}
     >
-      <div className="th-row-grid" style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 16, padding: '18px 20px', alignItems: 'center' }}>
-        {/* Icon */}
-        <div className="th-row-icon" style={{ width: 44, height: 44, borderRadius: 12, background: hovered ? ft.primaryBg : C.paper, border: `1px solid ${hovered ? ft.primary + '30' : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ft.primary, flexShrink: 0, transition: 'all 180ms' }}>
-          {icon ?? <Motif kind={ft.motif} size={18} color={ft.primary} />}
-        </div>
-
+      <div className="th-row-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '18px 20px', alignItems: 'center' }}>
         {/* Content */}
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3, flexWrap: 'wrap' }}>

@@ -1,0 +1,251 @@
+--- Page 1 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+수기결제 연동 API 안내 
+V2.2 
+ 
+㈜나노솔루션 
+--- Page 2 ---
+목차 
+1. 공통 ................................ ................................ ................................ ................................ ....................  3 
+2. 결제요청 ................................ ................................ ................................ ................................ ............  3 
+3. 결제취소 ................................ ................................ ................................ ................................ ............  5 
+4. 별첨 ................................ ................................ ................................ ................................ ....................  6 
+ 카드코드 ................................ ................................ ................................ ................................ .......... 6 
+ 은행코드 ................................ ................................ ................................ ................................ .......... 6 
+--- Page 3 ---
+1. 공통 
+⚫ 프로토콜 : HTTPS/HTTP 
+⚫ HTTP Method : POST 
+⚫ URL  
+테스트 http://dev3.nanopay.co.kr 
+운영 https://pay.nanopay.co.kr 
+⚫ Headers 
+Header Value 
+Content-Type application/json 
+CharSet UTF-8 
+API_KEY *필수 
+ 
+⚫ 암호화 방식 : AES-256-CBC, PKCS7 
+ 
+ 
+2. 결제요청 
+⚫ URL : /api/payment/approval.io 
+⚫ 요청 
+ 
+필드 필드명 타입 필수 비고 
+ver 버전 String △  
+loginId 사용자 ID String O  
+shopcode 가맹점코드 String O  
+payMethod 결제방법 String O Q : QR결제 
+payType 결제(정산)타입 String △  
+orderName 주문자명 String O  
+orderTel 주문자 전화번호 String O  
+orderEmail 주문자 이메일 String   
+goodsName 상품명 String O  
+reqPayAmt 결제금액 String O  
+installment 할부개월 String  mm형식, 미입력시 00(일시불) 
+compOrderNo 업체주문번호 String   
+compOrderMem 업체주문자정보 String   
+encData 카드정보 암호화 String O 카드정보 json 전체 AES 암호화 
+--- Page 4 ---
+{ 
+"resultCode": "0000", 
+"resultMsg": "", 
+"shopcode": "230000002", 
+"payType": "", 
+"apprDate": "20240903", 
+✓ encData json 
+ 
+필드 필드명 타입 필수 비고 
+cardNo 카드번호 String O  
+cardExpYy 카드 유효기간 년 String O yy 형식 
+cardExpMm 카드 유효기간 월 String O mm 형식 
+cardPw 카드 비밀번호 앞2자리 String O  
+cardHolderYmd 생년월일or사업자번호 String O 카드소유주의 생년월일 6자리or 
+법인카드 사업자번호 10자리 
+ 
+⚫ 응답 
+ 
+필드 필드명 타입 비고 
+resultCode 결과코드 String 성공 : 0000, 실패 : 그 외 
+resultMsg 결과메세지 String  
+shopcode 가맹점코드 String  
+payType 결제(정산)타입 String  
+apprDate 승인일자 String yyyymmdd 
+apprTime 승인시간 String hhmmss 
+orderName 주문자명 String  
+orderTel 주문자 전화번호 String  
+orderEmail 주문자 이메일 String  
+goodsName 상품명 String  
+reqPayAmt 결제금액 String  
+installment 할부 개월수 String  
+cardNo 카드번호 String 마스킹 처리 된 카드번호 
+apprNo 승인번호 String  
+tranNo 거래번호 String *취소요청시 필요 
+cardTxt 카드명 String  
+cardCode 카드코드 String  
+compOrderNo 업체주문번호 String  
+compOrderMem 업체주문자정보 String  
+ 
+⚫ 응답 예시 
+ 
+--- Page 5 ---
+ 
+ 
+ 
+ 
+3. 결제취소 
+⚫ URL : /api/payment/cancel.io 
+⚫ 요청 
+ 
+필드 필드명 타입 필수 비고 
+ver 버전 String △  
+loginId 사용자 ID String O  
+shopcode 가맹점코드 String O  
+payMethod 결제방법 String △ Q : QR결제 
+cancelAmt 취소금액 String O 부분취소 불가 
+tranNo 원거래번호 String O 승인거래시 응답받은 거래번호 
+compOrderNo 원거래 업체 주문번호 String   
+ 
+⚫ 응답 
+ 
+필드 필드명 타입 비고 
+resultCode 결과코드 String 성공 : 0000, 실패 : 그 외 
+resultMsg 결과메세지 String  
+shopcode 가맹점코드 String  
+cancelDate 취소일자 String yyyymmdd 
+cancelTime 취소시간 String hhmmss 
+"apprTime": "160025", 
+"orderName": "test", 
+"orderTel": "1234", 
+"orderEmail": "", 
+"goodsName": "test0903", 
+"reqPayAmt": "1004", 
+"installment": "00", 
+"cardNo": "48901682****1700", 
+"apprNo": "00647018", 
+"tranNo": "2409030071109", 
+"cardTxt": "현대", 
+"cardCode": "06", 
+"compOrderNo": "", 
+"compOrderMem": "" 
+} 
+--- Page 6 ---
+{ 
+"resultCode": "0000", 
+"resultMsg": "정상", 
+"shopcode": "230000002", 
+"cancelDate": "20240904", 
+"cancelTime": "155242", 
+"cancelAmt": "1004", 
+"apprTranNo": "2409030071109", 
+"compOrderNo": "" 
+} 
+cancelAmt 취소금액 String  
+apprTranNo 원거래번호 String  
+compOrderNo 원거래 업체 주문번호 String  
+ 
+⚫ 응답 예시 
+ 
+ 
+ 
+ 
+4. 별첨 
+ 카드코드 
+ 
+카드코드 카드사명 
+01 비씨 
+02 국민 
+03 외환(하나) 
+04 삼성 
+05 신한 
+06 현대 
+07 롯데 
+08 농협 
+09 하나 
+11 우리 
+99 해외 
+ 
+ 은행코드 
+ 
+은행코드 은행명 
+002 산업은행 
+--- Page 7 ---
+003 기업은행 
+004 국민은행 
+005 외환은행 
+007 수협중앙회 
+011 농협중앙회 
+012 농협회원조합 
+020 우리은행 
+023 SC 제일은행 
+027 한국씨티은행 
+031 대구은행 
+032 부산은행 
+034 광주은행 
+035 제주은행 
+037 전북은행 
+039 경남은행 
+045 새마을금고연합회 
+048 신협중앙회 
+050 상호저축은행 
+052 모건스탠리은행 
+054 HSBC 은행 
+055 도이치은행 
+056 알비에스은행 
+057 제이피모간체이스은행 
+058 미즈호코퍼레이트은행 
+059 미쓰비시도쿄 UFJ 은행 
+060 BOA 은행 
+064 산림조합중앙회 
+071 우체국 
+081 하나은행 
+088 신한은행 
+089 케이뱅크 
+090 카카오뱅크 
+092 토스뱅크 
+209 유안타증권 
+218 현대증권 
+230 미래에셋증권 
+238 대우증권 
+240 삼성증권 
+243 한국투자증권 
+--- Page 8 ---
+247 우리투자증권 
+261 교보증권 
+262 하이투자증권 
+263 HMC 투자증권 
+264 키움증권 
+265 이트레이드증권 
+266 에스케이증권 
+267 대신증권 
+268 솔로몬투자증권 
+269 한화증권 
+270 하나대투증권 
+271 토스증권 
+278 신한금융투자 
+279 동부증권 
+280 유진투자증권 
+287 메리츠종합금융증권 
+288 카카오증권 
+289 엔에이치투자증권 
+290 부국증권 
+291 신영증권 
+292 엘아이지투자증권 
+ 

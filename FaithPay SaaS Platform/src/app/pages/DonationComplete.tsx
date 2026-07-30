@@ -37,241 +37,164 @@ export default function DonationComplete() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--fp-bg-subtle)', fontFamily: 'var(--font-ui)' }}>
-      {/* Success hero */}
-      <div style={{
-        background: ft.heroGradient,
-        padding: '56px 28px 40px',
-        position: 'relative', overflow: 'hidden',
-        color: '#fff',
-      }}>
-        {/* Background decorations */}
-        <div style={{ position: 'absolute', top: -60, right: -50, width: 260, height: 260, opacity: 0.14, color: '#fff' }}>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans pb-16">
+      {/* Success Hero */}
+      <section className="relative overflow-hidden px-4 py-16 text-white text-center sm:text-left" style={{ background: ft.heroGradient }}>
+        {/* Large background motif decoration */}
+        <div className="absolute -top-12 -right-12 w-52 h-52 opacity-10 text-white pointer-events-none">
           <MotifLarge kind={ft.motif} color="#fff" opacity={1} />
         </div>
-        <div style={{ position: 'absolute', bottom: -80, left: -60, width: 280, height: 280, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div className="absolute -bottom-20 -left-10 w-64 h-64 rounded-full bg-white/[0.04] blur-3xl pointer-events-none" />
 
-        <div style={{ position: 'relative', zIndex: 2, maxWidth: 560, margin: '0 auto' }}>
-          {/* Animated icon */}
-          <div style={{
-            width: 88, height: 88, borderRadius: 24,
-            background: 'rgba(255,255,255,0.14)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 24,
-            animation: 'fp-ring-in 520ms var(--fp-ease-standard)',
-          }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: 18, background: '#fff', color: ft.primary,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: 'fp-pop-in 560ms 120ms both var(--fp-ease-standard)',
-            }}>
-              <Motif kind={ft.motif} size={32} color={ft.primary} />
+        <div className="max-w-xl mx-auto relative z-10 flex flex-col sm:flex-row items-center gap-6">
+          {/* Animated check circle & Motif */}
+          <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/25 flex items-center justify-center animate-ring-in shadow-md">
+            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center animate-pop-in">
+              <Motif kind={ft.motif} size={28} color={ft.primary} />
             </div>
           </div>
 
-          <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 30, fontWeight: 800, lineHeight: 1.28, letterSpacing: '-0.027em',
-            margin: '0 0 10px',
-          }}>
-            봉헌이<br />완료되었습니다
-          </h1>
-          <p style={{
-            fontSize: 15, fontWeight: 500, lineHeight: 1.5,
-            color: 'rgba(255,255,255,0.88)', letterSpacing: '0.006em',
-            margin: '0 0 28px',
-          }}>{completionMessage}</p>
-
-          {/* Receipt preview in hero */}
-          <div style={{
-            background: 'rgba(255,255,255,0.10)',
-            border: '1px solid rgba(255,255,255,0.18)',
-            borderRadius: 18, padding: 20,
-            backdropFilter: 'blur(8px)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.75, letterSpacing: '0.031em' }}>봉헌 금액</span>
-              <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.75, letterSpacing: '0.019em' }}>{formattedDate}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 16 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, letterSpacing: '-0.027em' }}>
-                {fmt(donationFormData.amount)}
-              </span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, opacity: 0.8 }}>원</span>
-            </div>
-            <div style={{ height: 1, background: 'rgba(255,255,255,0.18)', margin: '0 0 14px' }} />
-            {[
-              [currentTenant.terminology.donation, donationFormData.itemName],
-              ['받은 곳', currentTenant.name],
-              ...(donationFormData.isRecurring ? [['결제', `매월 ${donationFormData.recurringDay}일 정기`]] : []),
-            ].map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
-                <span style={{ fontSize: 13, opacity: 0.7, letterSpacing: '0.019em', flexShrink: 0 }}>{k}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.014em', textAlign: 'right' }}>{v}</span>
-              </div>
-            ))}
+          <div className="flex-1">
+            <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
+              봉헌이 완료되었습니다
+            </h1>
+            <p className="text-sm font-semibold text-white/80 tracking-wide">
+              {completionMessage}
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Detailed receipt */}
-      <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 20px 48px' }}>
-        {/* Official receipt card */}
-        <div style={{
-          background: '#fff',
-          border: `1px solid ${ft.primaryBgStrong}`,
-          borderRadius: 20, padding: '24px',
-          position: 'relative', overflow: 'hidden',
-          marginBottom: 14,
-        }}>
-          <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, opacity: 0.06, color: ft.primary }}>
+      {/* Detail Content Ticket */}
+      <main className="max-w-xl mx-auto px-4 mt-8 flex flex-col gap-5">
+        
+        {/* Receipt Container */}
+        <div 
+          className="bg-white dark:bg-zinc-900 border rounded-2xl p-6 shadow-sm relative overflow-hidden"
+          style={{ borderColor: ft.primaryBgStrong }}
+        >
+          <div 
+            className="absolute -top-6 -right-6 w-28 h-28 opacity-5 pointer-events-none"
+            style={{ color: ft.primary }}
+          >
             <MotifLarge kind={ft.motif} color="currentColor" opacity={1} />
           </div>
-          <div style={{ position: 'relative' }}>
-            {/* Header */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '4px 10px', borderRadius: 999,
-              background: ft.primaryBg, color: ft.primary,
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.031em',
-              marginBottom: 14,
-            }}>
-              <Motif kind={ft.motif} size={12} color={ft.primary} />
-              기부금 영수증
-            </div>
 
-            <div style={{ fontSize: 12, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.031em', marginBottom: 6 }}>봉헌 금액</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, color: ft.primaryDark, marginBottom: 20 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, letterSpacing: '-0.027em' }}>
+          <div className="relative z-10">
+            {/* Ticket Tag */}
+            <span 
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase mb-5"
+              style={{ background: ft.primaryBg, color: ft.primary }}
+            >
+              <Motif kind={ft.motif} size={10} color={ft.primary} />
+              <span>기부금 영수증</span>
+            </span>
+
+            <span className="block text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mb-1.5">
+              최종 봉헌 금액
+            </span>
+            
+            <div className="flex items-baseline gap-1 mb-6 border-b pb-5 border-dashed border-zinc-200 dark:border-zinc-800">
+              <span className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: ft.primaryDark }}>
                 {fmt(donationFormData.amount)}
               </span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700 }}>원</span>
+              <span className="font-display text-base font-bold" style={{ color: ft.primaryDark }}>원</span>
             </div>
 
-            {/* Dashed divider */}
-            <div style={{ borderTop: '1px dashed var(--fp-border-strong)', margin: '0 -24px', padding: '20px 24px 0' }}>
+            {/* Meta Table */}
+            <div className="flex flex-col gap-3">
               {[
-                ['영수증번호', receiptId],
-                ['봉헌일시', formattedDate],
+                ['영수증 번호', receiptId],
+                ['봉헌 일시', formattedDate],
                 [`${currentTenant.terminology.donation} 항목`, donationFormData.itemName],
-                ['받은 곳', currentTenant.name],
-                ['성명', donationFormData.name],
+                ['받은 기관', currentTenant.name],
+                ['봉헌자 성명', donationFormData.name],
                 ...(donationFormData.baptismName ? [['세례명', donationFormData.baptismName]] : []),
-                ['전화번호', donationFormData.phone],
-                ...(donationFormData.isRecurring ? [['결제 유형', `정기 결제 (매월 ${donationFormData.recurringDay}일)`]] : [['결제 유형', '단발']]),
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0' }}>
-                  <span style={{ fontSize: 13, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em' }}>{k}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.014em', textAlign: 'right', maxWidth: '60%' }}>{v}</span>
+                ['연락처', donationFormData.phone],
+                ...(donationFormData.isRecurring ? [['결제 주기', `정기 결제 (매월 ${donationFormData.recurringDay}일)`]] : [['결제 유형', '일회성 단발']]),
+              ].map(([key, val]) => (
+                <div key={key} className="flex justify-between items-center text-xs">
+                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">{key}</span>
+                  <span className="font-bold text-zinc-850 dark:text-zinc-150 text-right max-w-[65%] line-clamp-1">{val}</span>
                 </div>
               ))}
             </div>
 
+            {/* Prayers Note */}
             {donationFormData.prayerText && (
-              <div style={{
-                margin: '16px -24px -24px', padding: '16px 24px',
-                background: ft.accentBg, borderTop: `1px solid ${ft.primaryBgStrong}`,
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: ft.accent, letterSpacing: '0.031em', marginBottom: 6 }}>
+              <div 
+                className="mt-6 -mx-6 -mb-6 p-5 border-t"
+                style={{ background: ft.accentBg, borderColor: ft.primaryBgStrong }}
+              >
+                <span className="block text-[10px] font-extrabold uppercase tracking-widest mb-1.5" style={{ color: ft.accent }}>
                   {currentTenant.terminology.prayer}
-                </div>
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--fp-fg-primary)', letterSpacing: '0.019em' }}>
+                </span>
+                <p className="text-xs font-semibold leading-relaxed text-zinc-700 dark:text-zinc-300">
                   {donationFormData.prayerText}
-                </div>
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Tax auto-reported */}
-        <div style={{
-          background: '#fff', border: '1px solid var(--fp-border-strong)',
-          borderRadius: 16, padding: '16px 18px',
-          display: 'flex', alignItems: 'center', gap: 12,
-          marginBottom: 20,
-        }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: '#FFF1DD', color: '#B86B00',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
+        {/* Auto Report Alert Card */}
+        <section className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-xl p-4 flex items-center gap-3.5 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 flex items-center justify-center flex-shrink-0 shadow-sm">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
               <path d="M3 9h18M8 14h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.014em' }}>홈택스 자동 신고됨</div>
-            <div style={{ fontSize: 12, color: 'var(--fp-fg-tertiary)', letterSpacing: '0.019em', marginTop: 2 }}>
-              연말정산 기부금공제 자동 반영
-            </div>
+          <div className="flex-1">
+            <h4 className="text-xs sm:text-sm font-bold tracking-tight">국세청 홈택스 신고 진행</h4>
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">연말정산 소득공제용 기부금 대장 자동 신고 처리</p>
           </div>
-          <div style={{
-            width: 22, height: 22, borderRadius: 999, background: '#00bf40', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>
+          <div className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0">
+            <svg width="10" height="10" viewBox="0 0 24 24">
+              <path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
           </div>
-        </div>
+        </section>
 
-        {/* Kakao notice */}
-        <div style={{
-          background: ft.primaryBg, border: `1px solid ${ft.primaryBgStrong}`,
-          borderRadius: 16, padding: '16px 18px',
-          marginBottom: 20,
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: ft.primaryDark, letterSpacing: '-0.014em', marginBottom: 4 }}>
-            알림톡이 발송되었습니다
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--fp-fg-secondary)', letterSpacing: '0.019em', lineHeight: 1.6 }}>
-            {donationFormData.phone}으로 카카오 알림톡이 발송되었습니다.
-            {donationFormData.isRecurring && ' 정기 결제는 마이페이지에서 관리하실 수 있습니다.'}
-          </div>
-        </div>
+        {/* Messaging Notice */}
+        <section 
+          className="p-4 rounded-xl border text-xs leading-relaxed"
+          style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
+        >
+          <h4 className="font-bold mb-1" style={{ color: ft.primaryDark }}>알림톡 안내</h4>
+          <p className="text-zinc-650 dark:text-zinc-400 font-medium">
+            기재하신 연락처({donationFormData.phone})로 카카오 알림톡 감사 메시지가 즉시 발송되었습니다. {donationFormData.isRecurring && '자동 정기결제 해지 및 정보관리는 마이페이지 로그인 후 가능합니다.'}
+          </p>
+        </section>
 
-        {/* Action buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        {/* Action Sharing Buttons Grid */}
+        <section className="grid grid-cols-2 gap-3 mt-2">
           <button
-            onClick={() => toast.info('카카오톡 공유 기능은 실제 환경에서 구현됩니다')}
-            style={{
-              height: 52, borderRadius: 14,
-              border: '1.5px solid var(--fp-border-strong)', background: '#fff',
-              color: 'var(--fp-fg-primary)', fontSize: 14, fontWeight: 700,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              fontFamily: 'var(--font-ui)',
-            }}
+            onClick={() => toast.info('카카오톡 공유 기능은 실제 환경에서 지원됩니다.')}
+            className="h-13 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs"
           >
-            <Share2 size={18} /> 공유
+            <Share2 size={16} /> 
+            <span>공유하기</span>
           </button>
           <button
-            onClick={() => toast.info('영수증 저장 기능은 실제 환경에서 구현됩니다')}
-            style={{
-              height: 52, borderRadius: 14,
-              border: '1.5px solid var(--fp-border-strong)', background: '#fff',
-              color: 'var(--fp-fg-primary)', fontSize: 14, fontWeight: 700,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              fontFamily: 'var(--font-ui)',
-            }}
+            onClick={() => toast.info('영수증 PDF 저장 기능은 실제 환경에서 지원됩니다.')}
+            className="h-13 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs"
           >
-            <Download size={18} /> PDF 저장
+            <Download size={16} /> 
+            <span>PDF 저장</span>
           </button>
-        </div>
+        </section>
 
         <button
           onClick={() => navigate(`/${tenantSlug}`)}
-          style={{
-            width: '100%', height: 56, borderRadius: 14,
-            background: ft.heroGradient, color: '#fff',
-            border: 0, fontSize: 16, fontWeight: 700, letterSpacing: '0.006em',
-            cursor: 'pointer', fontFamily: 'var(--font-ui)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
+          className="w-full h-14 rounded-xl text-white font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 mt-2 shadow-md"
+          style={{ background: ft.heroGradient }}
         >
           <Motif kind={ft.motif} size={18} color="#fff" />
           홈으로 돌아가기
         </button>
-      </div>
+
+      </main>
     </div>
   );
 }

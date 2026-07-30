@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import { useApp, mockAdmins, mockTenants } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,10 +12,19 @@ import { toast } from 'sonner';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { setCurrentAdmin, setCurrentTenant } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedTab, setSelectedTab] = useState('login');
+
+  useEffect(() => {
+    if (tenantSlug) {
+      const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+      if (tenant) {
+        setCurrentTenant(tenant);
+      }
+    }
+  }, [tenantSlug, setCurrentTenant]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,10 +107,10 @@ export default function AdminLogin() {
         <Button
           variant="ghost"
           className="mb-4"
-          onClick={() => navigate('/')}
+          onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          홈으로
+          {tenantSlug ? '단체 홈으로' : '메인으로'}
         </Button>
 
         <div className="text-center mb-8">
@@ -114,125 +123,51 @@ export default function AdminLogin() {
           <p className="text-xl text-muted-foreground">관리자 로그인</p>
         </div>
 
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="login">로그인</TabsTrigger>
-            <TabsTrigger value="demo">데모 계정</TabsTrigger>
-          </TabsList>
+        <Card>
+          <CardHeader>
+            <CardTitle>관리자 로그인</CardTitle>
+            <CardDescription>
+              발급받으신 관리자 이메일과 비밀번호를 입력해주세요
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  <Mail className="h-4 w-4 inline mr-2" />
+                  이메일
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@example.org"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-          <TabsContent value="login">
-            <Card>
-              <CardHeader>
-                <CardTitle>관리자 로그인</CardTitle>
-                <CardDescription>
-                  단체 관리자 또는 재정 담당자 계정으로 로그인하세요
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">
-                      <Mail className="h-4 w-4 inline mr-2" />
-                      이메일
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="admin@example.org"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  <Lock className="h-4 w-4 inline mr-2" />
+                  비밀번호
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">
-                      <Lock className="h-4 w-4 inline mr-2" />
-                      비밀번호
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    로그인
-                  </Button>
-
-                  <p className="text-xs text-center text-muted-foreground mt-4">
-                    데모 환경에서는 비밀번호가 "admin123"입니다
-                  </p>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="demo">
-            <Card>
-              <CardHeader>
-                <CardTitle>데모 계정 목록</CardTitle>
-                <CardDescription>
-                  클릭하여 빠르게 로그인할 수 있습니다
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {mockAdmins.map((admin) => {
-                  // 통합관리자는 데모 목록에서 숨김
-                  if (admin.role === 'system_admin') {
-                    return null;
-                  }
-
-                  const tenant = mockTenants.find((t) => t.id === admin.tenantId);
-                  if (!tenant) return null;
-
-                  return (
-                    <Card
-                      key={admin.id}
-                      className="cursor-pointer hover:border-primary transition-colors"
-                      onClick={() => handleQuickLogin(admin.email)}
-                    >
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: tenant.primaryColor }}
-                              />
-                              <h4 className="font-semibold">{admin.name}</h4>
-                              <Badge variant="secondary">{getRoleName(admin.role)}</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              {tenant.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground font-mono">
-                              {admin.email}
-                            </p>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            선택
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                  <p className="text-sm font-medium mb-2">💡 사용 방법</p>
-                  <p className="text-sm text-muted-foreground">
-                    위에서 원하는 계정 카드를 클릭하면 자동으로 로그인됩니다!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              <Button type="submit" className="w-full">
+                로그인
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         {/* Info Card */}
         <Card className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border-none">
