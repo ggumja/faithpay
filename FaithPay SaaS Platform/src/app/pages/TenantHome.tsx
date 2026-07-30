@@ -265,18 +265,17 @@ export default function TenantHome() {
                 }}
               />
             ))}
-            {/* Dark overlay for optimal text readability */}
+            {/* Lighter overlay for brighter banner image while maintaining high text contrast */}
             <div style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.68) 100%)',
-              backdropFilter: 'blur(2px)',
+              background: 'linear-gradient(90deg, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.22) 50%, rgba(0,0,0,0.38) 100%)',
             }} />
           </div>
         )}
 
         {/* Background motif */}
-        <div style={{ position: 'absolute', right: -40, top: -20, width: '40%', height: '130%', opacity: 0.08, pointerEvents: 'none', zIndex: 1 }}>
+        <div style={{ position: 'absolute', right: -40, top: -20, width: '40%', height: '130%', opacity: 0.12, pointerEvents: 'none', zIndex: 1 }}>
           <MotifLarge kind={ft.motif} color="white" opacity={1} />
         </div>
 
@@ -285,15 +284,15 @@ export default function TenantHome() {
             {/* Left copy */}
             <div className="th-animate th-hero-copy">
               {/* Greeting badge */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'oklch(1 0 0 / 0.14)', border: '1px solid oklch(1 0 0 / 0.22)', borderRadius: 6, padding: '4px 12px', marginBottom: 18, backdropFilter: 'blur(8px)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0, 0, 0, 0.40)', border: '1px solid rgba(255, 255, 255, 0.25)', borderRadius: 6, padding: '4px 12px', marginBottom: 18, backdropFilter: 'blur(8px)' }}>
                 <Motif kind={ft.motif} size={11} color="white" />
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'oklch(1 0 0 / 0.90)', letterSpacing: '0.04em' }}>{ft.greeting}</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'white', letterSpacing: '0.04em' }}>{ft.greeting}</span>
               </div>
 
-              <h1 style={{ fontSize: 'clamp(28px, 5vw, 54px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: 14, textShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+              <h1 style={{ fontSize: 'clamp(28px, 5vw, 54px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: 14, textShadow: '0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.8)' }}>
                 {currentTenant.name}
               </h1>
-              <p style={{ fontSize: 'clamp(14px, 2vw, 16px)', color: 'oklch(1 0 0 / 0.85)', lineHeight: 1.7, maxWidth: 500, marginBottom: 26, fontWeight: 400, textShadow: '0 1px 6px rgba(0,0,0,0.3)' }}>
+              <p style={{ fontSize: 'clamp(14px, 2vw, 16px)', color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.7, maxWidth: 500, marginBottom: 26, fontWeight: 400, textShadow: '0 2px 10px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.8)' }}>
                 {currentTenant.description}
               </p>
 
