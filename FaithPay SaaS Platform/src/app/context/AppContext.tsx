@@ -543,6 +543,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // mockDonationItems 메모리 참조도 업데이트
       mockDonationItems[religionType] = updatedList;
 
+      // Supabase DB 비동기 서버 연동
+      donationItemsAPI.saveItems(tenantIdOrSlug, updatedList).catch((err) => {
+        console.warn('Supabase DB saveItems failed, kept in local state:', err);
+      });
+
       return nextState;
     });
   }, []);
@@ -565,6 +570,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       mockDonationItems[religionType] = updatedList;
+
+      // Supabase DB 비동기 서버 연동
+      donationItemsAPI.saveItems(tenantIdOrSlug, updatedList).catch((err) => {
+        console.warn('Supabase DB delete saveItems failed, kept in local state:', err);
+      });
 
       return nextState;
     });

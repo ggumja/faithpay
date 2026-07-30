@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import TaxReceiptModal from '../components/TaxReceiptModal';
+import { donationAPI } from '../api/client';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Share2, Download } from 'lucide-react';
@@ -19,7 +20,37 @@ export default function DonationComplete() {
   const [receiptId] = useState(() => `FP${Date.now().toString().slice(-8)}`);
 
   useEffect(() => {
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+
+    // Supabase DB에 실시간 결제 완료 내역 보관 저장
+    if (currentTenant && donationFormData) {
+      donationAPI.create({
+        id: receiptId,
+        tenantId: currentTenant.id,
+        itemId: donationFormData.itemId,
+        itemName: donationFormData.itemName,
+        amount: donationFormData.amount,
+        donorName: donationFormData.name,
+        donorPhone: donationFormData.phone,
+        prayerText: donationFormData.prayerText,
+        baptismName: donationFormData.baptismName,
+        isRecurring: donationFormData.isRecurring,
+        recurringDay: donationFormData.recurringDay,
+        paymentStatus: 'completed',
+        paymentMethod: '카드결제',
+        transactionId: receiptId,
+      }).then((res) => {
+        if (res.success) {
+          console.log('Successfully recorded donation in Supabase DB:', res.data);
+        }
+      }).catch((err) => {
+        console.warn('DB recording notice:', err);
+      });
+    }
   }, []);
 
   if (!currentTenant || !donationFormData) return null;
