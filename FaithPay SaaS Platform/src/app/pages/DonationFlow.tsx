@@ -244,26 +244,74 @@ export default function DonationFlow() {
                   <FPInput label="성명 *" value={name} onChange={setName} placeholder="홍길동" />
                   <FPInput label="전화번호 *" value={phone} onChange={setPhone} placeholder="010-1234-5678" type="tel" />
 
+                  {/* ✝️ 천주교 성당 특화 서식 */}
                   {currentTenant.religionType === 'catholic' && (
-                    <FPInput label="세례명" value={baptismName} onChange={setBaptismName} placeholder="프란치스코" />
+                    <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-2xl space-y-3 mt-1">
+                      <span className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                        ✝️ 천주교 본당 전용 입력 서식
+                      </span>
+                      <FPInput label="세례명" value={baptismName} onChange={setBaptismName} placeholder="예: 프란치스코 / 마리아" />
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+                          미사 지향 선택 (선택)
+                        </label>
+                        <select 
+                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150"
+                          defaultValue="life"
+                        >
+                          <option value="life">생미사 (건강 / 은혜 / 축복 지향)</option>
+                          <option value="memorial">위령미사 (영가 안식 지향)</option>
+                          <option value="thanks">감사미사 (감사 지향)</option>
+                        </select>
+                      </div>
+                    </div>
                   )}
 
+                  {/* ⛪ 기독교 교회 특화 서식 */}
+                  {currentTenant.religionType === 'protestant' && (
+                    <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-3 mt-1">
+                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                        ⛪ 교회 직분 정보
+                      </span>
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+                          교회 직분 선택
+                        </label>
+                        <select 
+                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150"
+                          defaultValue="member"
+                        >
+                          <option value="member">성도</option>
+                          <option value="deacon">집사</option>
+                          <option value="senior_deacon">권사</option>
+                          <option value="elder">장로</option>
+                          <option value="youth">청년/학생</option>
+                          <option value="pastor">목회자/교역자</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ⛩️ 불교 사찰 특화 서식 (가족 축원 명단) */}
                   {currentTenant.religionType === 'buddhist' && (
-                    <div className="mt-2">
-                      <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2.5 uppercase tracking-wide">
-                        가족 정보 <span className="font-medium text-zinc-400">(선택)</span>
+                    <div className="mt-2 p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-2xl">
+                      <label className="block text-xs font-extrabold text-orange-950 dark:text-orange-200 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                        ⛩️ 사찰 전용 가족 축원 명단 카드 <span className="font-semibold text-orange-700 dark:text-orange-400">(선택)</span>
                       </label>
+                      <p className="text-[11px] text-orange-800 dark:text-orange-300 mb-3">
+                        대웅전 연등/인등 점등 및 축원카드에 기재될 가족 구성원의 생년월일을 적어주세요.
+                      </p>
                       
                       <div className="flex flex-col gap-3">
                         {familyMembers.map((member, i) => (
                           <div 
                             key={i} 
-                            className="rounded-2xl p-4 border flex flex-col gap-3 relative"
-                            style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
+                            className="rounded-2xl p-4 border flex flex-col gap-3 relative shadow-2xs"
+                            style={{ background: '#fff', borderColor: ft.primaryBgStrong }}
                           >
                             <div className="flex justify-between items-center">
-                              <span className="text-xs font-extrabold" style={{ color: ft.primaryDark }}>
-                                가족 {i + 1}
+                              <span className="text-xs font-extrabold flex items-center gap-1" style={{ color: ft.primaryDark }}>
+                                축원 대상 {i + 1}
                               </span>
                               <button 
                                 onClick={() => removeFamilyMember(i)} 
@@ -275,26 +323,26 @@ export default function DonationFlow() {
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <input 
-                                placeholder="이름" 
+                                placeholder="성명 (예: 홍길동)" 
                                 value={member.name} 
                                 onChange={(e) => updateFamilyMember(i, 'name', e.target.value)}
-                                className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
+                                className="w-full h-11 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
                               />
                               <input 
-                                placeholder="생년월일 (1990-01-01)" 
+                                placeholder="생년월일 (예: 1990-05-15)" 
                                 value={member.birthDate} 
                                 onChange={(e) => updateFamilyMember(i, 'birthDate', e.target.value)}
-                                className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
+                                className="w-full h-11 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
                               />
                             </div>
                             
                             <Select value={member.calendar} onValueChange={(v) => updateFamilyMember(i, 'calendar', v)}>
-                              <SelectTrigger className="h-11 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-xs font-semibold rounded-xl">
+                              <SelectTrigger className="h-11 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-xs font-semibold rounded-xl">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="solar" className="text-xs">양력</SelectItem>
-                                <SelectItem value="lunar" className="text-xs">음력</SelectItem>
+                                <SelectItem value="solar" className="text-xs">양력 (Solar)</SelectItem>
+                                <SelectItem value="lunar" className="text-xs">음력 (Lunar)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -303,11 +351,11 @@ export default function DonationFlow() {
 
                       <button
                         onClick={addFamilyMember}
-                        className="w-full h-12 rounded-xl border border-dashed text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-3"
+                        className="w-full h-12 rounded-xl border border-dashed text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-3 bg-white/80"
                         style={{ borderColor: ft.primaryBgStrong, color: ft.primary }}
                       >
                         <Plus size={14} /> 
-                        <span>가족 구성원 추가</span>
+                        <span>가족 축원 인원 추가</span>
                       </button>
                     </div>
                   )}
