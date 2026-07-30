@@ -289,10 +289,10 @@ export default function TenantHome() {
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'white', letterSpacing: '0.04em' }}>{ft.greeting}</span>
               </div>
 
-              <h1 style={{ fontSize: 'clamp(28px, 5vw, 54px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: 14, textShadow: '0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.8)' }}>
+              <h1 style={{ fontSize: 'clamp(28px, 5vw, 56px)', fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: 14, textShadow: '0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.8)' }}>
                 {currentTenant.name}
               </h1>
-              <p style={{ fontSize: 'clamp(14px, 2vw, 16px)', color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.7, maxWidth: 500, marginBottom: 26, fontWeight: 400, textShadow: '0 2px 10px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.8)' }}>
+              <p style={{ fontSize: 'clamp(14px, 2vw, 16.5px)', color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.7, maxWidth: 640, marginBottom: 28, fontWeight: 400, textShadow: '0 2px 10px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.8)' }}>
                 {currentTenant.description}
               </p>
 
@@ -327,20 +327,6 @@ export default function TenantHome() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Right — quick stats */}
-            <div className="th-animate th-delay-2 th-hero-stats">
-              {[
-                { label: '봉헌 항목', value: `${allItems.length}가지` },
-                { label: '정기 후원', value: `${allItems.filter(i => i.allowRecurring).length}가지` },
-                { label: ft.name, value: ft.placeNoun },
-              ].map(({ label, value }) => (
-                <div key={label} className="th-hero-stat" style={{ background: 'rgba(0, 0, 0, 0.35)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: 12, padding: '14px 18px', backdropFilter: 'blur(12px)' }}>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'rgba(255, 255, 255, 0.65)', letterSpacing: '0.04em', marginBottom: 4, whiteSpace: 'nowrap' }}>{label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>{value}</div>
-                </div>
-              ))}
             </div>
           </div>
 
