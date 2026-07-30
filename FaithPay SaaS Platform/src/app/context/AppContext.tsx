@@ -380,11 +380,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchTenants]);
 
   const updateTenantBanners = useCallback(async (tenantId: string, bannerImages: string[]) => {
-    // 로컬 State & LocalStorage 즉시 업데이트
+    // 로컬 State & LocalStorage 동기화 (QuotaExceededError 방지)
     const mockIdx = mockTenants.findIndex(t => t.id === tenantId);
     if (mockIdx !== -1) {
       mockTenants[mockIdx] = { ...mockTenants[mockIdx], bannerImages };
-      localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+      try {
+        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+      } catch (storageErr) {
+        console.warn('LocalStorage quota exceeded for bannerImages:', storageErr);
+        // 용량 초과 시 기본 데이터 저장은 건너뛰고 인메모리 state는 정상 작동
+      }
       setTenants([...mockTenants]);
     }
 
@@ -393,11 +398,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (response.success && response.data) {
         toast.success('배너가 DB에 저장되었습니다.');
       } else {
-        toast.success('배너가 로컬에 저장되었습니다.');
+        toast.success('배너가 저장되었습니다.');
       }
     } catch (error) {
       console.error('Failed to update tenant banners on server:', error);
-      toast.success('배너가 저장되었습니다.');
+      toast.success('배너가 메모리에 저장되었습니다.');
     }
   }, []);
 

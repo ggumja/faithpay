@@ -122,7 +122,44 @@ export default function BannerManagement() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File, maxWidth = 1000, quality = 0.75): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          // JPEG 포맷 75% 퀄리티로 압축하여 base64 용량 대폭 축소
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -131,33 +168,34 @@ export default function BannerManagement() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('파일 크기는 5MB 이하여야 합니다');
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('파일 크기는 10MB 이하여야 합니다');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (!dataUrl) return;
+    try {
+      toast.info('이미지 압축 중...');
+      const compressedDataUrl = await compressImage(file, 1000, 0.75);
 
       const newBanner: BannerItem = {
         id: `banner-${Date.now()}`,
-        url: dataUrl,
+        url: compressedDataUrl,
         order: banners.length,
       };
 
       const updatedBanners = [...banners, newBanner];
       setBanners(updatedBanners);
-      toast.success('배너 이미지가 업로드 되었습니다');
+      toast.success('배너 이미지가 성공적으로 업로드되었습니다');
 
       if (currentTenant) {
         const bannerUrls = updatedBanners.map(b => b.url);
         updateTenantBanners(currentTenant.id, bannerUrls);
         setCurrentTenant({ ...currentTenant, bannerImages: bannerUrls });
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Image compression failed:', err);
+      toast.error('이미지 처리 중 오류가 발생했습니다');
+    }
   };
 
   const handleDeleteBanner = (id: string) => {
