@@ -97,10 +97,7 @@ const defaultTenants: Tenant[] = [
     religionType: 'protestant',
     primaryColor: '#1976d2',
     logoUrl: 'https://images.unsplash.com/photo-1620495137036-fccf4af581bf?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1772878490426-e1c25eff4dba?w=1200',
-      'https://images.unsplash.com/photo-1620495137036-fccf4af581bf?w=1200',
-    ],
+    bannerImages: [],
     description: '예수 그리스도의 사랑과 은혜를 경험하고 나누는 교회입니다. 모든 사람이 환영받고, 하나님의 말씀으로 성장하며, 서로 랑하는 공동체를 만들어갑니다.',
     address: '서울특별시 강남구 테헤란로 123',
     contact: {
@@ -126,10 +123,7 @@ const defaultTenants: Tenant[] = [
     religionType: 'buddhist',
     primaryColor: '#ff6f00',
     logoUrl: 'https://images.unsplash.com/photo-1770149682823-0befb39aa86e?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1573285702030-f7952e595655?w=1200',
-      'https://images.unsplash.com/photo-1770149682823-0befb39aa86e?w=1200',
-    ],
+    bannerImages: [],
     description: '부처님의 자비와 지혜로 평화와 행복을 찾는 도량입니다. 참선과 수행을 통해 마음의 평안을 얻고, 자비와 나눔의 실천으로 세상에 빛을 전합니다.',
     address: '서울특별시 종로구 인사동길 45',
     contact: {
@@ -155,10 +149,7 @@ const defaultTenants: Tenant[] = [
     religionType: 'catholic',
     primaryColor: '#7b1fa2',
     logoUrl: 'https://images.unsplash.com/photo-1761316945926-51b6c682c190?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1623351151870-302b4199cee3?w=1200',
-      'https://images.unsplash.com/photo-1761316945926-51b6c682c190?w=1200',
-    ],
+    bannerImages: [],
     description: '하느님의 사랑과 은총 안에서 신앙을 키우고 실천하는 본당입니다. 성찬의 신비를 체험하고, 이웃 사랑을 실천하며, 복음의 기쁨을 전하는 공동체입니다.',
     address: '서울특별시 중구 명동길 74',
     contact: {
