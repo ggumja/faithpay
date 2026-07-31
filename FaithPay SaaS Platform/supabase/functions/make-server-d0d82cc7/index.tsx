@@ -431,49 +431,54 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     };
 
     console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "hash1:", hash1);
+
+    const debugInfo = { NANO_API_KEY, shopcode, loginId, ver, receiveUrl, NANO_API_URL };
     console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
 
-    const debugInfo = {
-      NANO_API_KEY,
-      shopcode,
-      loginId,
-      ver,
-      receiveUrl,
-      NANO_API_URL,
-      payload
-    };
+    // 나노페이 KICC 결제창 호출용 자동 전송 HTML Form 생성
+    const payFormHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Nanopay Payment</title>
+      </head>
+      <body>
+        <p style="text-align:center; padding-top:20px; font-family:sans-serif;">나노페이 안전 결제창으로 이동 중입니다...</p>
+        <form id="nanoPayForm" method="POST" action="${NANO_API_URL}">
+          <input type="hidden" name="ver" value="${ver}" />
+          <input type="hidden" name="loginId" value="${loginId}" />
+          <input type="hidden" name="shopcode" value="${shopcode}" />
+          <input type="hidden" name="orderName" value="${realDonorName}" />
+          <input type="hidden" name="orderTel" value="${(donationData?.phone || "01000000000").replace(/[^0-9]/g, '')}" />
+          <input type="hidden" name="orderEmail" value="${donationData?.email || "donator@faithpay.kr"}" />
+          <input type="hidden" name="payWay" value="${payWay || "card"}" />
+          <input type="hidden" name="goodsName" value="${donationData?.itemName || "FaithPay 봉헌금"}" />
+          <input type="hidden" name="reqPayAmt" value="${reqPayAmt}" />
+          <input type="hidden" name="receiveUrl" value="${receiveUrl}" />
+          <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
+          <input type="hidden" name="compOrderMem" value="${realDonorName}" />
+          <input type="hidden" name="ediDate" value="${ediDate}" />
+          <input type="hidden" name="timestamp" value="${timestamp}" />
+          <input type="hidden" name="hash" value="${hash1}" />
+          <input type="hidden" name="hashValue" value="${hash4}" />
+          <input type="hidden" name="ediHash" value="${hash2}" />
+          <input type="hidden" name="secretHash" value="${hash3}" />
+        </form>
+        <script>
+          document.getElementById('nanoPayForm').submit();
+        </script>
+      </body>
+      </html>
+    `;
 
-    // Body 인코딩 깨짐 방지용 Raw Bytes 변환
-    const encoder = new TextEncoder();
-    const bodyBytes = encoder.encode(JSON.stringify(payload));
-
-    const response = await fetch(NANO_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'CharSet': 'UTF-8',
-        'API_KEY': NANO_API_KEY,
-        'API-KEY': NANO_API_KEY,
-        'api_key': NANO_API_KEY,
-        'api-key': NANO_API_KEY,
-        'apiKey': NANO_API_KEY,
-        'ApiKey': NANO_API_KEY,
-        'X-API-KEY': NANO_API_KEY,
-        'x-api-key': NANO_API_KEY
-      },
-      body: bodyBytes
+    return c.json({
+      success: true,
+      isJson: false,
+      html: payFormHtml,
+      donationId: tempDonationId,
+      debug: debugInfo
     });
-
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const result = await response.json();
-      console.log("Nanopay Cert Request Result (JSON):", result);
-      return c.json({ success: true, isJson: true, data: result, donationId: tempDonationId, debug: debugInfo });
-    } else {
-      const resultText = await response.text();
-      console.log("Nanopay Cert Request Result (HTML/Text):", resultText);
-      return c.json({ success: true, isJson: false, html: resultText, donationId: tempDonationId, debug: debugInfo });
-    }
   } catch (error) {
     console.error('Error initiating certified payment:', error);
     return c.json({ success: false, error: 'Failed to initiate certified payment' }, 500);
