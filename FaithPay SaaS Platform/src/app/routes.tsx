@@ -19,6 +19,8 @@ import OrganizationSettings from "./pages/admin/OrganizationSettings";
 import MyDonations from "./pages/MyDonations";
 import TaxReceiptCenter from "./pages/TaxReceiptCenter";
 import OnboardingFlow from "./pages/OnboardingFlow";
+import PartnerDashboard from "./pages/partner/PartnerDashboard";
+import PartnerTenantCreate from "./pages/partner/PartnerTenantCreate";
 import NotFound from "./pages/NotFound";
 
 export const router = createBrowserRouter([
@@ -28,6 +30,14 @@ export const router = createBrowserRouter([
       {
         path: "/",
         Component: Root,
+      },
+      {
+        path: "/partner/dashboard",
+        Component: PartnerDashboard,
+      },
+      {
+        path: "/partner/tenants/new",
+        Component: PartnerTenantCreate,
       },
       {
         path: "/admin/login",

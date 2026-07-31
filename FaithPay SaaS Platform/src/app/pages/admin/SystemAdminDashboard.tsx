@@ -23,11 +23,13 @@ import {
   Settings,
   Megaphone,
   Key,
+  Briefcase,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import TenantApprovalModal from '../../components/TenantApprovalModal';
 import GlobalBroadcastModal from '../../components/GlobalBroadcastModal';
 import TenantStatsPage from './TenantStatsPage';
+import PartnerManagement from './PartnerManagement';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
@@ -199,6 +201,17 @@ export default function SystemAdminDashboard() {
                     <BarChart3 className="h-5 w-5" />
                     <span>통계관리</span>
                   </button>
+                  <button
+                    onClick={() => setActiveMenu('partners')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      activeMenu === 'partners'
+                        ? 'bg-purple-100 text-purple-700 font-semibold'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Briefcase className="h-5 w-5" />
+                    <span>영업 파트너 관리</span>
+                  </button>
                 </nav>
               </CardContent>
             </Card>
@@ -206,6 +219,7 @@ export default function SystemAdminDashboard() {
 
           {/* Main Content Area */}
           <div className="flex-1 space-y-6">
+            {activeMenu === 'partners' && <PartnerManagement />}
             {activeMenu === 'tenants' && (
               <>
                 {/* Tenant List */}

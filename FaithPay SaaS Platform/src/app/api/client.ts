@@ -303,6 +303,60 @@ export const adminAPI = {
   },
 };
 
+// ==================== PARTNER API ====================
+
+export interface Partner {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'master_agency' | 'sales_agent'; // 총판/대리점 vs 영업자
+  parentId?: string; // 상위 총판 ID
+  commissionRate: number; // 수수료율 (%)
+  referralCode: string; // 영업자 추천코드 (예: AGENT_KIM)
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  status: 'active' | 'pending' | 'suspended';
+  createdAt: string;
+}
+
+export interface PartnerCommission {
+  id: string;
+  partnerId: string;
+  tenantId: string;
+  tenantName: string;
+  donationId: string;
+  donationAmount: number;
+  commissionAmount: number;
+  settlementStatus: 'pending' | 'paid';
+  createdAt: string;
+}
+
+export const partnerAPI = {
+  async getPartners(): Promise<APIResponse<Partner[]>> {
+    return fetchAPI<Partner[]>('/partners');
+  },
+
+  async createPartner(partner: Omit<Partner, 'id' | 'createdAt'>): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>('/partners', {
+      method: 'POST',
+      body: JSON.stringify(partner),
+    });
+  },
+
+  async getCommissions(partnerId: string): Promise<APIResponse<PartnerCommission[]>> {
+    return fetchAPI<PartnerCommission[]>(`/partners/${partnerId}/commissions`);
+  },
+
+  async createTenantByPartner(partnerId: string, tenantData: any): Promise<APIResponse<Tenant>> {
+    return fetchAPI<Tenant>(`/partners/${partnerId}/tenants`, {
+      method: 'POST',
+      body: JSON.stringify(tenantData),
+    });
+  },
+};
+
 // ==================== STATISTICS API ====================
 
 export const statsAPI = {

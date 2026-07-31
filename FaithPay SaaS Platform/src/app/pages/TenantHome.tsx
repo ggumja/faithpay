@@ -190,24 +190,15 @@ export default function TenantHome() {
 
       {/* ── Sticky Nav ── */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: C.white, borderBottom: `1px solid ${C.border}`,
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(255, 255, 255, 0.94)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: `1px solid ${C.border}`,
         boxShadow: heroVisible ? 'none' : C.shadow,
         transition: 'box-shadow 200ms ease',
       }}>
-        <div style={{ height: 56, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Back */}
-        <button
-          onClick={() => navigate('/')}
-          className="th-nav-left"
-          style={{ alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: C.ink3, fontSize: 13, fontFamily: 'inherit', padding: '4px', borderRadius: 6, flexShrink: 0 }}
-          onMouseEnter={e => (e.currentTarget.style.color = C.ink)}
-          onMouseLeave={e => (e.currentTarget.style.color = C.ink3)}
-        >
-          <ArrowLeft size={15} /><span style={{ marginLeft: 4 }}>전체 단체</span>
-        </button>
-
-        {/* Tenant identity — always center */}
+        <div style={{ maxWidth: 1100, margin: '0 auto', height: 56, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Left identity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: ft.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Motif kind={ft.motif} size={14} color={ft.primary} />
