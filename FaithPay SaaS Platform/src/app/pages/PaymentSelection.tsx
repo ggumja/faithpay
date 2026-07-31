@@ -30,6 +30,9 @@ export default function PaymentSelection() {
 
   const [pgProvider, setPgProvider] = useState<string>('');
   const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
+  const [enableCard, setEnableCard] = useState<boolean>(true);
+  const [enableEasyPayment, setEnableEasyPayment] = useState<boolean>(true);
+  const [enableVBank, setEnableVBank] = useState<boolean>(true);
 
   useEffect(() => {
     if (tenantSlug) {
@@ -41,10 +44,22 @@ export default function PaymentSelection() {
   }, [tenantSlug, tenants, setCurrentTenant]);
 
   useEffect(() => {
-    if (currentTenant) {
+    if (currentTenant?.id) {
       paymentAPI.getConfig(currentTenant.id).then(res => {
         if (res.success && res.data) {
           setPgProvider(res.data.pgProvider || '');
+          setEnableCard(res.data.enableCard !== undefined ? res.data.enableCard : true);
+          setEnableEasyPayment(res.data.enableEasyPayment !== undefined ? res.data.enableEasyPayment : true);
+          setEnableVBank(res.data.enableVBank !== undefined ? res.data.enableVBank : true);
+          
+          // 만약 활성화된 수단으로 기본 선택값 세팅
+          if (res.data.enableCard !== false) {
+            setPaymentMethod('card');
+          } else if (res.data.enableEasyPayment !== false) {
+            setPaymentMethod('simple');
+          } else if (res.data.enableVBank !== false) {
+            setPaymentMethod('bank');
+          }
         }
       });
     }
@@ -265,7 +280,7 @@ export default function PaymentSelection() {
             <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="flex flex-col gap-4">
               
               {/* Easy Payment option */}
-              {!donationFormData.isRecurring && (
+              {!donationFormData.isRecurring && enableEasyPayment && (
                 <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 transition-colors">
                   <div className="flex items-center space-x-2.5 mb-3">
                     <RadioGroupItem value="simple" id="simple" className="border-zinc-300 dark:border-zinc-700" />
@@ -293,142 +308,144 @@ export default function PaymentSelection() {
               )}
 
               {/* Credit Card option */}
-              <div 
-                className="border rounded-xl p-4 transition-all"
-                style={{ 
-                  borderColor: paymentMethod === 'card' ? ft.primary : 'rgba(112, 115, 124, 0.16)',
-                  background: paymentMethod === 'card' && donationFormData.isRecurring ? ft.primaryBg : undefined
-                }}
-              >
-                <div className="flex items-center space-x-2.5 mb-3">
-                  <RadioGroupItem value="card" id="card" className="border-zinc-300 dark:border-zinc-700" />
-                  <Label htmlFor="card" className="flex-1 cursor-pointer font-bold text-sm flex items-center gap-1.5">
-                    <CreditCard className="h-4 w-4" />
-                    <span>{donationFormData.isRecurring ? '신용카드 자동 등록 (매월 자동 청구)' : '신용/체크카드'}</span>
-                  </Label>
-                </div>
-                
-                {paymentMethod === 'card' && (
-                  <div className="ml-6 space-y-4 animate-fade-in mt-4 border-t pt-4 border-zinc-100 dark:border-zinc-800">
-                    {pgProvider === 'nanopay' && !donationFormData.isRecurring && (
-                      <div className="flex gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-850 rounded-lg">
-                        <button
-                          type="button"
-                          className={`flex-1 py-2 text-xs font-bold rounded-md transition-all cursor-pointer ${cardPaymentType === 'cert' ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 hover:text-zinc-900'}`}
-                          onClick={() => setCardPaymentType('cert')}
-                        >
-                          일반 결제창 (인증결제)
-                        </button>
-                        <button
-                          type="button"
-                          className={`flex-1 py-2 text-xs font-bold rounded-md transition-all cursor-pointer ${cardPaymentType === 'manual' ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 hover:text-zinc-900'}`}
-                          onClick={() => setCardPaymentType('manual')}
-                        >
-                          직접 입력 (수기결제)
-                        </button>
-                      </div>
-                    )}
-                    
-                    {pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring ? (
-                      <div className="bg-zinc-50 dark:bg-zinc-900/60 p-5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-650 dark:text-zinc-400 flex flex-col gap-2.5 justify-center items-center">
-                        <CreditCard className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-pulse" />
-                        <p className="font-bold">안전한 카드 결제창이 호출됩니다</p>
-                        <p className="text-[10px] text-zinc-500 leading-relaxed max-w-sm">결제 완료 버튼을 누르시면 카드사별 안심클릭 및 모바일 App카드 결제 공식 팝업창이 열립니다.</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-4">
-                        {donationFormData.isRecurring && (
-                          <div className="p-3.5 rounded-xl text-xs font-medium bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 leading-relaxed">
-                            정기 결제 등록 시 기재하신 카드로 매월 지정일에 자동 결제됩니다. 언제든지 관리 메뉴에서 직접 해지하실 수 있습니다.
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-1.5">
-                          <Label htmlFor="cardNumber" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">카드번호</Label>
-                          <Input
-                            id="cardNumber"
-                            placeholder="**** **** **** ****"
-                            value={cardNumber}
-                            onChange={(e) => setCardNumber(e.target.value)}
-                            autoComplete="cc-number"
-                            className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="expiry" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">유효기간</Label>
-                            <Input 
-                              id="expiry" 
-                              value={expiry} 
-                              onChange={(e) => setExpiry(e.target.value)} 
-                              placeholder="MM/YY" 
-                              autoComplete="cc-exp" 
-                              className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="password" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">비밀번호 앞 2자리</Label>
-                            <Input 
-                              id="password" 
-                              value={password} 
-                              onChange={(e) => setPassword(e.target.value)} 
-                              placeholder="**" 
-                              type="password" 
-                              maxLength={2} 
-                              autoComplete="new-password" 
-                              data-lpignore="true" 
-                              className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label htmlFor="birth" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">생년월일 (YYMMDD) 또는 사업자번호 (10자리)</Label>
-                          <Input 
-                            id="birth" 
-                            value={birth} 
-                            onChange={(e) => setBirth(e.target.value)} 
-                            placeholder="YYMMDD" 
-                            maxLength={10} 
-                            autoComplete="off" 
-                            className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
-                          />
-                        </div>
-                        {!donationFormData.isRecurring && (
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="installment" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">할부 개월 수</Label>
-                            <Select 
-                              value={installment} 
-                              onValueChange={setInstallment}
-                              disabled={donationFormData.amount < 50000}
-                            >
-                              <SelectTrigger id="installment" className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 text-xs font-semibold">
-                                <SelectValue placeholder="할부 개월 수 선택" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="00" className="text-xs">일시불</SelectItem>
-                                {donationFormData.amount >= 50000 && (
-                                  <>
-                                    {[...Array(11)].map((_, i) => {
-                                      const months = i + 2;
-                                      const value = months.toString().padStart(2, '0');
-                                      return <SelectItem key={value} value={value} className="text-xs">{months}개월</SelectItem>;
-                                    })}
-                                  </>
-                                )}
-                              </SelectContent>
-                            </Select>
-                            {donationFormData.amount < 50000 && (
-                              <p className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">5만원 이상 결제 시 할부 선택이 가능합니다.</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
+              {enableCard && (
+                <div 
+                  className="border rounded-xl p-4 transition-all"
+                  style={{ 
+                    borderColor: paymentMethod === 'card' ? ft.primary : 'rgba(112, 115, 124, 0.16)',
+                    background: paymentMethod === 'card' && donationFormData.isRecurring ? ft.primaryBg : undefined
+                  }}
+                >
+                  <div className="flex items-center space-x-2.5 mb-3">
+                    <RadioGroupItem value="card" id="card" className="border-zinc-300 dark:border-zinc-700" />
+                    <Label htmlFor="card" className="flex-1 cursor-pointer font-bold text-sm flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4" />
+                      <span>{donationFormData.isRecurring ? '신용카드 자동 등록 (매월 자동 청구)' : '신용/체크카드'}</span>
+                    </Label>
                   </div>
-                )}
-              </div>
+                  
+                  {paymentMethod === 'card' && (
+                    <div className="ml-6 space-y-4 animate-fade-in mt-4 border-t pt-4 border-zinc-100 dark:border-zinc-800">
+                      {pgProvider === 'nanopay' && !donationFormData.isRecurring && (
+                        <div className="flex gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-850 rounded-lg">
+                          <button
+                            type="button"
+                            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all cursor-pointer ${cardPaymentType === 'cert' ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 hover:text-zinc-900'}`}
+                            onClick={() => setCardPaymentType('cert')}
+                          >
+                            일반 결제창 (인증결제)
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all cursor-pointer ${cardPaymentType === 'manual' ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 hover:text-zinc-900'}`}
+                            onClick={() => setCardPaymentType('manual')}
+                          >
+                            직접 입력 (수기결제)
+                          </button>
+                        </div>
+                      )}
+                      
+                      {pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring ? (
+                        <div className="bg-zinc-50 dark:bg-zinc-900/60 p-5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-650 dark:text-zinc-400 flex flex-col gap-2.5 justify-center items-center">
+                          <CreditCard className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-pulse" />
+                          <p className="font-bold">안전한 카드 결제창이 호출됩니다</p>
+                          <p className="text-[10px] text-zinc-500 leading-relaxed max-w-sm">결제 완료 버튼을 누르시면 카드사별 안심클릭 및 모바일 App카드 결제 공식 팝업창이 열립니다.</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {donationFormData.isRecurring && (
+                            <div className="p-3.5 rounded-xl text-xs font-medium bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 leading-relaxed">
+                              정기 결제 등록 시 기재하신 카드로 매월 지정일에 자동 결제됩니다. 언제든지 관리 메뉴에서 직접 해지하실 수 있습니다.
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="cardNumber" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">카드번호</Label>
+                            <Input
+                              id="cardNumber"
+                              placeholder="**** **** **** ****"
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              autoComplete="cc-number"
+                              className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1.5">
+                              <Label htmlFor="expiry" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">유효기간</Label>
+                              <Input 
+                                id="expiry" 
+                                value={expiry} 
+                                onChange={(e) => setExpiry(e.target.value)} 
+                                placeholder="MM/YY" 
+                                autoComplete="cc-exp" 
+                                className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <Label htmlFor="password" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">비밀번호 앞 2자리</Label>
+                              <Input 
+                                id="password" 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                                placeholder="**" 
+                                type="password" 
+                                maxLength={2} 
+                                autoComplete="new-password" 
+                                data-lpignore="true" 
+                                className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="birth" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">생년월일 (YYMMDD) 또는 사업자번호 (10자리)</Label>
+                            <Input 
+                              id="birth" 
+                              value={birth} 
+                              onChange={(e) => setBirth(e.target.value)} 
+                              placeholder="YYMMDD" 
+                              maxLength={10} 
+                              autoComplete="off" 
+                              className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                            />
+                          </div>
+                          {!donationFormData.isRecurring && (
+                            <div className="flex flex-col gap-1.5">
+                              <Label htmlFor="installment" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">할부 개월 수</Label>
+                              <Select 
+                                value={installment} 
+                                onValueChange={setInstallment}
+                                disabled={donationFormData.amount < 50000}
+                              >
+                                <SelectTrigger id="installment" className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 text-xs font-semibold">
+                                  <SelectValue placeholder="할부 개월 수 선택" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="00" className="text-xs">일시불</SelectItem>
+                                  {donationFormData.amount >= 50000 && (
+                                    <>
+                                      {[...Array(11)].map((_, i) => {
+                                        const months = i + 2;
+                                        const value = months.toString().padStart(2, '0');
+                                        return <SelectItem key={value} value={value} className="text-xs">{months}개월</SelectItem>;
+                                      })}
+                                    </>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              {donationFormData.amount < 50000 && (
+                                <p className="text-[10px] text-zinc-450 dark:text-zinc-500 font-medium">5만원 이상 결제 시 할부 선택이 가능합니다.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Virtual Account option */}
-              {!donationFormData.isRecurring && (
+              {!donationFormData.isRecurring && enableVBank && (
                 <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 transition-colors">
                   <div className="flex items-center space-x-2.5 mb-3">
                     <RadioGroupItem value="bank" id="bank" className="border-zinc-300 dark:border-zinc-700" />

@@ -33,6 +33,12 @@ export interface Tenant {
     apiKey: string;
     secretKey: string;
     mid: string; // Merchant ID
+    loginId?: string;
+    iv?: string;
+    ver?: string;
+    enableCard?: boolean;
+    enableEasyPayment?: boolean;
+    enableVBank?: boolean;
     isActive: boolean;
   };
   createdAt?: string;
@@ -152,6 +158,9 @@ const defaultTenants: Tenant[] = [
       loginId: 'smbtestshop',
       iv: 'vgqTyX5tBqnMXB68',
       ver: 'smbtest',
+      enableCard: true,
+      enableEasyPayment: true,
+      enableVBank: true,
       isActive: true,
     },
   },

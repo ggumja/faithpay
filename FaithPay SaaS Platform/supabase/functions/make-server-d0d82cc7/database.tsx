@@ -48,6 +48,9 @@ export interface PaymentConfig {
   loginId?: string;
   iv?: string;
   ver?: string;
+  enableCard?: boolean;
+  enableEasyPayment?: boolean;
+  enableVBank?: boolean;
   isActive: boolean;
   updatedAt: string;
 }

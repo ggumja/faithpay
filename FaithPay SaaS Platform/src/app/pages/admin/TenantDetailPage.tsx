@@ -64,6 +64,9 @@ export default function TenantDetailPage() {
   const [loginId, setLoginId] = useState('');
   const [iv, setIv] = useState('');
   const [ver, setVer] = useState('');
+  const [enableCard, setEnableCard] = useState(true);
+  const [enableEasyPayment, setEnableEasyPayment] = useState(true);
+  const [enableVBank, setEnableVBank] = useState(true);
   const [isActive, setIsActive] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
@@ -125,6 +128,9 @@ export default function TenantDetailPage() {
           setLoginId(result.data.loginId || '');
           setIv(result.data.iv || '');
           setVer(result.data.ver || '');
+          setEnableCard(result.data.enableCard !== undefined ? result.data.enableCard : true);
+          setEnableEasyPayment(result.data.enableEasyPayment !== undefined ? result.data.enableEasyPayment : true);
+          setEnableVBank(result.data.enableVBank !== undefined ? result.data.enableVBank : true);
           setIsActive(result.data.isActive || false);
         }
       }
@@ -142,6 +148,9 @@ export default function TenantDetailPage() {
         setLoginId(parsed.loginId || '');
         setIv(parsed.iv || '');
         setVer(parsed.ver || '');
+        setEnableCard(parsed.enableCard !== undefined ? parsed.enableCard : true);
+        setEnableEasyPayment(parsed.enableEasyPayment !== undefined ? parsed.enableEasyPayment : true);
+        setEnableVBank(parsed.enableVBank !== undefined ? parsed.enableVBank : true);
         setIsActive(parsed.isActive || false);
       }
     }
@@ -216,6 +225,9 @@ export default function TenantDetailPage() {
             loginId,
             iv,
             ver,
+            enableCard,
+            enableEasyPayment,
+            enableVBank,
             isActive,
           }),
         }
@@ -244,6 +256,9 @@ export default function TenantDetailPage() {
         loginId,
         iv,
         ver,
+        enableCard,
+        enableEasyPayment,
+        enableVBank,
         isActive,
       };
       localStorage.setItem(`paymentConfig_${id}`, JSON.stringify(configData));
@@ -612,6 +627,49 @@ export default function TenantDetailPage() {
                 </div>
               )}
 
+              {/* 결제 수단 사용 여부 체크박스 섹션 */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <span>💳</span>
+                  <span>신도 제공 결제 수단 선택</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-2">
+                  체크 해제된 결제 수단은 신도 결제 페이지에서 즉시 숨김 처리됩니다.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100/60 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableCard}
+                      onChange={(e) => setEnableCard(e.target.checked)}
+                      className="h-4 w-4 rounded text-blue-600 border-gray-300"
+                    />
+                    <span className="text-xs font-semibold text-slate-700">💳 신용/체크카드</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100/60 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableEasyPayment}
+                      onChange={(e) => setEnableEasyPayment(e.target.checked)}
+                      className="h-4 w-4 rounded text-amber-500 border-gray-300"
+                    />
+                    <span className="text-xs font-semibold text-slate-700">⚡ 간편결제 (카카오/네이버/토스)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100/60 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={enableVBank}
+                      onChange={(e) => setEnableVBank(e.target.checked)}
+                      className="h-4 w-4 rounded text-emerald-600 border-gray-300"
+                    />
+                    <span className="text-xs font-semibold text-slate-700">🏦 가상계좌 (무통장 입금)</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-lg">
                 <input
                   type="checkbox"
@@ -621,7 +679,7 @@ export default function TenantDetailPage() {
                   className="h-4 w-4 rounded border-gray-300"
                 />
                 <Label htmlFor="isActive" className="cursor-pointer font-normal">
-                  결제 기능 활성화
+                  전체 결제 기능 활성화
                 </Label>
               </div>
 
