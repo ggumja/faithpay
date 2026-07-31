@@ -459,11 +459,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
           <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
           <input type="hidden" name="compOrderMem" value="${realDonorName}" />
           <input type="hidden" name="ediDate" value="${ediDate}" />
-          <input type="hidden" name="timestamp" value="${timestamp}" />
-          <input type="hidden" name="hash" value="${secretHash1}" />
           <input type="hidden" name="hashValue" value="${secretHash3}" />
-          <input type="hidden" name="ediHash" value="${secretHash2}" />
-          <input type="hidden" name="apiHash" value="${apiHash1}" />
+          <input type="hidden" name="hash" value="${secretHash3}" />
         </form>
         <script>
           document.getElementById('nanoPayForm').submit();
