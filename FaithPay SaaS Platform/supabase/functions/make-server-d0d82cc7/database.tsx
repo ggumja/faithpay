@@ -513,6 +513,11 @@ export async function updateSubscriptionStatus(id: string, status: 'active' | 'p
   return sub;
 }
 
+export async function getAllActiveSubscriptions(): Promise<Subscription[]> {
+  const allSubs = await kv.getByPrefix<Subscription>('subscription:');
+  return allSubs.filter((s: Subscription) => s.status === 'active');
+}
+
 // ==================== SMS OTP OPERATIONS ====================
 
 export async function createSmsOtp(phone: string, otpCode: string): Promise<SmsOtp> {

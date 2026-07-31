@@ -88,11 +88,17 @@ export default function MyDonations() {
     try {
       const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
 
+      // 로컬 세션 저장소 쿼리
+      const localSubs = JSON.parse(localStorage.getItem('faithpay_subscriptions') || '[]');
+      const matchedLocalSubs = localSubs.filter((s: any) => (s.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone);
+
       // 1. OTP 검증 API 호출
       const res = await otpAuthAPI.verifyOtp(phoneNumber, otpCode);
       if (res.success && res.data) {
         setIsAuthenticated(true);
-        setSubscriptions(res.data.subscriptions || []);
+        const combinedSubs = [...(res.data.subscriptions || []), ...matchedLocalSubs];
+        const uniqueSubs = Array.from(new Map(combinedSubs.map(item => [item.id, item])).values());
+        setSubscriptions(uniqueSubs);
 
         if (res.data.donations && res.data.donations.length > 0) {
           const matched: HistoryItem[] = res.data.donations.map(d => ({
@@ -112,8 +118,10 @@ export default function MyDonations() {
         }
         toast.success('본인 인증이 완료되었습니다.');
       } else {
-        // 2. Supabase DB에서 해당 테넌트 & 전화번호 봉헌 내역 직접 쿼리 (더미 Fallback 완전 배제)
+        // 2. Supabase DB 및 세션 기반 정기결제 바인딩
         setIsAuthenticated(true);
+        setSubscriptions(matchedLocalSubs);
+
         const dbRes = await donationAPI.getByTenant(currentTenant.id);
         if (dbRes.success && dbRes.data) {
           const matched: HistoryItem[] = dbRes.data
@@ -137,6 +145,10 @@ export default function MyDonations() {
       }
     } catch (err) {
       setIsAuthenticated(true);
+      const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
+      const localSubs = JSON.parse(localStorage.getItem('faithpay_subscriptions') || '[]');
+      const matchedLocalSubs = localSubs.filter((s: any) => (s.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone);
+      setSubscriptions(matchedLocalSubs);
       setHistory([]);
       toast.success('본인 인증이 완료되었습니다.');
     } finally {
@@ -262,22 +274,35 @@ export default function MyDonations() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Subscriptions Self-Management Card */}
-            {subscriptions.length > 0 && (
-              <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
-                <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                      <span>⚡ 내 정기결제 셀프 관리</span>
-                    </CardTitle>
-                    <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+            {/* Subscriptions Self-Management Card (항시 노출) */}
+            <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
+              <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+                    <span>⚡ 내 정기결제 셀프 관리</span>
+                  </CardTitle>
+                  <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+                </div>
+                <CardDescription className="text-xs text-indigo-700 dark:text-indigo-400">
+                  매월 자동 청구되는 보시/헌금 정기결제를 직접 일시정지하거나 즉시 해지하실 수 있습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                {subscriptions.length === 0 ? (
+                  <div className="text-center py-6 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900">
+                    <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-3">
+                      현재 매월 자동 청구 등록된 정기 보시/헌금이 없습니다.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-xs"
+                      onClick={() => navigate(`/${tenantSlug}/donate`)}
+                    >
+                      ⚡ 정기결제 보시 신청하러 가기
+                    </Button>
                   </div>
-                  <CardDescription className="text-xs text-indigo-700 dark:text-indigo-400">
-                    매월 자동 청구되는 보시/헌금 정기결제를 직접 일시정지하거나 즉시 해지하실 수 있습니다.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-3">
-                  {subscriptions.map(sub => (
+                ) : (
+                  subscriptions.map(sub => (
                     <div key={sub.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
                       <div>
                         <div className="flex justify-between items-start mb-1">
@@ -287,8 +312,8 @@ export default function MyDonations() {
                           </Badge>
                         </div>
                         <div className="text-xs text-zinc-500 space-y-0.5">
-                          <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> (매월 {sub.recurringDay}일)</p>
-                          <p>· 결제카드: {sub.cardName} ({sub.cardNo})</p>
+                          <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> ({sub.recurringInterval === 'daily' ? '매일 자동결제' : sub.recurringInterval === 'weekly' ? `매주 (${sub.recurringDayOfWeek || '일'})요일` : `매월 ${sub.recurringDay || 10}일`})</p>
+                          <p>· 결제카드: {sub.cardName || '신용카드'} ({sub.cardNo || '****-****'})</p>
                         </div>
                       </div>
 
@@ -324,10 +349,10 @@ export default function MyDonations() {
                         </div>
                       )}
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+                  ))
+                )}
+              </CardContent>
+            </Card>
             {/* Stats Summary */}
             <div className="grid grid-cols-2 gap-4">
               <Card className="bg-white border-none shadow-sm">

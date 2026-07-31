@@ -39,6 +39,8 @@ export default function DonationFlow() {
   const [baptismName, setBaptismName] = useState('');
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>('일');
   const [recurringDay, setRecurringDay] = useState<number>(5);
 
   useEffect(() => {
@@ -82,7 +84,9 @@ export default function DonationFlow() {
       baptismName: baptismName || undefined,
       familyMembers: familyMembers.length > 0 ? familyMembers : undefined,
       isRecurring,
-      recurringDay: isRecurring ? recurringDay : undefined,
+      recurringInterval: isRecurring ? recurringInterval : undefined,
+      recurringDayOfWeek: isRecurring && recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
+      recurringDay: isRecurring && recurringInterval === 'monthly' ? recurringDay : undefined,
     });
     navigate(`/${tenantSlug}/payment`);
   };
@@ -430,20 +434,89 @@ export default function DonationFlow() {
                 </div>
 
                 {isRecurring && (
-                  <div className="animate-fade-in">
-                    <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
-                      정기 결제일 선택
+                  <div className="animate-fade-in space-y-3">
+                    <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                      🗓️ 정기 결제 주기 선택
                     </label>
-                    <Select value={recurringDay.toString()} onValueChange={(v) => setRecurringDay(Number(v))}>
-                      <SelectTrigger className="h-12 border-zinc-200 dark:border-zinc-800 text-sm font-semibold rounded-xl bg-zinc-50 dark:bg-zinc-900">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5" className="text-sm">매월 5일</SelectItem>
-                        <SelectItem value="15" className="text-sm">매월 15일</SelectItem>
-                        <SelectItem value="25" className="text-sm">매월 25일</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                      <button
+                        type="button"
+                        className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          recurringInterval === 'daily'
+                            ? 'bg-white dark:bg-zinc-900 text-amber-700 shadow-xs'
+                            : 'text-zinc-500 hover:text-zinc-900'
+                        }`}
+                        onClick={() => setRecurringInterval('daily')}
+                      >
+                        📅 매일
+                      </button>
+                      <button
+                        type="button"
+                        className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          recurringInterval === 'weekly'
+                            ? 'bg-white dark:bg-zinc-900 text-amber-700 shadow-xs'
+                            : 'text-zinc-500 hover:text-zinc-900'
+                        }`}
+                        onClick={() => setRecurringInterval('weekly')}
+                      >
+                        📅 매주
+                      </button>
+                      <button
+                        type="button"
+                        className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                          recurringInterval === 'monthly'
+                            ? 'bg-white dark:bg-zinc-900 text-amber-700 shadow-xs'
+                            : 'text-zinc-500 hover:text-zinc-900'
+                        }`}
+                        onClick={() => setRecurringInterval('monthly')}
+                      >
+                        📅 매월
+                      </button>
+                    </div>
+
+                    {recurringInterval === 'weekly' && (
+                      <div className="pt-1 space-y-1.5 animate-fade-in">
+                        <label className="text-[11px] text-zinc-500 font-medium">자동 결제 희망 요일</label>
+                        <div className="flex gap-1">
+                          {['월', '화', '수', '목', '금', '토', '일'].map((day) => (
+                            <button
+                              key={day}
+                              type="button"
+                              className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                recurringDayOfWeek === day
+                                  ? 'bg-amber-700 text-white border-amber-700'
+                                  : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                              }`}
+                              onClick={() => setRecurringDayOfWeek(day)}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {recurringInterval === 'monthly' && (
+                      <div className="pt-1 space-y-1.5 animate-fade-in">
+                        <label className="text-[11px] text-zinc-500 font-medium">매월 자동 결제 날짜</label>
+                        <div className="grid grid-cols-6 gap-1">
+                          {[1, 5, 10, 15, 20, 25].map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                recurringDay === d
+                                  ? 'bg-amber-700 text-white border-amber-700'
+                                  : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                              }`}
+                              onClick={() => setRecurringDay(d)}
+                            >
+                              {d}일
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -471,7 +544,7 @@ export default function DonationFlow() {
                       ['금액', `${fmt(amount)}원`],
                       ['성명', name],
                       ['연락처', phone],
-                      ...(isRecurring ? [['결제 주기', `매월 ${recurringDay}일 정기`]] : []),
+                      ...(isRecurring ? [['결제 주기', recurringInterval === 'daily' ? '매일 자동 정기' : recurringInterval === 'weekly' ? `매주 (${recurringDayOfWeek})요일 정기` : `매월 ${recurringDay}일 정기`]] : []),
                     ].map(([k, v]) => (
                       <div key={k} className="flex justify-between items-center text-xs">
                         <span className="text-zinc-500 dark:text-zinc-400 font-medium">{k}</span>

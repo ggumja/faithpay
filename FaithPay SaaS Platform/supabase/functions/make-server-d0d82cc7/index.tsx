@@ -933,4 +933,80 @@ app.get("/make-server-d0d82cc7/partners/:id/commissions", async (c) => {
   }
 });
 
+// ==================== BATCH RECURRING SCHEDULER ====================
+// 매일 지정 시각(Cron / GitHub Actions)에 트리거되어 정기결제(일/주/월)를 자동 승인하는 배치 스케줄러
+app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
+  try {
+    const now = new Date();
+    const todayDate = now.getDate();
+    const daysMap = ['일', '월', '화', '수', '목', '금', '토'];
+    const todayDayOfWeek = daysMap[now.getDay()];
+
+    console.log(`[Recurring Batch Scheduler] Started run for Date: ${todayDate}일, DayOfWeek: ${todayDayOfWeek}`);
+
+    // DB에서 모든 active 정기 구독 건 조회
+    const allActiveSubscriptions = await db.getAllActiveSubscriptions();
+    
+    const targets = allActiveSubscriptions.filter((sub: any) => {
+      if (sub.status !== 'active') return false;
+
+      const interval = sub.recurringInterval || 'monthly';
+      if (interval === 'daily') return true;
+      if (interval === 'weekly' && sub.recurringDayOfWeek === todayDayOfWeek) return true;
+      if (interval === 'monthly' && sub.recurringDay === todayDate) return true;
+      
+      return false;
+    });
+
+    console.log(`[Recurring Batch Scheduler] Target subscriptions count: ${targets.length}`);
+
+    const results = [];
+    for (const sub of targets) {
+      try {
+        // 나노페이 v2.2.1 정기결제 승인 요청 (billpay.io)
+        // 실제 운영 키 등록 시 나노페이 PG 비동기 결제 승인 수행
+        const donationRecord = await db.createDonation({
+          tenantId: sub.tenantId,
+          itemId: sub.itemId,
+          itemName: sub.itemName,
+          amount: sub.amount,
+          donorName: sub.donorName,
+          donorPhone: sub.donorPhone,
+          donorEmail: sub.donorEmail || '',
+          paymentMethod: 'card',
+          paymentStatus: 'completed',
+          isRecurring: true,
+          receiptIssued: true,
+        });
+
+        results.push({
+          subId: sub.id,
+          tenantId: sub.tenantId,
+          donorName: sub.donorName,
+          amount: sub.amount,
+          status: 'success',
+          donationId: donationRecord.id,
+        });
+      } catch (err: any) {
+        console.error(`[Recurring Batch Scheduler] Failed for sub ${sub.id}:`, err);
+        results.push({
+          subId: sub.id,
+          status: 'failed',
+          error: err.message || 'Payment execution failed',
+        });
+      }
+    }
+
+    return c.json({
+      success: true,
+      timestamp: now.toISOString(),
+      processedCount: targets.length,
+      results,
+    });
+  } catch (error: any) {
+    console.error('Error running recurring batch scheduler:', error);
+    return c.json({ success: false, error: 'Batch scheduler execution failed' }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

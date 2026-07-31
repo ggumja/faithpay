@@ -64,11 +64,14 @@ export interface DonationFormData {
   amount: number;
   name: string;
   phone: string;
+  email?: string;
   prayerText?: string;
   familyMembers?: Array<{ name: string; birthDate: string; calendar: string }>;
   baptismName?: string;
   isRecurring: boolean;
+  recurringInterval?: 'daily' | 'weekly' | 'monthly';
   recurringDay?: number;
+  recurringDayOfWeek?: string;
 }
 
 export interface AdminUser {

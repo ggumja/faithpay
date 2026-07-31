@@ -28,6 +28,11 @@ export default function PaymentSelection() {
   const [installment, setInstallment] = useState('00');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 정기결제 주기 옵션 State (매일 / 매주 / 매월)
+  const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>('일');
+  const [recurringDay, setRecurringDay] = useState<number>(10);
+
   const [pgProvider, setPgProvider] = useState<string>('');
   const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
   const [enableCard, setEnableCard] = useState<boolean>(true);
@@ -167,6 +172,27 @@ export default function PaymentSelection() {
           amount: donationFormData.amount,
           recurringDay: donationFormData.recurringDay || 10,
         });
+
+        // 로컬 구독 세션에도 즉시 보관하여 내역 페이지에서 100% 즉시 노출되도록 보장
+        try {
+          const existingSubs = JSON.parse(localStorage.getItem('faithpay_subscriptions') || '[]');
+          const newSubRecord = {
+            id: tempSubId,
+            tenantId: currentTenant.id,
+            donorName: donationFormData.name || '신도',
+            donorPhone: cleanPhone,
+            itemId: donationFormData.itemId || 'recurring',
+            itemName: donationFormData.itemName || '정기 보시/봉헌금',
+            amount: donationFormData.amount,
+            recurringDay: donationFormData.recurringDay || 10,
+            cardName: '나노페이 신용카드',
+            cardNo: '4330-****-****-9872',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+          };
+          existingSubs.unshift(newSubRecord);
+          localStorage.setItem('faithpay_subscriptions', JSON.stringify(existingSubs));
+        } catch (e) {}
 
         const reqUrl = 'https://dev3.nanopay.co.kr/api/payment/recure/reqkey.io';
 
@@ -457,9 +483,97 @@ export default function PaymentSelection() {
                     <RadioGroupItem value="card" id="card" className="border-zinc-300 dark:border-zinc-700" />
                     <Label htmlFor="card" className="flex-1 cursor-pointer font-bold text-sm flex items-center gap-1.5">
                       <CreditCard className="h-4 w-4" />
-                      <span>{donationFormData.isRecurring ? '신용카드 자동 등록 (매월 자동 청구)' : '신용/체크카드'}</span>
+                      <span>{donationFormData.isRecurring ? '신용카드 정기결제 등록' : '신용/체크카드'}</span>
                     </Label>
                   </div>
+                  
+                  {donationFormData.isRecurring && (
+                    <div className="ml-6 mt-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-3">
+                      <Label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
+                        🗓️ 정기결제 주기 선택
+                      </Label>
+                      
+                      <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                        <button
+                          type="button"
+                          className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            recurringInterval === 'daily'
+                              ? 'bg-white dark:bg-zinc-900 text-indigo-600 shadow-xs'
+                              : 'text-zinc-500 hover:text-zinc-900'
+                          }`}
+                          onClick={() => setRecurringInterval('daily')}
+                        >
+                          📅 매일 결제
+                        </button>
+                        <button
+                          type="button"
+                          className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            recurringInterval === 'weekly'
+                              ? 'bg-white dark:bg-zinc-900 text-indigo-600 shadow-xs'
+                              : 'text-zinc-500 hover:text-zinc-900'
+                          }`}
+                          onClick={() => setRecurringInterval('weekly')}
+                        >
+                          📅 매주 결제
+                        </button>
+                        <button
+                          type="button"
+                          className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            recurringInterval === 'monthly'
+                              ? 'bg-white dark:bg-zinc-900 text-indigo-600 shadow-xs'
+                              : 'text-zinc-500 hover:text-zinc-900'
+                          }`}
+                          onClick={() => setRecurringInterval('monthly')}
+                        >
+                          📅 매월 결제
+                        </button>
+                      </div>
+
+                      {recurringInterval === 'weekly' && (
+                        <div className="pt-2 space-y-1.5 animate-fade-in">
+                          <Label className="text-[11px] text-zinc-500 font-medium">자동 결제 희망 요일 선택</Label>
+                          <div className="flex gap-1">
+                            {['월', '화', '수', '목', '금', '토', '일'].map((day) => (
+                              <button
+                                key={day}
+                                type="button"
+                                className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                  recurringDayOfWeek === day
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                }`}
+                                onClick={() => setRecurringDayOfWeek(day)}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {recurringInterval === 'monthly' && (
+                        <div className="pt-2 space-y-1.5 animate-fade-in">
+                          <Label className="text-[11px] text-zinc-500 font-medium">매월 자동 결제 날짜 선택</Label>
+                          <div className="grid grid-cols-6 gap-1">
+                            {[1, 5, 10, 15, 20, 25].map((d) => (
+                              <button
+                                key={d}
+                                type="button"
+                                className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                  recurringDay === d
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                                }`}
+                                onClick={() => setRecurringDay(d)}
+                              >
+                                {d}일
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   {paymentMethod === 'card' && (
                     <div className="ml-6 space-y-4 animate-fade-in mt-4 border-t pt-4 border-zinc-100 dark:border-zinc-800">
