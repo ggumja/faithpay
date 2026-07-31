@@ -231,8 +231,8 @@ export default function PaymentSelection() {
 
         const isMobile = window.innerWidth <= 768;
         const nanoUrl = isMobile 
-          ? 'https://dev3.nanopay.co.kr/pay/cert/mobile/request.io'
-          : 'https://dev3.nanopay.co.kr/pay/cert/pc/request.io';
+          ? 'https://dev3.nanopay.co.kr/api/payment/cert/mobile/request.io'
+          : 'https://dev3.nanopay.co.kr/api/payment/cert/pc/request.io';
 
         // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입 (기존 방식 유지)
         const payFormHtml = `
