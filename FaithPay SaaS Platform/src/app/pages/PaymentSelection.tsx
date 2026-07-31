@@ -123,7 +123,77 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 나노 PG 인증결제 처리
+    // 나노 PG 정기결제(빌키 발급) 처리
+    if (pgProvider === 'nanopay' && donationFormData.isRecurring) {
+      setIsProcessing(true);
+      toast.info('정기결제 카드 등록 창을 요청하고 있습니다...');
+      
+      try {
+        const paymentWindow = window.open('about:blank', 'NanopayBillKey', 'width=650,height=700,scrollbars=yes,resizable=yes');
+        if (!paymentWindow) {
+          toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
+          setIsProcessing(false);
+          return;
+        }
+
+        paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제 안전 카드 등록창으로 연결 중입니다...</p>');
+
+        const res = await paymentAPI.processBillKeyRequest({
+          tenantId: currentTenant.id,
+          donationData: donationFormData,
+        });
+
+        if (res.success && res.payload) {
+          const { ver, loginId, shopcode, userId, receiveUrl, timestamp, hashValue, compData } = res.payload;
+          const reqUrl = res.reqUrl || 'https://dev3.nanopay.co.kr/api/payment/recure/reqkey.io';
+
+          const payFormHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"><title>Nanopay Recurring Setup</title></head>
+            <body>
+              <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 정기결제 카드 등록창으로 이동 중입니다...</p>
+              <form id="nanoBillKeyForm" method="POST" action="${reqUrl}">
+                <input type="hidden" name="ver" value="${ver}" />
+                <input type="hidden" name="loginId" value="${loginId}" />
+                <input type="hidden" name="shopcode" value="${shopcode}" />
+                <input type="hidden" name="userId" value="${userId}" />
+                <input type="hidden" name="receiveUrl" value="${receiveUrl}" />
+                <input type="hidden" name="timestamp" value="${timestamp}" />
+                <input type="hidden" name="hashValue" value="${hashValue}" />
+                <input type="hidden" name="compData" value='${compData}' />
+              </form>
+              <script>document.getElementById('nanoBillKeyForm').submit();</script>
+            </body>
+            </html>
+          `;
+
+          try {
+            if (paymentWindow && !paymentWindow.closed) {
+              paymentWindow.document.open();
+              paymentWindow.document.write(payFormHtml);
+              paymentWindow.document.close();
+            }
+          } catch (e) {}
+
+          toast.success('정기결제 카드 등록창이 열렸습니다.');
+          setTimeout(() => {
+            navigate(`/${tenantSlug}/complete`);
+          }, 4000);
+        } else {
+          paymentWindow.close();
+          toast.error(`정기결제 등록 실패: ${res.error || '알 수 없는 오류'}`);
+          setIsProcessing(false);
+        }
+      } catch (error) {
+        console.error('BillKey error:', error);
+        toast.error('정기결제 요청 중 오류가 발생했습니다.');
+        setIsProcessing(false);
+      }
+      return;
+    }
+
+    // 나노 PG 일반 인증결제 처리
     if (pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
       setIsProcessing(true);
       toast.info('결제창을 요청하고 있습니다...');
@@ -161,8 +231,8 @@ export default function PaymentSelection() {
 
         const isMobile = window.innerWidth <= 768;
         const nanoUrl = isMobile 
-          ? 'https://dev3.nanopay.co.kr/payment/cert/mobile/request.io'
-          : 'https://dev3.nanopay.co.kr/payment/cert/pc/request.io';
+          ? 'https://dev3.nanopay.co.kr/pay/cert/mobile/request.io'
+          : 'https://dev3.nanopay.co.kr/pay/cert/pc/request.io';
 
         // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입 (기존 방식 유지)
         const payFormHtml = `
@@ -175,6 +245,8 @@ export default function PaymentSelection() {
               <input type="hidden" name="ver" value="${ver}" />
               <input type="hidden" name="loginId" value="${loginId}" />
               <input type="hidden" name="shopcode" value="${shopcode}" />
+              <input type="hidden" name="apiKey" value="${apiKey}" />
+              <input type="hidden" name="API_KEY" value="${apiKey}" />
               <input type="hidden" name="orderName" value="${donorName}" />
               <input type="hidden" name="orderTel" value="${donorPhone}" />
               <input type="hidden" name="orderEmail" value="donator@faithpay.kr" />

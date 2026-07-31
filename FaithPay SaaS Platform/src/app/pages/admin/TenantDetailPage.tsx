@@ -56,6 +56,7 @@ export default function TenantDetailPage() {
   const [slug, setSlug] = useState('');
 
   // Payment Config State
+  const [paymentTab, setPaymentTab] = useState<'general' | 'billing'>('general');
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [pgProvider, setPgProvider] = useState('');
   const [mid, setMid] = useState('');
@@ -64,6 +65,13 @@ export default function TenantDetailPage() {
   const [loginId, setLoginId] = useState('');
   const [iv, setIv] = useState('');
   const [ver, setVer] = useState('');
+  
+  // Billing Key (Recurring Payment) State
+  const [billMid, setBillMid] = useState('');
+  const [billApiKey, setBillApiKey] = useState('');
+  const [billSecretKey, setBillSecretKey] = useState('');
+  const [billVer, setBillVer] = useState('240000005');
+
   const [enableCard, setEnableCard] = useState(true);
   const [enableEasyPayment, setEnableEasyPayment] = useState(true);
   const [enableVBank, setEnableVBank] = useState(true);
@@ -71,6 +79,8 @@ export default function TenantDetailPage() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showIv, setShowIv] = useState(false);
+  const [showBillApiKey, setShowBillApiKey] = useState(false);
+  const [showBillSecretKey, setShowBillSecretKey] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -434,198 +444,317 @@ export default function TenantDetailPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {!paymentConfig ? (
-              <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
-                <AlertCircle className="h-12 w-12 text-amber-600 mx-auto mb-3" />
-                <p className="text-sm font-medium text-amber-900 mb-1">
-                  결제 설정이 아직 구성되지 않았습니다
-                </p>
-                <p className="text-xs text-amber-700">
-                  아래 정보를 입력하여 결제 기능을 활성화하세요
-                </p>
-              </div>
-            ) : null}
+          <CardContent>
+            {/* Payment Method Category Tabs */}
+            <div className="flex gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-4">
+              <button
+                type="button"
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  paymentTab === 'general'
+                    ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+                onClick={() => setPaymentTab('general')}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>💳 일반 결제 설정 (일시불/가상계좌)</span>
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  paymentTab === 'billing'
+                    ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                }`}
+                onClick={() => setPaymentTab('billing')}
+              >
+                <Key className="h-4 w-4 text-amber-500" />
+                <span>⚡ 빌링키(정기) 결제 설정 (매월 자동 청구)</span>
+              </button>
+            </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pgProvider" className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  PG 제공자 <span className="text-red-500">*</span>
-                </Label>
-                <Select value={pgProvider} onValueChange={setPgProvider}>
-                  <SelectTrigger id="pgProvider">
-                    <SelectValue placeholder="PG 제공자 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nanopay">나노PG (NANO)</SelectItem>
-                    <SelectItem value="toss">토스페이먼츠</SelectItem>
-                    <SelectItem value="portone">포트원 (구 아임포트)</SelectItem>
-                    <SelectItem value="nice">NICE페이먼츠</SelectItem>
-                    <SelectItem value="kg">KG이니시스</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mid" className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  {pgProvider === 'nanopay' ? '가맹점 코드 (shopcode)' : '가맹점 식별번호 (MID)'} <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="mid"
-                  value={mid}
-                  onChange={(e) => setMid(e.target.value)}
-                  placeholder={pgProvider === 'nanopay' ? "예: 240000006" : "예: toss_mid_12345"}
-                  autoComplete="off"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="apiKey" className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  API Key {pgProvider !== 'nanopay' && '(Client Key)'} <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="apiKey"
-                    type={showApiKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={pgProvider === 'nanopay' ? "API Key 입력" : "토스페이먼츠 API Key 입력"}
-                    className="pr-10"
-                    autoComplete="new-password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  >
-                    {showApiKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
+            {paymentTab === 'general' ? (
+              /* ==================== GENERAL PAYMENT TAB ==================== */
+              <div className="space-y-4 animate-fade-in">
+                <div className="space-y-2">
+                  <Label htmlFor="pgProvider" className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    PG 제공자 <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={pgProvider} onValueChange={setPgProvider}>
+                    <SelectTrigger id="pgProvider">
+                      <SelectValue placeholder="PG 제공자 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nanopay">나노PG (NANO)</SelectItem>
+                      <SelectItem value="toss">토스페이먼츠</SelectItem>
+                      <SelectItem value="portone">포트원 (구 아임포트)</SelectItem>
+                      <SelectItem value="nice">NICE페이먼츠</SelectItem>
+                      <SelectItem value="kg">KG이니시스</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="secretKey" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  {pgProvider === 'nanopay' ? '암호화 KEY (Secret)' : 'Secret Key'} <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
+                <div className="space-y-2">
+                  <Label htmlFor="mid" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    {pgProvider === 'nanopay' ? '가맹점 코드 (shopcode)' : '가맹점 식별번호 (MID)'} <span className="text-red-500">*</span>
+                  </Label>
                   <Input
-                    id="secretKey"
-                    type={showSecretKey ? 'text' : 'password'}
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    placeholder={pgProvider === 'nanopay' ? "암호화 KEY 입력" : "토스페이먼츠 Secret Key 입력"}
-                    className="pr-10"
-                    autoComplete="new-password"
+                    id="mid"
+                    value={mid}
+                    onChange={(e) => setMid(e.target.value)}
+                    placeholder={pgProvider === 'nanopay' ? "예: 240000006" : "예: toss_mid_12345"}
+                    autoComplete="off"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full"
-                    onClick={() => setShowSecretKey(!showSecretKey)}
-                  >
-                    {showSecretKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
                 </div>
-              </div>
 
-              {pgProvider === 'nanopay' && (
-                <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-100">
-                  <div className="space-y-2">
-                    <Label htmlFor="loginId" className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      로그인 ID (loginId) <span className="text-red-500">*</span>
-                    </Label>
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey" className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    API Key {pgProvider !== 'nanopay' && '(Client Key)'} <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
                     <Input
-                      id="loginId"
-                      value={loginId}
-                      onChange={(e) => setLoginId(e.target.value)}
-                      placeholder="예: smbtestshop"
-                      className="bg-white"
-                      autoComplete="off"
+                      id="apiKey"
+                      type={showApiKey ? 'text' : 'password'}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder={pgProvider === 'nanopay' ? "API Key 입력" : "토스페이먼츠 API Key 입력"}
+                      className="pr-10"
+                      autoComplete="new-password"
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="iv" className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      초기화 벡터 (IV) <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="iv"
-                        type={showIv ? 'text' : 'password'}
-                        value={iv}
-                        onChange={(e) => setIv(e.target.value)}
-                        placeholder="IV 값 입력"
-                        className="pr-10 bg-white"
-                        autoComplete="new-password"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full"
-                        onClick={() => setShowIv(!showIv)}
-                      >
-                        {showIv ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ver" className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      버전 (ver) <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="ver"
-                      value={ver}
-                      onChange={(e) => setVer(e.target.value)}
-                      placeholder="예: smbtest 또는 1.0"
-                      className="bg-white"
-                      autoComplete="off"
-                    />
-                  </div>
-                  
-                  <div className="flex justify-end mt-4">
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      className="bg-white border-purple-200 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
-                      onClick={() => {
-                        setMid('240000006');
-                        setLoginId('smbtestshop');
-                        setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
-                        setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
-                        setIv('vgqTyX5tBqnMXB68');
-                        setVer('smbtest');
-                        toast.success('나노PG 테스트 계정 정보가 입력되었습니다.');
-                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowApiKey(!showApiKey)}
                     >
-                      나노PG 테스트 계정 정보 채우기
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="secretKey" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    {pgProvider === 'nanopay' ? '암호화 KEY (Secret)' : 'Secret Key'} <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="secretKey"
+                      type={showSecretKey ? 'text' : 'password'}
+                      value={secretKey}
+                      onChange={(e) => setSecretKey(e.target.value)}
+                      placeholder={pgProvider === 'nanopay' ? "암호화 KEY 입력" : "토스페이먼츠 Secret Key 입력"}
+                      className="pr-10"
+                      autoComplete="new-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                    >
+                      {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                {pgProvider === 'nanopay' && (
+                  <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900">
+                    <div className="space-y-2">
+                      <Label htmlFor="loginId" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        로그인 ID (loginId) <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="loginId"
+                        value={loginId}
+                        onChange={(e) => setLoginId(e.target.value)}
+                        placeholder="예: smbtestshop"
+                        className="bg-white dark:bg-zinc-900"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="iv" className="flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        초기화 벡터 (IV) <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="iv"
+                          type={showIv ? 'text' : 'password'}
+                          value={iv}
+                          onChange={(e) => setIv(e.target.value)}
+                          placeholder="IV 값 입력"
+                          className="pr-10 bg-white dark:bg-zinc-900"
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowIv(!showIv)}
+                        >
+                          {showIv ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ver" className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        버전 (ver) <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="ver"
+                        value={ver}
+                        onChange={(e) => setVer(e.target.value)}
+                        placeholder="예: smbtest 또는 1.0"
+                        className="bg-white dark:bg-zinc-900"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="bg-white border-purple-200 text-purple-700 hover:bg-purple-100"
+                        onClick={() => {
+                          setMid('240000006');
+                          setLoginId('smbtestshop');
+                          setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
+                          setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
+                          setIv('vgqTyX5tBqnMXB68');
+                          setVer('smbtest');
+                          toast.info('나노PG 일반결제 테스트 계정 정보가 채워졌습니다.');
+                        }}
+                      >
+                        나노PG 일반결제 테스트 계정 정보 채우기
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ==================== BILLING KEY PAYMENT TAB ==================== */
+              <div className="space-y-4 animate-fade-in p-4 bg-amber-50/50 dark:bg-amber-950/20 rounded-2xl border border-amber-200/80 dark:border-amber-900/50">
+                <div className="p-3.5 bg-amber-100/70 dark:bg-amber-900/40 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-medium leading-relaxed">
+                  ⚡ <strong>나노페이 정기결제(빌링키) 연동 v2.2.1 안내</strong><br />
+                  매월 신도 자동 청구 결제를 처리하기 위한 정기결제 전용 가맹점 코드(Bill MID) 및 빌링 API Key를 설정합니다. 미입력 시 일반 결제 가맹점 정보가 기본 호환 적용됩니다.
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="billMid" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                    <CreditCard className="h-4 w-4 text-amber-600" />
+                    정기결제 전용 가맹점 코드 (Bill MID / shopcode)
+                  </Label>
+                  <Input
+                    id="billMid"
+                    value={billMid}
+                    onChange={(e) => setBillMid(e.target.value)}
+                    placeholder="미입력 시 일반 가맹점 코드(240000006) 사용"
+                    className="bg-white dark:bg-zinc-900 font-semibold"
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="billApiKey" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                    <Key className="h-4 w-4 text-amber-600" />
+                    정기결제 빌링 API Key
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="billApiKey"
+                      type={showBillApiKey ? 'text' : 'password'}
+                      value={billApiKey}
+                      onChange={(e) => setBillApiKey(e.target.value)}
+                      placeholder="나노페이 발급 빌링 전용 API Key 입력"
+                      className="pr-10 bg-white dark:bg-zinc-900 font-semibold"
+                      autoComplete="new-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowBillApiKey(!showBillApiKey)}
+                    >
+                      {showBillApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="billSecretKey" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    정기결제 암호화 Key (Secret)
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="billSecretKey"
+                      type={showBillSecretKey ? 'text' : 'password'}
+                      value={billSecretKey}
+                      onChange={(e) => setBillSecretKey(e.target.value)}
+                      placeholder="나노페이 발급 빌링 암호화 Key 입력"
+                      className="pr-10 bg-white dark:bg-zinc-900 font-semibold"
+                      autoComplete="new-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowBillSecretKey(!showBillSecretKey)}
+                    >
+                      {showBillSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="billVer" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    정기결제 API 버전 (ver)
+                  </Label>
+                  <Input
+                    id="billVer"
+                    value={billVer}
+                    onChange={(e) => setBillVer(e.target.value)}
+                    placeholder="기본값: 240000005"
+                    className="bg-white dark:bg-zinc-900 font-semibold"
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100"
+                    onClick={() => {
+                      setBillMid('240000005');
+                      setBillApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
+                      setBillSecretKey('Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6');
+                      setBillVer('240000005');
+                      toast.info('나노PG 빌링결제 v2.2.1 테스트 계정 정보가 채워졌습니다.');
+                    }}
+                  >
+                    나노PG 빌링 테스트 계정 정보 채우기
+                  </Button>
+                </div>
+              </div>
+            )}
 
               {/* 결제 수단 사용 여부 체크박스 섹션 */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
@@ -683,7 +812,7 @@ export default function TenantDetailPage() {
                 </Label>
               </div>
 
-              {pgProvider === 'nanopay' ? (
+              {pgProvider === 'nanopay' && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex gap-2">
                     <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
@@ -697,22 +826,7 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-900">
-                      <p className="font-medium mb-1">토스페이먼츠 API 키 발급 안내</p>
-                      <ul className="text-xs space-y-1 text-blue-800">
-                        <li>• 토스페이먼츠 개발자센터에서 API 키를 발급받으세요</li>
-                        <li>• 테스트 환경에서는 테스트 키를, 운영 환경에서는 실제 키를 사용하세요</li>
-                        <li>• Secret Key는 안전하게 보관하고 노출되지 않도록 주의하세요</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
               )}
-            </div>
 
             <Separator className="my-4" />
 

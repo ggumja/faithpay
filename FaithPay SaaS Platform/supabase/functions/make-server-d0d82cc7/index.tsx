@@ -477,6 +477,161 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
   }
 });
 
+// ==================== NANOPAY BILLING KEY (RECURRING) API ====================
+
+// 빌키 발급 요청 (카드 인증창 호출)
+app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
+  try {
+    const { tenantId, donationData } = await c.req.json();
+    const config = await db.getPaymentConfig(tenantId);
+    
+    const NANO_API_KEY = config?.apiKey || "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    const shopcode = config?.mid || "240000006";
+    const loginId = config?.loginId || "smbtestshop";
+    const ver = "240000005";
+
+    const cleanPhone = (donationData?.phone || "01000000000").replace(/[^0-9]/g, '');
+    const userId = `${tenantId}_${cleanPhone}`;
+    const timestamp = Date.now().toString();
+    const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
+
+    // hashValue 예시: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO")
+    const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
+    const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toUpperCase();
+
+    const tempSubId = `sub_${Date.now()}`;
+    const compData = JSON.stringify({
+      tempSubId,
+      tenantId,
+      donorName: donationData.name,
+      donorPhone: cleanPhone,
+      donorEmail: donationData.email || "",
+      itemId: donationData.itemId || "recurring",
+      itemName: donationData.itemName || "정기 봉헌금",
+      amount: donationData.amount,
+      recurringDay: donationData.recurringDay || 10,
+    });
+
+    const isTest = !config?.apiKey;
+    const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
+    const NANO_REQKEY_URL = `${baseUrl}/api/payment/recure/reqkey.io`;
+
+    return c.json({
+      success: true,
+      reqUrl: NANO_REQKEY_URL,
+      payload: {
+        ver,
+        loginId,
+        shopcode,
+        userId,
+        receiveUrl,
+        timestamp,
+        hashValue,
+        compData,
+      }
+    });
+  } catch (error) {
+    console.error("BillKey request error:", error);
+    return c.json({ success: false, error: "Failed to initiate BillKey request" }, 500);
+  }
+});
+
+// 빌키 발급 콜백 결과 처리
+app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => {
+  try {
+    const body = await c.req.json();
+    console.log("Nanopay BillKey Callback Received:", body);
+
+    const { resultCode, resultMsg, billKey, userId, cardNo, cardName, compData } = body;
+
+    if (resultCode === "0000" && billKey) {
+      let meta: any = {};
+      try { meta = JSON.parse(compData || "{}"); } catch(e){}
+
+      const newSub = await db.createSubscription({
+        tenantId: meta.tenantId || "default",
+        donorName: meta.donorName || "신도",
+        donorPhone: meta.donorPhone || "01000000000",
+        donorEmail: meta.donorEmail || "",
+        itemId: meta.itemId || "recurring",
+        itemName: meta.itemName || "정기 봉헌금",
+        amount: meta.amount || 10000,
+        userId: userId || "user",
+        billKey: billKey,
+        cardNo: cardNo || "****-****-****-****",
+        cardName: cardName || "신용카드",
+        recurringDay: meta.recurringDay || 10,
+        status: "active",
+      });
+
+      return c.json({ resultCode: "0000", resultMsg: "Success", subscription: newSub });
+    }
+    return c.json({ resultCode: resultCode || "9999", resultMsg: resultMsg || "Failed" });
+  } catch (error) {
+    console.error("BillKey callback error:", error);
+    return c.json({ resultCode: "9999", resultMsg: "Callback error" }, 500);
+  }
+});
+
+// ==================== 1초 SMS OTP AUTH & SUBSCRIPTION API ====================
+
+// 1초 SMS OTP 발송 요청
+app.post("/make-server-d0d82cc7/auth/otp/send", async (c) => {
+  try {
+    const { phone } = await c.req.json();
+    if (!phone) return c.json({ success: false, error: "Phone number is required" }, 400);
+
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    await db.createSmsOtp(cleanPhone, otpCode);
+
+    console.log(`[SMS OTP Sent] Phone: ${cleanPhone}, Code: ${otpCode} (테스트용: 1234 사용 가능)`);
+    return c.json({ success: true, message: "1초 SMS 인증번호가 발송되었습니다. (테스트용 코드: 1234)" });
+  } catch (error) {
+    return c.json({ success: false, error: "Failed to send OTP" }, 500);
+  }
+});
+
+// 1초 SMS OTP 검증 및 구독/헌금 내역 조회
+app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
+  try {
+    const { phone, otpCode } = await c.req.json();
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const isValid = await db.verifySmsOtp(cleanPhone, otpCode);
+
+    if (!isValid) {
+      return c.json({ success: false, error: "인증번호가 올바르지 않거나 만료되었습니다." }, 400);
+    }
+
+    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
+    const allDonations = await db.getAllDonations();
+    const donations = allDonations.filter(d => d.donorPhone.replace(/[^0-9]/g, '') === cleanPhone);
+
+    return c.json({
+      success: true,
+      token: `token_${cleanPhone}_${Date.now()}`,
+      subscriptions,
+      donations
+    });
+  } catch (error) {
+    return c.json({ success: false, error: "OTP Verification failed" }, 500);
+  }
+});
+
+// 비회원 정기결제 중단/일시정지 상태 변경
+app.post("/make-server-d0d82cc7/subscriptions/:id/status", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json(); // 'active' | 'paused' | 'cancelled'
+    const updated = await db.updateSubscriptionStatus(id, status);
+    if (!updated) return c.json({ success: false, error: "Subscription not found" }, 444);
+    return c.json({ success: true, subscription: updated });
+  } catch (error) {
+    return c.json({ success: false, error: "Failed to update subscription status" }, 500);
+  }
+});
+
 // 인증결제 콜백 결과 처리
 app.post("/make-server-d0d82cc7/payment/process/cert/callback", async (c) => {
   try {

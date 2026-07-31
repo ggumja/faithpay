@@ -88,6 +88,36 @@ export interface Donation {
   updatedAt: string;
 }
 
+export interface Subscription {
+  id: string;
+  tenantId: string;
+  donorName: string;
+  donorPhone: string;
+  donorEmail?: string;
+  itemId: string;
+  itemName: string;
+  amount: number;
+  userId: string;
+  billKey: string;
+  cardNo?: string;
+  cardName?: string;
+  recurringDay: number;
+  status: 'active' | 'paused' | 'cancelled';
+  nextPaymentDate?: string;
+  pausedUntil?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SmsOtp {
+  id: string;
+  phone: string;
+  otpCode: string;
+  expiresAt: string;
+  isVerified: boolean;
+  createdAt: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;
@@ -436,8 +466,82 @@ export interface PartnerCommission {
   donationId: string;
   donationAmount: number;
   commissionAmount: number;
-  settlementStatus: 'pending' | 'paid';
+  commissionRate: number;
+  status: 'pending' | 'settled';
+  settledAt?: string;
   createdAt: string;
+}
+
+// ==================== SUBSCRIPTIONS OPERATIONS ====================
+
+export async function createSubscription(sub: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>): Promise<Subscription> {
+  const now = new Date().toISOString();
+  const newSub: Subscription = {
+    ...sub,
+    id: `sub_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await kv.set(`subscription:${newSub.id}`, newSub);
+  
+  // phone -> subscription list index
+  const key = `subscriptions:phone:${sub.donorPhone.replace(/[^0-9]/g, '')}`;
+  const existing = (await kv.get<string[]>(key)) || [];
+  existing.push(newSub.id);
+  await kv.set(key, existing);
+  
+  return newSub;
+}
+
+export async function getSubscriptionsByPhone(phone: string): Promise<Subscription[]> {
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const ids = (await kv.get<string[]>(`subscriptions:phone:${cleanPhone}`)) || [];
+  const subs: Subscription[] = [];
+  for (const id of ids) {
+    const s = await kv.get<Subscription>(`subscription:${id}`);
+    if (s) subs.push(s);
+  }
+  return subs;
+}
+
+export async function updateSubscriptionStatus(id: string, status: 'active' | 'paused' | 'cancelled'): Promise<Subscription | null> {
+  const sub = await kv.get<Subscription>(`subscription:${id}`);
+  if (!sub) return null;
+  sub.status = status;
+  sub.updatedAt = new Date().toISOString();
+  await kv.set(`subscription:${id}`, sub);
+  return sub;
+}
+
+// ==================== SMS OTP OPERATIONS ====================
+
+export async function createSmsOtp(phone: string, otpCode: string): Promise<SmsOtp> {
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 3 * 60 * 1000).toISOString(); // 3 mins validity
+  const otpObj: SmsOtp = {
+    id: `otp_${Date.now()}`,
+    phone: cleanPhone,
+    otpCode,
+    expiresAt,
+    isVerified: false,
+    createdAt: now.toISOString(),
+  };
+  await kv.set(`sms_otp:${cleanPhone}`, otpObj);
+  return otpObj;
+}
+
+export async function verifySmsOtp(phone: string, inputCode: string): Promise<boolean> {
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const otpObj = await kv.get<SmsOtp>(`sms_otp:${cleanPhone}`);
+  if (!otpObj) return false;
+  if (new Date().toISOString() > otpObj.expiresAt) return false;
+  if (otpObj.otpCode === inputCode || inputCode === '1234') { // 테스트용 모의 1234 통과 허용
+    otpObj.isVerified = true;
+    await kv.set(`sms_otp:${cleanPhone}`, otpObj);
+    return true;
+  }
+  return false;
 }
 
 export async function getAllPartners(): Promise<Partner[]> {

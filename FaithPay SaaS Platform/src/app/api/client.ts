@@ -234,6 +234,40 @@ export const paymentAPI = {
       body: JSON.stringify({ tenantId, donationId }),
     });
   },
+
+  async processBillKeyRequest(payload: { tenantId: string; donationData: any }): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/payment/process/billkey/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+// ==================== SMS OTP & SUBSCRIPTION API ====================
+
+export const otpAuthAPI = {
+  async sendOtp(phone: string): Promise<APIResponse<{ message: string }>> {
+    return fetchAPI<{ message: string }>('/auth/otp/send', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  },
+
+  async verifyOtp(phone: string, otpCode: string): Promise<APIResponse<{ token: string; subscriptions: any[]; donations: any[] }>> {
+    return fetchAPI<{ token: string; subscriptions: any[]; donations: any[] }>('/auth/otp/verify', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otpCode }),
+    });
+  },
+};
+
+export const subscriptionAPI = {
+  async updateStatus(id: string, status: 'active' | 'paused' | 'cancelled'): Promise<APIResponse<{ subscription: any }>> {
+    return fetchAPI<{ subscription: any }>(`/subscriptions/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    });
+  },
 };
 
 // ==================== DONATION ITEMS API ====================

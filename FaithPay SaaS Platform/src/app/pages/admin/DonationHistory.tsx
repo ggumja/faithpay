@@ -35,7 +35,8 @@ import {
   Receipt,
   Loader2,
 } from 'lucide-react';
-import { donationAPI, paymentAPI } from '../../api/client';
+import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
+import { toast } from 'sonner';
 
 // Mock donation data removed, will fetch real data
 const mockDonations = [
@@ -143,8 +144,17 @@ export default function DonationHistory() {
   const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
   const [donations, setDonations] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // 1초 SMS OTP 모달 & 세션 State
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpPhone, setOtpPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,6 +165,68 @@ export default function DonationHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
   const itemsPerPage = 10;
+
+  const handleSendOtp = async () => {
+    if (!otpPhone || otpPhone.length < 10) {
+      toast.error('올바른 휴대폰 번호를 입력해 주세요.');
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await otpAuthAPI.sendOtp(otpPhone);
+      if (res.success) {
+        setIsOtpSent(true);
+        toast.success(res.data?.message || '1초 SMS 인증번호가 발송되었습니다.');
+      } else {
+        toast.error(res.error || '인증번호 발송 실패');
+      }
+    } catch (e) {
+      toast.error('인증번호 발송 중 오류가 발생했습니다.');
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode) {
+      toast.error('4자리 인증번호를 입력해 주세요.');
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await otpAuthAPI.verifyOtp(otpPhone, otpCode);
+      if (res.success && res.data) {
+        setIsOtpVerified(true);
+        setShowOtpModal(false);
+        setSubscriptions(res.data.subscriptions || []);
+        setDonations(res.data.donations || []);
+        toast.success('본인 인증이 완료되었습니다. 내역 및 정기결제를 확인하세요.');
+      } else {
+        toast.error(res.error || '인증번호가 올바르지 않습니다.');
+      }
+    } catch (e) {
+      toast.error('인증 검증 중 오류가 발생했습니다.');
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleUpdateSubStatus = async (subId: string, newStatus: 'paused' | 'cancelled' | 'active') => {
+    const labelMap = { paused: '일시정지', cancelled: '해지', active: '재개' };
+    if (!window.confirm(`정말 정기결제를 ${labelMap[newStatus]}하시겠습니까?`)) return;
+
+    try {
+      const res = await subscriptionAPI.updateStatus(subId, newStatus);
+      if (res.success && res.data) {
+        toast.success(`정기결제가 ${labelMap[newStatus]} 처리되었습니다.`);
+        setSubscriptions(prev => prev.map(s => s.id === subId ? res.data!.subscription : s));
+      } else {
+        toast.error(`처리 실패: ${res.error}`);
+      }
+    } catch (e) {
+      toast.error('처리 중 오류가 발생했습니다.');
+    }
+  };
 
   useEffect(() => {
     const tenant = mockTenants.find((t) => t.slug === tenantSlug);
@@ -335,13 +407,155 @@ export default function DonationHistory() {
         <div className="p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-2">
-                <Heart className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
-                <h1 className="text-3xl font-bold">봉헌 내역</h1>
+            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Heart className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
+                  <h1 className="text-3xl font-bold">보시/봉헌 내역 및 정기결제 관리</h1>
+                </div>
+                <p className="text-muted-foreground">보시 및 헌금 내역을 조회하고 정기결제를 직접 중단/관리하세요</p>
               </div>
-              <p className="text-muted-foreground">모든 봉헌 내역을 조회하고 관리하세요</p>
+              <Button
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xs py-2.5 px-4 flex items-center gap-2 cursor-pointer"
+                onClick={() => setShowOtpModal(true)}
+              >
+                🔒 1초 SMS 본인인증하기
+              </Button>
             </div>
+
+            {/* Subscriptions Self-Management Section */}
+            {subscriptions.length > 0 && (
+              <div className="mb-8 border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-6 rounded-2xl">
+                <h3 className="text-lg font-bold text-indigo-950 dark:text-indigo-200 mb-1 flex items-center gap-2">
+                  <span>⚡ 내 정기결제 셀프 관리</span>
+                  <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+                </h3>
+                <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-4">매월 자동 청구되는 보시/헌금 정기결제를 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {subscriptions.map(sub => (
+                    <div key={sub.id} className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between gap-4">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-base">{sub.itemName}</h4>
+                          <Badge className={sub.status === 'active' ? 'bg-green-100 text-green-800' : sub.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}>
+                            {sub.status === 'active' ? '🟢 이용 중' : sub.status === 'paused' ? '🟡 일시정지' : '🔴 해지 완료'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-zinc-500 space-y-1">
+                          <p>· 결제 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> (매월 {sub.recurringDay}일)</p>
+                          <p>· 등록 카드: {sub.cardName} ({sub.cardNo})</p>
+                          <p>· 신청 일시: {new Date(sub.createdAt).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      {sub.status !== 'cancelled' && (
+                        <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                          {sub.status === 'active' ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer"
+                              onClick={() => handleUpdateSubStatus(sub.id, 'paused')}
+                            >
+                              🟡 다음 달 쉬기 (일시정지)
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-xs border-green-300 text-green-700 hover:bg-green-50 cursor-pointer"
+                              onClick={() => handleUpdateSubStatus(sub.id, 'active')}
+                            >
+                              🟢 정기결제 재개
+                            </Button>
+                          )}
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex-1 text-xs cursor-pointer"
+                            onClick={() => handleUpdateSubStatus(sub.id, 'cancelled')}
+                          >
+                            🔴 정기결제 중단 (해지)
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 1초 SMS OTP Authentication Modal */}
+            {showOtpModal && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+                <Card className="max-w-md w-full rounded-2xl overflow-hidden shadow-2xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                  <CardHeader className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                    <CardTitle className="text-lg font-extrabold flex items-center gap-2">
+                      <span>🔒 1초 SMS 본인인증</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      비회원 신도의 개인정보 보호를 위해 휴대폰 4자리 핀으로 본인확인을 진행합니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6 space-y-4">
+                    {!isOtpSent ? (
+                      <div className="space-y-3">
+                        <label className="text-xs font-bold text-zinc-500">휴대폰 번호</label>
+                        <Input
+                          placeholder="01012345678"
+                          value={otpPhone}
+                          onChange={(e) => setOtpPhone(e.target.value)}
+                          className="h-11 rounded-xl bg-zinc-50 font-semibold"
+                        />
+                        <Button
+                          className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl text-white cursor-pointer"
+                          onClick={handleSendOtp}
+                          disabled={isOtpLoading}
+                        >
+                          {isOtpLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          1초 인증번호 받기
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <label className="text-xs font-bold text-zinc-500">카카오톡/문자 4자리 인증번호</label>
+                        <Input
+                          placeholder="4자리 숫자 입력 (테스트: 1234)"
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value)}
+                          maxLength={4}
+                          className="h-11 rounded-xl bg-zinc-50 font-bold text-center tracking-widest text-lg"
+                        />
+                        <p className="text-[11px] text-indigo-600 font-medium text-center">· 테스트용 코드 '1234'를 입력하시면 즉시 인증됩니다.</p>
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 h-11 rounded-xl cursor-pointer"
+                            onClick={() => setIsOtpSent(false)}
+                          >
+                            재발송
+                          </Button>
+                          <Button
+                            className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl text-white cursor-pointer"
+                            onClick={handleVerifyOtp}
+                            disabled={isOtpLoading}
+                          >
+                            {isOtpLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            인증 및 내역 조회
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="pt-3 border-t text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setShowOtpModal(false)} className="text-xs cursor-pointer">
+                        닫기
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
