@@ -94,9 +94,9 @@ export default function PartnerApply() {
               <div className="p-2 w-fit bg-emerald-500/20 text-emerald-400 rounded-xl">
                 <TrendingUp className="h-5 w-5" />
               </div>
-              <h3 className="font-bold text-white text-sm">업계 최고 다계층 수수료</h3>
+              <h3 className="font-bold text-white text-sm">업계 최고 다계층 정산 수익</h3>
               <p className="text-xs text-slate-400 leading-normal">
-                매월 신도들이 납부하는 보시/헌금 결제액의 최대 0.7%가 지속 정산됩니다.
+                매월 신도들이 납부하는 보시/헌금 결제액에 대한 파트너 정산금이 매달 지속 지급됩니다.
               </p>
             </div>
 

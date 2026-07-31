@@ -251,68 +251,69 @@ export default function Root() {
         background: 'oklch(0.99 0.006 80 / 0.92)',
         backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
         borderBottom: '1px solid var(--hm-warm-border)',
-        height: 60, padding: '0 clamp(16px, 4vw, 40px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-            background: 'linear-gradient(135deg, var(--hm-warm-amber) 0%, var(--hm-warm-amber-dim) 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 10px var(--hm-warm-amber-glow)',
-          }}>
-            <span style={{ color: 'white', fontSize: 13, fontWeight: 900, letterSpacing: '-0.02em' }}>FP</span>
+        <div style={{
+          maxWidth: 1100, margin: '0 auto', height: 60, padding: '0 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+              background: 'linear-gradient(135deg, var(--hm-warm-amber) 0%, var(--hm-warm-amber-dim) 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 10px var(--hm-warm-amber-glow)',
+            }}>
+              <span style={{ color: 'white', fontSize: 13, fontWeight: 900, letterSpacing: '-0.02em' }}>FP</span>
+            </div>
+            <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--hm-warm-ink)', letterSpacing: '-0.03em' }}>FaithPay</span>
           </div>
-          <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--hm-warm-ink)', letterSpacing: '-0.03em' }}>FaithPay</span>
-        </div>
 
-        {/* Center links */}
-        <div className="rp-nav-links" style={{ display: 'flex', gap: 4 }}>
-          {[
-            { label: '서비스 특징', href: '#features' },
-            { label: '관리자 대시보드', href: '#dashboard' },
-            { label: '시작 방법', href: '#how' },
-            { label: '지원 종교', href: '#religions' },
-          ].map(({ label, href }) => (
-            <a
-              key={label}
-              href={href}
+          {/* Center links */}
+          <div className="rp-nav-links" style={{ display: 'flex', gap: 4 }}>
+            {[
+              { label: '서비스 특징', href: '#features' },
+              { label: '관리자 대시보드', href: '#dashboard' },
+              { label: '시작 방법', href: '#how' },
+              { label: '지원 종교', href: '#religions' },
+            ].map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  padding: '6px 14px', borderRadius: 8,
+                  fontSize: 13, fontWeight: 500, color: 'var(--hm-warm-ink-3)',
+                  fontFamily: 'inherit', textDecoration: 'none',
+                  transition: 'color 150ms, background 150ms',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--hm-warm-ink)'; e.currentTarget.style.background = 'var(--hm-warm-paper-2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--hm-warm-ink-3)'; e.currentTarget.style.background = 'transparent'; }}
+              >{label}</a>
+            ))}
+          </div>
+
+          {/* Right buttons */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => navigate('/partner/apply')}
               style={{
-                display: 'inline-flex', alignItems: 'center',
-                padding: '6px 14px', borderRadius: 8,
-                fontSize: 13, fontWeight: 500, color: 'var(--hm-warm-ink-3)',
-                fontFamily: 'inherit', textDecoration: 'none',
-                transition: 'color 150ms, background 150ms',
+                background: 'var(--hm-warm-paper-2)', border: '1px solid var(--hm-warm-border-med)', cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 8, fontFamily: 'inherit',
+                fontSize: 12, fontWeight: 700, color: 'var(--hm-warm-amber-dim)',
+                whiteSpace: 'nowrap', transition: 'all 150ms',
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--hm-warm-ink)'; e.currentTarget.style.background = 'var(--hm-warm-paper-2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--hm-warm-ink-3)'; e.currentTarget.style.background = 'transparent'; }}
-            >{label}</a>
-          ))}
-        </div>
-
-        {/* Right buttons */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            onClick={() => navigate('/partner/apply')}
-            style={{
-              background: 'var(--hm-warm-paper-2)', border: '1px solid var(--hm-warm-border-med)', cursor: 'pointer',
-              padding: '6px 12px', borderRadius: 8, fontFamily: 'inherit',
-              fontSize: 12, fontWeight: 700, color: 'var(--hm-warm-amber-dim)',
-              whiteSpace: 'nowrap', transition: 'all 150ms',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--hm-warm-amber)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--hm-warm-border-med)'; }}
-          >
-            💼 영업 파트너 신청
-          </button>
-          <button
-            onClick={() => navigate('/admin/login')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: '6px 10px', borderRadius: 6, fontFamily: 'inherit',
-              fontSize: 13, fontWeight: 500, color: 'var(--hm-warm-ink-3)',
-              transition: 'color 150ms', whiteSpace: 'nowrap',
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--hm-warm-amber)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--hm-warm-border-med)'; }}
+            >
+              💼 영업 파트너 신청
+            </button>
+            <button
+              onClick={() => navigate('/admin/login')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '6px 10px', borderRadius: 6, fontFamily: 'inherit',
+                fontSize: 13, fontWeight: 500, color: 'var(--hm-warm-ink-3)',
             }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--hm-warm-ink)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--hm-warm-ink-3)'}
@@ -327,7 +328,8 @@ export default function Root() {
             서비스 신청
           </button>
         </div>
-      </nav>
+      </div>
+    </nav>
 
       {/* ══ HERO WITH AUTHENTIC EDITORIAL PHOTOGRAPH ═══════════════ */}
       <section style={{
