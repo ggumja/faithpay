@@ -289,7 +289,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
+    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
@@ -354,13 +354,17 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
+    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let NANO_SECRET_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
+    let NANO_IV = "vgqTyX5tBqnMXB68";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
     
     if (config && config.pgProvider === 'nanopay' && config.isActive) {
       NANO_API_KEY = config.apiKey || NANO_API_KEY;
+      NANO_SECRET_KEY = config.secretKey || NANO_SECRET_KEY;
+      NANO_IV = config.iv || NANO_IV;
       shopcode = config.mid || shopcode;
       loginId = config.loginId || loginId;
       ver = config.ver || ver;
