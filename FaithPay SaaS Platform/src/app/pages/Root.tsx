@@ -294,6 +294,19 @@ export default function Root() {
         {/* Right buttons */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
+            onClick={() => navigate('/partner/apply')}
+            style={{
+              background: 'var(--hm-warm-paper-2)', border: '1px solid var(--hm-warm-border-med)', cursor: 'pointer',
+              padding: '6px 12px', borderRadius: 8, fontFamily: 'inherit',
+              fontSize: 12, fontWeight: 700, color: 'var(--hm-warm-amber-dim)',
+              whiteSpace: 'nowrap', transition: 'all 150ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--hm-warm-amber)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--hm-warm-border-med)'; }}
+          >
+            💼 영업 파트너 신청
+          </button>
+          <button
             onClick={() => navigate('/admin/login')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',

@@ -730,4 +730,41 @@ app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
   }
 });
 
+// ==================== PARTNER ROUTES ====================
+
+// 영업 파트너 목록 조회
+app.get("/make-server-d0d82cc7/partners", async (c) => {
+  try {
+    const partners = await db.getAllPartners();
+    return c.json({ success: true, data: partners });
+  } catch (error) {
+    console.error('Error fetching partners:', error);
+    return c.json({ success: false, error: 'Failed to fetch partners' }, 500);
+  }
+});
+
+// 신규 영업 파트너 생성 / 제휴 신청
+app.post("/make-server-d0d82cc7/partners", async (c) => {
+  try {
+    const body = await c.req.json();
+    const partner = await db.createPartner(body);
+    return c.json({ success: true, data: partner }, 201);
+  } catch (error) {
+    console.error('Error creating partner:', error);
+    return c.json({ success: false, error: 'Failed to create partner' }, 500);
+  }
+});
+
+// 영업자 수수료 내역 조회
+app.get("/make-server-d0d82cc7/partners/:id/commissions", async (c) => {
+  try {
+    const partnerId = c.req.param('id');
+    const commissions = await db.getCommissionsByPartner(partnerId);
+    return c.json({ success: true, data: commissions });
+  } catch (error) {
+    console.error('Error fetching commissions:', error);
+    return c.json({ success: false, error: 'Failed to fetch commissions' }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

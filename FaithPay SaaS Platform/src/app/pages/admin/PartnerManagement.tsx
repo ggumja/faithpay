@@ -72,9 +72,33 @@ const mockPartners: Partner[] = [
   },
 ];
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
+import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+
 export default function PartnerManagement() {
   const [partners, setPartners] = useState<Partner[]>(mockPartners);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // New Partner Form state
+  const [role, setRole] = useState<'master_agency' | 'sales_agent'>('sales_agent');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [parentId, setParentId] = useState('');
+  const [commissionRate, setCommissionRate] = useState<number>(0.4);
+  const [referralCode, setReferralCode] = useState('');
+  const [bankName, setBankName] = useState('신한은행');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
 
   const filteredPartners = partners.filter(p => 
     p.name.includes(searchTerm) || p.referralCode.includes(searchTerm)
@@ -90,6 +114,42 @@ export default function PartnerManagement() {
     toast.success('수수료율이 수정되었습니다.');
   };
 
+  const handleCreatePartnerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email || !phone) {
+      toast.error('파트너 기본 정보를 입력해 주세요.');
+      return;
+    }
+
+    const newPartner: Partner = {
+      id: `partner-${Date.now()}`,
+      name,
+      email,
+      phone,
+      role,
+      parentId: role === 'sales_agent' ? parentId || 'partner-001' : undefined,
+      commissionRate,
+      referralCode: referralCode || `AGENT_${Math.floor(100 + Math.random() * 900)}`,
+      bankName,
+      accountNumber: accountNumber || '110-000-000000',
+      accountHolder: accountHolder || name,
+      status: 'active',
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+
+    setPartners([newPartner, ...partners]);
+    setIsModalOpen(false);
+    toast.success(`[${name}] 신규 파트너가 성공적으로 등록되었습니다!`);
+
+    // Reset Form
+    setName('');
+    setEmail('');
+    setPhone('');
+    setReferralCode('');
+    setAccountNumber('');
+    setAccountHolder('');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -103,7 +163,7 @@ export default function PartnerManagement() {
           </p>
         </div>
 
-        <Button className="bg-purple-600 hover:bg-purple-700 font-bold">
+        <Button onClick={() => setIsModalOpen(true)} className="bg-purple-600 hover:bg-purple-700 font-bold">
           <Plus className="h-4 w-4 mr-2" /> 신규 총판/영업자 직접 등록
         </Button>
       </div>
@@ -186,6 +246,11 @@ export default function PartnerManagement() {
                   <TableCell>
                     <div className="font-bold text-slate-900">{p.name}</div>
                     <div className="text-xs text-slate-500">{p.email} | {p.phone}</div>
+                    {p.role === 'sales_agent' && p.parentId && (
+                      <div className="text-[11px] text-indigo-600 font-semibold mt-0.5">
+                        ↳ 소속 총판: {partners.find(m => m.id === p.parentId)?.name || '주식회사 파이프라인'}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="font-mono text-xs font-bold text-indigo-600">{p.referralCode}</TableCell>
                   <TableCell className="text-right font-bold text-emerald-600">
@@ -227,6 +292,184 @@ export default function PartnerManagement() {
         </CardContent>
       </Card>
 
+      {/* 신규 총판/영업자 직접 등록 모달 */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-purple-600" />
+              신규 총판 / 영업자 직접 등록
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              FaithPay 영업 파트너를 등록하고 계층별 분배 수수료율(%)을 지정합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreatePartnerSubmit} className="space-y-4 py-2">
+            
+            {/* 파트너 구분 */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">파트너 구분 *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setRole('master_agency'); setCommissionRate(0.7); setParentId(''); }}
+                  className={`p-3 rounded-xl border text-xs font-bold text-center cursor-pointer transition-all ${
+                    role === 'master_agency'
+                      ? 'bg-purple-50 border-purple-600 text-purple-950 font-bold'
+                      : 'bg-white border-slate-200 text-slate-600'
+                  }`}
+                >
+                  Tier-1 총판 / 대리점 (0.7%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setRole('sales_agent'); 
+                    setCommissionRate(0.4);
+                    const masterAgencies = partners.filter(p => p.role === 'master_agency');
+                    if (masterAgencies.length > 0) setParentId(masterAgencies[0].id);
+                  }}
+                  className={`p-3 rounded-xl border text-xs font-bold text-center cursor-pointer transition-all ${
+                    role === 'sales_agent'
+                      ? 'bg-indigo-50 border-indigo-600 text-indigo-950 font-bold'
+                      : 'bg-white border-slate-200 text-slate-600'
+                  }`}
+                >
+                  Tier-2 영업자 / 에이전트 (0.4%)
+                </button>
+              </div>
+            </div>
+
+            {/* Tier-2 영업자일 경우 소속 상위 총판 선택 */}
+            {role === 'sales_agent' && (
+              <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1.5">
+                <Label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  🏢 소속 상위 총판 (Tier-1 Master Partner) 선택 *
+                </Label>
+                <Select value={parentId} onValueChange={(v) => setParentId(v)}>
+                  <SelectTrigger className="h-9 bg-white border-indigo-200 text-xs font-bold text-indigo-900 rounded-lg">
+                    <SelectValue placeholder="소속 총판을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {partners.filter(p => p.role === 'master_agency').map((m) => (
+                      <SelectItem key={m.id} value={m.id} className="text-xs font-bold">
+                        {m.name} ({m.referralCode} - {m.commissionRate}%)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-indigo-700">
+                  * 선택한 총판의 하위 영업자로 자동 귀속되어 다계층 정산이 연동됩니다.
+                </p>
+              </div>
+            )}
+
+            {/* 기본 정보 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold">파트너명 / 대표자 성함 *</Label>
+                <Input
+                  placeholder="예: 김영업 파트너 (서울강남)"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold">연락처 *</Label>
+                <Input
+                  placeholder="010-1234-5678"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold">이메일 주소 *</Label>
+                <Input
+                  type="email"
+                  placeholder="partner@faithpay.kr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold">영업자 추천 코드</Label>
+                <Input
+                  placeholder="AGENT_KIM77 (미입력 시 자동)"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  className="font-mono text-xs uppercase"
+                />
+              </div>
+            </div>
+
+            {/* 수수료율 및 정산 계좌 */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-800">지급 수수료율 (%) *</Label>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={commissionRate}
+                    onChange={(e) => setCommissionRate(parseFloat(e.target.value) || 0)}
+                    className="w-20 h-8 text-right font-bold text-xs bg-white"
+                  />
+                  <span className="text-xs font-bold">%</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px]">은행명</Label>
+                  <Input
+                    placeholder="신한은행"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">계좌번호</Label>
+                  <Input
+                    placeholder="110-123-456789"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    className="h-8 text-xs bg-white font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">예금주</Label>
+                  <Input
+                    placeholder="홍길동"
+                    value={accountHolder}
+                    onChange={(e) => setAccountHolder(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>
+                취소
+              </Button>
+              <Button type="submit" size="sm" className="bg-purple-600 hover:bg-purple-700 font-bold">
+                신규 파트너 즉시 등록
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

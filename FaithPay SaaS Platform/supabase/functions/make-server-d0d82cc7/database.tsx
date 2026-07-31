@@ -406,3 +406,59 @@ export async function calculateAndSaveMonthlyStats(tenantId: string, year: numbe
   
   return stats;
 }
+
+// ==================== PARTNER DB FUNCTIONS ====================
+
+export interface Partner {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'master_agency' | 'sales_agent';
+  parentId?: string;
+  commissionRate: number;
+  referralCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  status: 'active' | 'pending' | 'suspended';
+  createdAt: string;
+}
+
+export interface PartnerCommission {
+  id: string;
+  partnerId: string;
+  tenantId: string;
+  tenantName: string;
+  donationId: string;
+  donationAmount: number;
+  commissionAmount: number;
+  settlementStatus: 'pending' | 'paid';
+  createdAt: string;
+}
+
+export async function getAllPartners(): Promise<Partner[]> {
+  const partners = await kv.getByPrefix<Partner>('partner:');
+  return partners.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function getPartnerById(id: string): Promise<Partner | null> {
+  return await kv.get<Partner>(`partner:${id}`);
+}
+
+export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'>): Promise<Partner> {
+  const id = `partner-${Date.now()}`;
+  const newPartner: Partner = {
+    ...partner,
+    id,
+    createdAt: new Date().toISOString(),
+  };
+  await kv.set(`partner:${id}`, newPartner);
+  return newPartner;
+}
+
+export async function getCommissionsByPartner(partnerId: string): Promise<PartnerCommission[]> {
+  const commissions = await kv.getByPrefix<PartnerCommission>(`commission:${partnerId}:`);
+  return commissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+

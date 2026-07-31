@@ -21,6 +21,7 @@ import TaxReceiptCenter from "./pages/TaxReceiptCenter";
 import OnboardingFlow from "./pages/OnboardingFlow";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import PartnerTenantCreate from "./pages/partner/PartnerTenantCreate";
+import PartnerApply from "./pages/partner/PartnerApply";
 import NotFound from "./pages/NotFound";
 
 export const router = createBrowserRouter([
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
       {
         path: "/",
         Component: Root,
+      },
+      {
+        path: "/partner/apply",
+        Component: PartnerApply,
       },
       {
         path: "/partner/dashboard",
