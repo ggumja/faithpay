@@ -193,9 +193,15 @@ export default function PaymentSelection() {
           </html>
         `;
 
-        paymentWindow.document.open();
-        paymentWindow.document.write(payFormHtml);
-        paymentWindow.document.close();
+        try {
+          if (paymentWindow && !paymentWindow.closed) {
+            paymentWindow.document.open();
+            paymentWindow.document.write(payFormHtml);
+            paymentWindow.document.close();
+          }
+        } catch (e) {
+          console.warn('[Nanopay] Cross-origin popup write warning handled safely:', e);
+        }
 
         toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
         pollDonationStatus(tempDonationId);
