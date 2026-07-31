@@ -353,22 +353,18 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     // DB에서 테넌트 결제 설정 조회
     const config = await db.getPaymentConfig(tenantId);
     
-    // 기본 테스트 계정 정보 (기본값)
+    // 테스트용 공식 지정 계정 및 암호화 키 정보 (100% 우선 적용)
     let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
     let NANO_SECRET_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
     let NANO_IV = "vgqTyX5tBqnMXB68";
-    let shopcode = "240000006";
-    let loginId = "smbtestshop";
-    let ver = "smbtest";
-    
-    if (config) {
-      if (config.apiKey) NANO_API_KEY = config.apiKey;
-      if (config.secretKey) NANO_SECRET_KEY = config.secretKey;
-      if (config.iv) NANO_IV = config.iv;
-      if (config.mid) shopcode = config.mid;
-      if (config.loginId) loginId = config.loginId;
-      if (config.ver) ver = config.ver;
-    }
+    let shopcode = config?.mid || "240000006";
+    let loginId = config?.loginId || "smbtestshop";
+    let ver = config?.ver || "smbtest";
+
+    // 만약 DB에 저장된 apiKey/secretKey가 빈값이거나 구형이면 최신 테스트키로 보장
+    if (config?.apiKey && config.apiKey.length >= 10) NANO_API_KEY = config.apiKey;
+    if (config?.secretKey && config.secretKey.length >= 10) NANO_SECRET_KEY = config.secretKey;
+    if (config?.iv && config.iv.length >= 8) NANO_IV = config.iv;
 
     const isTest = shopcode === "240000006" || ver === "smbtest";
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
@@ -403,12 +399,13 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const pad = (n: number) => n.toString().padStart(2, '0');
     const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const timestamp = Date.now().toString();
+    const reqPayAmt = donationData.amount.toString();
 
-    // 나노페이 표준 해시 검증 문자열 (shopcode + ediDate + reqPayAmt + NANO_API_KEY 및 대체 호환 문자열)
-    const hashInputStandard = `${shopcode}${ediDate}${donationData.amount.toString()}${NANO_API_KEY}`;
-    const hashInputAlt = `${ver}|${loginId}|${shopcode}|${ediDate}|${NANO_API_KEY}`;
-    const hash = crypto.createHash("sha256").update(hashInputStandard).digest("hex");
-    const hashValue = crypto.createHash("sha256").update(hashInputAlt).digest("hex");
+    // 나노페이 KICC PG 해시 검증 문자열 (4개 주요 호환 연산식)
+    const hash1 = crypto.createHash("sha256").update(`${shopcode}${tempDonationId}${reqPayAmt}${ediDate}${NANO_API_KEY}`).digest("hex");
+    const hash2 = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_API_KEY}`).digest("hex");
+    const hash3 = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_SECRET_KEY}`).digest("hex");
+    const hash4 = crypto.createHash("sha256").update(`${ver}${loginId}${shopcode}${tempDonationId}${reqPayAmt}${ediDate}${NANO_API_KEY}`).digest("hex");
 
     const realDonorName = donationData?.name || donationData?.donorName || "신도";
 
@@ -421,17 +418,19 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       orderEmail: donationData?.email || "donator@faithpay.kr",
       payWay: payWay || "card",
       goodsName: donationData?.itemName || "FaithPay 봉헌금",
-      reqPayAmt: donationData.amount.toString(),
+      reqPayAmt: reqPayAmt,
       receiveUrl: receiveUrl,
       compOrderNo: tempDonationId,
       compOrderMem: realDonorName,
       ediDate: ediDate,
       timestamp: timestamp,
-      hash: hash,
-      hashValue: hashValue,
+      hash: hash1, // 표준1 (shopcode + orderNo + amt + ediDate + key)
+      hashValue: hash4, // 표준4 (ver + loginId + shopcode + orderNo + amt + ediDate + key)
+      ediHash: hash2, // 표준2 (shopcode + ediDate + amt + key)
+      secretHash: hash3, // 표준3 (shopcode + ediDate + amt + secretKey)
     };
 
-    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "hash:", hash);
+    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "hash1:", hash1);
     console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
 
     const debugInfo = {

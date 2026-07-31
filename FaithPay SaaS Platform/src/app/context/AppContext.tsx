@@ -144,6 +144,16 @@ const defaultTenants: Tenant[] = [
       member: '불자',
       prayer: '발원문',
     },
+    paymentConfig: {
+      pgProvider: 'nanopay',
+      mid: '240000006',
+      apiKey: '2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL',
+      secretKey: 'UfS2tccZNyz3HYxXJDhZH52Ujorqp5km',
+      loginId: 'smbtestshop',
+      iv: 'vgqTyX5tBqnMXB68',
+      ver: 'smbtest',
+      isActive: true,
+    },
   },
   {
     id: '3',
