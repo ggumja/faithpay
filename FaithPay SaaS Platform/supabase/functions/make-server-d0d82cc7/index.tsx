@@ -401,11 +401,11 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const timestamp = Date.now().toString();
     const reqPayAmt = donationData.amount.toString();
 
-    // 나노페이 KICC PG 해시 검증 문자열 (4개 주요 호환 연산식)
-    const hash1 = crypto.createHash("sha256").update(`${shopcode}${tempDonationId}${reqPayAmt}${ediDate}${NANO_API_KEY}`).digest("hex");
-    const hash2 = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_API_KEY}`).digest("hex");
-    const hash3 = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_SECRET_KEY}`).digest("hex");
-    const hash4 = crypto.createHash("sha256").update(`${ver}${loginId}${shopcode}${tempDonationId}${reqPayAmt}${ediDate}${NANO_API_KEY}`).digest("hex");
+    // 나노페이 KICC PG 해시 검증 (암호화 Key NANO_SECRET_KEY 1순위 연산식)
+    const secretHash1 = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_SECRET_KEY}`).digest("hex");
+    const secretHash2 = crypto.createHash("sha256").update(`${ediDate}${reqPayAmt}${NANO_SECRET_KEY}`).digest("hex");
+    const secretHash3 = crypto.createHash("sha256").update(`${ver}${loginId}${shopcode}${tempDonationId}${reqPayAmt}${ediDate}${NANO_SECRET_KEY}`).digest("hex");
+    const apiHash1 = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_API_KEY}`).digest("hex");
 
     const realDonorName = donationData?.name || donationData?.donorName || "신도";
 
@@ -424,15 +424,15 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       compOrderMem: realDonorName,
       ediDate: ediDate,
       timestamp: timestamp,
-      hash: hash1, // 표준1 (shopcode + orderNo + amt + ediDate + key)
-      hashValue: hash4, // 표준4 (ver + loginId + shopcode + orderNo + amt + ediDate + key)
-      ediHash: hash2, // 표준2 (shopcode + ediDate + amt + key)
-      secretHash: hash3, // 표준3 (shopcode + ediDate + amt + secretKey)
+      hash: secretHash1, // SecretKey 메인 (shopcode + ediDate + amt + secretKey)
+      hashValue: secretHash3, // SecretKey 다중 (ver + loginId + shopcode + orderNo + amt + ediDate + secretKey)
+      ediHash: secretHash2, // SecretKey 단축 (ediDate + amt + secretKey)
+      apiHash: apiHash1, // APIKey 방식
     };
 
-    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "hash1:", hash1);
+    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "secretHash1:", secretHash1);
 
-    const debugInfo = { NANO_API_KEY, shopcode, loginId, ver, receiveUrl, NANO_API_URL };
+    const debugInfo = { NANO_API_KEY, NANO_SECRET_KEY, shopcode, loginId, ver, receiveUrl, NANO_API_URL };
     console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
 
     // 나노페이 KICC 결제창 호출용 자동 전송 HTML Form 생성
@@ -460,10 +460,10 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
           <input type="hidden" name="compOrderMem" value="${realDonorName}" />
           <input type="hidden" name="ediDate" value="${ediDate}" />
           <input type="hidden" name="timestamp" value="${timestamp}" />
-          <input type="hidden" name="hash" value="${hash1}" />
-          <input type="hidden" name="hashValue" value="${hash4}" />
-          <input type="hidden" name="ediHash" value="${hash2}" />
-          <input type="hidden" name="secretHash" value="${hash3}" />
+          <input type="hidden" name="hash" value="${secretHash1}" />
+          <input type="hidden" name="hashValue" value="${secretHash3}" />
+          <input type="hidden" name="ediHash" value="${secretHash2}" />
+          <input type="hidden" name="apiHash" value="${apiHash1}" />
         </form>
         <script>
           document.getElementById('nanoPayForm').submit();
