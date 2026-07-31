@@ -114,6 +114,16 @@ export default function PaymentSelection() {
       toast.info('결제창을 요청하고 있습니다...');
       
       try {
+        // 팝업 창 미리 오픈 (팝업 차단 방지)
+        const paymentWindow = window.open('about:blank', 'NanopayPayment', 'width=650,height=700,scrollbars=yes,resizable=yes');
+        if (!paymentWindow) {
+          toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
+          setIsProcessing(false);
+          return;
+        }
+
+        paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 결제창을 불러오는 중입니다...</p>');
+
         const deviceType = window.innerWidth <= 768 ? 'mobile' : 'pc';
         const response = await paymentAPI.processCertRequest({
           tenantId: currentTenant.id,
@@ -123,33 +133,14 @@ export default function PaymentSelection() {
         });
 
         console.log("Nanopay API Response:", response);
-        if (response.debug && response.debug.payload) {
-          console.log("👉 Nanopay Payload Sent:", response.debug.payload);
-        }
-        if (response.success) {
+        if (response.success && response.html) {
           toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
-          
-          if (response.isJson && response.data?.nextUrl) {
-            window.open(response.data.nextUrl, 'NanopayPayment', 'width=650,height=650,scrollbars=yes');
-          } else if (response.html) {
-            const paymentWindow = window.open('about:blank', 'NanopayPayment', 'width=650,height=700,scrollbars=yes,resizable=yes');
-            if (paymentWindow) {
-              paymentWindow.document.open();
-              paymentWindow.document.write(response.html);
-              paymentWindow.document.close();
-            } else {
-              toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
-              setIsProcessing(false);
-              return;
-            }
-          } else {
-            toast.error('결제 페이지 정보를 받지 못했습니다.');
-            setIsProcessing(false);
-            return;
-          }
-          
+          paymentWindow.document.open();
+          paymentWindow.document.write(response.html);
+          paymentWindow.document.close();
           pollDonationStatus(response.donationId);
         } else {
+          paymentWindow.close();
           toast.error(`결제창 요청 실패: ${response.error || '알 수 없는 오류'}`);
           setIsProcessing(false);
         }
