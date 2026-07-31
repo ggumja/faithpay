@@ -123,7 +123,7 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 나노 PG 정기결제(빌키 발급) 처리
+    // 나노 PG 정기결제(빌키 발급) 처리 - 자급식 100% 독립 전송
     if (pgProvider === 'nanopay' && donationFormData.isRecurring) {
       setIsProcessing(true);
       toast.info('정기결제 카드 등록 창을 요청하고 있습니다...');
@@ -138,53 +138,72 @@ export default function PaymentSelection() {
 
         paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제 안전 카드 등록창으로 연결 중입니다...</p>');
 
-        const res = await paymentAPI.processBillKeyRequest({
+        // 1. 빌키 발급 파라미터 준비 (나노페이 v2.2.1 규격)
+        const ver = "240000005";
+        const loginId = "smbtestshop";
+        const shopcode = "240000006";
+        const apiKey = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+        const cleanPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
+        const userId = `${currentTenant.id}_${cleanPhone}`;
+        const timestamp = Date.now().toString();
+        const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
+
+        // 2. Web Crypto API를 사용한 hashValue 대문자 연산: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO")
+        const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${apiKey}NANO`;
+        const msgBuffer = new TextEncoder().encode(hashRaw);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashValue = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+        const tempSubId = `sub_${Date.now()}`;
+        const compData = JSON.stringify({
+          tempSubId,
           tenantId: currentTenant.id,
-          donationData: donationFormData,
+          donorName: donationFormData.name,
+          donorPhone: cleanPhone,
+          donorEmail: donationFormData.email || "",
+          itemId: donationFormData.itemId || "recurring",
+          itemName: donationFormData.itemName || "정기 봉헌금",
+          amount: donationFormData.amount,
+          recurringDay: donationFormData.recurringDay || 10,
         });
 
-        if (res.success && res.payload) {
-          const { ver, loginId, shopcode, userId, receiveUrl, timestamp, hashValue, compData } = res.payload;
-          const reqUrl = res.reqUrl || 'https://dev3.nanopay.co.kr/api/payment/recure/reqkey.io';
+        const reqUrl = 'https://dev3.nanopay.co.kr/api/payment/recure/reqkey.io';
 
-          const payFormHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="utf-8"><title>Nanopay Recurring Setup</title></head>
-            <body>
-              <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 정기결제 카드 등록창으로 이동 중입니다...</p>
-              <form id="nanoBillKeyForm" method="POST" action="${reqUrl}">
-                <input type="hidden" name="ver" value="${ver}" />
-                <input type="hidden" name="loginId" value="${loginId}" />
-                <input type="hidden" name="shopcode" value="${shopcode}" />
-                <input type="hidden" name="userId" value="${userId}" />
-                <input type="hidden" name="receiveUrl" value="${receiveUrl}" />
-                <input type="hidden" name="timestamp" value="${timestamp}" />
-                <input type="hidden" name="hashValue" value="${hashValue}" />
-                <input type="hidden" name="compData" value='${compData}' />
-              </form>
-              <script>document.getElementById('nanoBillKeyForm').submit();</script>
-            </body>
-            </html>
-          `;
+        // 3. 나노페이 빌키 발급 팝업창 폼 주입
+        const payFormHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"><title>Nanopay Recurring Setup</title></head>
+          <body>
+            <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 정기결제 카드 등록창으로 이동 중입니다...</p>
+            <form id="nanoBillKeyForm" method="POST" action="${reqUrl}">
+              <input type="hidden" name="ver" value="${ver}" />
+              <input type="hidden" name="loginId" value="${loginId}" />
+              <input type="hidden" name="shopcode" value="${shopcode}" />
+              <input type="hidden" name="userId" value="${userId}" />
+              <input type="hidden" name="receiveUrl" value="${receiveUrl}" />
+              <input type="hidden" name="timestamp" value="${timestamp}" />
+              <input type="hidden" name="hashValue" value="${hashValue}" />
+              <input type="hidden" name="compData" value='${compData}' />
+            </form>
+            <script>document.getElementById('nanoBillKeyForm').submit();</script>
+          </body>
+          </html>
+        `;
 
-          try {
-            if (paymentWindow && !paymentWindow.closed) {
-              paymentWindow.document.open();
-              paymentWindow.document.write(payFormHtml);
-              paymentWindow.document.close();
-            }
-          } catch (e) {}
+        try {
+          if (paymentWindow && !paymentWindow.closed) {
+            paymentWindow.document.open();
+            paymentWindow.document.write(payFormHtml);
+            paymentWindow.document.close();
+          }
+        } catch (e) {}
 
-          toast.success('정기결제 카드 등록창이 열렸습니다.');
-          setTimeout(() => {
-            navigate(`/${tenantSlug}/complete`);
-          }, 4000);
-        } else {
-          paymentWindow.close();
-          toast.error(`정기결제 등록 실패: ${res.error || '알 수 없는 오류'}`);
-          setIsProcessing(false);
-        }
+        toast.success('정기결제 카드 등록창이 열렸습니다.');
+        setTimeout(() => {
+          navigate(`/${tenantSlug}/complete`);
+        }, 4000);
       } catch (error) {
         console.error('BillKey error:', error);
         toast.error('정기결제 요청 중 오류가 발생했습니다.');
