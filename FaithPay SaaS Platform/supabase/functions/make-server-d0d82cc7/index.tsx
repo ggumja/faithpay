@@ -294,11 +294,11 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     let loginId = "smbtestshop";
     let ver = "smbtest";
     
-    if (config && config.pgProvider === 'nanopay') {
-      NANO_API_KEY = config.apiKey || NANO_API_KEY;
-      shopcode = config.mid || shopcode;
-      loginId = config.loginId || loginId;
-      ver = config.ver || ver;
+    if (config) {
+      if (config.apiKey) NANO_API_KEY = config.apiKey;
+      if (config.mid) shopcode = config.mid;
+      if (config.loginId) loginId = config.loginId;
+      if (config.ver) ver = config.ver;
     }
     
     const isTest = shopcode === "240000006" || ver === "smbtest";
@@ -361,13 +361,13 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     let loginId = "smbtestshop";
     let ver = "smbtest";
     
-    if (config && config.pgProvider === 'nanopay' && config.isActive) {
-      NANO_API_KEY = config.apiKey || NANO_API_KEY;
-      NANO_SECRET_KEY = config.secretKey || NANO_SECRET_KEY;
-      NANO_IV = config.iv || NANO_IV;
-      shopcode = config.mid || shopcode;
-      loginId = config.loginId || loginId;
-      ver = config.ver || ver;
+    if (config) {
+      if (config.apiKey) NANO_API_KEY = config.apiKey;
+      if (config.secretKey) NANO_SECRET_KEY = config.secretKey;
+      if (config.iv) NANO_IV = config.iv;
+      if (config.mid) shopcode = config.mid;
+      if (config.loginId) loginId = config.loginId;
+      if (config.ver) ver = config.ver;
     }
 
     const isTest = shopcode === "240000006" || ver === "smbtest";
