@@ -132,8 +132,9 @@ export default function PaymentSelection() {
           if (response.isJson && response.data?.nextUrl) {
             window.open(response.data.nextUrl, 'NanopayPayment', 'width=650,height=650,scrollbars=yes');
           } else if (response.html) {
-            const paymentWindow = window.open('', 'NanopayPayment', 'width=650,height=650,scrollbars=yes');
+            const paymentWindow = window.open('about:blank', 'NanopayPayment', 'width=650,height=700,scrollbars=yes,resizable=yes');
             if (paymentWindow) {
+              paymentWindow.document.open();
               paymentWindow.document.write(response.html);
               paymentWindow.document.close();
             } else {

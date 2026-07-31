@@ -394,29 +394,40 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     // 콜백 주소 (Supabase Edge Function의 콜백 URL)
     const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
-    // 타임스탬프 및 해시 값 생성 (v2.2 규격 추가 파라미터)
+    // 14자리 ediDate (YYYYMMDDHHmmss) 타임스탬프 생성
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const timestamp = Date.now().toString();
-    const hashInput = `${ver}|${loginId}|${shopcode}|${timestamp}|${NANO_API_KEY}`;
-    const hashValue = crypto.createHash("sha256").update(hashInput).digest("hex");
+
+    // 나노페이 표준 해시 검증 문자열 (shopcode + ediDate + reqPayAmt + NANO_API_KEY 및 대체 호환 문자열)
+    const hashInputStandard = `${shopcode}${ediDate}${donationData.amount.toString()}${NANO_API_KEY}`;
+    const hashInputAlt = `${ver}|${loginId}|${shopcode}|${ediDate}|${NANO_API_KEY}`;
+    const hash = crypto.createHash("sha256").update(hashInputStandard).digest("hex");
+    const hashValue = crypto.createHash("sha256").update(hashInputAlt).digest("hex");
+
+    const realDonorName = donationData?.name || donationData?.donorName || "신도";
 
     const payload = {
       ver: ver,
       loginId: loginId,
       shopcode: shopcode,
-      orderName: "Hong Gil Dong",
-      orderTel: (donationData.phone || "01000000000").replace(/[^0-9]/g, ''),
-      orderEmail: "test@test.com",
+      orderName: realDonorName,
+      orderTel: (donationData?.phone || donationData?.donorPhone || "01000000000").replace(/[^0-9]/g, ''),
+      orderEmail: donationData?.email || "donator@faithpay.kr",
       payWay: payWay || "card",
-      goodsName: "FaithPay Contribution",
+      goodsName: donationData?.itemName || "FaithPay 봉헌금",
       reqPayAmt: donationData.amount.toString(),
       receiveUrl: receiveUrl,
       compOrderNo: tempDonationId,
-      compOrderMem: "Hong Gil Dong",
+      compOrderMem: realDonorName,
+      ediDate: ediDate,
       timestamp: timestamp,
+      hash: hash,
       hashValue: hashValue,
     };
 
-    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver);
+    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "hash:", hash);
     console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
 
     const debugInfo = {
