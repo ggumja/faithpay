@@ -19,56 +19,14 @@ import { LayoutDashboard, Heart, Users, MessageSquare, FileText, Settings, Dolla
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
-// Mock prayer data
-const prayerRequests = [
-  {
-    id: 1,
-    name: '홍길동',
-    item: '십일조',
-    prayer: '가족의 건강과 평안을 기원합니다. 특히 어머니의 빠른 쾌유를 바랍니다.',
-    date: '2026-03-28',
-    printed: false,
-  },
-  {
-    id: 2,
-    name: '김미영',
-    item: '인등보시',
-    prayer: '자녀 학업 성취 및 사업 번창을 발원합니다.',
-    date: '2026-03-28',
-    printed: false,
-  },
-  {
-    id: 3,
-    name: '박지민',
-    item: '미사예물',
-    prayer: '선종하신 조부모님을 기억하며 영면을 기원합니다.',
-    date: '2026-03-28',
-    printed: false,
-  },
-  {
-    id: 4,
-    name: '이영희',
-    item: '감사헌금',
-    prayer: '주님의 은혜에 감사하며 교회 부흥을 위해 기도합니다.',
-    date: '2026-03-27',
-    printed: true,
-  },
-  {
-    id: 5,
-    name: '정수진',
-    item: '건축헌금',
-    prayer: '새 예배당 건축이 순조롭게 진행되기를 기도합니다.',
-    date: '2026-03-27',
-    printed: true,
-  },
-];
-
-
+import { donationAPI } from '../../api/client';
 
 export default function PrayerManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const [prayers, setPrayers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedPrayers, setSelectedPrayers] = useState<number[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
@@ -78,6 +36,37 @@ export default function PrayerManagement() {
       setCurrentTenant(tenant);
     }
   }, [tenantSlug, setCurrentTenant]);
+
+  useEffect(() => {
+    async function loadPrayers() {
+      if (!currentTenant) return;
+      setIsLoading(true);
+      try {
+        const res = await donationAPI.getByTenant(currentTenant.id);
+        if (res.success && res.data) {
+          const prayerList = res.data
+            .filter((d: any) => d.prayerText && d.prayerText.trim() !== '')
+            .map((d: any, idx: number) => ({
+              id: d.id || idx + 1,
+              name: d.donorName || '익명',
+              item: d.itemName || '보시/헌금',
+              prayer: d.prayerText,
+              date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+              printed: false,
+            }));
+          setPrayers(prayerList);
+        } else {
+          setPrayers([]);
+        }
+      } catch (err) {
+        console.error('Error fetching prayers:', err);
+        setPrayers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadPrayers();
+  }, [currentTenant]);
 
   if (!currentTenant) {
     return null;
@@ -109,7 +98,7 @@ export default function PrayerManagement() {
     return true;
   });
 
-  const unprintedCount = prayerRequests.filter((p) => !p.printed).length;
+  const unprintedCount = prayers.filter((p) => !p.printed).length;
 
   const togglePrayer = (id: number) => {
     setSelectedPrayers((prev) =>

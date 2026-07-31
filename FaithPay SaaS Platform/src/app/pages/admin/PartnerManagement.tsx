@@ -23,54 +23,7 @@ import {
   Search
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Partner } from '../../api/client';
-
-const mockPartners: Partner[] = [
-  {
-    id: 'partner-001',
-    name: '주식회사 파이프라인 (김영업 대표)',
-    email: 'master@pipeline.co.kr',
-    phone: '010-9876-5432',
-    role: 'master_agency',
-    commissionRate: 0.7,
-    referralCode: 'PIPELINE_KIM',
-    bankName: '신한은행',
-    accountNumber: '110-123-456789',
-    accountHolder: '주식회사 파이프라인',
-    status: 'active',
-    createdAt: '2026-01-15',
-  },
-  {
-    id: 'partner-002',
-    name: '이영업 파트너 (경기남부 총판)',
-    email: 'agent_lee@gmail.com',
-    phone: '010-2345-6789',
-    role: 'sales_agent',
-    parentId: 'partner-001',
-    commissionRate: 0.4,
-    referralCode: 'AGENT_LEE',
-    bankName: '국민은행',
-    accountNumber: '400401-04-123456',
-    accountHolder: '이영업',
-    status: 'active',
-    createdAt: '2026-02-01',
-  },
-  {
-    id: 'partner-003',
-    name: '박영업 파트너 (충청불교 대리점)',
-    email: 'park_buddha@naver.com',
-    phone: '010-3456-7890',
-    role: 'sales_agent',
-    parentId: 'partner-001',
-    commissionRate: 0.4,
-    referralCode: 'AGENT_PARK',
-    bankName: '농협',
-    accountNumber: '302-0123-4567-89',
-    accountHolder: '박영업',
-    status: 'pending',
-    createdAt: '2026-03-20',
-  },
-];
+import { Partner, partnerAPI } from '../../api/client';
 
 import {
   Dialog,
@@ -84,9 +37,29 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 export default function PartnerManagement() {
-  const [partners, setPartners] = useState<Partner[]>(mockPartners);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadPartners() {
+      setIsLoading(true);
+      try {
+        const res = await partnerAPI.getAll();
+        if (res.success && res.data) {
+          setPartners(res.data);
+        } else {
+          setPartners([]);
+        }
+      } catch (err) {
+        console.error('Error loading partners:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadPartners();
+  }, []);
 
   // New Partner Form state
   const [role, setRole] = useState<'master_agency' | 'sales_agent'>('sales_agent');

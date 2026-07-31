@@ -18,72 +18,17 @@ import { LayoutDashboard, Heart, Users, MessageSquare, FileText, Settings, Dolla
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
-// Mock member data
-const members = [
-  {
-    id: 1,
-    name: '홍길동',
-    phone: '010-1234-5678',
-    email: 'hong@example.com',
-    baptismName: '요한',
-    registeredDate: '2024-01-15',
-    totalDonation: 2400000,
-    lastDonation: '2026-03-28',
-    recurring: true,
-  },
-  {
-    id: 2,
-    name: '김미영',
-    phone: '010-2345-6789',
-    email: 'kim@example.com',
-    baptismName: '마리아',
-    registeredDate: '2023-06-20',
-    totalDonation: 1800000,
-    lastDonation: '2026-03-28',
-    recurring: true,
-  },
-  {
-    id: 3,
-    name: '박지민',
-    phone: '010-3456-7890',
-    email: 'park@example.com',
-    baptismName: '프란치스코',
-    registeredDate: '2025-11-10',
-    totalDonation: 500000,
-    lastDonation: '2026-03-27',
-    recurring: false,
-  },
-  {
-    id: 4,
-    name: '이영희',
-    phone: '010-4567-8901',
-    email: 'lee@example.com',
-    baptismName: '안나',
-    registeredDate: '2024-08-03',
-    totalDonation: 3200000,
-    lastDonation: '2026-03-27',
-    recurring: true,
-  },
-  {
-    id: 5,
-    name: '정수진',
-    phone: '010-5678-9012',
-    email: 'jung@example.com',
-    baptismName: '요셉',
-    registeredDate: '2025-02-18',
-    totalDonation: 1500000,
-    lastDonation: '2026-03-26',
-    recurring: true,
-  },
-];
-
-
+import { donationAPI } from '../../api/client';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+
+  const [members, setMembers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     const tenant = mockTenants.find((t) => t.slug === tenantSlug);
@@ -91,6 +36,48 @@ export default function MemberManagement() {
       setCurrentTenant(tenant);
     }
   }, [tenantSlug, setCurrentTenant]);
+
+  useEffect(() => {
+    async function loadMembers() {
+      if (!currentTenant) return;
+      setIsLoading(true);
+      try {
+        const res = await donationAPI.getByTenant(currentTenant.id);
+        if (res.success && res.data) {
+          // 전화번호 기준 신도 목록 동적 집계
+          const map = new Map<string, any>();
+          res.data.forEach((d: any) => {
+            const phone = d.donorPhone || '미등록';
+            if (!map.has(phone)) {
+              map.set(phone, {
+                id: d.id,
+                name: d.donorName || '익명 신도',
+                phone: phone,
+                email: d.donorEmail || '-',
+                registeredDate: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+                totalDonation: d.amount || 0,
+                lastDonation: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+                recurring: d.isRecurring || false,
+              });
+            } else {
+              const existing = map.get(phone);
+              existing.totalDonation += d.amount || 0;
+              if (d.isRecurring) existing.recurring = true;
+            }
+          });
+          setMembers(Array.from(map.values()));
+        } else {
+          setMembers([]);
+        }
+      } catch (err) {
+        console.error('Error fetching members:', err);
+        setMembers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadMembers();
+  }, [currentTenant]);
 
   if (!currentTenant) {
     return null;

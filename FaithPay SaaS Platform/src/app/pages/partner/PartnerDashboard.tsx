@@ -27,42 +27,46 @@ import {
   LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Partner, PartnerCommission } from '../../api/client';
-
-// Mock Partner data for demo
-const mockCurrentPartner: Partner = {
-  id: 'partner-001',
-  name: '김영업 총판 (주식회사 파이프라인)',
-  email: 'sales@pipeline.co.kr',
-  phone: '010-9876-5432',
-  role: 'master_agency',
-  commissionRate: 0.7, // 0.7%
-  referralCode: 'PIPELINE_KIM',
-  bankName: '신한은행',
-  accountNumber: '110-123-456789',
-  accountHolder: '주식회사 파이프라인',
-  status: 'active',
-  createdAt: '2026-01-15',
-};
-
-const mockPartnerTenants = [
-  { id: '1', name: '각원사', slug: 'gakwonsa', religion: '불교', monthlyDonation: 36000000, commission: 252000, createdAt: '2026-02-01' },
-  { id: '2', name: '기쁨의교회', slug: 'joyful-church', religion: '기독교', monthlyDonation: 52000000, commission: 364000, createdAt: '2026-02-15' },
-  { id: '3', name: '명동성당', slug: 'myeongdong', religion: '천주교', monthlyDonation: 41000000, commission: 287000, createdAt: '2026-03-01' },
-];
-
-const mockCommissionsHistory: PartnerCommission[] = [
-  { id: 'pc-1', partnerId: 'partner-001', tenantId: '1', tenantName: '각원사', donationId: 'FP2026010', donationAmount: 500000, commissionAmount: 3500, settlementStatus: 'paid', createdAt: '2026-03-28 14:20' },
-  { id: 'pc-2', partnerId: 'partner-001', tenantId: '2', tenantName: '기쁨의교회', donationId: 'FP2026011', donationAmount: 1000000, commissionAmount: 7000, settlementStatus: 'paid', createdAt: '2026-03-28 15:40' },
-  { id: 'pc-3', partnerId: 'partner-001', tenantId: '1', tenantName: '각원사', donationId: 'FP2026012', donationAmount: 100000, commissionAmount: 700, settlementStatus: 'pending', createdAt: '2026-03-29 10:15' },
-];
+import { Partner, PartnerCommission, partnerAPI } from '../../api/client';
 
 export default function PartnerDashboard() {
   const navigate = useNavigate();
   const { tenants } = useApp();
-  const [partner] = useState<Partner>(mockCurrentPartner);
-  const [myTenants, setMyTenants] = useState(mockPartnerTenants);
-  const [commissions] = useState<PartnerCommission[]>(mockCommissionsHistory);
+  const [partner, setPartner] = useState<Partner | null>(null);
+  const [myTenants, setMyTenants] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<PartnerCommission[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPartnerData() {
+      setIsLoading(true);
+      try {
+        const res = await partnerAPI.getAll();
+        if (res.success && res.data && res.data.length > 0) {
+          const currentPartner = res.data[0];
+          setPartner(currentPartner);
+
+          // 수수료 내역 DB 조회
+          const commRes = await partnerAPI.getCommissions(currentPartner.id);
+          if (commRes.success && commRes.data) {
+            setCommissions(commRes.data);
+          } else {
+            setCommissions([]);
+          }
+          setMyTenants(tenants.slice(0, 3));
+        } else {
+          setPartner(null);
+          setCommissions([]);
+          setMyTenants([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch partner data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadPartnerData();
+  }, [tenants]);
 
   const inviteUrl = `${window.location.origin}/onboarding?ref=${partner.referralCode}`;
 
@@ -89,9 +93,9 @@ export default function PartnerDashboard() {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-bold">{partner.name}</p>
+              <p className="text-sm font-bold">{partner?.name || '영업 파트너'}</p>
               <Badge className="bg-emerald-600 text-white text-[11px] hover:bg-emerald-600">
-                {partner.role === 'master_agency' ? 'Tier-1 총판/대리점' : 'Tier-2 영업자'} ({partner.commissionRate}%)
+                {partner?.role === 'master_agency' ? 'Tier-1 총판/대리점' : 'Tier-2 영업자'} ({partner?.commissionRate || 0.7}%)
               </Badge>
             </div>
             <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white" onClick={() => navigate('/partner/login')}>
