@@ -164,7 +164,7 @@ export default function PaymentSelection() {
           ? 'https://dev3.nanopay.co.kr/payment/cert/mobile/request.io'
           : 'https://dev3.nanopay.co.kr/payment/cert/pc/request.io';
 
-        // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입
+        // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입 (기존 방식 유지)
         const payFormHtml = `
           <!DOCTYPE html>
           <html>

@@ -320,10 +320,6 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       headers: {
         'Content-Type': 'application/json',
         'CharSet': 'UTF-8',
-        'API_KEY': NANO_API_KEY,
-        'API-KEY': NANO_API_KEY,
-        'api_key': NANO_API_KEY,
-        'api-key': NANO_API_KEY
       },
       body: JSON.stringify(payload)
     });
