@@ -4,7 +4,7 @@
 -- Description: Full Production Database Schema & Seed Data (Partners, Tenants, Agent Rates, Commissions, System Settings)
 -- ====================================================================
 
--- 1. 파트너 (대리점 / 영업자) 테이블 생성 (기존에 테이블이 없을 경우)
+-- 1. 파트너 (대리점 / 영업자) 테이블 생성
 CREATE TABLE IF NOT EXISTS partners (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -23,21 +23,11 @@ CREATE TABLE IF NOT EXISTS partners (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 1-1. 기존 partners 테이블 컬럼 보강 (이미 테이블이 생성된 경우 agency_rate 컬럼 추가)
+-- 1-1. 기존 partners 테이블 컬럼 보강 (이미 테이블이 존재하는 경우)
 ALTER TABLE partners ADD COLUMN IF NOT EXISTS agency_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.50;
 
--- 2. 영업자별 개별 지정 대리점 수수료율 테이블
-CREATE TABLE IF NOT EXISTS partner_agent_rates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agency_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
-  agent_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
-  agency_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.30, -- 해당 영업자에게 지정한 대리점 수수료율 (%)
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (agency_id, agent_id)
-);
 
--- 3. 가맹점 단체 (Tenants) 테이블 생성 및 기존 테이블 컬럼 보강
+-- 2. 가맹점 단체 (Tenants) 테이블 생성
 CREATE TABLE IF NOT EXISTS tenants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
@@ -61,13 +51,26 @@ CREATE TABLE IF NOT EXISTS tenants (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3-1. 기존 tenants 테이블 컬럼 보강 (이미 테이블이 생성된 경우)
+-- 2-1. 기존 tenants 테이블 컬럼 보강 (이미 테이블이 존재하는 경우)
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS registration_source TEXT DEFAULT 'self';
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS registered_by_partner_id UUID;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS registered_by_referral_code TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contract_rate NUMERIC(5, 2) NOT NULL DEFAULT 3.00;
 
--- 4. 수수료 발생 & 정산 대장 테이블
+
+-- 3. 영업자별 개별 지정 대리점 수수료율 테이블 생성
+CREATE TABLE IF NOT EXISTS partner_agent_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agency_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  agent_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  agency_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.30, -- 해당 영업자에게 지정한 대리점 수수료율 (%)
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (agency_id, agent_id)
+);
+
+
+-- 4. 수수료 발생 & 정산 대장 테이블 생성
 CREATE TABLE IF NOT EXISTS partner_commissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
@@ -85,13 +88,15 @@ CREATE TABLE IF NOT EXISTS partner_commissions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. 글로벌 플랫폼 및 PG 원가 설정 테이블
+
+-- 5. 글로벌 플랫폼 및 PG 원가 설정 테이블 생성
 CREATE TABLE IF NOT EXISTS system_settings (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
   description TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
 
 -- 6. 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_partners_parent_id ON partners(parent_id);
@@ -148,7 +153,8 @@ VALUES
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   phone = EXCLUDED.phone,
-  referral_code = EXCLUDED.referral_code;
+  referral_code = EXCLUDED.referral_code,
+  agency_rate = EXCLUDED.agency_rate;
 
 -- B. 대리점 지정 영업자별 수수료율 시딩 (이수진 영업자: 0.3%)
 INSERT INTO partner_agent_rates (agency_id, agent_id, agency_rate)
