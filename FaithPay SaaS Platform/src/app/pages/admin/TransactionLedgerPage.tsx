@@ -301,10 +301,18 @@ export default function TransactionLedgerPage() {
                 {filtered.flatMap(row => {
                   const isOpen    = expanded === row.id;
                   const bd        = row.breakdown as any;
-                  const contractR = row.contractRate ?? bd?.contractRate ?? bd?.customerRate ?? row.commissionRate ?? 0;
-                  const agencyAmt = bd?.agencyAmount ?? bd?.masterAgencyAmount ?? 0;
-                  const agentRate = bd?.agentRate ?? row.commissionRate ?? 0;
-                  const agencyR   = bd?.agencyRate ?? 0;
+                  
+                  const contractR = row.contractRate ?? bd?.contractRate ?? bd?.customerRate ?? (row as any).tenantContractRate ?? 3.0;
+                  const pgCostR   = bd?.pgCostRate ?? 1.5;
+                  const platformR = bd?.platformProfitRate ?? 0.5;
+                  const agencyR   = bd?.agencyRate ?? 0.5;
+                  const agentRate = bd?.agentRate ?? Math.max(0, contractR - pgCostR - platformR - agencyR);
+
+                  const totalFeeAmt = bd?.totalFeeAmount ?? Math.round(row.donationAmount * (contractR / 100));
+                  const pgCostAmt   = bd?.pgCostAmount ?? Math.round(row.donationAmount * (pgCostR / 100));
+                  const platformAmt = bd?.platformProfitAmount ?? Math.round(row.donationAmount * (platformR / 100));
+                  const agencyAmt   = bd?.agencyAmount ?? bd?.masterAgencyAmount ?? Math.round(row.donationAmount * (agencyR / 100));
+                  const agentAmt    = bd?.agentAmount ?? bd?.salesAgentAmount ?? row.commissionAmount ?? Math.round(row.donationAmount * (agentRate / 100));
 
                   return [
                     <tr key={row.id}
@@ -329,7 +337,7 @@ export default function TransactionLedgerPage() {
                         </span>
                       </td>
                       <td className={`${S.td} text-right`}>
-                        <span className="font-bold text-amber-600">{fmt(row.commissionAmount)}</span>
+                        <span className="font-bold text-amber-600">{fmt(agentAmt)}</span>
                         <span className="ml-1 text-[10px] text-[var(--hm-ink-3)]">({fmtRate(agentRate)})</span>
                       </td>
                       <td className={`${S.td} text-right text-emerald-600`}>
@@ -346,16 +354,16 @@ export default function TransactionLedgerPage() {
                       </td>
                     </tr>,
 
-                    ...(isOpen && bd ? [
+                    ...(isOpen ? [
                       <tr key={row.id+'-bd'} className="bg-[var(--hm-paper-2)]">
                         <td colSpan={10} className="px-6 py-3 border-t border-[var(--hm-border)]">
                           <div className="grid grid-cols-5 gap-3 mb-2">
                             {[
-                              { label:'고객 결제 수수료', rate:fmtRate(bd?.contractRate??bd?.customerRate??contractR), amt:fmt(bd?.totalFeeAmount),       color:'text-[var(--hm-ink)]',   bg:'bg-[var(--hm-paper)]' },
-                              { label:'PG 원가 (고정)',    rate:fmtRate(bd?.pgCostRate),             amt:fmt(bd?.pgCostAmount),          color:'text-slate-500',          bg:'bg-slate-50' },
-                              { label:'플랫폼 수익 (고정)',rate:fmtRate(bd?.platformProfitRate),     amt:fmt(bd?.platformProfitAmount),  color:'text-indigo-600',         bg:'bg-indigo-50' },
-                              { label:'대리점 수령 (고정)',rate:fmtRate(bd?.agencyRate),             amt:fmt(bd?.agencyAmount??bd?.masterAgencyAmount??0), color:'text-emerald-600', bg:'bg-emerald-50' },
-                              { label:'영업자 수령 (잔여)',rate:fmtRate(bd?.agentRate??agentRate),   amt:fmt(bd?.agentAmount??bd?.salesAgentAmount??row.commissionAmount), color:'text-amber-600', bg:'bg-amber-50' },
+                              { label:'고객 결제 수수료', rate:fmtRate(contractR), amt:fmt(totalFeeAmt), color:'text-[var(--hm-ink)]', bg:'bg-[var(--hm-paper)]' },
+                              { label:'PG 원가 (고정)', rate:fmtRate(pgCostR), amt:fmt(pgCostAmt), color:'text-slate-500', bg:'bg-slate-50' },
+                              { label:'플랫폼 수익 (고정)', rate:fmtRate(platformR), amt:fmt(platformAmt), color:'text-indigo-600', bg:'bg-indigo-50' },
+                              { label:'대리점 수령 (고정)', rate:fmtRate(agencyR), amt:fmt(agencyAmt), color:'text-emerald-600', bg:'bg-emerald-50' },
+                              { label:'영업자 수령 (잔여)', rate:fmtRate(agentRate), amt:fmt(agentAmt), color:'text-amber-600', bg:'bg-amber-50' },
                             ].map(b => (
                               <div key={b.label} className={`rounded-[8px] px-3 py-2 border border-[var(--hm-border)] ${b.bg}`}>
                                 <p className="text-[9.5px] text-[var(--hm-ink-3)] font-medium">{b.label}</p>
