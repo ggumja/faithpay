@@ -139,33 +139,32 @@ export default function PartnerDashboard() {
           setAgentRates(rates);
         }
 
-        // 파트너(대리점/영업자) 및 소속 영업자의 실제 등록 단체 필터링
-        const rawTenants = (tenants && tenants.length > 0) ? tenants : mockTenants;
-
-        const relevantAgentIds = [
+        // 대리점 본사 (BIT2024 / 한국불교문화원) 및 소속 영업자 (LSJ002 / 이수진) 관할 ID 세트
+        const agencyAgentIds = [
           merged.id,
           merged.referralCode,
           'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
           'BIT2024',
+          'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+          'LSJ002',
         ];
         fetchedSubAgents.forEach(a => {
-          if (a.id) relevantAgentIds.push(a.id);
-          if (a.referralCode) relevantAgentIds.push(a.referralCode);
+          if (a.id) agencyAgentIds.push(a.id);
+          if (a.referralCode) agencyAgentIds.push(a.referralCode);
         });
 
-        let realMyTenants = rawTenants.filter(t =>
-          relevantAgentIds.includes((t as any).registeredByPartnerId) ||
-          relevantAgentIds.includes((t as any).registeredByReferralCode) ||
-          relevantAgentIds.includes((t as any).referralCode) ||
+        // 가용한 단체 소스 중 이 대리점 본사 및 소속 영업자가 등록한 단체만 정확히 필터링
+        const sourceTenants = (tenants && tenants.length > 0) ? tenants : mockTenants;
+
+        const agencyManagedTenants = sourceTenants.filter(t =>
+          agencyAgentIds.includes((t as any).registeredByPartnerId) ||
+          agencyAgentIds.includes((t as any).registeredByReferralCode) ||
+          agencyAgentIds.includes((t as any).referralCode) ||
           (t as any).registrationSource === 'agency' ||
           (t as any).registrationSource === 'agent'
         );
 
-        if (realMyTenants.length === 0) {
-          realMyTenants = rawTenants;
-        }
-
-        setMyTenants(realMyTenants);
+        setMyTenants(agencyManagedTenants);
       } catch (err) {
         console.error('Failed to load partner dashboard data:', err);
       } finally {

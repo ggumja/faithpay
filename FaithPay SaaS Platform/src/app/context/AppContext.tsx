@@ -266,15 +266,15 @@ const defaultTenants: Tenant[] = [
   },
 ];
 
-// 구버전 및 빈 로컬스토리지 캐시 초기화 및 신규 5개 대리점/영업자 단체 스키마 적용
+// 대리점/영업자 시드 5개 단체 보장 (구버전 캐시 무조건 재설정)
 let parsedTenants: Tenant[] = defaultTenants;
 if (typeof window !== 'undefined') {
   const saved = localStorage.getItem('faithpay_tenants');
   if (saved) {
     try {
       const arr = JSON.parse(saved);
-      const hasNewSchema = Array.isArray(arr) && arr.length > 0 && arr.some(x => x.registeredByPartnerId || x.slug === 'bulguksa');
-      if (hasNewSchema) {
+      const isUpdatedSchema = Array.isArray(arr) && arr.some(x => x.slug === 'bulguksa' && x.registeredByPartnerId === 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      if (isUpdatedSchema) {
         parsedTenants = arr;
       } else {
         localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
