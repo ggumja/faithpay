@@ -695,12 +695,11 @@ export default function PartnerDashboard() {
               ) : (
                 <div className="space-y-4">
                   {subAgents.map(agent => {
-                     const rate = agentRates[agent.id] ?? 0.4;     // 절대 수수료율 (%)
-                     // 수수료 구조 계산용
+                     const rate = agentRates[agent.id] ?? editAgencyRate ?? 0.3;     // 대리점 수수료율 (내 수수료 %)
                      let pgCost2 = 1.5, platformMargin2 = 0.5;
                      try { const pgs2 = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]'); if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5; const pm2 = parseFloat(localStorage.getItem('faithpay:platform_margin') || ''); if (!isNaN(pm2)) platformMargin2 = pm2; } catch { /* ignore */ }
-                     const myAgencyRate2 = (partner as any).agencyRate ?? (partner as any).commissionRate ?? 0.7;
-                     const isValid = true;  // 절대값 입력이므로 항상 유효
+                     const subAgentFloor = +(pgCost2 + platformMargin2 + rate).toFixed(2);
+                     const isValid = true;
                      const isActive = agent.status === 'active';
                     return (
                       <Card key={agent.id} className={`border ${isActive ? 'border-slate-200' : 'border-amber-200 bg-amber-50/30'}`}>
@@ -793,11 +792,13 @@ export default function PartnerDashboard() {
                                </div>
                              </div>
 
-                             {/* 수수료 구조 안내 */}
-                             <div className="p-2.5 bg-white rounded-lg border border-purple-100 space-y-1.5">
-                               <div className="text-[10.5px] font-bold text-slate-700 flex items-center justify-between">
-                                 <span>💡 고객 계약 수수료 공식:</span>
-                                 <span className="font-mono text-purple-700">계약율 = PG 1.5% + 플랫폼 0.5% + 대리점 {rate}% + 영업자 마진</span>
+                             {/* 영업자 베이스 수수료 및 안내 */}
+                             <div className="p-3 bg-white rounded-xl border border-purple-100 space-y-2">
+                               <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
+                                 <span>🎯 {agent.name} 님의 베이스 수수료 (하한선):</span>
+                                 <span className="font-mono text-[13px] text-purple-800 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                                   {subAgentFloor}%
+                                 </span>
                                </div>
                                <div className="flex items-center gap-1 flex-wrap text-[10px]">
                                  <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">PG {pgCost2}%</span>
@@ -805,10 +806,12 @@ export default function PartnerDashboard() {
                                  <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">플랫폼 {platformMargin2}%</span>
                                  <span className="text-slate-300">+</span>
                                  <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">대리점(나) {rate}%</span>
-                                 <span className="text-slate-300">+</span>
-                                 <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">영업자 마진 (차액)</span>
-                                 <span className="text-slate-400 ml-auto font-semibold">하한선 {+(pgCost2 + platformMargin2 + rate).toFixed(2)}%</span>
+                                 <span className="text-slate-300">=</span>
+                                 <span className="font-bold text-purple-900 font-mono">베이스 {subAgentFloor}%</span>
                                </div>
+                               <p className="text-[10px] text-slate-500 mt-1">
+                                 * {agent.name} 님이 가맹점과 계약할 때 <strong>{subAgentFloor}% 이상</strong>으로 계약해야 영업자 마진 수익이 발생합니다.
+                               </p>
                              </div>
                            </div>
 
