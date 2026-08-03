@@ -52,7 +52,11 @@ export default function PartnerLogin() {
         // 세션 저장 (실제 환경에서는 JWT 등으로 대체)
         localStorage.setItem('faithpay_partner_session', JSON.stringify(found));
         toast.success(`${found.name}님, 환영합니다!`);
-        navigate('/partner/dashboard');
+        if (found.role === 'sales_agent') {
+          navigate('/agent/dashboard');
+        } else {
+          navigate('/partner/dashboard');
+        }
       } else {
         toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
         setIsLoading(false);

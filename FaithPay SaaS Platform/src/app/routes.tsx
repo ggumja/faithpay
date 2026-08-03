@@ -25,6 +25,7 @@ import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import PartnerTenantCreate from "./pages/partner/PartnerTenantCreate";
 import PartnerApply from "./pages/partner/PartnerApply";
 import PartnerLogin from "./pages/partner/PartnerLogin";
+import AgentDashboard from "./pages/agent/AgentDashboard";
 import NotFound from "./pages/NotFound";
 import SystemSettingsPage from "./pages/admin/SystemSettingsPage";
 
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
       {
         path: "/partner/dashboard",
         Component: PartnerDashboard,
+      },
+      {
+        path: "/agent/dashboard",
+        Component: AgentDashboard,
       },
       {
         path: "/partner/tenants/new",
