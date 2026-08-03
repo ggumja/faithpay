@@ -81,99 +81,6 @@ export default function CommissionStatsPage() {
   const masters       = partners.filter(p => p.role === 'master_agency');
   const agents        = partners.filter(p => p.role === 'sales_agent');
 
-  /* ── 수수료 구조 설명 블록 ── */
-  const FeeStructureCard = () => {
-    // 예시: 3.0%, 3.5%, 4.0%
-    const examples = [
-      { contractRate: 3.0, agentRate: 0.5,  note: '표준' },
-      { contractRate: 3.5, agentRate: 1.0,  note: '+0.5% 인센티브' },
-      { contractRate: 4.0, agentRate: 1.5,  note: '+1.0% 인센티브' },
-    ];
-    const baseRate = FEE.defaultCustomerRate;
-    const agencyRate = FEE.defaultAgencyRate;
-    const agentRate  = baseRate - FEE.pgCostRate - FEE.platformProfitRate - agencyRate;
-
-    return (
-      <div className={S.card}>
-        <div className={S.head}>
-          <PieChart size={13} className="text-[var(--hm-accent)] shrink-0" />
-          <span className="text-[12.5px] font-semibold text-[var(--hm-ink)]">수수료 분배 구조</span>
-          <span className="text-[10.5px] text-[var(--hm-ink-3)] ml-auto">카드 결제 기준</span>
-        </div>
-        <div className="px-5 py-4">
-
-          {/* 바 시각화 — 기본 3% 기준 */}
-          <div className="mb-4">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="text-[11px] text-[var(--hm-ink-3)]">고객 결제 수수료</span>
-              <span className="text-[12px] font-bold text-[var(--hm-ink)]">{FEE.defaultCustomerRate}% <span className="text-[10px] font-normal text-[var(--hm-ink-3)]">(영업자 협상에 따라 변동 가능)</span></span>
-            </div>
-            <div className="flex h-6 rounded-[6px] overflow-hidden border border-[var(--hm-border)]">
-              <div
-                className="flex items-center justify-center text-[9.5px] font-semibold text-slate-600 bg-slate-200 shrink-0"
-                style={{ width: `${(FEE.pgCostRate / baseRate) * 100}%` }}
-              >PG {FEE.pgCostRate}%</div>
-              <div
-                className="flex items-center justify-center text-[9.5px] font-semibold text-indigo-700 bg-indigo-100 shrink-0"
-                style={{ width: `${(FEE.platformProfitRate / baseRate) * 100}%` }}
-              >플랫폼 {FEE.platformProfitRate}%</div>
-              <div
-                className="flex items-center justify-center text-[9.5px] font-semibold text-emerald-700 bg-emerald-100 shrink-0"
-                style={{ width: `${(agencyRate / baseRate) * 100}%` }}
-              >대리점 {agencyRate}%</div>
-              <div
-                className="flex items-center justify-center text-[9.5px] font-semibold text-amber-700 bg-amber-100 flex-1"
-              >영업자 {agentRate}%</div>
-            </div>
-            <div className="flex items-center flex-wrap gap-3 mt-2.5">
-              {[
-                { color: 'bg-slate-200',   label: 'PG 원가 (고정)',        rate: `${FEE.pgCostRate}%` },
-                { color: 'bg-indigo-100',  label: '플랫폼 수익 (고정)',    rate: `${FEE.platformProfitRate}%` },
-                { color: 'bg-emerald-100', label: '대리점 고정율 (대리점 자체 설정)', rate: `${agencyRate}%` },
-                { color: 'bg-amber-100',   label: '영업자 (채널풀 - 대리점율, 실적에 따라 증가)', rate: `${agentRate}%~` },
-              ].map(item => (
-                <div key={item.label} className="flex items-center gap-1.5">
-                  <div className={`w-2.5 h-2.5 rounded-[3px] shrink-0 ${item.color} border border-[var(--hm-border)]`} />
-                  <span className="text-[11px] text-[var(--hm-ink-3)]">{item.label}</span>
-                  <span className="text-[11px] font-semibold text-[var(--hm-ink)]">{item.rate}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 계약율별 영업자 수수료 분배 표 */}
-          <div className="rounded-[8px] bg-[var(--hm-paper-2)] border border-[var(--hm-border)] p-3">
-            <p className="text-[10.5px] font-semibold text-[var(--hm-ink-3)] mb-2.5">📊 계약율별 영업자 수수료 변화 (100만원 결제 시)</p>
-            <table className="w-full">
-              <thead>
-                <tr>
-                  {['고객 계약율','대리점','PG','플랫폼','영업자 (나머지)','비고'].map(h => (
-                    <th key={h} className="text-[9.5px] font-semibold text-[var(--hm-ink-3)] text-right pb-1.5 first:text-left">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {examples.map(ex => {
-                  const base = 1000000;
-                  return (
-                    <tr key={ex.contractRate} className="border-t border-[var(--hm-border)]">
-                      <td className="text-[11px] font-bold text-[var(--hm-ink)] py-1.5">{ex.contractRate}%</td>
-                      <td className="text-[11px] text-right text-emerald-600">{(base * agencyRate / 100).toLocaleString('ko-KR')}원</td>
-                      <td className="text-[11px] text-right text-slate-500">{(base * FEE.pgCostRate / 100).toLocaleString('ko-KR')}원</td>
-                      <td className="text-[11px] text-right text-indigo-600">{(base * FEE.platformProfitRate / 100).toLocaleString('ko-KR')}원</td>
-                      <td className="text-[11px] text-right text-amber-600 font-bold">{(base * ex.agentRate / 100).toLocaleString('ko-KR')}원 <span className="font-normal text-[10px]">({ex.agentRate}%)</span></td>
-                      <td className="text-[9.5px] text-right text-[var(--hm-ink-3)]">{ex.note}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   /* ── 통계 카드 ── */
   const StatCard = ({ icon: Icon, label, value, sub, color }: any) => (
     <div className={`${S.card} px-4 py-3.5 flex items-center gap-3`}>
@@ -198,9 +105,6 @@ export default function CommissionStatsPage() {
           새로고침
         </button>
       </div>
-
-      {/* ── 수수료 구조 카드 ── */}
-      <FeeStructureCard />
 
       {/* ── 요약 통계 4개 ── */}
       <div className="grid grid-cols-4 gap-3">
