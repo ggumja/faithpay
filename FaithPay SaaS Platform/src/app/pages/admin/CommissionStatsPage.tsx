@@ -83,11 +83,11 @@ export default function CommissionStatsPage() {
 
   /* ── 수수료 구조 설명 블록 ── */
   const FeeStructureCard = () => {
-    // 개어원 실효율 예시: 3.0%, 3.5%, 4.0%
+    // 예시: 3.0%, 3.5%, 4.0%
     const examples = [
-      { contractRate: 3.0, agentRate: 0.5,  note: '\ud45c\uc900' },
-      { contractRate: 3.5, agentRate: 1.0,  note: '+0.5% \uc778\uc13c\ud2f0\ube0c' },
-      { contractRate: 4.0, agentRate: 1.5,  note: '+1.0% \uc778\uc13c\ud2f0\ube0c' },
+      { contractRate: 3.0, agentRate: 0.5,  note: '표준' },
+      { contractRate: 3.5, agentRate: 1.0,  note: '+0.5% 인센티브' },
+      { contractRate: 4.0, agentRate: 1.5,  note: '+1.0% 인센티브' },
     ];
     const baseRate = FEE.defaultCustomerRate;
     const agencyRate = FEE.defaultAgencyRate;
@@ -106,7 +106,7 @@ export default function CommissionStatsPage() {
           <div className="mb-4">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="text-[11px] text-[var(--hm-ink-3)]">고객 결제 수수료</span>
-              <span className="text-[12px] font-bold text-[var(--hm-ink)]">{FEE.defaultCustomerRate}% <span className="text-[10px] font-normal text-[var(--hm-ink-3)]">(\uc601\uc5c5\uc790 \ud611\uc0c1\uc5d0 \ub530\ub77c \ubcc0\ub3d9 \uac00\ub2a5)</span></span>
+              <span className="text-[12px] font-bold text-[var(--hm-ink)]">{FEE.defaultCustomerRate}% <span className="text-[10px] font-normal text-[var(--hm-ink-3)]">(영업자 협상에 따라 변동 가능)</span></span>
             </div>
             <div className="flex h-6 rounded-[6px] overflow-hidden border border-[var(--hm-border)]">
               <div
@@ -127,10 +127,10 @@ export default function CommissionStatsPage() {
             </div>
             <div className="flex items-center flex-wrap gap-3 mt-2.5">
               {[
-                { color: 'bg-slate-200',   label: 'PG \uc6d0\uac00 (\uace0\uc815)',        rate: `${FEE.pgCostRate}%` },
-                { color: 'bg-indigo-100',  label: '\ud50c\ub7ab\ud3fc \uc218\uc775 (\uace0\uc815)',    rate: `${FEE.platformProfitRate}%` },
-                { color: 'bg-emerald-100', label: '\ub300\ub9ac\uc810 \uace0\uc815\uc728 (\ub300\ub9ac\uc810 \uc790\uccb4 \uc124\uc815)', rate: `${agencyRate}%` },
-                { color: 'bg-amber-100',   label: '\uc601\uc5c5\uc790 (\ucc44\ub110\ud480 - \ub300\ub9ac\uc810\uc728, \uc5d1\uc0ad\uc5d0 \ub530\ub77c \uc99d\uac00)', rate: `${agentRate}%~` },
+                { color: 'bg-slate-200',   label: 'PG 원가 (고정)',        rate: `${FEE.pgCostRate}%` },
+                { color: 'bg-indigo-100',  label: '플랫폼 수익 (고정)',    rate: `${FEE.platformProfitRate}%` },
+                { color: 'bg-emerald-100', label: '대리점 고정율 (대리점 자체 설정)', rate: `${agencyRate}%` },
+                { color: 'bg-amber-100',   label: '영업자 (채널풀 - 대리점율, 실적에 따라 증가)', rate: `${agentRate}%~` },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-1.5">
                   <div className={`w-2.5 h-2.5 rounded-[3px] shrink-0 ${item.color} border border-[var(--hm-border)]`} />
@@ -147,22 +147,21 @@ export default function CommissionStatsPage() {
             <table className="w-full">
               <thead>
                 <tr>
-                  {['\uace0\uac1d \uacc4\uc57d\uc728','\ub300\ub9ac\uc810','PG','\ud50c\ub7ab\ud3fc','\uc601\uc5c5\uc790 (\ub098\uba38\uc9c0)','\ube44\uace0'].map(h => (
+                  {['고객 계약율','대리점','PG','플랫폼','영업자 (나머지)','비고'].map(h => (
                     <th key={h} className="text-[9.5px] font-semibold text-[var(--hm-ink-3)] text-right pb-1.5 first:text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {examples.map(ex => {
-                  const pool = ex.contractRate - FEE.pgCostRate - FEE.platformProfitRate;
                   const base = 1000000;
                   return (
                     <tr key={ex.contractRate} className="border-t border-[var(--hm-border)]">
                       <td className="text-[11px] font-bold text-[var(--hm-ink)] py-1.5">{ex.contractRate}%</td>
-                      <td className="text-[11px] text-right text-emerald-600">{(base * agencyRate / 100).toLocaleString('ko-KR')}\uc6d0</td>
-                      <td className="text-[11px] text-right text-slate-500">{(base * FEE.pgCostRate / 100).toLocaleString('ko-KR')}\uc6d0</td>
-                      <td className="text-[11px] text-right text-indigo-600">{(base * FEE.platformProfitRate / 100).toLocaleString('ko-KR')}\uc6d0</td>
-                      <td className="text-[11px] text-right text-amber-600 font-bold">{(base * ex.agentRate / 100).toLocaleString('ko-KR')}\uc6d0 <span className="font-normal text-[10px]">({ex.agentRate}%)</span></td>
+                      <td className="text-[11px] text-right text-emerald-600">{(base * agencyRate / 100).toLocaleString('ko-KR')}원</td>
+                      <td className="text-[11px] text-right text-slate-500">{(base * FEE.pgCostRate / 100).toLocaleString('ko-KR')}원</td>
+                      <td className="text-[11px] text-right text-indigo-600">{(base * FEE.platformProfitRate / 100).toLocaleString('ko-KR')}원</td>
+                      <td className="text-[11px] text-right text-amber-600 font-bold">{(base * ex.agentRate / 100).toLocaleString('ko-KR')}원 <span className="font-normal text-[10px]">({ex.agentRate}%)</span></td>
                       <td className="text-[9.5px] text-right text-[var(--hm-ink-3)]">{ex.note}</td>
                     </tr>
                   );
@@ -244,7 +243,7 @@ export default function CommissionStatsPage() {
             <tbody>
               {partners.map(p => {
                 const isOpen      = expanded === p.id;
-                const agencyR     = (p as any).agencyRate ?? 0;
+                const agencyR     = (p as any).agencyRate || (p.role === 'master_agency' ? 0.5 : 0);
                 // 영업자: 수수료 이력에서 평균 실효율 계산
                 const comms       = (p as any).commissions ?? [];
                 const avgRate     = comms.length > 0
