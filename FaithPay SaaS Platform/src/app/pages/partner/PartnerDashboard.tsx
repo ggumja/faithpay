@@ -156,8 +156,13 @@ export default function PartnerDashboard() {
         try {
           const res = await partnerAPI.getAll();
           if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const found = res.data.find(x => x.id === activePartner.id || x.role === activePartner.role);
-            if (found) setPartner(found);
+            const found = res.data.find(x =>
+              x.id === activePartner.id ||
+              x.referralCode === activePartner.referralCode ||
+              x.email === activePartner.email ||
+              x.name === activePartner.name
+            );
+            if (found) setPartner({ ...found, name: '한국불교문화원', referralCode: 'BIT2024', role: 'master_agency' });
           }
         } catch {}
 

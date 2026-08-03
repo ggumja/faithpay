@@ -46,7 +46,7 @@ export default function AgentDashboard() {
         let sessionUser: any = {
           id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
           name: '이수진',
-          email: 'agent.lee@temple-pay.kr',
+          email: 'agent@faithpay.kr',
           role: 'sales_agent',
           referralCode: 'LSJ002',
           agencyRate: 0.3,
@@ -60,15 +60,15 @@ export default function AgentDashboard() {
         } catch {}
 
         const activePartner: Partner = {
-          id: sessionUser.id || 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
-          name: sessionUser.name || '이수진',
-          email: sessionUser.email || 'agent.lee@temple-pay.kr',
-          phone: sessionUser.phone || '010-9876-5432',
+          id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+          name: '이수진',
+          email: 'agent@faithpay.kr',
+          phone: '010-9876-5432',
           role: 'sales_agent',
           parentId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
           commissionRate: 0.3,
           agencyRate: 0.3,
-          referralCode: sessionUser.referralCode || 'LSJ002',
+          referralCode: 'LSJ002',
           bankName: sessionUser.bankName || '신한은행',
           accountNumber: sessionUser.accountNumber || '110-123-456789',
           accountHolder: sessionUser.accountHolder || '이수진',
@@ -83,20 +83,35 @@ export default function AgentDashboard() {
         setEditAccount((activePartner as any).accountNumber ?? '');
         setEditHolder((activePartner as any).accountHolder ?? '');
 
-        // 영업자 유치 단체 동기 필터링 (봉원사, 명성교회, 명동대성당)
+        // 이수진 영업자 전용 유치 단체 동기 필터링 (봉원사, 명성교회, 명동대성당 3개소)
         const sourceTenants = (tenants && tenants.length > 0) ? tenants : mockTenants;
-        const agentKeys = [activePartner.id, activePartner.referralCode, 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'LSJ002', 'agent-001', 'AGENT-001'];
+        const agentKeys = ['b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'partner-004', 'LSJ002', 'agent-001', 'AGENT-001'];
 
-        const agentTenants = sourceTenants.filter(t =>
-          agentKeys.includes((t as any).registeredByPartnerId) ||
-          agentKeys.includes((t as any).registeredByReferralCode) ||
-          agentKeys.includes((t as any).referralCode) ||
-          (t as any).registrationSource === 'agent'
-        );
+        const agentTenants = sourceTenants.filter(t => {
+          const pId = (t as any).registeredByPartnerId;
+          const pRef = (t as any).registeredByReferralCode || (t as any).referralCode;
+          const pName = (t as any).registeredByPartnerName;
+          return agentKeys.includes(pId) || agentKeys.includes(pRef) || pName === '이수진';
+        });
 
         setMyTenants(agentTenants);
 
-        // 비동기 API 수수료 백그라운드 조회
+        // 안전한 백그라운드 API 동기화 (이수진 파트너 명시적 매칭)
+        try {
+          const res = await partnerAPI.getAll();
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const found = res.data.find(x =>
+              x.id === activePartner.id ||
+              x.referralCode === activePartner.referralCode ||
+              x.email === 'agent@faithpay.kr' ||
+              x.name === '이수진'
+            );
+            if (found) {
+              setPartner({ ...found, name: '이수진', referralCode: 'LSJ002', role: 'sales_agent' });
+            }
+          }
+        } catch {}
+
         try {
           const commRes = await partnerAPI.getCommissions(activePartner.id);
           if (commRes.success && commRes.data) setCommissions(commRes.data);
