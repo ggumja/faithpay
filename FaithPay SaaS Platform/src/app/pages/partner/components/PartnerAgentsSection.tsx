@@ -202,9 +202,9 @@ export function PartnerAgentsSection({
           {(() => {
             const agencyOverridingMargin = subAgents.reduce((s, a) => {
               if (a.status !== 'active') return s;
-              const mockMonthly = (a as any).monthlyAmount ?? 5000000;
-              const aRate = agentRates[a.id] ?? (a as any).agencyRate ?? 0.5;
-              return s + Math.round(mockMonthly * aRate / 100);
+              const agentMonthly = (a as any).monthlyAmount ?? 0;
+              const aRate = agentRates[a.id] ?? (a as any).agencyRate ?? editAgencyRate ?? 0.5;
+              return s + Math.round(agentMonthly * aRate / 100);
             }, 0);
 
             return (
@@ -261,9 +261,9 @@ export function PartnerAgentsSection({
                           </TableRow>
                         ) : (
                           subAgents.map(agent => {
-                            const mockMonthly = (agent as any).monthlyAmount ?? 5000000;
-                            const agentAgencyRate = agentRates[agent.id] ?? (agent as any).agencyRate ?? 0.5;
-                            const overriding = Math.round(mockMonthly * agentAgencyRate / 100);
+                            const agentMonthly = (agent as any).monthlyAmount ?? 0;
+                            const agentAgencyRate = agentRates[agent.id] ?? (agent as any).agencyRate ?? editAgencyRate ?? 0.5;
+                            const overriding = Math.round(agentMonthly * agentAgencyRate / 100);
                             const isActive = agent.status === 'active';
                             return (
                               <TableRow key={agent.id} className="hover:bg-purple-50/20">

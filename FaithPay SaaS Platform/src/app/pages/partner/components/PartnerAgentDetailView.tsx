@@ -255,25 +255,25 @@ export function PartnerAgentDetailView({
           <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded-xl">
             <div>
               <span className="text-[11px] text-slate-400 block font-semibold">휴대폰 번호</span>
-              <span className="font-mono font-bold text-slate-700">{selectedAgent.phone ?? '010-1234-5678'}</span>
+              <span className="font-mono font-bold text-slate-700">{selectedAgent.phone || '—'}</span>
             </div>
             <div>
               <span className="text-[11px] text-slate-400 block font-semibold">이메일 주소</span>
-              <span className="font-mono text-slate-700">{selectedAgent.email ?? '—'}</span>
+              <span className="font-mono text-slate-700">{selectedAgent.email || '—'}</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4 p-3 bg-slate-50 rounded-xl">
             <div>
               <span className="text-[11px] text-slate-400 block font-semibold">정산 은행</span>
-              <span className="font-bold text-slate-700">{(selectedAgent as any).bankName ?? '신한은행'}</span>
+              <span className="font-bold text-slate-700">{(selectedAgent as any).bankName || '—'}</span>
             </div>
             <div>
               <span className="text-[11px] text-slate-400 block font-semibold">계좌 번호</span>
-              <span className="font-mono text-slate-700">{(selectedAgent as any).accountNumber ?? '110-123-456789'}</span>
+              <span className="font-mono text-slate-700">{(selectedAgent as any).accountNumber || '—'}</span>
             </div>
             <div>
               <span className="text-[11px] text-slate-400 block font-semibold">예금주</span>
-              <span className="font-bold text-slate-700">{(selectedAgent as any).accountHolder ?? selectedAgent.name}</span>
+              <span className="font-bold text-slate-700">{(selectedAgent as any).accountHolder || selectedAgent.name || '—'}</span>
             </div>
           </div>
         </CardContent>
