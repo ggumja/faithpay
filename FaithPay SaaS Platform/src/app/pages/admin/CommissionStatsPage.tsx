@@ -251,14 +251,10 @@ export default function CommissionStatsPage() {
                   rateLabel = `${agencyR.toFixed(2)}% (대리점 고정)`;
                 } else {
                   if (comms.length > 0) {
-                    const rates = comms.map((c: any) => c.commissionRate ?? 0.5);
-                    const minR = Math.min(...rates);
-                    const maxR = Math.max(...rates);
-                    rateLabel = minR === maxR
-                      ? `${minR.toFixed(2)}% (기본 수수료)`
-                      : `${minR.toFixed(2)}% ~ ${maxR.toFixed(2)}% (계약별 차등)`;
+                    const avgRate = comms.reduce((s: number, c: any) => s + (c.commissionRate ?? 0.5), 0) / comms.length;
+                    rateLabel = `평균 ${avgRate.toFixed(2)}%`;
                   } else {
-                    rateLabel = `0.50%~ (계약별 차등)`;
+                    rateLabel = `평균 0.50% (기본)`;
                   }
                 }
 
