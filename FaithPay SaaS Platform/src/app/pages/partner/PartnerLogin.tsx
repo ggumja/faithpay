@@ -5,8 +5,31 @@ import { toast } from 'sonner';
 
 // ── 데모 파트너 계정 ──────────────────────────────────────
 const DEMO_ACCOUNTS = [
-  { id: 'agency-001', email: 'agency@faithpay.kr', password: 'fp1234', name: '한국불교문화원', role: 'master_agency' as const, referralCode: 'AGENCY-001' },
-  { id: 'agent-001',  email: 'agent@faithpay.kr',  password: 'fp1234', name: '박민호',         role: 'sales_agent' as const,   referralCode: 'AGENT-001' },
+  {
+    id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    email: 'agency@faithpay.kr',
+    password: 'fp1234',
+    name: '한국불교문화원',
+    role: 'master_agency' as const,
+    referralCode: 'BIT2024',
+    phone: '02-567-8901',
+    bankName: '국민은행',
+    accountNumber: '620-21-0123456',
+    accountHolder: '불교정보화협의회',
+  },
+  {
+    id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+    email: 'agent@faithpay.kr',
+    password: 'fp1234',
+    name: '이수진',
+    role: 'sales_agent' as const,
+    referralCode: 'LSJ002',
+    parentId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    phone: '010-9876-5432',
+    bankName: '신한은행',
+    accountNumber: '110-123-456789',
+    accountHolder: '이수진',
+  },
 ];
 
 export default function PartnerLogin() {
