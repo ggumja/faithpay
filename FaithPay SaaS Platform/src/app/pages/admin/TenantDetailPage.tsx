@@ -581,7 +581,7 @@ export default function TenantDetailPage() {
                   결제 정보 설정
                 </CardTitle>
                 <CardDescription>
-                  {pgProvider === 'nanopay' ? '나노PG API 키 및 설정을 관리합니다' : '토스페이먼츠 API 키를 설정합니다'}
+                  나노PG API 키 및 결제 설정을 관리합니다
                 </CardDescription>
               </div>
               {paymentConfig && (
@@ -641,16 +641,12 @@ export default function TenantDetailPage() {
                     <Key className="h-4 w-4" />
                     PG 제공자 <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={pgProvider} onValueChange={setPgProvider}>
+                  <Select value={pgProvider || 'nanopay'} onValueChange={setPgProvider}>
                     <SelectTrigger id="pgProvider">
                       <SelectValue placeholder="PG 제공자 선택" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="nanopay">나노PG (NANO)</SelectItem>
-                      <SelectItem value="toss">토스페이먼츠</SelectItem>
-                      <SelectItem value="portone">포트원 (구 아임포트)</SelectItem>
-                      <SelectItem value="nice">NICE페이먼츠</SelectItem>
-                      <SelectItem value="kg">KG이니시스</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
