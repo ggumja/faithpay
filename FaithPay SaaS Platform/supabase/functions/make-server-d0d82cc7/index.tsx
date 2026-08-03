@@ -377,6 +377,58 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
   }
 });
 
+// 토스페이먼츠(TossPayments) 승인 API 연동 (/v1/payments/confirm)
+app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
+  try {
+    const { tenantId, paymentKey, orderId, amount } = await c.req.json();
+    const config = await db.getPaymentConfig(tenantId);
+    
+    // 토스페이먼츠 시크릿 키 기본값 (toss secretKey)
+    let secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+
+    // Basic Base64 Authorization (secretKey + :)
+    const basicAuth = btoa(`${secretKey}:`);
+
+    const tossResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount: Number(amount),
+      }),
+    });
+
+    const result = await tossResponse.json();
+
+    if (tossResponse.ok && (result.status === "DONE" || result.paymentKey)) {
+      // 결제 성공 DB 거래 기록 생성/업데이트
+      const newDonation = await db.createDonation({
+        id: orderId || `don_${Date.now()}`,
+        tenantId,
+        itemId: 'general',
+        itemName: result.orderName || '토스페이먼츠 봉헌금',
+        amount: Number(amount),
+        donorName: result.customerName || '신도/기부자',
+        donorPhone: '010-0000-0000',
+        paymentStatus: 'completed',
+        paymentMethod: result.method === '카드' ? 'card' : 'simple',
+        transactionId: result.paymentKey,
+      });
+
+      return c.json({ success: true, data: newDonation, toss: result });
+    } else {
+      return c.json({ success: false, error: result.message || '토스페이먼츠 결제 승인 실패', data: result }, 400);
+    }
+  } catch (error) {
+    console.error('Toss confirm error:', error);
+    return c.json({ success: false, error: '토스페이먼츠 승인 처리 중 오류 발생' }, 500);
+  }
+});
+
 // 인증결제 요청 처리
 app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
   try {
