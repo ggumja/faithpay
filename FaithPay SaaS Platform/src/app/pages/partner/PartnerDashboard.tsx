@@ -90,11 +90,12 @@ export default function PartnerDashboard() {
 
           const commRes = await partnerAPI.getCommissions(merged.id);
           setCommissions(commRes.success && commRes.data ? commRes.data : []);
-          setMyTenants(tenants.slice(0, 5));
 
+          let fetchedSubAgents: Partner[] = [];
           if (merged.role === 'master_agency') {
             const agentsRes = await partnerAPI.getByParent(merged.id);
             if (agentsRes.success && agentsRes.data) {
+              fetchedSubAgents = agentsRes.data;
               setSubAgents(agentsRes.data);
               let savedMap: Record<string, number> = {};
               try { savedMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
@@ -107,6 +108,20 @@ export default function PartnerDashboard() {
               setAgentRates(rates);
             }
           }
+
+          // 파트너(대리점/영업자) 및 소속 영업자의 실제 DB 등록 단체만 필터링
+          const relevantAgentIds = [merged.id, merged.referralCode];
+          fetchedSubAgents.forEach(a => {
+            if (a.id) relevantAgentIds.push(a.id);
+            if (a.referralCode) relevantAgentIds.push(a.referralCode);
+          });
+
+          const realMyTenants = tenants.filter(t =>
+            relevantAgentIds.includes((t as any).registeredByPartnerId) ||
+            relevantAgentIds.includes((t as any).registeredByReferralCode) ||
+            relevantAgentIds.includes((t as any).referralCode)
+          );
+          setMyTenants(realMyTenants);
         }
       } catch (err) {
         console.error('Failed to load partner dashboard data:', err);
@@ -227,7 +242,11 @@ export default function PartnerDashboard() {
         )}
 
         {section === 'tenants' && (
-          <PartnerTenantsSection myTenants={myTenants} />
+          <PartnerTenantsSection
+            partner={partner}
+            myTenants={myTenants}
+            subAgents={subAgents}
+          />
         )}
 
         {section === 'commissions' && (
