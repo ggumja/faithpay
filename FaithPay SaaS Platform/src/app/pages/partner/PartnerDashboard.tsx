@@ -75,7 +75,18 @@ export default function PartnerDashboard() {
           setEditBank((merged as any).bankName ?? '');
           setEditAccount((merged as any).accountNumber ?? '');
           setEditHolder((merged as any).accountHolder ?? '');
-          setEditAgencyRate((merged as any).agencyRate ?? (merged as any).commissionRate ?? 0.5);
+          setEditPhone(merged.phone ?? '');
+          setEditEmail(merged.email ?? '');
+          setEditBank((merged as any).bankName ?? '');
+          setEditAccount((merged as any).accountNumber ?? '');
+          setEditHolder((merged as any).accountHolder ?? '');
+
+          // 대리점 기본 수수료율 복원 (localStorage > 세션 > 기본값)
+          const savedDefaultRate = localStorage.getItem(`faithpay:agency_default_rate_${merged.id}`) ||
+                                   localStorage.getItem('faithpay:agency_default_rate');
+          const activeAgencyRate = savedDefaultRate ? parseFloat(savedDefaultRate) : ((merged as any).agencyRate ?? (merged as any).commissionRate ?? 0.5);
+          setEditAgencyRate(activeAgencyRate);
+          (merged as any).agencyRate = activeAgencyRate;
 
           const commRes = await partnerAPI.getCommissions(merged.id);
           setCommissions(commRes.success && commRes.data ? commRes.data : []);
@@ -87,7 +98,7 @@ export default function PartnerDashboard() {
               setSubAgents(agentsRes.data);
               let savedMap: Record<string, number> = {};
               try { savedMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
-              const defaultFee = (merged as any).agencyRate ?? 0.5;
+              const defaultFee = activeAgencyRate;
 
               const rates: Record<string, number> = {};
               agentsRes.data.forEach((a: Partner) => {

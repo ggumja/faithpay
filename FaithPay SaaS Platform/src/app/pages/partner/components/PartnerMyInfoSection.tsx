@@ -91,7 +91,21 @@ export function PartnerMyInfoSection({
                 onClick={async () => {
                   try {
                     await partnerAPI.updateAgentRate(partner.id, editAgencyRate);
-                    // 신규 및 미지정 소속 영업자들의 요율 업데이트
+                    // 1. localStorage 영구 저장 (세션 간 및 새로고침 간 유지)
+                    localStorage.setItem(`faithpay:agency_default_rate_${partner.id}`, editAgencyRate.toString());
+                    localStorage.setItem('faithpay:agency_default_rate', editAgencyRate.toString());
+
+                    // 2. 세션 내 partner 객체 업데이트
+                    const sessionRaw = localStorage.getItem('faithpay_partner_session');
+                    if (sessionRaw) {
+                      try {
+                        const sessionUser = JSON.parse(sessionRaw);
+                        sessionUser.agencyRate = editAgencyRate;
+                        localStorage.setItem('faithpay_partner_session', JSON.stringify(sessionUser));
+                      } catch {}
+                    }
+
+                    // 3. 신규 및 미지정 소속 영업자들의 요율 업데이트
                     setAgentRates(prev => {
                       const next = { ...prev };
                       subAgents.forEach(a => {
@@ -99,9 +113,9 @@ export function PartnerMyInfoSection({
                       });
                       return next;
                     });
-                    toast.success(`대리점 기본 수수료율이 ${editAgencyRate}%로 저장되었습니다.`);
+                    toast.success(`대리점 기본 수수료율이 ${editAgencyRate}%로 DB 및 세션 스토리지에 저장되었습니다.`);
                   } catch {
-                    toast.error('수수료율 저장에 실패했습니다.');
+                    toast.error('수수료율 저장 중 오류가 발생했습니다.');
                   }
                 }}
               >
