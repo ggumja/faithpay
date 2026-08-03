@@ -1,4 +1,5 @@
-import { ArrowLeft, Copy, Percent, RefreshCw, Building2, Plus, UserCircle } from 'lucide-react';
+import { ArrowLeft, Copy, Percent, RefreshCw, Building2, Plus, UserCircle, History } from 'lucide-react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -18,6 +19,15 @@ interface PartnerAgentDetailViewProps {
   savingAgentId: string | null;
   setSavingAgentId: (id: string | null) => void;
   tenants: any[];
+}
+
+interface HistoryEntry {
+  id: string;
+  timestamp: string;
+  category: string;
+  beforeVal: string;
+  afterVal: string;
+  modifiedBy: string;
 }
 
 export function PartnerAgentDetailView({
@@ -48,6 +58,40 @@ export function PartnerAgentDetailView({
     (t as any).referralCode === selectedAgent.referralCode
   );
 
+  const historyStorageKey = `faithpay:agent_history:${selectedAgent.id}`;
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    try {
+      const raw = localStorage.getItem(historyStorageKey);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [
+      {
+        id: 'h-1',
+        timestamp: '2026-08-03 12:00:00',
+        category: '수수료율 지정',
+        beforeVal: '대리점 0.5% (베이스 2.5%)',
+        afterVal: `대리점 ${currentRate}% (베이스 ${subAgentFloor}%)`,
+        modifiedBy: '한국불교문화원 (대리점)',
+      },
+      {
+        id: 'h-2',
+        timestamp: '2026-07-20 10:15:00',
+        category: '가맹점 단체 유치',
+        beforeVal: '—',
+        afterVal: '신규 단체 [명성교회] 유치 등록 (3.0%)',
+        modifiedBy: `${selectedAgent.name} (영업자)`,
+      },
+      {
+        id: 'h-3',
+        timestamp: '2026-07-01 09:00:00',
+        category: '영업자 계정 승인',
+        beforeVal: '승인 대기',
+        afterVal: `승인 완료 (추천코드 ${selectedAgent.referralCode} 부여)`,
+        modifiedBy: '시스템 관리자',
+      },
+    ];
+  });
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* 상단 뒤로가기 바 */}
@@ -60,72 +104,76 @@ export function PartnerAgentDetailView({
         </span>
       </div>
 
-      {/* 영업자 헤더 배너 카드 */}
-      <Card className="border-slate-800 bg-slate-900 text-white overflow-hidden shadow-lg">
-        <CardContent className="p-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
-              <span className="text-2xl font-bold text-purple-300">{selectedAgent.name?.charAt(0)}</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-[20px] font-bold">{selectedAgent.name}</h2>
-                <Badge className={selectedAgent.status === 'active' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}>
-                  {selectedAgent.status === 'active' ? '활성' : '대기/정지'}
-                </Badge>
+      {/* 헤더 카드 */}
+      <Card className="border-purple-200 bg-gradient-to-r from-purple-50/80 via-white to-purple-50/50 shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-purple-600 text-white font-bold text-xl flex items-center justify-center shadow-md">
+                {selectedAgent.name?.charAt(0)}
               </div>
-              <p className="text-[12px] text-slate-300 font-mono mt-0.5">
-                추천코드: {selectedAgent.referralCode} {selectedAgent.email && ` · ${selectedAgent.email}`}
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-[20px] font-bold text-slate-800">{selectedAgent.name} 영업자</h1>
+                  <Badge className="bg-purple-600 text-white font-mono text-[11px]">
+                    추천코드: {selectedAgent.referralCode}
+                  </Badge>
+                </div>
+                <p className="text-[12.5px] text-slate-500 mt-1">
+                  소속 대리점: <strong>한국불교문화원</strong> · 등록 가맹점: <strong>{agentTenants.length}개소</strong>
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" className="text-xs bg-white/10 hover:bg-white/20 text-white border-0"
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
               onClick={() => {
-                const link = `${window.location.origin}/partner/apply?ref=${selectedAgent.referralCode}`;
-                navigator.clipboard.writeText(link);
-                toast.success(`${selectedAgent.name} 전용 초대 링크가 복사되었습니다.`);
-              }}>
-              <Copy className="h-3.5 w-3.5 mr-1.5" /> 초대 링크 복사
+                navigator.clipboard.writeText(selectedAgent.referralCode);
+                toast.success('영업자 추천코드가 복사되었습니다.');
+              }}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1" /> 코드 복사
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* 수수료 설정 & 베이스 수수료 블록 */}
-      <Card className="border-purple-200 bg-purple-50/30 shadow-sm">
-        <CardHeader className="pb-3 bg-purple-50/60 border-b border-purple-100">
-          <CardTitle className="text-[14px] font-bold text-purple-950 flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Percent className="h-4 w-4 text-purple-600" /> 대리점 수수료 설정 & 베이스 수수료
-            </span>
-            <span className="text-[12px] font-bold text-purple-800 bg-white px-3 py-1 rounded-lg border border-purple-200 shadow-2xs font-mono">
-              영업자 베이스 수수료: {subAgentFloor}%
-            </span>
+      {/* 대리점 수수료 마진 & 영업자 베이스 수수료 설정 */}
+      <Card className="border-purple-200 shadow-sm">
+        <CardHeader className="pb-3 border-b border-purple-100">
+          <CardTitle className="text-[15px] font-bold text-slate-800 flex items-center gap-2">
+            <Percent className="h-4 w-4 text-purple-600" /> [{selectedAgent.name}] 영업자 대리점 수수료 및 베이스 수수료 설정
           </CardTitle>
-          <CardDescription className="text-[11.5px] text-purple-800">
-            이 영업자에게 지정할 대리점 수수료율(내 수수료)을 입력하면 영업자의 베이스 수수료(하한선)가 자동 저장 및 연동됩니다.
+          <CardDescription className="text-[11.5px] text-slate-500">
+            대리점 수수료(나의 수익)를 조정하면, 해당 영업자에게 부여되는 정산 베이스 수수료(하한선)가 자동 산출됩니다.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-5 space-y-4">
-          <div className="flex items-center justify-between gap-4 p-4 bg-white rounded-xl border border-purple-100">
+
+        <CardContent className="p-6 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div>
-              <Label className="text-[13px] font-bold text-purple-950">대리점 수수료율 (내 수수료 %)</Label>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                {selectedAgent.name} 님이 유치하는 가맹점 결제 발생 시 대리점(나)에 귀속되는 고정 수수료율입니다.
+              <Label className="text-xs font-bold text-slate-700 block mb-1">
+                대리점 수수료율 (나의 수수료 마진)
+              </Label>
+              <p className="text-[11px] text-slate-500">
+                {selectedAgent.name} 님이 유치한 가맹점 거래액에서 대리점이 취할 수수료율입니다.
               </p>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 justify-end">
               <Input
-                type="number" step="0.1" min="0" max="3"
+                type="number"
+                step="0.05"
+                min="0.1"
+                max="3.0"
                 value={currentRate}
                 onChange={e => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v)) setAgentRates(prev => ({ ...prev, [selectedAgent.id]: v }));
+                  const val = parseFloat(e.target.value) || 0;
+                  setAgentRates(prev => ({ ...prev, [selectedAgent.id]: val }));
                 }}
-                className="w-24 h-9 text-right font-bold text-[14px] text-purple-900 bg-purple-50/50 border-purple-300"
+                className="w-28 text-right font-bold text-purple-900 font-mono h-10 text-base"
               />
-              <span className="text-[14px] font-bold text-purple-900">%</span>
+              <span className="font-bold text-slate-700 text-sm">%</span>
             </div>
           </div>
 
@@ -135,13 +183,6 @@ export function PartnerAgentDetailView({
               <span>🎯 {selectedAgent.name} 님의 베이스 수수료 (하한선):</span>
               <span className="font-mono text-[14px] text-purple-800 font-bold bg-purple-50 px-2.5 py-0.5 rounded border border-purple-200">
                 {subAgentFloor}%
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap text-[10.5px]">
-              <span className="px-2.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">지정 대리점 마진율: {currentRate}%</span>
-              <span className="text-slate-300 font-bold">➔</span>
-              <span className="font-bold text-purple-900 font-mono bg-purple-50 px-2.5 py-0.5 rounded border border-purple-200">
-                영업자 부여 베이스 수수료: {subAgentFloor}%
               </span>
             </div>
             <p className="text-[10.5px] text-slate-500 mt-1">
@@ -158,8 +199,22 @@ export function PartnerAgentDetailView({
                   await partnerAPI.updateAgentRate(selectedAgent.id, currentRate);
                   let savedMap: Record<string, number> = {};
                   try { savedMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
+                  const prevRate = savedMap[selectedAgent.id] ?? 0.3;
                   savedMap[selectedAgent.id] = currentRate;
                   localStorage.setItem('faithpay:agent_rates', JSON.stringify(savedMap));
+
+                  // 수정 이력 추가 저장
+                  const newEntry: HistoryEntry = {
+                    id: `h-${Date.now()}`,
+                    timestamp: new Date().toLocaleString('ko-KR', { hour12: false }),
+                    category: '수수료율 변경',
+                    beforeVal: `대리점 ${prevRate}% (베이스 ${+(pgCost2 + platformMargin2 + prevRate).toFixed(2)}%)`,
+                    afterVal: `대리점 ${currentRate}% (베이스 ${subAgentFloor}%)`,
+                    modifiedBy: '한국불교문화원 (대리점)',
+                  };
+                  const updatedHistory = [newEntry, ...history];
+                  setHistory(updatedHistory);
+                  localStorage.setItem(historyStorageKey, JSON.stringify(updatedHistory));
 
                   toast.success(`[${selectedAgent.name}] 영업자의 베이스 수수료가 ${subAgentFloor}% (대리점 수수료 ${currentRate}%)로 저장되었습니다.`);
                 } catch {
@@ -240,38 +295,45 @@ export function PartnerAgentDetailView({
         </CardContent>
       </Card>
 
-      {/* 연락처 및 정산 계좌 상세 정보 */}
-      <Card className="border-slate-200">
-        <CardHeader className="pb-3">
+      {/* 📜 정보 및 수수료 변경 이력 하단 원장 카드 */}
+      <Card className="border-slate-200 shadow-2xs">
+        <CardHeader className="pb-3 bg-slate-50/80 border-b border-slate-200">
           <CardTitle className="text-[14px] font-bold text-slate-800 flex items-center gap-2">
-            <UserCircle className="h-4 w-4 text-slate-500" /> 기본 연락처 및 정산 계좌 정보
+            <History className="h-4 w-4 text-purple-600" /> [{selectedAgent.name}] 영업자 정보 및 수수료 변경 이력
           </CardTitle>
+          <CardDescription className="text-[11px] mt-0.5">
+            수수료율 변경, 프로필 수정 및 주요 가맹점 개설 내역 실시간 기록원장입니다.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-[12.5px]">
-          <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded-xl">
-            <div>
-              <span className="text-[11px] text-slate-400 block font-semibold">휴대폰 번호</span>
-              <span className="font-mono font-bold text-slate-700">{selectedAgent.phone || '—'}</span>
-            </div>
-            <div>
-              <span className="text-[11px] text-slate-400 block font-semibold">이메일 주소</span>
-              <span className="font-mono text-slate-700">{selectedAgent.email || '—'}</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4 p-3 bg-slate-50 rounded-xl">
-            <div>
-              <span className="text-[11px] text-slate-400 block font-semibold">정산 은행</span>
-              <span className="font-bold text-slate-700">{(selectedAgent as any).bankName || '—'}</span>
-            </div>
-            <div>
-              <span className="text-[11px] text-slate-400 block font-semibold">계좌 번호</span>
-              <span className="font-mono text-slate-700">{(selectedAgent as any).accountNumber || '—'}</span>
-            </div>
-            <div>
-              <span className="text-[11px] text-slate-400 block font-semibold">예금주</span>
-              <span className="font-bold text-slate-700">{(selectedAgent as any).accountHolder || selectedAgent.name || '—'}</span>
-            </div>
-          </div>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="text-[11px]">변경일시</TableHead>
+                <TableHead className="text-[11px]">구분 / 항목</TableHead>
+                <TableHead className="text-[11px]">변경 내용 (변경 전 ➔ 변경 후)</TableHead>
+                <TableHead className="text-[11px]">처리 담당자</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {history.map(item => (
+                <TableRow key={item.id} className="hover:bg-slate-50">
+                  <TableCell className="font-mono text-[11px] text-slate-500 whitespace-nowrap">{item.timestamp}</TableCell>
+                  <TableCell className="text-[11px] font-bold">
+                    <Badge variant="outline" className="bg-purple-50 border-purple-200 text-purple-700 text-[10px]">
+                      {item.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-[11px] text-slate-700">
+                    <span className="font-medium">{item.beforeVal}</span>
+                    {item.beforeVal !== '—' && <span className="mx-1.5 text-slate-400 font-bold">➔</span>}
+                    <span className="font-bold text-purple-800">{item.afterVal}</span>
+                  </TableCell>
+                  <TableCell className="text-[11px] text-slate-500 font-medium">{item.modifiedBy}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
