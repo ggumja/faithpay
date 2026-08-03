@@ -490,16 +490,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchTenants = useCallback(async () => {
     try {
       const response = await tenantAPI.getTenants();
+      let finalTenants: Tenant[] = defaultTenants;
+
       if (response.success && Array.isArray(response.data) && response.data.length > 0) {
         const dbTenants = response.data;
-        mockTenants.length = 0;
-        mockTenants.push(...dbTenants);
-        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-        setTenants(dbTenants);
-      } else {
-        // API/KV 스토어 데이터가 비어있을 경우 5개 대리점/영업자 defaultTenants 보장
-        setTenants(defaultTenants);
+        const existingSlugs = new Set(dbTenants.map(t => t.slug));
+        const missingDefaults = defaultTenants.filter(d => !existingSlugs.has(d.slug));
+        finalTenants = [...dbTenants, ...missingDefaults];
       }
+
+      mockTenants.length = 0;
+      mockTenants.push(...finalTenants);
+      try {
+        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
+      } catch {}
+      setTenants(finalTenants);
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
       setTenants(defaultTenants);
