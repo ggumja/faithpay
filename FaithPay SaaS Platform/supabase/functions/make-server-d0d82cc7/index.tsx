@@ -53,36 +53,45 @@ app.get("/make-server-d0d82cc7/tenants", async (c) => {
   }
 });
 
-// 특정 단체 조회 (by ID)
-app.get("/make-server-d0d82cc7/tenants/:id", async (c) => {
+// ✅ 특정(static) 경로를 먼저 — :id 와일드카드보다 반드시 앞에 등록
+
+// 승인 대기 단체 목록 조회  ← /tenants/:id 보다 반드시 앞
+app.get("/make-server-d0d82cc7/tenants/pending", async (c) => {
   try {
-    const id = c.req.param('id');
-    const tenant = await db.getTenantById(id);
-    
-    if (!tenant) {
-      return c.json({ success: false, error: 'Tenant not found' }, 404);
-    }
-    
-    return c.json({ success: true, data: tenant });
+    const pending = await db.getPendingTenants();
+    return c.json({ success: true, data: pending });
   } catch (error) {
-    console.error('Error fetching tenant:', error);
-    return c.json({ success: false, error: 'Failed to fetch tenant' }, 500);
+    console.error('Error fetching pending tenants:', error);
+    return c.json({ success: false, error: 'Failed to fetch pending tenants' }, 500);
   }
 });
 
-// 단체 조회 (by slug)
+// 단체 조회 (by slug)  ← /tenants/:id 보다 반드시 앞
 app.get("/make-server-d0d82cc7/tenants/slug/:slug", async (c) => {
   try {
     const slug = c.req.param('slug');
     const tenant = await db.getTenantBySlug(slug);
-    
     if (!tenant) {
       return c.json({ success: false, error: 'Tenant not found' }, 404);
     }
-    
     return c.json({ success: true, data: tenant });
   } catch (error) {
     console.error('Error fetching tenant by slug:', error);
+    return c.json({ success: false, error: 'Failed to fetch tenant' }, 500);
+  }
+});
+
+// 특정 단체 조회 (by ID)  ← 와일드카드이므로 static 경로 뒤에 등록
+app.get("/make-server-d0d82cc7/tenants/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const tenant = await db.getTenantById(id);
+    if (!tenant) {
+      return c.json({ success: false, error: 'Tenant not found' }, 404);
+    }
+    return c.json({ success: true, data: tenant });
+  } catch (error) {
+    console.error('Error fetching tenant:', error);
     return c.json({ success: false, error: 'Failed to fetch tenant' }, 500);
   }
 });
@@ -100,16 +109,44 @@ app.post("/make-server-d0d82cc7/tenants", async (c) => {
 });
 
 // 단체 수정
+app.put("/make-server-d0d82cc7/tenants/:id/approve", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const tenant = await db.approveTenant(id);
+    if (!tenant) {
+      return c.json({ success: false, error: 'Tenant not found' }, 404);
+    }
+    return c.json({ success: true, data: tenant });
+  } catch (error) {
+    console.error('Error approving tenant:', error);
+    return c.json({ success: false, error: 'Failed to approve tenant' }, 500);
+  }
+});
+
+// 단체 입점 거절 (suspended)
+app.put("/make-server-d0d82cc7/tenants/:id/reject", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const tenant = await db.rejectTenant(id);
+    if (!tenant) {
+      return c.json({ success: false, error: 'Tenant not found' }, 404);
+    }
+    return c.json({ success: true, data: tenant });
+  } catch (error) {
+    console.error('Error rejecting tenant:', error);
+    return c.json({ success: false, error: 'Failed to reject tenant' }, 500);
+  }
+});
+
+// 단체 정보 수정 (일반)
 app.put("/make-server-d0d82cc7/tenants/:id", async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
     const tenant = await db.updateTenant(id, body);
-    
     if (!tenant) {
       return c.json({ success: false, error: 'Tenant not found' }, 404);
     }
-    
     return c.json({ success: true, data: tenant });
   } catch (error) {
     console.error('Error updating tenant:', error);
@@ -122,17 +159,16 @@ app.delete("/make-server-d0d82cc7/tenants/:id", async (c) => {
   try {
     const id = c.req.param('id');
     const success = await db.deleteTenant(id);
-    
     if (!success) {
       return c.json({ success: false, error: 'Tenant not found' }, 404);
     }
-    
     return c.json({ success: true, message: 'Tenant deleted' });
   } catch (error) {
     console.error('Error deleting tenant:', error);
     return c.json({ success: false, error: 'Failed to delete tenant' }, 500);
   }
 });
+
 
 // ==================== PAYMENT CONFIG ROUTES ====================
 
@@ -901,8 +937,13 @@ app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
 // 영업 파트너 목록 조회
 app.get("/make-server-d0d82cc7/partners", async (c) => {
   try {
+    const parentId = c.req.query('parentId');
     const partners = await db.getAllPartners();
-    return c.json({ success: true, data: partners });
+    // parentId 필터: 대리점의 소속 영업자 목록
+    const result = parentId
+      ? partners.filter((p: db.Partner) => p.parentId === parentId)
+      : partners;
+    return c.json({ success: true, data: result });
   } catch (error) {
     console.error('Error fetching partners:', error);
     return c.json({ success: false, error: 'Failed to fetch partners' }, 500);
@@ -930,6 +971,38 @@ app.get("/make-server-d0d82cc7/partners/:id/commissions", async (c) => {
   } catch (error) {
     console.error('Error fetching commissions:', error);
     return c.json({ success: false, error: 'Failed to fetch commissions' }, 500);
+  }
+});
+
+// 대리점이 소속 영업자의 체널풀 배분율 설정
+// PATCH /partners/:id/channel-share  { channelShareRate: number }
+app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
+  try {
+    const agentId = c.req.param('id');
+    const body = await c.req.json();
+    const { channelShareRate } = body as { channelShareRate: number };
+
+    if (typeof channelShareRate !== 'number' || channelShareRate < 0 || channelShareRate > 100) {
+      return c.json({ success: false, error: 'channelShareRate는 0~100 사이여야 합니다.' }, 400);
+    }
+
+    // 대상 파트너 조회
+    const agent = await db.getPartnerById(agentId);
+    if (!agent) {
+      return c.json({ success: false, error: '영업자를 찾지 못했습니다.' }, 404);
+    }
+    if (agent.role !== 'sales_agent') {
+      return c.json({ success: false, error: '영업자(sales_agent)만 대상으로 할 수 있습니다.' }, 400);
+    }
+
+    // 업데이트
+    const updated: db.Partner = { ...agent, channelShareRate };
+    await kv.set(`partner:${agentId}`, updated);
+
+    return c.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error updating agent channel share rate:', error);
+    return c.json({ success: false, error: 'Failed to update channel share rate' }, 500);
   }
 });
 

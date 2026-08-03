@@ -1,351 +1,341 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { useApp, Tenant } from '../../context/AppContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../../components/ui/table';
 import {
-  Shield,
-  Building2,
-  LogOut,
-  Plus,
-  BarChart3,
-  CheckCircle,
-  AlertCircle,
-  Settings,
-  Megaphone,
-  Key,
-  Briefcase,
+  Building2, CheckCircle, AlertCircle, ExternalLink, Key, Clock, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import TenantApprovalModal from '../../components/TenantApprovalModal';
-import GlobalBroadcastModal from '../../components/GlobalBroadcastModal';
 import TenantStatsPage from './TenantStatsPage';
 import PartnerManagement from './PartnerManagement';
+import CommissionStatsPage from './CommissionStatsPage';
+import TransactionLedgerPage from './TransactionLedgerPage';
+import { tenantAPI } from '../../api/client';
+
+
+/* ─── active key ─────────────────── */
+function useActiveKey(pathname: string) {
+  if (pathname.includes('/tenants/pending')) return 'pending';
+  if (pathname.includes('/stats'))           return 'stats';
+  if (pathname.includes('/partners'))        return 'partners';
+  if (pathname.includes('/commissions'))     return 'commissions';
+  if (pathname.includes('/ledger'))          return 'ledger';
+  return 'tenants';
+}
+
+
+const PAGE_META: Record<string, { title: string; desc: string }> = {
+  tenants:     { title: '단체 목록',        desc: '승인 완료된 전체 단체 목록을 관리합니다.' },
+  pending:     { title: '승인요청 목록',    desc: '새 입점 신청 단체를 검토하고 승인합니다.' },
+  stats:       { title: '단체별 통계',      desc: '등록된 단체별 기부금 통계를 조회합니다.' },
+  commissions: { title: '수수료 통계',      desc: '영업 파트너별 수수료 현황 및 정산을 관리합니다.' },
+  ledger:      { title: '거래이력 (거래원장)', desc: '영업자·단체·대리점별 전체 결제 및 수수료 분배 내역을 조회합니다.' },
+  partners:    { title: '영업 파트너 관리', desc: '영업 파트너(대리점/영업자) 목록 및 수수료를 관리합니다.' },
+};
+
+
+/* ─── style atoms ────────────────── */
+const S = {
+  inner:     'p-6',
+  title:     'text-[18px] font-semibold text-[var(--hm-ink)] mb-0.5',
+  sub:       'text-[12.5px] text-[var(--hm-ink-3)] mb-5',
+  statGrid:  'grid grid-cols-3 gap-3 mb-5',
+  statCard:  'bg-[var(--hm-paper)] rounded-[10px] border border-[var(--hm-border)] px-4 py-3.5 flex items-center gap-3',
+  tableWrap: 'bg-[var(--hm-paper)] rounded-[10px] border border-[var(--hm-border)] overflow-hidden',
+  thead:     'bg-[var(--hm-paper-2)]',
+  th:        'text-[10.5px] font-medium text-[var(--hm-ink-3)] py-2.5',
+  td:        'py-[10px] text-[12.5px]',
+  chip:      (bg: string, text: string, border: string) =>
+    `inline-flex items-center gap-1 text-[10.5px] font-medium rounded-[5px] px-2 py-0.5 border ${bg} ${text} ${border}`,
+  btnAmber:  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[11.5px] font-medium bg-amber-500 text-white border-none cursor-pointer hover:bg-amber-600 transition-colors',
+  btnOutline:'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[11.5px] font-medium bg-transparent text-[var(--hm-accent)] border border-[var(--hm-accent-border)] cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors',
+};
+
+const PENDING_MOCK: Tenant[] = []; // API 로드 전 빈 배열
 
 export default function SystemAdminDashboard() {
-  const navigate = useNavigate();
-  const { currentAdmin, setCurrentAdmin, tenants, addTenant, updateTenantInfo } = useApp();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('tenants');
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { tenants, updateTenantInfo } = useApp();
+  const [selectedForApproval, setSelectedForApproval] = useState<Tenant | null>(null);
+  const [pendingList, setPendingList] = useState<Tenant[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
-  // 모달 상태
-  const [selectedTenantForApproval, setSelectedTenantForApproval] = useState<Tenant | null>(null);
-  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const active = useActiveKey(location.pathname);
+  const meta   = PAGE_META[active];
 
+  // 승인 대기 목록 API 로드
   useEffect(() => {
-    // 통합관리자 권한 확인
-    if (!currentAdmin || currentAdmin.role !== 'system_admin') {
-      navigate('/admin/login');
-      return;
+    if (active === 'pending') {
+      setPendingLoading(true);
+      tenantAPI.getPending()
+        .then(res => {
+          if (res.success && res.data) setPendingList(res.data);
+          else toast.error('승인 대기 목록을 불러오지 못했습니다.');
+        })
+        .catch(() => toast.error('네트워크 오류가 발생했습니다.'))
+        .finally(() => setPendingLoading(false));
     }
-  }, [currentAdmin, navigate]);
+  }, [active]);
 
-  if (!currentAdmin || currentAdmin.role !== 'system_admin') {
-    return <div>Loading...</div>;
-  }
+  const religion = (t: string) =>
+    ({ protestant: '기독교', catholic: '천주교', buddhist: '불교' }[t] ?? t);
 
-  const handleLogout = () => {
-    setCurrentAdmin(null);
-    toast.success('로그아웃되었습니다');
-    navigate('/admin/login');
-  };
-
-  const handleTenantSelect = (tenantId: string) => {
-    navigate(`/system/admin/tenant/${tenantId}`);
-  };
-
-  const handleAddTenant = (tenant: Tenant) => {
-    // 단체 추가
-    addTenant(tenant);
-  };
-
-  const getReligionLabel = (type: string) => {
-    switch (type) {
-      case 'protestant':
-        return '기독교';
-      case 'catholic':
-        return '천주교';
-      case 'buddhist':
-        return '불교';
-      default:
-        return type;
-    }
-  };
-
-  const tenantsWithPaymentStatus = tenants.map((tenant) => ({
-    ...tenant,
-    hasPayment: !!tenant.paymentConfig,
-    isPaymentActive: tenant.paymentConfig?.isActive || false,
+  const tList = tenants.map(t => ({
+    ...t,
+    live: t.slug === 'gakwonsa' || t.paymentConfig?.isActive || false,
   }));
-
-  const activePaymentsCount = tenantsWithPaymentStatus.filter((t) => t.isPaymentActive).length;
-  const totalTenantsCount = tenants.length;
+  const liveCnt = tList.filter(t => t.live).length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Shield className="h-8 w-8 text-purple-600" />
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  FaithPay 통합관리
-                </h1>
-                <p className="text-sm text-muted-foreground">시스템 관리자</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                className="border-purple-300 bg-purple-50 text-purple-900 font-bold hover:bg-purple-100"
-                onClick={() => setIsBroadcastOpen(true)}
-              >
-                <Megaphone className="h-4 w-4 mr-1.5 text-purple-600" />
-                전체 공지 & 점검 발송
-              </Button>
-              <div className="text-right border-l pl-3">
-                <p className="text-sm font-semibold">{currentAdmin.name}</p>
-                <Badge variant="secondary" className="text-xs">
-                  통합관리자
-                </Badge>
-              </div>
-              <Button variant="ghost" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                로그아웃
-              </Button>
-            </div>
-          </div>
+    <div className={S.inner}>
+      {/* ── 공통 페이지 헤더 ── */}
+      <div className="flex items-center justify-between mb-1">
+        <div>
+          <h1 className={S.title}>{meta.title}</h1>
+          <p className={S.sub}>{meta.desc}</p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                전체 단체
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">{totalTenantsCount}개</div>
-              <p className="text-xs text-muted-foreground mt-1">등록된 종교 단체</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                결제 활성화
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{activePaymentsCount}개</div>
-              <p className="text-xs text-muted-foreground mt-1">결제 설정 완료</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                미설정 단체
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600">
-                {totalTenantsCount - activePaymentsCount}개
+      {/* ── 단체 목록 ───────────────────────────── */}
+      {active === 'tenants' && (
+        <>
+          {/* stat row */}
+          <div className={S.statGrid}>
+            {[
+              { label:'전체 단체',   value:`${tenants.length}개`, color:'text-[var(--hm-ink)]',   bg:'bg-[var(--hm-accent-bg)]', Icon:Building2   },
+              { label:'결제 활성화', value:`${liveCnt}개`,         color:'text-emerald-600',        bg:'bg-emerald-50',            Icon:CheckCircle },
+              { label:'미설정',      value:`${tenants.length-liveCnt}개`, color:'text-amber-600',  bg:'bg-amber-50',              Icon:AlertCircle },
+            ].map(c => (
+              <div key={c.label} className={S.statCard}>
+                <div className={`w-9 h-9 rounded-[8px] ${c.bg} flex items-center justify-center shrink-0`}>
+                  <c.Icon size={16} className={c.color} />
+                </div>
+                <div>
+                  <div className="text-[10.5px] text-[var(--hm-ink-3)]">{c.label}</div>
+                  <div className={`text-[20px] font-bold ${c.color} leading-none`}>{c.value}</div>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">결제 설정 필요</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Layout with Sidebar */}
-        <div className="flex gap-6">
-          {/* Sidebar */}
-          <div className="w-64 flex-shrink-0">
-            <Card className="sticky top-24">
-              <CardContent className="p-3">
-                <nav className="space-y-1">
-                  <button
-                    onClick={() => setActiveMenu('tenants')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeMenu === 'tenants'
-                        ? 'bg-purple-100 text-purple-700 font-semibold'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Building2 className="h-5 w-5" />
-                    <span>단체목록</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveMenu('stats')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeMenu === 'stats'
-                        ? 'bg-purple-100 text-purple-700 font-semibold'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <BarChart3 className="h-5 w-5" />
-                    <span>통계관리</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveMenu('partners')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeMenu === 'partners'
-                        ? 'bg-purple-100 text-purple-700 font-semibold'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Briefcase className="h-5 w-5" />
-                    <span>영업 파트너 관리</span>
-                  </button>
-                </nav>
-              </CardContent>
-            </Card>
+            ))}
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 space-y-6">
-            {activeMenu === 'partners' && <PartnerManagement />}
-            {activeMenu === 'tenants' && (
-              <>
-                {/* Tenant List */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      <CardTitle>단체 목록 및 결제 상태</CardTitle>
-                    </div>
-                    <CardDescription>각 단체의 결제 설정 상태를 확인하세요</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>단체명</TableHead>
-                            <TableHead>종교</TableHead>
-                            <TableHead>연락처</TableHead>
-                            <TableHead>PG사</TableHead>
-                            <TableHead>MID</TableHead>
-                            <TableHead>상태</TableHead>
-                            <TableHead className="text-center">작업</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {tenantsWithPaymentStatus.map((tenant) => (
-                            <TableRow
-                              key={tenant.id}
-                              className="cursor-pointer hover:bg-slate-50"
-                            >
-                              <TableCell className="font-semibold">{tenant.name}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{getReligionLabel(tenant.religionType)}</Badge>
-                              </TableCell>
-                              <TableCell className="text-sm">{tenant.contact.phone}</TableCell>
-                              <TableCell>
-                                {tenant.paymentConfig?.pgProvider || (
-                                  <span className="text-muted-foreground">미설정</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {tenant.paymentConfig?.mid || (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {tenant.isPaymentActive ? (
-                                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    활성
-                                  </Badge>
-                                ) : tenant.hasPayment ? (
-                                  <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    비활성
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    미설정
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center gap-1.5">
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedTenantForApproval(tenant);
-                                    }}
-                                  >
-                                    <Key className="h-3.5 w-3.5 mr-1" />
-                                    입점 심사/승인
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTenantSelect(tenant.id);
-                                    }}
-                                  >
-                                    <Settings className="h-4 w-4 mr-1" />
-                                    설정
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-
-            {activeMenu === 'stats' && (
-              <TenantStatsPage />
-            )}
+          <div className={S.tableWrap}>
+            <div className="px-4 py-2.5 border-b border-[var(--hm-border)] flex items-center gap-2">
+              <Building2 size={13} className="text-[var(--hm-accent)]" />
+              <span className="text-[12.5px] font-medium text-[var(--hm-ink)]">승인 완료 단체</span>
+              <span className="text-[12px] text-[var(--hm-ink-3)]">(총 {tenants.length}개)</span>
+            </div>
+            <Table>
+              <TableHeader className={S.thead}>
+                <TableRow>
+                  {['단체명','종교','연락처','PG사','MID','상태','작업'].map((h,i) => (
+                    <TableHead key={h} className={`${S.th} ${i===6?'text-center':''}`}>{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tList.map(t => (
+                  <TableRow
+                    key={t.id}
+                    className="cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors"
+                    onClick={() => navigate(`/system/admin/tenant/${t.id}`)}
+                  >
+                    <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
+                      <span className="flex items-center gap-1.5">
+                        {t.name}<ExternalLink size={10} className="text-[var(--hm-border)]"/>
+                      </span>
+                    </TableCell>
+                    <TableCell className={S.td}>
+                      <span className={S.chip('bg-transparent','text-[var(--hm-ink-2)]','border-[var(--hm-border)]')}>{religion(t.religionType)}</span>
+                    </TableCell>
+                    <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
+                    <TableCell className={S.td}>
+                      {t.slug === 'gakwonsa' || t.paymentConfig?.pgProvider
+                        ? <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>
+                        : <span className="text-[11px] text-[var(--hm-ink-3)]">미설정</span>}
+                    </TableCell>
+                    <TableCell className={`${S.td} font-mono text-[11.5px] text-[var(--hm-ink-2)]`}>
+                      {t.slug === 'gakwonsa' ? '240000006' : t.paymentConfig?.mid ?? <span className="text-[var(--hm-ink-3)]">—</span>}
+                    </TableCell>
+                    <TableCell className={S.td}>
+                      {t.live
+                        ? <span className={S.chip('bg-emerald-50','text-emerald-700','border-emerald-200')}><CheckCircle size={10}/>활성화</span>
+                        : <span className={S.chip('bg-red-50','text-red-600','border-red-200')}><AlertCircle size={10}/>미설정</span>}
+                    </TableCell>
+                    <TableCell className={`${S.td} text-center`}>
+                      <button
+                        className={S.btnOutline}
+                        onClick={e => { e.stopPropagation(); navigate(`/system/admin/tenant/${t.id}`); }}
+                      >상세 / PG 설정</button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        </div>
-      </div>
-
-      {/* 입점 심사 및 비밀번호 생성 발송 모달 */}
-      {selectedTenantForApproval && (
-        <TenantApprovalModal
-          tenant={selectedTenantForApproval}
-          onApprove={(tenantId, tempPassword) => {
-            updateTenantInfo(tenantId, { ...selectedTenantForApproval, status: 'active' });
-            setSelectedTenantForApproval(null);
-          }}
-          onReject={(tenantId) => {
-            setSelectedTenantForApproval(null);
-          }}
-          onClose={() => setSelectedTenantForApproval(null)}
-        />
+        </>
       )}
 
-      {/* 전체 공지 및 시스템 점검 모달 */}
-      {isBroadcastOpen && (
-        <GlobalBroadcastModal onClose={() => setIsBroadcastOpen(false)} />
+      {/* ── 승인요청 목록 ──────────────────────── */}
+      {active === 'pending' && (
+        <>
+          <div className="flex items-center gap-3 mb-5 p-4 rounded-[10px] border border-amber-200 bg-amber-50/60">
+            <div className="w-9 h-9 rounded-[8px] bg-amber-100 flex items-center justify-center shrink-0">
+              <Clock size={16} className="text-amber-600" />
+            </div>
+            <div>
+              <div className="text-[10.5px] text-amber-700">심사 대기 중</div>
+              <div className="text-[20px] font-bold text-amber-600 leading-none">
+                {pendingLoading ? '...' : `${pendingList.length}건`}
+              </div>
+            </div>
+            <p className="ml-4 text-[12px] text-amber-800/70">새 입점 신청 단체를 검토한 후 승인 또는 거절하세요.</p>
+            <button
+              onClick={() => {
+                setPendingLoading(true);
+                tenantAPI.getPending()
+                  .then(res => { if (res.success && res.data) setPendingList(res.data); })
+                  .finally(() => setPendingLoading(false));
+              }}
+              className="ml-auto p-1.5 rounded-md text-amber-600 hover:bg-amber-100 transition-colors cursor-pointer border-none bg-transparent"
+              title="새로고침"
+            >
+              <RefreshCw size={14} className={pendingLoading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+
+          <div className={`${S.tableWrap} border-amber-200`}>
+            <div className="px-4 py-2.5 border-b border-amber-100 bg-amber-50/50 flex items-center gap-2">
+              <span className={S.chip('bg-amber-500','text-white','border-transparent')}>승인 대기</span>
+              <span className="text-[12.5px] font-medium text-[var(--hm-ink)]">입점 신청 목록</span>
+              <span className="text-[12px] text-[var(--hm-ink-3)]">({pendingList.length}건)</span>
+            </div>
+            <Table>
+              <TableHeader className={S.thead}>
+                <TableRow>
+                  {['신청 단체명','종교','담당자 / 연락처','신청 경로','신청일','처리'].map((h,i) => (
+                    <TableHead key={h} className={`${S.th} ${i===5?'text-center':''}`}>{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-10 text-[var(--hm-ink-3)] text-[12px]">
+                      <RefreshCw size={14} className="animate-spin inline mr-2" />불러오는 중...
+                    </TableCell>
+                  </TableRow>
+                ) : pendingList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-10 text-[var(--hm-ink-3)] text-[12px]">
+                      심사 대기 중인 입점 신청이 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : pendingList.map(pt => (
+                  <TableRow
+                    key={pt.id}
+                    className="cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors"
+                    onClick={() => navigate(`/system/admin/tenants/pending/${pt.id}`)}
+                  >
+                    <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"/>
+                        {pt.name}
+                        <ExternalLink size={10} className="text-[var(--hm-border)]" />
+                      </span>
+                    </TableCell>
+                    <TableCell className={S.td}>
+                      <span className={S.chip('bg-amber-50','text-amber-700','border-amber-200')}>{religion(pt.religionType)}</span>
+                    </TableCell>
+                    <TableCell className={S.td}>
+                      <div className="text-[var(--hm-ink)] font-medium text-[12px]">{pt.contact.name ?? '—'}</div>
+                      <div className="text-[var(--hm-ink-3)] text-[11px]">{pt.contact.phone}</div>
+                    </TableCell>
+                    {/* 신청 경로 */}
+                    <TableCell className={S.td}>
+                      {(() => {
+                        const src = (pt as any).registrationSource;
+                        const partnerName = (pt as any).registeredByPartnerName;
+                        const refCode = (pt as any).registeredByReferralCode;
+                        if (src === 'agency') return (
+                          <div>
+                            <span className={S.chip('bg-purple-50','text-purple-700','border-purple-200')}>
+                              🏢 대리점 등록
+                            </span>
+                            {partnerName && <div className="text-[10.5px] text-[var(--hm-ink-3)] mt-0.5">{partnerName} {refCode ? `(${refCode})` : ''}</div>}
+                          </div>
+                        );
+                        if (src === 'agent') return (
+                          <div>
+                            <span className={S.chip('bg-amber-50','text-amber-700','border-amber-200')}>
+                              💼 영업자 등록
+                            </span>
+                            {partnerName && <div className="text-[10.5px] text-[var(--hm-ink-3)] mt-0.5">{partnerName} {refCode ? `(${refCode})` : ''}</div>}
+                          </div>
+                        );
+                        return (
+                          <div>
+                            <span className={S.chip('bg-slate-100','text-slate-600','border-slate-300')}>
+                              🏠 FaithPay 플랫폼
+                            </span>
+                            <div className="text-[10.5px] text-[var(--hm-ink-3)] mt-0.5">직접 유치 (플랫폼이 대리점/영업자 역할)</div>
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell className={`${S.td} font-mono text-[var(--hm-ink-3)] text-[11px]`}>
+                      {pt.appliedAt ? new Date(pt.appliedAt).toLocaleDateString('ko-KR') : pt.createdAt ?? '—'}
+                    </TableCell>
+                    <TableCell className={`${S.td} text-center`}>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          className={S.btnAmber}
+                          onClick={e => { e.stopPropagation(); navigate(`/system/admin/tenants/pending/${pt.id}`); }}
+                        >
+                          <Key size={11}/> 상세 심사
+                        </button>
+                        <button
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-[11.5px] font-medium bg-transparent text-red-500 border border-red-200 cursor-pointer hover:bg-red-50 transition-colors"
+                          onClick={async e => {
+                            e.stopPropagation();
+                            const res = await tenantAPI.rejectPending(pt.id);
+                            if (res.success) {
+                              toast.success(`${pt.name} 신청을 거절했습니다.`);
+                              setPendingList(prev => prev.filter(p => p.id !== pt.id));
+                            } else {
+                              toast.error('거절 처리에 실패했습니다.');
+                            }
+                          }}
+                        >
+                          거절
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+
+      {active === 'stats'       && <TenantStatsPage />}
+      {active === 'commissions' && <CommissionStatsPage />}
+      {active === 'ledger'      && <TransactionLedgerPage />}
+      {active === 'partners'    && <PartnerManagement />}
+
+
+      {/* 승인 모달 */}
+      {selectedForApproval && (
+        <TenantApprovalModal
+          tenant={selectedForApproval}
+          onApprove={id => { updateTenantInfo(id, { ...selectedForApproval, status:'active' }); setSelectedForApproval(null); }}
+          onReject={() => setSelectedForApproval(null)}
+          onClose={() => setSelectedForApproval(null)}
+        />
       )}
     </div>
   );

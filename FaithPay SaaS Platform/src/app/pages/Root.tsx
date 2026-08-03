@@ -723,17 +723,21 @@ export default function Root() {
                 { label: '관리자 대시보드', action: () => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }) },
                 { label: '관리자 로그인', action: () => navigate('/admin/login') },
                 { label: '서비스 신청', action: () => navigate('/onboarding') },
-              ].map(({ label, action }) => (
+                { label: '영업자 대시보드', action: () => navigate('/partner/login'), highlight: true },
+              ].map(({ label, action, highlight }) => (
                 <button
                   key={label}
                   onClick={action}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 13, color: 'oklch(0.55 0.010 65)', fontFamily: 'inherit',
+                    fontSize: 13,
+                    color: highlight ? 'var(--hm-warm-amber)' : 'oklch(0.55 0.010 65)',
+                    fontFamily: 'inherit',
+                    fontWeight: highlight ? 600 : 400,
                     transition: 'color 150ms', padding: '4px 0', whiteSpace: 'nowrap',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'oklch(0.80 0.010 70)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'oklch(0.55 0.010 65)'}
+                  onMouseEnter={e => e.currentTarget.style.color = highlight ? 'oklch(0.80 0.15 60)' : 'oklch(0.80 0.010 70)'}
+                  onMouseLeave={e => e.currentTarget.style.color = highlight ? 'var(--hm-warm-amber)' : 'oklch(0.55 0.010 65)'}
                 >
                   {label}
                 </button>

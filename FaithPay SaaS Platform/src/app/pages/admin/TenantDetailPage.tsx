@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useApp, Tenant } from '../../context/AppContext';
+import { useApp, Tenant, mockAdmins } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -24,6 +24,11 @@ import {
   Save,
   AlertCircle,
   CheckCircle,
+  CheckCircle2,
+  RefreshCw,
+  User,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
@@ -54,6 +59,9 @@ export default function TenantDetailPage() {
   const [name, setName] = useState('');
   const [religionType, setReligionType] = useState('');
   const [slug, setSlug] = useState('');
+
+  // Main Page Tab State ('basic' | 'payment')
+  const [activeTab, setActiveTab] = useState<'basic' | 'payment'>('basic');
 
   // Payment Config State
   const [paymentTab, setPaymentTab] = useState<'general' | 'billing'>('general');
@@ -294,10 +302,10 @@ export default function TenantDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">로딩 중...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--hm-accent)] mx-auto mb-3"></div>
+          <p className="text-[12px] text-[var(--hm-ink-3)]">로딩 중...</p>
         </div>
       </div>
     );
@@ -308,39 +316,69 @@ export default function TenantDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="p-6">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 mb-1">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/system/admin')}
-            className="shrink-0"
+            onClick={() => navigate('/system/admin/tenants')}
+            className="shrink-0 -ml-2"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Building2 className="h-8 w-8 text-purple-600" />
-              단체 상세 정보
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-[18px] font-semibold text-[var(--hm-ink)]">
+                {tenant?.name ?? '단체 상세 정보'}
+              </h1>
+              <span className="inline-flex items-center text-[10.5px] font-medium rounded-[5px] px-2 py-0.5 border border-purple-200 bg-purple-50 text-purple-700">
+                {getReligionLabel(tenant?.religionType)}
+              </span>
+            </div>
+            <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">
               단체의 기본 정보와 결제 설정을 관리하세요
             </p>
           </div>
-          <Badge variant="outline" className="text-sm">
-            {getReligionLabel(tenant.religionType)}
-          </Badge>
         </div>
 
-        {/* Basic Information Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-purple-600" />
-              기본 정보
-            </CardTitle>
+        {/* 탭 전환 스위치 버튼 그룹 */}
+        <div className="flex gap-2 p-1 bg-slate-200/70 dark:bg-zinc-800 rounded-xl max-w-md">
+          <button
+            type="button"
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'basic'
+                ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 shadow-sm'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+            }`}
+            onClick={() => setActiveTab('basic')}
+          >
+            <Building2 className="h-4 w-4" />
+            🏢 기본 정보 & 계정
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'payment'
+                ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300 shadow-sm'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+            }`}
+            onClick={() => setActiveTab('payment')}
+          >
+            <CreditCard className="h-4 w-4" />
+            💳 결제 / PG 설정
+          </button>
+        </div>
+
+        {/* ── 탭 1: 기본 정보 ── */}
+        {activeTab === 'basic' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-purple-600" />
+                사찰 / 교회 기본 정보 및 로그인 계정
+              </CardTitle>
             <CardDescription>단체의 기본 정보를 수정합니다</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -384,8 +422,128 @@ export default function TenantDetailPage() {
                   placeholder="예: seoul-central-church"
                 />
                 <p className="text-xs text-muted-foreground">
-                  신도용 봉헌 페이지 URL: /donate/{slug}
+                  신도용 봉헌 페이지 URL: /{slug}
                 </p>
+              </div>
+
+              {/* 담당자 및 계정/사업자 정보 카드 섹션 */}
+              <div className="md:col-span-2 border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                    <User className="h-3.5 w-3.5 text-purple-600" />
+                    대표 관리자 (주지스님 / 담임목사)
+                  </Label>
+                  <Input value={tenant.contact?.name || '주지스님 / 담임목사'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                    <Phone className="h-3.5 w-3.5 text-blue-600" />
+                    담당자 연락처 (전화번호)
+                  </Label>
+                  <Input value={tenant.contact?.phone || '010-1234-5678'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold text-indigo-600 dark:text-indigo-400" />
+                </div>
+                
+                {/* 관리자 로그인 계정 아이디 & 임시 비밀번호 */}
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5 text-emerald-600" />
+                    관리자 로그인 아이디 (이메일)
+                  </Label>
+                  <Input value={tenant.contact?.email || `${tenant.slug}@faithpay.or.kr`} disabled className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-emerald-700 dark:text-emerald-400" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                    <Key className="h-3.5 w-3.5 text-amber-500" />
+                    발급 관리자 비밀번호
+                  </Label>
+                  <div className="relative">
+                    <Input 
+                      type={showSecretKey ? "text" : "password"}
+                      value="fp348320" 
+                      disabled 
+                      className="bg-amber-50/60 dark:bg-amber-950/30 text-sm font-extrabold font-mono text-amber-900 dark:text-amber-300 border-amber-200" 
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                    >
+                      {showSecretKey ? "숨기기" : "보기"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">고유(사업자) 등록번호</Label>
+                  <Input value={tenant.businessInfo?.registrationNumber || '240-82-12345'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold font-mono" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">사찰/교회 소재지 주소</Label>
+                  <Input value={tenant.businessInfo?.address || '충청남도 천안시 동남구 각원사길 245'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
+                </div>
+              </div>
+
+              {/* 해당 단체 소속 관리자 계정 리스트 섹션 */}
+              <div className="md:col-span-2 border-t pt-5 mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                      <User className="h-4 w-4 text-purple-600" />
+                      소속 관리자 계정 목록 (총 {mockAdmins.filter(a => a.tenantId === tenant.id || (tenant.slug === 'gakwonsa' && a.tenantId === '1')).length || 1}명)
+                    </h4>
+                    <p className="text-xs text-muted-foreground">이 사찰/교회 시스템에 접근할 수 있는 관리 권한자 계정입니다.</p>
+                  </div>
+                  <Button size="sm" variant="outline" className="text-xs border-purple-300 text-purple-700 hover:bg-purple-50 font-bold">
+                    + 관리자 계정 추가
+                  </Button>
+                </div>
+
+                <div className="border rounded-xl overflow-hidden bg-white dark:bg-zinc-900">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold border-b">
+                      <tr>
+                        <th className="px-4 py-2.5">성명 / 담당자</th>
+                        <th className="px-4 py-2.5">로그인 아이디 (이메일)</th>
+                        <th className="px-4 py-2.5">관리 권한</th>
+                        <th className="px-4 py-2.5">등록일</th>
+                        <th className="px-4 py-2.5 text-center">계정 상태</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(() => {
+                        const filteredAdmins = mockAdmins.filter(a => a.tenantId === tenant.id || (tenant.slug === 'gakwonsa' && a.tenantId === '1'));
+                        const displayAdmins = filteredAdmins.length > 0 ? filteredAdmins : [
+                          { id: '1', name: tenant.contact?.name || '주지스님 / 담임목사', email: tenant.contact?.email || `${tenant.slug}@faithpay.or.kr`, role: 'tenant_admin', createdAt: '2026-01-15' }
+                        ];
+                        return displayAdmins.map((adminUser: any) => (
+                        <tr key={adminUser.id} className="hover:bg-slate-50 dark:hover:bg-zinc-850">
+                          <td className="px-4 py-3 font-bold text-slate-900 dark:text-zinc-100">
+                            {adminUser.name}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-semibold text-purple-700 dark:text-purple-400">
+                            {adminUser.email}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className={adminUser.role === 'tenant_admin' ? 'bg-purple-100 text-purple-800 font-bold' : 'bg-blue-100 text-blue-800'}>
+                              {adminUser.role === 'tenant_admin' ? '최고 관리자' : '재무/보시 실무자'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-mono">
+                            {adminUser.createdAt || '2026-01-15'}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge className="bg-emerald-100 text-emerald-800 font-bold">
+                              🟢 정상 작동
+                            </Badge>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -410,11 +568,13 @@ export default function TenantDetailPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {/* Payment Configuration Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        {/* ── 탭 2: 결제 / PG 설정 ── */}
+        {activeTab === 'payment' && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-green-600" />
@@ -849,6 +1009,7 @@ export default function TenantDetailPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );

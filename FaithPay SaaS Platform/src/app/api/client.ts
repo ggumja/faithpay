@@ -69,7 +69,8 @@ async function fetchAPI<T>(
   options: RequestInit = {}
 ): Promise<APIResponse<T>> {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const cleanEndpoint = endpoint.replace(/^\/make-server-d0d82cc7/, '');
+    const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -169,6 +170,25 @@ export const tenantAPI = {
   async delete(id: string): Promise<APIResponse<void>> {
     return fetchAPI<void>(`/tenants/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  // 승인 대기 단체 목록
+  async getPending(): Promise<APIResponse<Tenant[]>> {
+    return fetchAPI<Tenant[]>('/tenants/pending');
+  },
+
+  // 단체 입점 승인 (새 엔드포인트)
+  async approvePending(id: string): Promise<APIResponse<Tenant>> {
+    return fetchAPI<Tenant>(`/tenants/${id}/approve`, {
+      method: 'PUT',
+    });
+  },
+
+  // 단체 입점 거절
+  async rejectPending(id: string): Promise<APIResponse<Tenant>> {
+    return fetchAPI<Tenant>(`/tenants/${id}/reject`, {
+      method: 'PUT',
     });
   },
 };
@@ -344,8 +364,8 @@ export interface Partner {
   name: string;
   email: string;
   phone: string;
-  role: 'master_agency' | 'sales_agent'; // 총판/대리점 vs 영업자
-  parentId?: string; // 상위 총판 ID
+  role: 'master_agency' | 'sales_agent'; // 대리점 vs 영업자
+  parentId?: string; // 상위 대리점 ID
   commissionRate: number; // 수수료율 (%)
   referralCode: string; // 영업자 추천코드 (예: AGENT_KIM)
   bankName: string;
@@ -368,6 +388,10 @@ export interface PartnerCommission {
 }
 
 export const partnerAPI = {
+  async getAll(): Promise<APIResponse<Partner[]>> {
+    return fetchAPI<Partner[]>('/partners');
+  },
+
   async getPartners(): Promise<APIResponse<Partner[]>> {
     return fetchAPI<Partner[]>('/partners');
   },
@@ -381,6 +405,18 @@ export const partnerAPI = {
 
   async getCommissions(partnerId: string): Promise<APIResponse<PartnerCommission[]>> {
     return fetchAPI<PartnerCommission[]>(`/partners/${partnerId}/commissions`);
+  },
+
+  async getByParent(parentId: string): Promise<APIResponse<Partner[]>> {
+    return fetchAPI<Partner[]>(`/partners?parentId=${parentId}`);
+  },
+
+  /** 대리점이 소속 영업자의 channelShareRate(채널풀 배분율 %)를 설정 */
+  async updateAgentRate(agentId: string, channelShareRate: number): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>(`/partners/${agentId}/channel-share`, {
+      method: 'PATCH',
+      body: JSON.stringify({ channelShareRate }),
+    });
   },
 
   async createTenantByPartner(partnerId: string, tenantData: any): Promise<APIResponse<Tenant>> {

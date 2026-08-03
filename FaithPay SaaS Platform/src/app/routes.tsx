@@ -7,8 +7,10 @@ import PaymentSelection from "./pages/PaymentSelection";
 import DonationComplete from "./pages/DonationComplete";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import SystemAdminShell from "./pages/admin/SystemAdminShell";
 import SystemAdminDashboard from "./pages/admin/SystemAdminDashboard";
 import TenantDetailPage from "./pages/admin/TenantDetailPage";
+import PendingTenantDetailPage from "./pages/admin/PendingTenantDetailPage";
 import DonationHistory from "./pages/admin/DonationHistory";
 import PrayerManagement from "./pages/admin/PrayerManagement";
 import DonationMenuManagement from "./pages/admin/DonationMenuManagement";
@@ -22,7 +24,9 @@ import OnboardingFlow from "./pages/OnboardingFlow";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import PartnerTenantCreate from "./pages/partner/PartnerTenantCreate";
 import PartnerApply from "./pages/partner/PartnerApply";
+import PartnerLogin from "./pages/partner/PartnerLogin";
 import NotFound from "./pages/NotFound";
+import SystemSettingsPage from "./pages/admin/SystemSettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +35,10 @@ export const router = createBrowserRouter([
       {
         path: "/",
         Component: Root,
+      },
+      {
+        path: "/partner/login",
+        Component: PartnerLogin,
       },
       {
         path: "/partner/apply",
@@ -52,13 +60,22 @@ export const router = createBrowserRouter([
         path: "/:tenantSlug/admin/login",
         Component: AdminLogin,
       },
+      // ── System Admin (공통 사이드바 셸) ──
       {
-        path: "/system/admin",
-        Component: SystemAdminDashboard,
-      },
-      {
-        path: "/system/admin/tenant/:id",
-        Component: TenantDetailPage,
+        Component: SystemAdminShell,
+        children: [
+          { path: "/system/admin",                  Component: SystemAdminDashboard },
+          { path: "/system/admin/tenants",          Component: SystemAdminDashboard },
+          { path: "/system/admin/tenants/pending",  Component: SystemAdminDashboard },
+          { path: "/system/admin/tenants/pending/:id", Component: PendingTenantDetailPage },
+          { path: "/system/admin/stats",            Component: SystemAdminDashboard },
+          { path: "/system/admin/partners",         Component: SystemAdminDashboard },
+          { path: "/system/admin/commissions",      Component: SystemAdminDashboard },
+          { path: "/system/admin/ledger",           Component: SystemAdminDashboard },
+          { path: "/system/admin/tenant/:id",       Component: TenantDetailPage     },
+          { path: "/system/admin/settings",          Component: SystemSettingsPage   },
+
+        ],
       },
       {
         path: "/onboarding",

@@ -25,6 +25,7 @@ export interface Tenant {
   contact: {
     phone: string;
     email: string;
+    name?: string;  // 담당자 이름
   };
   schedule: {
     label: string;
@@ -35,6 +36,10 @@ export interface Tenant {
     member: string;
     prayer: string;
   };
+  // 입점 상태 관리
+  status: 'pending' | 'active' | 'suspended';
+  appliedAt?: string;   // 입점 신청일
+  approvedAt?: string;  // 승인일
   createdAt: string;
   updatedAt: string;
 }
@@ -155,10 +160,44 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   return await kv.get(`tenant:${id}`);
 }
 
-export async function getAllTenants(): Promise<Tenant[]> {
+export async function getAllTenants(status?: 'pending' | 'active' | 'suspended'): Promise<Tenant[]> {
   const tenants = await kv.getByPrefix('tenant:');
-  // slug 매핑 제외
-  return tenants.filter((t: any) => t && t.id);
+  // slug 매핑 제외 (id가 있는 것만)
+  const filtered = tenants.filter((t: any) => t && t.id);
+  if (status) {
+    return filtered.filter((t: any) => t.status === status);
+  }
+  // status 없으면 active만 반환 (기본값 — 하위 호환)
+  return filtered.filter((t: any) => !t.status || t.status === 'active');
+}
+
+export async function getPendingTenants(): Promise<Tenant[]> {
+  return getAllTenants('pending');
+}
+
+export async function approveTenant(id: string): Promise<Tenant | null> {
+  const tenant = await getTenantById(id);
+  if (!tenant) return null;
+  const updated: Tenant = {
+    ...tenant,
+    status: 'active',
+    approvedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  await kv.set(`tenant:${id}`, updated);
+  return updated;
+}
+
+export async function rejectTenant(id: string): Promise<Tenant | null> {
+  const tenant = await getTenantById(id);
+  if (!tenant) return null;
+  const updated: Tenant = {
+    ...tenant,
+    status: 'suspended',
+    updatedAt: new Date().toISOString(),
+  };
+  await kv.set(`tenant:${id}`, updated);
+  return updated;
 }
 
 export async function updateTenant(id: string, updates: Partial<Tenant>): Promise<Tenant | null> {
@@ -442,6 +481,108 @@ export async function calculateAndSaveMonthlyStats(tenantId: string, year: numbe
 
 // ==================== PARTNER DB FUNCTIONS ====================
 
+// ==================== FEE STRUCTURE CONSTANTS ====================
+//
+//  고객 결제 수수료 분배 구조 (영업자 역량에 따라 변동):
+//
+//  │ 고객 부담 (contractRate)  ← 영업자 협상 (기본 3%, 역량따라 더 높게 가능)
+//  ├─ PG 원가           1.5%  (고정 - 플랫폼-PG 계약)
+//  ├─ 플랫폼 수익        0.5%  (고정 - 플랫폼 운영)
+//  └─ 영업채널 풀  ← contractRate − 1.5% − 0.5%
+//       ├─ 대리점  agencyRate%  (고정 - 대리점이 자체 설정)
+//       └─ 영업자  channelPool − agencyRate%  (잔여분 전부)
+//
+//  예시 (목표 3.0% 계약):
+//    channelPool = 3.0 - 1.5 - 0.5 = 1.0%
+//    대리점 0.5% (fixed) / 영업자 0.5% (residual)
+//
+//  예시 (영업자가 3.5% 유치 시):
+//    channelPool = 3.5 - 1.5 - 0.5 = 1.5%
+//    대리점 0.5% (fixed) / 영업자 1.0% (+인센티브!)
+export const FEE_CONSTANTS = {
+  pgCostRate:          1.5,  // % — 고정: PG 원가
+  platformProfitRate:  0.5,  // % — 고정: 플랫폼 수익
+  defaultCustomerRate: 3.0,  // % — 기준 고객 계약율 (영업자 역량에 따라 변동)
+  defaultAgencyRate:   0.5,  // % — 기준 대리점 고정 수수료율 (대리점이 자체 설정)
+} as const;
+
+/** 결제 건당 수수료 분배 상세 */
+export interface CommissionBreakdown {
+  // 율 (%)
+  contractRate: number;        // 고객과 계약한 수수료율 (영업자 역량에 따라 결정)
+  pgCostRate: number;          // 1.5% 고정
+  platformProfitRate: number;  // 0.5% 고정
+  channelPoolRate: number;     // = contractRate - pgCostRate - platformProfitRate
+  agencyRate: number;          // 대리점 고정 수수료율 (대리점이 설정)
+  agentRate: number;           // = channelPoolRate - agencyRate (영업자 실효율)
+  // 금액 (원)
+  totalFeeAmount: number;         // amount × contractRate
+  pgCostAmount: number;           // amount × pgCostRate
+  platformProfitAmount: number;   // amount × platformProfitRate
+  channelPoolAmount: number;      // amount × channelPoolRate
+  agencyAmount: number;           // amount × agencyRate
+  agentAmount: number;            // amount × agentRate
+  // 파트너 ID 매핑
+  masterAgencyId?: string;
+  salesAgentId?: string;
+  // 백워드 콤패티
+  masterAgencyAmount: number;  // = agencyAmount
+  salesAgentAmount: number;    // = agentAmount
+}
+
+/**
+ * 수수료 분배 계산 헬퍼
+ *
+ * @param donationAmount  결제 금액 (원)
+ * @param options.contractRate   고객 계약율 (%, default 3.0)
+ * @param options.agencyRate     대리점 고정 수수료율 (%, default 0 — 대리점 없엄)
+ * @param options.masterAgencyId 대리점 ID
+ * @param options.salesAgentId   영업자 ID
+ */
+export function calcCommissionBreakdown(
+  donationAmount: number,
+  options?: {
+    contractRate?: number;
+    agencyRate?: number;
+    masterAgencyId?: string;
+    salesAgentId?: string;
+  }
+): CommissionBreakdown {
+  const f = FEE_CONSTANTS;
+  const contractRate     = options?.contractRate ?? f.defaultCustomerRate;
+  const agencyRate       = options?.agencyRate   ?? 0;
+
+  const channelPoolRate  = Math.max(0, contractRate - f.pgCostRate - f.platformProfitRate);
+  const agentRate        = Math.max(0, channelPoolRate - agencyRate);
+
+  const totalFeeAmount       = Math.round(donationAmount * contractRate       / 100);
+  const pgCostAmount         = Math.round(donationAmount * f.pgCostRate       / 100);
+  const platformProfitAmount = Math.round(donationAmount * f.platformProfitRate / 100);
+  const channelPoolAmount    = Math.round(donationAmount * channelPoolRate     / 100);
+  const agencyAmount         = Math.round(donationAmount * agencyRate          / 100);
+  const agentAmount          = channelPoolAmount - agencyAmount; // 잔여분 전부
+
+  return {
+    contractRate,
+    pgCostRate:          f.pgCostRate,
+    platformProfitRate:  f.platformProfitRate,
+    channelPoolRate,
+    agencyRate,
+    agentRate,
+    totalFeeAmount,
+    pgCostAmount,
+    platformProfitAmount,
+    channelPoolAmount,
+    agencyAmount,
+    agentAmount,
+    masterAgencyId:    options?.masterAgencyId,
+    salesAgentId:      options?.salesAgentId,
+    // 백워드 호환 aliases
+    masterAgencyAmount: agencyAmount,
+    salesAgentAmount:   agentAmount,
+  };
+}
+
 export interface Partner {
   id: string;
   name: string;
@@ -449,7 +590,16 @@ export interface Partner {
   phone: string;
   role: 'master_agency' | 'sales_agent';
   parentId?: string;
+  /** @deprecated 내부 참고용. 실제 배분은 agencyRate / 계약수수료율 기준 */
   commissionRate: number;
+  /**
+   * 대리점(master_agency)이 자체 설정하는 고정 수수료율 (% of 결제금액)
+   * 예: 0.5 → 결제금액의 0.5%
+   * 영업자(sales_agent)는 해당없음 — 영업자 실효율 = 채널풀율 − 대리점율
+   */
+  agencyRate: number;
+  /** @deprecated agencyRate로 대체됨. 절대값 % 방식 사용 권장 */
+  channelShareRate?: number;
   referralCode: string;
   bankName: string;
   accountNumber: string;
@@ -461,12 +611,15 @@ export interface Partner {
 export interface PartnerCommission {
   id: string;
   partnerId: string;
+  partnerRole: 'master_agency' | 'sales_agent';
   tenantId: string;
   tenantName: string;
   donationId: string;
   donationAmount: number;
-  commissionAmount: number;
-  commissionRate: number;
+  commissionAmount: number;  // 이 파트너가 실제 수령하는 금액
+  commissionRate: number;    // 실효 수수료율 (%) — 절대값
+  contractRate?: number;     // 고객과 연결된 계약 수수료율 (%)
+  breakdown: CommissionBreakdown;
   status: 'pending' | 'settled';
   settledAt?: string;
   createdAt: string;

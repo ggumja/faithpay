@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useApp } from '../context/AppContext';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
@@ -15,6 +16,7 @@ const STEP_LABELS = ['종교 선택', '기본 정보', '브랜딩', '완료'];
 
 export default function OnboardingFlow() {
   const navigate = useNavigate();
+  const { addTenant } = useApp();
   const [step, setStep] = useState<Step>('religion');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,10 +36,43 @@ export default function OnboardingFlow() {
 
   const handleSubmit = () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep('complete');
-      toast.success('단체 등록이 완료되었습니다!');
+    setTimeout(async () => {
+      try {
+        // 직접 입점신청: 플랫폼이 대리점/영업자 역할을 함
+        await addTenant({
+          id: `tenant-${Date.now()}`,
+          slug: formData.slug || `org-${Date.now()}`,
+          name: formData.name,
+          religionType: formData.religion as any,
+          primaryColor: formData.primaryColor,
+          logoUrl: '',
+          bannerImages: [],
+          description: formData.description || '',
+          address: formData.address || '',
+          contact: {
+            phone: formData.phone || '',
+            email: formData.email || '',
+          },
+          schedule: [],
+          terminology: {
+            donation: formData.religion === 'buddhist' ? '보시' : '헌금',
+            member: formData.religion === 'buddhist' ? '불자' : formData.religion === 'catholic' ? '교우' : '성도',
+            prayer: formData.religion === 'buddhist' ? '축원문' : '기도문',
+          },
+          status: 'pending',
+          appliedAt: new Date().toISOString(),
+          // 직접 신청 = 플랫폼이 영업 담당
+          registrationSource: 'self',
+          registeredByPartnerName: 'FaithPay 플랫폼',
+          registeredByReferralCode: 'PLATFORM',
+        } as any);
+        setStep('complete');
+        toast.success('단체 등록이 완료되었습니다!');
+      } catch {
+        toast.error('등록 중 오류가 발생했습니다. 다시 시도해주세요.');
+      } finally {
+        setIsLoading(false);
+      }
     }, 1500);
   };
 

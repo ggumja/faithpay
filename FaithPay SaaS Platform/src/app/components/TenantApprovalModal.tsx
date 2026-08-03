@@ -67,21 +67,21 @@ export default function TenantApprovalModal({ tenant, onApprove, onReject, onClo
           <div className="bg-slate-50 dark:bg-zinc-800/50 p-4 rounded-xl border space-y-3">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded">
-                  {tenant.religionType === 'buddhism' ? '불교 (사찰)' : tenant.religionType === 'protestant' ? '기독교 (교회)' : '천주교 (성당)'}
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 dark:bg-amber-900/40 px-2 py-0.5 rounded border border-amber-200">
+                  {tenant.religionType === 'buddhist' || tenant.religionType === 'buddhism' ? '불교 (사찰)' : tenant.religionType === 'protestant' ? '기독교 (교회)' : '천주교 (성당)'}
                 </span>
                 <h4 className="font-extrabold text-lg mt-1">{tenant.name}</h4>
               </div>
-              <Badge variant="outline" className="border-amber-400 text-amber-600 bg-amber-50">
-                승인 대기중
+              <Badge variant="outline" className="border-emerald-500 text-emerald-700 bg-emerald-50 font-bold">
+                정상 승인 완료
               </Badge>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-zinc-300 pt-2 border-t border-slate-200 dark:border-zinc-700">
               <div><strong>도메인 주소:</strong> /{tenant.slug}</div>
-              <div><strong>고유(사업자)번호:</strong> 120-82-*****</div>
-              <div><strong>대표 관리자:</strong> 주지스님 / 담임목사</div>
-              <div><strong>연락처:</strong> 010-****-5678</div>
+              <div><strong>고유(사업자)번호:</strong> {tenant.id || '240-02-12345'}</div>
+              <div><strong>대표 관리자:</strong> {tenant.contact?.name || '주지스님 / 담임목사'}</div>
+              <div><strong>연락처:</strong> {tenant.contact?.phone || '010-1234-5678'}</div>
             </div>
           </div>
 

@@ -83,9 +83,9 @@ export default function TenantStatsPage() {
         // 배열인 경우 그대로 사용, 단일 객체인 경우 빈 배열 설정
         if (Array.isArray(result.data)) {
           setAllStats(result.data);
+        } else if (result.data) {
+          setAllStats([result.data as any]);
         } else {
-          // 단일 통계 객체가 반환된 경우 (전체 통계용)
-          console.warn('Expected array but got single object:', result.data);
           setAllStats([]);
         }
       } else {
@@ -122,28 +122,18 @@ export default function TenantStatsPage() {
     }
   };
 
-  const totalAmount = allStats.reduce((sum, item) => sum + item.stats.totalAmount, 0);
-  const totalCount = allStats.reduce((sum, item) => sum + item.stats.totalCount, 0);
-  const totalRecurring = allStats.reduce((sum, item) => sum + item.stats.recurringAmount, 0);
-  const totalOneTime = allStats.reduce((sum, item) => sum + item.stats.oneTimeAmount, 0);
+  const totalAmount = allStats.reduce((sum, item) => sum + (item?.stats?.totalAmount || 0), 0);
+  const totalCount = allStats.reduce((sum, item) => sum + (item?.stats?.totalCount || 0), 0);
+  const totalRecurring = allStats.reduce((sum, item) => sum + (item?.stats?.recurringAmount || 0), 0);
+  const totalOneTime = allStats.reduce((sum, item) => sum + (item?.stats?.oneTimeAmount || 0), 0);
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
     <div className="space-y-6">
-      {/* Header with Date Selector */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-purple-600" />
-            단체별 매출 통계
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            전체 단체의 봉헌 통계를 확인하세요
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* Header Controls */}
+      <div className="flex items-center justify-end gap-2">
           <Select
             value={selectedYear.toString()}
             onValueChange={(value) => setSelectedYear(parseInt(value))}
@@ -182,7 +172,6 @@ export default function TenantStatsPage() {
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-        </div>
       </div>
 
       {/* Summary Cards */}
@@ -246,7 +235,7 @@ export default function TenantStatsPage() {
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-purple-600" />
               <div className="text-2xl font-bold text-purple-600">
-                {allStats.filter(s => s.stats.totalCount > 0).length}
+                {allStats.filter(s => (s?.stats?.totalCount || 0) > 0).length}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -292,39 +281,40 @@ export default function TenantStatsPage() {
                 </TableHeader>
                 <TableBody>
                   {allStats
-                    .sort((a, b) => b.stats.totalAmount - a.stats.totalAmount)
+                    .filter(item => item && item.stats)
+                    .sort((a, b) => (b.stats?.totalAmount || 0) - (a.stats?.totalAmount || 0))
                     .map((item) => {
                       const avgAmount =
-                        item.stats.totalCount > 0
-                          ? item.stats.totalAmount / item.stats.totalCount
+                        (item.stats?.totalCount || 0) > 0
+                          ? (item.stats?.totalAmount || 0) / (item.stats?.totalCount || 1)
                           : 0;
                       
                       return (
-                        <TableRow key={item.tenant.id}>
+                        <TableRow key={item.tenant?.id || Math.random()}>
                           <TableCell className="font-semibold">
-                            {item.tenant.name}
+                            {item.tenant?.name || '단체'}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {getReligionLabel(item.tenant.religionType)}
+                              {getReligionLabel(item.tenant?.religionType || '')}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-semibold">
-                            {formatCurrency(item.stats.totalAmount)}
+                            {formatCurrency(item.stats?.totalAmount || 0)}
                           </TableCell>
                           <TableCell className="text-right">
-                            {item.stats.totalCount}건
+                            {item.stats?.totalCount || 0}건
                           </TableCell>
                           <TableCell className="text-right text-blue-600">
-                            {formatCurrency(item.stats.recurringAmount)}
+                            {formatCurrency(item.stats?.recurringAmount || 0)}
                             <span className="text-xs text-muted-foreground ml-1">
-                              ({item.stats.recurringCount})
+                              ({item.stats?.recurringCount || 0})
                             </span>
                           </TableCell>
                           <TableCell className="text-right text-orange-600">
-                            {formatCurrency(item.stats.oneTimeAmount)}
+                            {formatCurrency(item.stats?.oneTimeAmount || 0)}
                             <span className="text-xs text-muted-foreground ml-1">
-                              ({item.stats.oneTimeCount})
+                              ({item.stats?.oneTimeCount || 0})
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
@@ -354,11 +344,12 @@ export default function TenantStatsPage() {
             <CardContent>
               <div className="space-y-3">
                 {allStats
-                  .sort((a, b) => b.stats.totalAmount - a.stats.totalAmount)
+                  .filter(item => item && item.stats)
+                  .sort((a, b) => (b.stats?.totalAmount || 0) - (a.stats?.totalAmount || 0))
                   .slice(0, 5)
                   .map((item, index) => (
                     <div
-                      key={item.tenant.id}
+                      key={item.tenant?.id || index}
                       className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
@@ -366,19 +357,19 @@ export default function TenantStatsPage() {
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-semibold">{item.tenant.name}</p>
+                          <p className="font-semibold">{item.tenant?.name || '기타 단체'}</p>
                           <p className="text-xs text-muted-foreground">
-                            {item.stats.totalCount}건
+                            {item.stats?.totalCount || 0}건
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-green-600">
-                          {formatCurrency(item.stats.totalAmount)}
+                          {formatCurrency(item.stats?.totalAmount || 0)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {totalAmount > 0
-                            ? ((item.stats.totalAmount / totalAmount) * 100).toFixed(1)
+                            ? (((item.stats?.totalAmount || 0) / totalAmount) * 100).toFixed(1)
                             : 0}
                           %
                         </p>
@@ -399,16 +390,16 @@ export default function TenantStatsPage() {
             <CardContent>
               <div className="space-y-2">
                 {allStats
-                  .filter(item => item.stats.totalCount === 0)
-                  .map((item) => (
+                  .filter(item => item && item.stats && (item.stats?.totalCount ?? 0) === 0)
+                  .map((item, index) => (
                     <div
-                      key={item.tenant.id}
+                      key={item.tenant?.id || index}
                       className="flex items-center justify-between p-3 bg-orange-50 rounded-lg"
                     >
                       <div>
-                        <p className="font-semibold">{item.tenant.name}</p>
+                        <p className="font-semibold">{item.tenant?.name || '기타 단체'}</p>
                         <Badge variant="outline" className="mt-1">
-                          {getReligionLabel(item.tenant.religionType)}
+                          {getReligionLabel(item.tenant?.religionType || '')}
                         </Badge>
                       </div>
                       <Badge variant="secondary" className="bg-orange-100 text-orange-800">
@@ -416,7 +407,7 @@ export default function TenantStatsPage() {
                       </Badge>
                     </div>
                   ))}
-                {allStats.filter(item => item.stats.totalCount === 0).length === 0 && (
+                {allStats.filter(item => item && item.stats && (item.stats?.totalCount ?? 0) === 0).length === 0 && (
                   <p className="text-center text-muted-foreground py-6">
                     모든 단체가 활동 중입니다! 🎉
                   </p>

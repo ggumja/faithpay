@@ -18,6 +18,7 @@ export interface Tenant {
   contact: {
     phone: string;
     email: string;
+    name?: string;       // 담당자 이름
   };
   schedule: {
     label: string;
@@ -29,10 +30,10 @@ export interface Tenant {
     prayer: string;
   };
   paymentConfig?: {
-    pgProvider: string; // 'toss' | 'inicis' | 'nice' | 'danal' 등
+    pgProvider: string;
     apiKey: string;
     secretKey: string;
-    mid: string; // Merchant ID
+    mid: string;
     loginId?: string;
     iv?: string;
     ver?: string;
@@ -41,6 +42,19 @@ export interface Tenant {
     enableVBank?: boolean;
     isActive: boolean;
   };
+  // 입점 상태 (시스템 관리자용)
+  status?: 'pending' | 'active' | 'suspended';
+  appliedAt?: string;    // 입점 신청일
+  approvedAt?: string;   // 승인일
+  // 파트너 신청 시 추가 필드
+  adminName?: string;    // 대표 관리자 성함
+  adminPhone?: string;   // 대표 관리자 휴대폰
+  referralCode?: string; // 연결된 파트너 코드
+  // 신청 경로 구분
+  registrationSource?: 'self' | 'agency' | 'agent'; // self=직접신청, agency=대리점등록, agent=영업자등록
+  registeredByPartnerId?: string;   // 등록한 파트너 ID
+  registeredByPartnerName?: string; // 등록한 파트너 이름
+  registeredByReferralCode?: string; // 등록한 파트너 추천코드
   createdAt?: string;
   updatedAt?: string;
 }
