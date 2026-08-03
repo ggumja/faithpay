@@ -151,16 +151,13 @@ export default function PartnerDashboard() {
           if (a.referralCode) relevantAgentIds.push(a.referralCode);
         });
 
-        let realMyTenants = tenants.filter(t =>
+        const realMyTenants = tenants.filter(t =>
           relevantAgentIds.includes((t as any).registeredByPartnerId) ||
           relevantAgentIds.includes((t as any).registeredByReferralCode) ||
-          relevantAgentIds.includes((t as any).referralCode)
+          relevantAgentIds.includes((t as any).referralCode) ||
+          (t as any).registrationSource === 'agency' ||
+          (t as any).registrationSource === 'agent'
         );
-
-        // 만약 필터 결과가 0개이나 전체 tenants가 존재하면 폴백으로 노출 보장
-        if (realMyTenants.length === 0 && tenants.length > 0) {
-          realMyTenants = tenants;
-        }
 
         setMyTenants(realMyTenants);
       } catch (err) {

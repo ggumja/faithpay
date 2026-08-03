@@ -266,8 +266,30 @@ const defaultTenants: Tenant[] = [
   },
 ];
 
-const savedTenants = typeof window !== 'undefined' ? localStorage.getItem('faithpay_tenants') : null;
-export const mockTenants: Tenant[] = savedTenants ? JSON.parse(savedTenants) : defaultTenants;
+// 구버전 localStorage 캐시 갱신 및 신규 5개 대리점/영업자 단체 스키마 적용
+let parsedTenants: Tenant[] = defaultTenants;
+if (typeof window !== 'undefined') {
+  const saved = localStorage.getItem('faithpay_tenants');
+  if (saved) {
+    try {
+      const arr = JSON.parse(saved);
+      const hasNewSchema = Array.isArray(arr) && arr.some(x => x.registeredByPartnerId || x.slug === 'bulguksa');
+      if (hasNewSchema) {
+        parsedTenants = arr;
+      } else {
+        localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
+        parsedTenants = defaultTenants;
+      }
+    } catch {
+      localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
+      parsedTenants = defaultTenants;
+    }
+  } else {
+    localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
+  }
+}
+
+export const mockTenants: Tenant[] = parsedTenants;
 
 export const mockDonationItems: Record<string, DonationItem[]> = {
   'protestant': [
