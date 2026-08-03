@@ -4,7 +4,7 @@
 -- Description: Full Production Database Schema & Seed Data (Partners, Tenants, Agent Rates, Commissions, System Settings)
 -- ====================================================================
 
--- 1. 파트너 (대리점 / 영업자) 테이블
+-- 1. 파트너 (대리점 / 영업자) 테이블 생성 (기존에 테이블이 없을 경우)
 CREATE TABLE IF NOT EXISTS partners (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS partners (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 1-1. 기존 partners 테이블 컬럼 보강 (이미 테이블이 생성된 경우 agency_rate 컬럼 추가)
+ALTER TABLE partners ADD COLUMN IF NOT EXISTS agency_rate NUMERIC(5, 2) NOT NULL DEFAULT 0.50;
+
 -- 2. 영업자별 개별 지정 대리점 수수료율 테이블
 CREATE TABLE IF NOT EXISTS partner_agent_rates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -34,7 +37,7 @@ CREATE TABLE IF NOT EXISTS partner_agent_rates (
   UNIQUE (agency_id, agent_id)
 );
 
--- 3. 가맹점 단체 (Tenants) 테이블
+-- 3. 가맹점 단체 (Tenants) 테이블 생성 및 기존 테이블 컬럼 보강
 CREATE TABLE IF NOT EXISTS tenants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
@@ -57,6 +60,12 @@ CREATE TABLE IF NOT EXISTS tenants (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 3-1. 기존 tenants 테이블 컬럼 보강 (이미 테이블이 생성된 경우)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS registration_source TEXT DEFAULT 'self';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS registered_by_partner_id UUID;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS registered_by_referral_code TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contract_rate NUMERIC(5, 2) NOT NULL DEFAULT 3.00;
 
 -- 4. 수수료 발생 & 정산 대장 테이블
 CREATE TABLE IF NOT EXISTS partner_commissions (
@@ -132,7 +141,7 @@ VALUES
     0.30,
     'LSJ002',
     '신한은행',
-     me: '110-123-456789',
+    '110-123-456789',
     '이수진',
     'active'
   )
