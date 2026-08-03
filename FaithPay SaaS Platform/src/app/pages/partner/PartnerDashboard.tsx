@@ -90,7 +90,9 @@ export default function PartnerDashboard() {
               setSubAgents(agentsRes.data);
               const rates: Record<string, number> = {};
               agentsRes.data.forEach((a: Partner) => {
-                rates[a.id] = (a as any).agentRate ?? (a as any).commissionRate ?? 0.4;
+                // 대리점이 해당 영업자에게 지정한 대리점 수수료율 (기본 0.5%)
+                const val = (a as any).agencyRate ?? (a as any).agentRate;
+                rates[a.id] = (typeof val === 'number' && val > 0 && val < 10) ? val : 0.5;
               });
               setAgentRates(rates);
             }
@@ -471,14 +473,13 @@ export default function PartnerDashboard() {
 
               {/* 요약 KPI + 오버라이딩 마진 집계 */}
               {(() => {
-                // 대리점 자신의 오버라이딩 마진율 (채널풀에서 대리점 몫)
-                const myAgencyRate = (partner as any).agencyRate ?? (partner as any).commissionRate ?? 0.7;
-                // 각 영업자별 당월 결제 추정액 (실제 API 연동 전 모의 데이터)
-                const totalEstimatedTxn = subAgents.reduce((s, a) => {
+                // 각 영업자별 지정 대리점 수수료율(내 수수료)로 합산
+                const agencyOverridingMargin = subAgents.reduce((s, a) => {
+                  if (a.status !== 'active') return s;
                   const mockMonthly = ((a as any).monthlyAmount ?? 5000000);
-                  return s + mockMonthly;
+                  const aRate = agentRates[a.id] ?? (a as any).agencyRate ?? 0.5;
+                  return s + Math.round(mockMonthly * aRate / 100);
                 }, 0);
-                const agencyOverridingMargin = Math.round(totalEstimatedTxn * myAgencyRate / 100);
 
                 return (
                   <>
@@ -490,7 +491,7 @@ export default function PartnerDashboard() {
                           color: 'text-emerald-600', bg: 'bg-emerald-50' },
                         { label: '대기/정지',      value: `${subAgents.filter(a => a.status !== 'active').length}명`,
                           color: 'text-amber-600', bg: 'bg-amber-50' },
-                        { label: `오버라이딩 마진 (${myAgencyRate}%)`, value: `${agencyOverridingMargin.toLocaleString()}원`,
+                        { label: '당월 대리점 마진 합계', value: `${agencyOverridingMargin.toLocaleString()}원`,
                           color: 'text-purple-600', bg: 'bg-purple-50' },
                       ].map(({ label, value, color, bg }) => (
                         <Card key={label} className="border-slate-200">
@@ -513,7 +514,7 @@ export default function PartnerDashboard() {
                             🏆 영업자별 오버라이딩 마진 집계
                           </CardTitle>
                           <CardDescription className="text-[11px] mt-0.5">
-                            소속 영업자의 결제 실적에 대리점 마진율({myAgencyRate}%)을 곱한 대리점 수익 집계입니다.
+                            소속 영업자의 결제 실적에 영업자별 지정 대리점 수수료율(내 수수료 %)을 적용한 대리점 수익 집계입니다.
                           </CardDescription>
                         </div>
                       </CardHeader>
@@ -538,7 +539,8 @@ export default function PartnerDashboard() {
                               </TableRow>
                             ) : subAgents.map(agent => {
                               const mockMonthly = (agent as any).monthlyAmount ?? 5000000;
-                              const overriding  = Math.round(mockMonthly * myAgencyRate / 100);
+                              const agentAgencyRate = agentRates[agent.id] ?? (agent as any).agencyRate ?? 0.5;
+                              const overriding  = Math.round(mockMonthly * agentAgencyRate / 100);
                               const isActive    = agent.status === 'active';
                               return (
                                 <TableRow key={agent.id} className="hover:bg-purple-50/20">
@@ -558,7 +560,7 @@ export default function PartnerDashboard() {
                                     {isActive ? mockMonthly.toLocaleString() + '원' : <span className="text-slate-300">—</span>}
                                   </TableCell>
                                   <TableCell className="text-right text-[12px] font-mono text-purple-600 font-bold">
-                                    {myAgencyRate}%
+                                    {agentAgencyRate}%
                                   </TableCell>
                                   <TableCell className="text-right">
                                     {isActive ? (
@@ -676,18 +678,18 @@ export default function PartnerDashboard() {
                               <div className="text-[10px] text-slate-400 mt-0.5">당월 결제액</div>
                             </div>
                              <div className="text-center">
-                               <div className="text-[14px] font-bold text-emerald-600">{rate}%</div>
-                               <div className="text-[10px] text-slate-400 mt-0.5">영업자 수수료율</div>
+                               <div className="text-[14px] font-bold text-purple-600">{rate}%</div>
+                               <div className="text-[10px] text-slate-400 mt-0.5">대리점 수수료율 (내 수수료)</div>
                              </div>
                           </div>
 
-                           {/* 절대 수수료율 직접 입력 */}
-                           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                           {/* 대리점 수수료율 (내 수수료) 입력 */}
+                           <div className="p-3.5 rounded-xl bg-purple-50/50 border border-purple-100 space-y-3">
                              <div className="flex items-center justify-between gap-3">
                                <div>
-                                 <p className="text-[11.5px] font-bold text-slate-700">영업자 지급 수수료율 (%)</p>
-                                 <p className="text-[10px] text-slate-400 mt-0.5">
-                                   결제금액에 직접 적용되는 절대값입니다
+                                 <p className="text-[12px] font-bold text-purple-950">대리점 수수료율 (내 수수료 %)</p>
+                                 <p className="text-[10.5px] text-purple-700 mt-0.5">
+                                   이 영업자가 유치하는 가맹점의 결제 발생 시 대리점(나)에 귀속되는 고정 수수료율입니다.
                                  </p>
                                </div>
                                <div className="flex items-center gap-1.5 shrink-0">
@@ -695,30 +697,34 @@ export default function PartnerDashboard() {
                                    type="number"
                                    step="0.1"
                                    min="0"
-                                   max="5"
+                                   max="3"
                                    value={rate}
                                    onChange={e => {
                                      const v = parseFloat(e.target.value);
                                      if (!isNaN(v)) setAgentRates(prev => ({ ...prev, [agent.id]: v }));
                                    }}
-                                   className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[13px] font-bold text-right text-emerald-700 outline-none focus:border-emerald-500 transition-colors"
+                                   className="w-20 px-2.5 py-1.5 rounded-lg border border-purple-200 bg-white text-[13px] font-bold text-right text-purple-800 outline-none focus:border-purple-500 transition-colors"
                                  />
-                                 <span className="text-[13px] font-bold text-slate-500">%</span>
+                                 <span className="text-[13px] font-bold text-purple-900">%</span>
                                </div>
                              </div>
-                             {/* 수수료 구조 분해 */}
-                             <div className="flex items-center gap-1 flex-wrap text-[10px]">
-                               <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-semibold">PG {myAgencyRate2 > 0 ? pgCost2 : 1.5}%</span>
-                               <span className="text-slate-300">+</span>
-                               <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 font-semibold">플랫폼 {platformMargin2}%</span>
-                               <span className="text-slate-300">+</span>
-                               <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 font-semibold">대리점 {myAgencyRate2}%</span>
-                               <span className="text-slate-300">+</span>
-                               <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">영업자 {rate}%</span>
-                               <span className="text-slate-400 ml-1 font-bold">=</span>
-                               <span className="font-bold text-slate-700 ml-1">
-                                 합계 {+(pgCost2 + platformMargin2 + myAgencyRate2 + rate).toFixed(2)}%
-                               </span>
+
+                             {/* 수수료 구조 안내 */}
+                             <div className="p-2.5 bg-white rounded-lg border border-purple-100 space-y-1.5">
+                               <div className="text-[10.5px] font-bold text-slate-700 flex items-center justify-between">
+                                 <span>💡 고객 계약 수수료 공식:</span>
+                                 <span className="font-mono text-purple-700">계약율 = PG 1.5% + 플랫폼 0.5% + 대리점 {rate}% + 영업자 마진</span>
+                               </div>
+                               <div className="flex items-center gap-1 flex-wrap text-[10px]">
+                                 <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">PG {pgCost2}%</span>
+                                 <span className="text-slate-300">+</span>
+                                 <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">플랫폼 {platformMargin2}%</span>
+                                 <span className="text-slate-300">+</span>
+                                 <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">대리점(나) {rate}%</span>
+                                 <span className="text-slate-300">+</span>
+                                 <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">영업자 마진 (차액)</span>
+                                 <span className="text-slate-400 ml-auto font-semibold">하한선 {+(pgCost2 + platformMargin2 + rate).toFixed(2)}%</span>
+                               </div>
                              </div>
                            </div>
 
@@ -729,7 +735,7 @@ export default function PartnerDashboard() {
                                 setSavingAgentId(agent.id);
                                 try {
                                   const res = await partnerAPI.updateAgentRate(agent.id, rate);
-                                  if (res.success) toast.success(`${agent.name} 영업자 수수료율 ${rate}%로 저장되었습니다.`);
+                                  if (res.success) toast.success(`${agent.name} 대리점 수수료율 ${rate}%로 저장되었습니다.`);
                                   else toast.error('저장에 실패했습니다.');
                                 } catch { toast.error('저장 중 오류가 발생했습니다.'); }
                                 finally { setSavingAgentId(null); }
