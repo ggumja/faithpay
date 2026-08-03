@@ -48,6 +48,7 @@ export default function PartnerDashboard() {
   const [editBank, setEditBank] = useState('');
   const [editAccount, setEditAccount] = useState('');
   const [editHolder, setEditHolder] = useState('');
+  const [editAgencyRate, setEditAgencyRate] = useState<number>(0.5);
 
   useEffect(() => {
     async function load() {
@@ -79,6 +80,7 @@ export default function PartnerDashboard() {
           setEditBank((merged as any).bankName ?? '');
           setEditAccount((merged as any).accountNumber ?? '');
           setEditHolder((merged as any).accountHolder ?? '');
+          setEditAgencyRate((merged as any).agencyRate ?? (merged as any).commissionRate ?? 0.5);
 
           const commRes = await partnerAPI.getCommissions(merged.id);
           setCommissions(commRes.success && commRes.data ? commRes.data : []);
@@ -841,9 +843,53 @@ export default function PartnerDashboard() {
           {section === 'myinfo' && (
             <div className="space-y-5 max-w-xl">
               <div>
-                <h1 className="text-[18px] font-bold text-slate-800">내 정보 수정</h1>
-                <p className="text-[12.5px] text-slate-500 mt-0.5">연락처 및 정산 계좌 정보 수정</p>
+                <h1 className="text-[18px] font-bold text-slate-800">{isAgency ? '대리점 정보 및 수수료 설정' : '내 정보 수정'}</h1>
+                <p className="text-[12.5px] text-slate-500 mt-0.5">
+                  {isAgency ? '대리점 기본 수수료율, 연락처 및 정산 계좌 설정' : '연락처 및 정산 계좌 정보 수정'}
+                </p>
               </div>
+
+              {/* 대리점 전용 기본 수수료 설정 카드 */}
+              {isAgency && (
+                <Card className="border-purple-200 bg-purple-50/40 shadow-xs">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-[13.5px] font-bold text-purple-950 flex items-center gap-2">
+                      <Percent className="h-4 w-4 text-purple-600" /> 대리점 기본 수수료 설정
+                    </CardTitle>
+                    <CardDescription className="text-[11px] text-purple-700">
+                      신규 영업자 가입 시 적용되는 대리점 기본 고정 마진율(%) 설정입니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-purple-100">
+                      <div>
+                        <Label className="text-[12px] font-bold text-purple-950">대리점 기본 수수료율 (%)</Label>
+                        <p className="text-[10.5px] text-slate-500 mt-0.5">
+                          영업자 가맹점 계약 시 대리점(나)에 귀속되는 고정 마진율입니다.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Input
+                          type="number" step="0.1" min="0" max="3"
+                          value={editAgencyRate}
+                          onChange={e => setEditAgencyRate(parseFloat(e.target.value) || 0)}
+                          className="w-24 h-9 text-right font-bold text-[14px] text-purple-900 bg-purple-50/60 border-purple-200"
+                        />
+                        <span className="text-[14px] font-bold text-purple-900">%</span>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-white rounded-xl border border-purple-100 text-[11px] text-slate-600 space-y-1">
+                      <div className="font-bold text-purple-900 flex items-center justify-between">
+                        <span>💡 수수료 하한선 기준 예시:</span>
+                        <span className="font-mono text-purple-700">하한선 = PG 1.5% + 플랫폼 0.5% + 대리점 {editAgencyRate}% = {(1.5 + 0.5 + editAgencyRate).toFixed(2)}%</span>
+                      </div>
+                      <p className="text-[10.5px] text-slate-500 mt-0.5">
+                        * 소속 영업자가 가맹점 계약을 등록할 때 이 기본 수수료가 포함되어 베이스 하한선이 계산됩니다.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-[13px] font-bold flex items-center gap-1.5">
@@ -901,7 +947,13 @@ export default function PartnerDashboard() {
                   </div>
                 </CardContent>
               </Card>
-              <Button className="w-full bg-emerald-600 hover:bg-emerald-700 font-semibold" onClick={() => toast.success('정보가 저장되었습니다.')}>
+              <Button className={`w-full font-semibold ${isAgency ? 'bg-purple-600 hover:bg-purple-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                onClick={() => {
+                  if (partner) {
+                    (partner as any).agencyRate = editAgencyRate;
+                  }
+                  toast.success(isAgency ? `대리점 기본 수수료율 (${editAgencyRate}%) 및 정보가 저장되었습니다.` : '정보가 저장되었습니다.');
+                }}>
                 저장하기
               </Button>
             </div>
