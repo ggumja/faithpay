@@ -14,7 +14,7 @@ import {
 import {
   LayoutDashboard, Building2, TrendingUp, Users, UserCircle,
   Plus, Copy, ExternalLink, LogOut, Briefcase, ChevronRight,
-  RefreshCw, BadgePercent, Landmark, Phone, Mail,
+  RefreshCw, BadgePercent, Percent, Landmark, Phone, Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Partner, PartnerCommission, partnerAPI } from '../../api/client';
