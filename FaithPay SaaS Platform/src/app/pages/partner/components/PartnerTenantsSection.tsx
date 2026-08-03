@@ -108,11 +108,11 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {filteredTenants.map((t: any) => (
+                {filteredTenants.map((t: any, idx: number) => (
                   <div key={t.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-800 font-bold flex items-center justify-center text-sm border border-purple-100 shrink-0">
-                        {t.name?.charAt(0)}
+                      <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 font-bold font-mono flex items-center justify-center text-xs border border-purple-100 shrink-0">
+                        {idx + 1}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -177,16 +177,21 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100">
-                      {directTenants.map((t: any) => (
+                      {directTenants.map((t: any, idx: number) => (
                         <div key={t.id} className="p-4 flex items-center justify-between hover:bg-purple-50/20 transition-colors">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-800 text-[13.5px]">{t.name}</span>
-                              <Badge variant={t.status === 'active' ? 'default' : 'secondary'} className="text-[9.5px]">
-                                {t.status === 'active' ? '운영중' : '승인대기'}
-                              </Badge>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-purple-100/70 text-purple-800 font-bold font-mono flex items-center justify-center text-xs border border-purple-200 shrink-0">
+                              {idx + 1}
                             </div>
-                            <span className="text-[10.5px] text-slate-400 font-mono mt-0.5 block">faithpay.kr/{t.slug}</span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-800 text-[13.5px]">{t.name}</span>
+                                <Badge variant={t.status === 'active' ? 'default' : 'secondary'} className="text-[9.5px]">
+                                  {t.status === 'active' ? '운영중' : '승인대기'}
+                                </Badge>
+                              </div>
+                              <span className="text-[10.5px] text-slate-400 font-mono mt-0.5 block">faithpay.kr/{t.slug}</span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-[12px] font-bold text-emerald-700 font-mono">{(t as any).contractRate ?? 3.0}%</span>
@@ -255,11 +260,11 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-100">
-                        {agentTenants.map((t: any) => (
+                        {agentTenants.map((t: any, idx: number) => (
                           <div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs border border-emerald-100 shrink-0">
-                                {t.name?.charAt(0)}
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 font-bold font-mono flex items-center justify-center text-xs border border-emerald-100 shrink-0">
+                                {idx + 1}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
