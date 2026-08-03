@@ -19,8 +19,6 @@ import {
 import { toast } from 'sonner';
 import { Partner, PartnerCommission, partnerAPI } from '../../api/client';
 
-const CHANNEL_POOL_RATE = 1.0;
-const AGENCY_SHARE = 30;
 
 type Section = 'home' | 'tenants' | 'commissions' | 'agents' | 'myinfo';
 
@@ -92,7 +90,7 @@ export default function PartnerDashboard() {
               setSubAgents(agentsRes.data);
               const rates: Record<string, number> = {};
               agentsRes.data.forEach((a: Partner) => {
-                rates[a.id] = (a as any).agentRate ?? (a as any).channelShareRate ?? 70;
+                rates[a.id] = (a as any).agentRate ?? (a as any).commissionRate ?? 0.4;
               });
               setAgentRates(rates);
             }
@@ -682,37 +680,55 @@ export default function PartnerDashboard() {
                             </div>
                           </div>
 
-                          {/* 수수료 슬라이더 */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-slate-500 font-medium">수수료 채널풀 배분</span>
-                              <span className={`font-bold ${isValid ? 'text-emerald-600' : 'text-red-500'}`}>
-                                영업자 {rate}% / 대리점 {AGENCY_SHARE}%
-                                {!isValid && ` ⚠ 합계 ${total}% ≠ 100%`}
-                              </span>
-                            </div>
-                            <input type="range" min={0} max={100 - AGENCY_SHARE} step={5} value={rate}
-                              onChange={e => setAgentRates(prev => ({ ...prev, [agent.id]: Number(e.target.value) }))}
-                              className="w-full accent-emerald-500 h-1.5" />
-                            <div className="flex h-4 rounded-md overflow-hidden text-[9.5px] font-bold border border-slate-200">
-                              <div className="bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 px-1"
-                                style={{ width: `${AGENCY_SHARE}%` }}>대리점 {AGENCY_SHARE}%</div>
-                              <div className="bg-amber-100 text-amber-700 flex items-center justify-center flex-1">영업자 {rate}%</div>
-                              {total < 100 && (
-                                <div className="bg-red-100 text-red-400 flex items-center justify-center px-1"
-                                  style={{ width: `${100 - total}%` }}>미배분</div>
-                              )}
-                            </div>
-                          </div>
+                           {/* 절대 수수료율 직접 입력 */}
+                           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                             <div className="flex items-center justify-between gap-3">
+                               <div>
+                                 <p className="text-[11.5px] font-bold text-slate-700">영업자 지급 수수료율 (%)</p>
+                                 <p className="text-[10px] text-slate-400 mt-0.5">
+                                   결제금액에 직접 적용되는 절대값입니다
+                                 </p>
+                               </div>
+                               <div className="flex items-center gap-1.5 shrink-0">
+                                 <input
+                                   type="number"
+                                   step="0.1"
+                                   min="0"
+                                   max="5"
+                                   value={rate}
+                                   onChange={e => {
+                                     const v = parseFloat(e.target.value);
+                                     if (!isNaN(v)) setAgentRates(prev => ({ ...prev, [agent.id]: v }));
+                                   }}
+                                   className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[13px] font-bold text-right text-emerald-700 outline-none focus:border-emerald-500 transition-colors"
+                                 />
+                                 <span className="text-[13px] font-bold text-slate-500">%</span>
+                               </div>
+                             </div>
+                             {/* 수수료 구조 분해 */}
+                             <div className="flex items-center gap-1 flex-wrap text-[10px]">
+                               <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-semibold">PG {myAgencyRate2 > 0 ? pgCost2 : 1.5}%</span>
+                               <span className="text-slate-300">+</span>
+                               <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 font-semibold">플랫폼 {platformMargin2}%</span>
+                               <span className="text-slate-300">+</span>
+                               <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 font-semibold">대리점 {myAgencyRate2}%</span>
+                               <span className="text-slate-300">+</span>
+                               <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">영업자 {rate}%</span>
+                               <span className="text-slate-400 ml-1 font-bold">=</span>
+                               <span className="font-bold text-slate-700 ml-1">
+                                 합계 {+(pgCost2 + platformMargin2 + myAgencyRate2 + rate).toFixed(2)}%
+                               </span>
+                             </div>
+                           </div>
 
                           {/* 저장 버튼 */}
                           <div className="flex justify-end">
-                            <Button size="sm" disabled={!isValid || savingAgentId === agent.id}
+                            <Button size="sm" disabled={savingAgentId === agent.id}
                               onClick={async () => {
                                 setSavingAgentId(agent.id);
                                 try {
                                   const res = await partnerAPI.updateAgentRate(agent.id, rate);
-                                  if (res.success) toast.success(`${agent.name} 수수료율 ${agentEffective}%로 저장되었습니다.`);
+                                  if (res.success) toast.success(`${agent.name} 영업자 수수료율 ${rate}%로 저장되었습니다.`);
                                   else toast.error('저장에 실패했습니다.');
                                 } catch { toast.error('저장 중 오류가 발생했습니다.'); }
                                 finally { setSavingAgentId(null); }
