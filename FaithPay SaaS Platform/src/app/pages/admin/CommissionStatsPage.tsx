@@ -243,12 +243,25 @@ export default function CommissionStatsPage() {
             <tbody>
               {partners.map(p => {
                 const isOpen      = expanded === p.id;
-                const agencyR     = (p as any).agencyRate || (p.role === 'master_agency' ? 0.5 : 0);
-                // 영업자: 수수료 이력에서 평균 실효율 계산
                 const comms       = (p as any).commissions ?? [];
-                const avgRate     = comms.length > 0
-                  ? comms.reduce((s: number, c: any) => s + (c.commissionRate ?? 0), 0) / comms.length
-                  : agencyR;
+                
+                let rateLabel = '';
+                if (p.role === 'master_agency') {
+                  const agencyR = (p as any).agencyRate || 0.5;
+                  rateLabel = `${agencyR.toFixed(2)}% (대리점 고정)`;
+                } else {
+                  if (comms.length > 0) {
+                    const rates = comms.map((c: any) => c.commissionRate ?? 0.5);
+                    const minR = Math.min(...rates);
+                    const maxR = Math.max(...rates);
+                    rateLabel = minR === maxR
+                      ? `${minR.toFixed(2)}% (기본 수수료)`
+                      : `${minR.toFixed(2)}% ~ ${maxR.toFixed(2)}% (계약별 차등)`;
+                  } else {
+                    rateLabel = `0.50%~ (계약별 차등)`;
+                  }
+                }
+
                 const roleLabel   = p.role === 'master_agency' ? '대리점' : '영업자';
                 const roleColor   = p.role === 'master_agency'
                   ? S.chip('bg-emerald-50','text-emerald-700','border-emerald-200')
@@ -256,9 +269,6 @@ export default function CommissionStatsPage() {
                 const statusColor = p.status === 'active'
                   ? S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')
                   : S.chip('bg-slate-50','text-slate-500','border-slate-200');
-                const rateLabel   = p.role === 'master_agency'
-                  ? `${agencyR}% 고정`
-                  : `평균 ${avgRate.toFixed(2)}% (계약별 변동)`;
 
                 return [
                   <tr
