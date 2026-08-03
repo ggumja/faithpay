@@ -226,39 +226,33 @@ export default function PartnerTenantCreate() {
                   </div>
                 </div>
 
-                {/* 수수료 구조 분해 */}
+                {/* 수수료 구조 분해 (내부 원가 노출 방지) */}
                 <div className="space-y-1">
                   <div className="flex h-5 rounded-lg overflow-hidden text-[9.5px] font-bold">
-                    <div className="bg-red-200 text-red-700 flex items-center justify-center px-1"
-                      style={{ width: `${(feeConfig.pgCost / Math.max(contractRate, floorRate)) * 100}%` }}>
-                      PG {feeConfig.pgCost}%
-                    </div>
-                    <div className="bg-amber-200 text-amber-700 flex items-center justify-center px-1"
-                      style={{ width: `${(feeConfig.platformMargin / Math.max(contractRate, floorRate)) * 100}%` }}>
-                      플랫폼 {feeConfig.platformMargin}%
-                    </div>
-                    <div className="bg-purple-200 text-purple-700 flex items-center justify-center px-1"
-                      style={{ width: `${(agencyRate / Math.max(contractRate, floorRate)) * 100}%` }}>
-                      대리점 {agencyRate}%
+                    <div className="bg-purple-200 text-purple-800 flex items-center justify-center px-2"
+                      style={{ width: `${(floorRate / Math.max(contractRate, floorRate)) * 100}%` }}>
+                      {myPartner?.role === 'master_agency' ? `영업자 베이스 ${floorRate}%` : `내 정산 베이스 ${floorRate}%`}
                     </div>
                     {isValid && spread > 0 && (
                       <div className="bg-emerald-400 text-emerald-900 flex items-center justify-center flex-1 px-1">
-                        영업자 스프레드 {spread}%
+                        {myPartner?.role === 'master_agency' ? `영업자 마진 +${spread}%` : `내 영업 순마진 +${spread}%`}
                       </div>
                     )}
                     {!isValid && (
                       <div className="bg-red-400 text-white flex items-center justify-center flex-1 px-1">
-                        역마진 ❌
+                        하한선 미달 ❌
                       </div>
                     )}
                   </div>
                   <div className="flex items-center justify-between text-[10.5px]">
                     <span className={`font-semibold ${isValid ? 'text-slate-500' : 'text-red-600'}`}>
-                      하한선: PG {feeConfig.pgCost}% + 플랫폼 {feeConfig.platformMargin}% + 대리점 {agencyRate}% = {floorRate}%
+                      {myPartner?.role === 'master_agency'
+                        ? `대리점 수수료율: ${agencyRate}% · 영업자 부여 베이스 하한선: ${floorRate}%`
+                        : `내 베이스 수수료(하한선): ${floorRate}%`}
                     </span>
                     {isValid ? (
                       <span className="font-bold text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> 영업자 스프레드 {spread}%
+                        <CheckCircle2 className="h-3 w-3" /> {myPartner?.role === 'master_agency' ? `영업 마진 +${spread}%` : `내 영업 마진 +${spread}%`}
                       </span>
                     ) : (
                       <span className="font-bold text-red-600 flex items-center gap-1">

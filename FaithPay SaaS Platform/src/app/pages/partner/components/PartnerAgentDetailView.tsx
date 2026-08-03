@@ -137,15 +137,11 @@ export function PartnerAgentDetailView({
                 {subAgentFloor}%
               </span>
             </div>
-            <div className="flex items-center gap-1 flex-wrap text-[10.5px]">
-              <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 font-semibold">PG {pgCost2}%</span>
-              <span className="text-slate-300">+</span>
-              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">플랫폼 {platformMargin2}%</span>
-              <span className="text-slate-300">+</span>
-              <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">대리점(나) {currentRate}%</span>
-              <span className="text-slate-300">=</span>
+            <div className="flex items-center gap-1.5 flex-wrap text-[10.5px]">
+              <span className="px-2.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">지정 대리점 마진율: {currentRate}%</span>
+              <span className="text-slate-300 font-bold">➔</span>
               <span className="font-bold text-purple-900 font-mono bg-purple-50 px-2.5 py-0.5 rounded border border-purple-200">
-                베이스 수수료 {subAgentFloor}%
+                영업자 부여 베이스 수수료: {subAgentFloor}%
               </span>
             </div>
             <p className="text-[10.5px] text-slate-500 mt-1">

@@ -299,7 +299,7 @@ export default function PartnerDashboard() {
         )}
 
         {section === 'commissions' && (
-          <PartnerCommissionsSection commissions={commissions} />
+          <PartnerCommissionsSection commissions={commissions} isAgency={isAgency} />
         )}
 
         {section === 'agents' && isAgency && (

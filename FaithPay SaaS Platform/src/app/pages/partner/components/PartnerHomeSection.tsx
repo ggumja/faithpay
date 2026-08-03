@@ -116,18 +116,18 @@ export function PartnerHomeSection({
           <CardContent className="p-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="p-3.5 bg-white rounded-xl border border-amber-200 space-y-1">
-                <span className="text-[10.5px] font-bold text-amber-800 block">1. 원가 및 대리점 수수료</span>
-                <p className="text-[12px] font-bold text-slate-700">
-                  PG({pgCost}%) + 플랫폼({platformMargin}%) + 대리점({agencyRateForAgent}%)
-                </p>
-                <p className="text-[10px] text-slate-400">플랫폼 고정 원가 하한선</p>
-              </div>
-              <div className="p-3.5 bg-white rounded-xl border border-amber-200 space-y-1">
-                <span className="text-[10.5px] font-bold text-amber-800 block">2. 내 베이스 수수료 (하한선)</span>
+                <span className="text-[10.5px] font-bold text-amber-800 block">1. 내 정산 베이스 수수료 (하한선)</span>
                 <p className="text-[15px] font-bold text-amber-900 font-mono">
                   {agentBaseFloor}%
                 </p>
-                <p className="text-[10px] text-amber-700">* 가맹점 계약 시 이 요율 이상 적용</p>
+                <p className="text-[10px] text-slate-400">대리점 부여 정산 기본율</p>
+              </div>
+              <div className="p-3.5 bg-white rounded-xl border border-amber-200 space-y-1">
+                <span className="text-[10.5px] font-bold text-amber-800 block">2. 예시 가맹점 계약 수수료율</span>
+                <p className="text-[15px] font-bold text-slate-700 font-mono">
+                  3.0%
+                </p>
+                <p className="text-[10px] text-amber-700">* 가맹점 계약 시 하한선 이상 적용</p>
               </div>
               <div className="p-3.5 bg-amber-100/60 rounded-xl border border-amber-300 space-y-1">
                 <span className="text-[10.5px] font-bold text-amber-900 block">3. 3.0% 계약 시 내 영업 마진</span>

@@ -5,24 +5,12 @@ import { PartnerCommission } from '../../../api/client';
 
 interface PartnerCommissionsSectionProps {
   commissions: PartnerCommission[];
+  isAgency?: boolean;
 }
 
-export function PartnerCommissionsSection({ commissions }: PartnerCommissionsSectionProps) {
+export function PartnerCommissionsSection({ commissions, isAgency = false }: PartnerCommissionsSectionProps) {
   const totalDonation = commissions.reduce((sum, c) => sum + (c.donationAmount ?? 0), 0);
   const totalCommission = commissions.reduce((sum, c) => sum + (c.commissionAmount ?? 0), 0);
-
-  // PG, 플랫폼 원가
-  let pgCost = 1.5;
-  let platformMargin = 0.5;
-  let agencyRate = 0.5;
-  try {
-    const pgs = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]');
-    if (pgs.length > 0) pgCost = pgs[0].rate ?? 1.5;
-    const pm = parseFloat(localStorage.getItem('faithpay:platform_margin') || '');
-    if (!isNaN(pm)) platformMargin = pm;
-  } catch {}
-
-  const floorRate = +(pgCost + platformMargin + agencyRate).toFixed(2);
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -49,16 +37,24 @@ export function PartnerCommissionsSection({ commissions }: PartnerCommissionsSec
 
       {/* 수수료 구조 시각화 배너 */}
       <div className="flex items-center gap-2 flex-wrap p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px]">
-        <span className="font-bold text-slate-700">수수료 구조:</span>
-        {[
-          { label: `PG 원가 ${pgCost}%`, bg: 'bg-red-100 text-red-700' },
-          { label: `플랫폼 마진 ${platformMargin}%`, bg: 'bg-amber-100 text-amber-700' },
-          { label: `대리점 ${agencyRate}%`, bg: 'bg-purple-100 text-purple-700' },
-          { label: `영업자 스프레드 (계약율 − ${floorRate}%)`, bg: 'bg-emerald-100 text-emerald-700' },
-        ].map((item, i) => (
-          <span key={i} className={`px-2 py-0.5 rounded-md font-semibold ${item.bg}`}>{item.label}</span>
-        ))}
-        <span className="ml-auto text-slate-400 font-mono">기본 하한선 {floorRate}%</span>
+        <span className="font-bold text-slate-700">수수료 정산 구조:</span>
+        {isAgency ? (
+          <>
+            <span className="px-2 py-0.5 rounded-md font-semibold bg-purple-100 text-purple-700">대리점 수수료 마진</span>
+            <span className="text-slate-300 font-bold">+</span>
+            <span className="px-2 py-0.5 rounded-md font-semibold bg-indigo-100 text-indigo-700">영업자 부여 베이스 수수료</span>
+            <span className="text-slate-300 font-bold">➔</span>
+            <span className="px-2 py-0.5 rounded-md font-semibold bg-emerald-100 text-emerald-700">가맹점 계약 수수료율</span>
+          </>
+        ) : (
+          <>
+            <span className="px-2 py-0.5 rounded-md font-semibold bg-amber-100 text-amber-700">내 정산 베이스 수수료율</span>
+            <span className="text-slate-300 font-bold">➔</span>
+            <span className="px-2 py-0.5 rounded-md font-semibold bg-blue-100 text-blue-700">가맹점 계약 수수료율</span>
+            <span className="text-slate-300 font-bold">➔</span>
+            <span className="px-2 py-0.5 rounded-md font-bold bg-emerald-100 text-emerald-700">내 영업 순마진 수익</span>
+          </>
+        )}
       </div>
 
       {/* 수수료 원장 내역 테이블 */}
