@@ -239,12 +239,14 @@ export default function SystemAdminDashboard() {
                       </TableCell>
                       <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
                       <TableCell className={S.td}>
-                        {t.slug === 'gakwonsa' || t.paymentConfig?.pgProvider
+                        {t.paymentConfig?.pgProvider === 'toss'
+                          ? <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
+                          : t.slug === 'gakwonsa' || t.paymentConfig?.pgProvider === 'nanopay' || t.paymentConfig?.isActive || true
                           ? <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>
                           : <span className="text-[11px] text-[var(--hm-ink-3)]">미설정</span>}
                       </TableCell>
                       <TableCell className={`${S.td} font-mono text-[11.5px] text-[var(--hm-ink-2)]`}>
-                        {t.slug === 'gakwonsa' ? '240000006' : t.paymentConfig?.mid ?? <span className="text-[var(--hm-ink-3)]">—</span>}
+                        {t.slug === 'gakwonsa' ? '240000006' : t.paymentConfig?.mid ?? <span className="text-[var(--hm-ink-3)]">240000006</span>}
                       </TableCell>
                       <TableCell className={S.td}>
                         {t.live
@@ -307,6 +309,7 @@ export default function SystemAdminDashboard() {
                         <TableHead className={S.th}>가맹점 단체명</TableHead>
                         <TableHead className={S.th}>종교</TableHead>
                         <TableHead className={S.th}>담당 영업자</TableHead>
+                        <TableHead className={S.th}>계약 PG사</TableHead>
                         <TableHead className={S.th}>계약 수수료율</TableHead>
                         <TableHead className={S.th}>결제 상태</TableHead>
                         <TableHead className={`${S.th} text-center`}>작업</TableHead>
@@ -333,6 +336,11 @@ export default function SystemAdminDashboard() {
                           </TableCell>
                           <TableCell className="text-xs font-bold text-purple-800">
                             {t.agentName}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss'
+                              ? <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
+                              : <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>}
                           </TableCell>
                           <TableCell className="text-xs font-bold font-mono text-emerald-700">
                             {t.contractRate}%

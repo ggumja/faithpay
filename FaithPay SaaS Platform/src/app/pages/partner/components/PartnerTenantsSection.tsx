@@ -122,16 +122,21 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                           </Badge>
                         </div>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          도메인: faithpay.kr/{t.slug} · 종교: {t.religionType === 'buddhist' ? '불교' : t.religionType === 'catholic' ? '천주교' : '기독교'}
+                          도메인: faithpay.kr/{t.slug} · 종교: {t.religionType === 'buddhist' ? '불교' : t.religionType === 'catholic' ? '천주교' : '기독교'} · PG사: {t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : '나노PG'}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right mr-2 hidden sm:block">
-                        <span className="text-[11px] text-slate-400 block">계약 수수료율</span>
-                        <span className="text-[13px] font-bold text-emerald-700 font-mono">
-                          {(t as any).contractRate ?? 3.0}%
-                        </span>
+                        <span className="text-[11px] text-slate-400 block">계약 수수료율 / PG</span>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <span className="text-[13px] font-bold text-emerald-700 font-mono">
+                            {(t as any).contractRate ?? 3.0}%
+                          </span>
+                          <Badge variant="outline" className={t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss' ? 'bg-blue-50 text-blue-700 border-blue-200 text-[9.5px]' : 'bg-purple-50 text-purple-700 border-purple-200 text-[9.5px]'}>
+                            {t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : '나노PG'}
+                          </Badge>
+                        </div>
                       </div>
                       <a
                         href={`/g/${t.slug}`}
