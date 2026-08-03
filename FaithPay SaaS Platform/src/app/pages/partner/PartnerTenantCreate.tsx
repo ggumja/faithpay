@@ -59,7 +59,9 @@ export default function PartnerTenantCreate() {
   }, []);
 
   // ── Guardrail 계산 ──────────────────────────────
-  const agencyRate = (myPartner as any)?.agencyRate ?? (myPartner as any)?.commissionRate ?? 0.7;
+  let savedRatesTC: Record<string, number> = {};
+  try { savedRatesTC = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
+  const agencyRate = (myPartner?.id && savedRatesTC[myPartner.id]) ?? (myPartner as any)?.agencyRate ?? 0.5;
   const floorRate  = +(feeConfig.pgCost + feeConfig.platformMargin + agencyRate).toFixed(2);
   const spread     = +(Math.max(0, contractRate - floorRate)).toFixed(2);
   const isValid    = contractRate >= floorRate;

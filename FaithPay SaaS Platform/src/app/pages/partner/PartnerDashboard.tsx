@@ -90,11 +90,15 @@ export default function PartnerDashboard() {
             const agentsRes = await partnerAPI.getByParent(merged.id);
             if (agentsRes.success && agentsRes.data) {
               setSubAgents(agentsRes.data);
+              let savedMap: Record<string, number> = {};
+              try { savedMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
+              const defaultFee = (merged as any).agencyRate ?? 0.5;
+
               const rates: Record<string, number> = {};
               agentsRes.data.forEach((a: Partner) => {
-                // 대리점이 해당 영업자에게 지정한 대리점 수수료율 (기본 0.5%)
-                const val = (a as any).agencyRate ?? (a as any).agentRate;
-                rates[a.id] = (typeof val === 'number' && val > 0 && val < 10) ? val : 0.5;
+                const saved = savedMap[a.id];
+                const val = typeof saved === 'number' ? saved : ((a as any).agencyRate ?? (a as any).agentRate);
+                rates[a.id] = (typeof val === 'number' && val > 0 && val < 10) ? val : defaultFee;
               });
               setAgentRates(rates);
             }
@@ -247,7 +251,9 @@ export default function PartnerDashboard() {
               const pm = parseFloat(localStorage.getItem('faithpay:platform_margin') || '');
               if (!isNaN(pm)) platformMarginHome = pm;
             } catch {}
-            const parentAgencyFee = (partner as any).agencyRate ?? 0.5;
+            let savedMapHome: Record<string, number> = {};
+            try { savedMapHome = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
+            const parentAgencyFee = (partner?.id && savedMapHome[partner.id]) ?? (partner as any).agencyRate ?? 0.5;
             const agentBaseFloor = +(pgCostHome + platformMarginHome + parentAgencyFee).toFixed(2);
 
             const cards = isAgency ? [
