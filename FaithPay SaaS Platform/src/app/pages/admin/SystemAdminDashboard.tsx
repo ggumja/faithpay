@@ -63,6 +63,7 @@ export default function SystemAdminDashboard() {
   const [selectedForApproval, setSelectedForApproval] = useState<Tenant | null>(null);
   const [pendingList, setPendingList] = useState<Tenant[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [tenantViewMode, setTenantViewMode] = useState<'all' | 'agency'>('all');
 
   const active = useActiveKey(location.pathname);
   const meta   = PAGE_META[active];
@@ -89,6 +90,63 @@ export default function SystemAdminDashboard() {
     live: t.slug === 'gakwonsa' || t.paymentConfig?.isActive || false,
   }));
   const liveCnt = tList.filter(t => t.live).length;
+
+  // ── 대리점별 단체 묶음 그룹 생성 ──────────────────────────────────
+  const agencyGroups = [
+    {
+      id: 'agency-bit',
+      name: '한국불교문화원',
+      code: 'BIT2024',
+      rate: 0.5,
+      agentNames: ['이수진', '박지훈'],
+      items: tList.filter(t => {
+        const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
+        const name = (t as any).registeredByPartnerName;
+        return ref === 'BIT2024' || ref === 'LSJ002' || name === '이수진' || name === '한국불교문화원' ||
+               ['bongwonsa', 'myungsung-church', 'myeongdong-cathedral', 'bulguksa', 'yoido-fullgospel'].includes(t.slug);
+      }).map(t => ({
+        ...t,
+        agentName: ['bongwonsa', 'myungsung-church', 'myeongdong-cathedral'].includes(t.slug) ? '이수진 (영업자)' : '대리점 본사 직접',
+        contractRate: (t as any).contractRate ?? (t.slug === 'bongwonsa' ? 3.2 : t.slug === 'myeongdong-cathedral' ? 2.9 : 3.0),
+      })),
+    },
+    {
+      id: 'agency-krs',
+      name: '한국종교솔루션(주)',
+      code: 'KRS2024',
+      rate: 0.5,
+      agentNames: ['김정수', '박민호'],
+      items: tList.filter(t => {
+        const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
+        const name = (t as any).registeredByPartnerName;
+        return ref === 'KRS2024' || ref === 'KJS001' || ref === 'PMH003' || name === '김정수' || name === '박민호' ||
+               ['gakwonsa', 'joyful-church', 'serenity-temple', 'grace-cathedral'].includes(t.slug);
+      }).map(t => ({
+        ...t,
+        agentName: ['gakwonsa', 'joyful-church'].includes(t.slug) ? '김정수 (영업자)' : '박민호 (영업자)',
+        contractRate: (t as any).contractRate ?? (t.slug === 'gakwonsa' ? 3.0 : 3.2),
+      })),
+    },
+  ];
+
+  // 기타 대리점 미지정 단체
+  const agencyAssignedSlugs = new Set(agencyGroups.flatMap(g => g.items.map(i => i.slug)));
+  const directItems = tList.filter(t => !agencyAssignedSlugs.has(t.slug)).map(t => ({
+    ...t,
+    agentName: '플랫폼 본사 직접',
+    contractRate: (t as any).contractRate ?? 3.0,
+  }));
+
+  if (directItems.length > 0) {
+    agencyGroups.push({
+      id: 'agency-direct',
+      name: '플랫폼 본사 직접 유치 관리',
+      code: 'SYSTEM',
+      rate: 0.0,
+      agentNames: ['시스템 관리자'],
+      items: directItems,
+    });
+  }
 
   return (
     <div className={S.inner}>
@@ -122,60 +180,184 @@ export default function SystemAdminDashboard() {
             ))}
           </div>
 
-          <div className={S.tableWrap}>
-            <div className="px-4 py-2.5 border-b border-[var(--hm-border)] flex items-center gap-2">
-              <Building2 size={13} className="text-[var(--hm-accent)]" />
-              <span className="text-[12.5px] font-medium text-[var(--hm-ink)]">승인 완료 단체</span>
-              <span className="text-[12px] text-[var(--hm-ink-3)]">(총 {tenants.length}개)</span>
+          {/* 뷰 모드 토글 탭 (전체 목록 뷰 vs 영업대리점별 묶어보기) */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg border border-slate-200 text-xs">
+              <button
+                className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer border-none ${
+                  tenantViewMode === 'all'
+                    ? 'bg-white text-slate-800 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                }`}
+                onClick={() => setTenantViewMode('all')}
+              >
+                📋 전체 단체 목록 뷰 ({tenants.length}개)
+              </button>
+              <button
+                className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer border-none ${
+                  tenantViewMode === 'agency'
+                    ? 'bg-purple-600 text-white shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                }`}
+                onClick={() => setTenantViewMode('agency')}
+              >
+                🏢 영업대리점별 묶어보기 ({agencyGroups.length}개 대리점)
+              </button>
             </div>
-            <Table>
-              <TableHeader className={S.thead}>
-                <TableRow>
-                  {['단체명','종교','연락처','PG사','MID','상태','작업'].map((h,i) => (
-                    <TableHead key={h} className={`${S.th} ${i===6?'text-center':''}`}>{h}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tList.map(t => (
-                  <TableRow
-                    key={t.id}
-                    className="cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors"
-                    onClick={() => navigate(`/system/admin/tenant/${t.id}`)}
-                  >
-                    <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
-                      <span className="flex items-center gap-1.5">
-                        {t.name}<ExternalLink size={10} className="text-[var(--hm-border)]"/>
-                      </span>
-                    </TableCell>
-                    <TableCell className={S.td}>
-                      <span className={S.chip('bg-transparent','text-[var(--hm-ink-2)]','border-[var(--hm-border)]')}>{religion(t.religionType)}</span>
-                    </TableCell>
-                    <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
-                    <TableCell className={S.td}>
-                      {t.slug === 'gakwonsa' || t.paymentConfig?.pgProvider
-                        ? <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>
-                        : <span className="text-[11px] text-[var(--hm-ink-3)]">미설정</span>}
-                    </TableCell>
-                    <TableCell className={`${S.td} font-mono text-[11.5px] text-[var(--hm-ink-2)]`}>
-                      {t.slug === 'gakwonsa' ? '240000006' : t.paymentConfig?.mid ?? <span className="text-[var(--hm-ink-3)]">—</span>}
-                    </TableCell>
-                    <TableCell className={S.td}>
-                      {t.live
-                        ? <span className={S.chip('bg-emerald-50','text-emerald-700','border-emerald-200')}><CheckCircle size={10}/>활성화</span>
-                        : <span className={S.chip('bg-red-50','text-red-600','border-red-200')}><AlertCircle size={10}/>미설정</span>}
-                    </TableCell>
-                    <TableCell className={`${S.td} text-center`}>
-                      <button
-                        className={S.btnOutline}
-                        onClick={e => { e.stopPropagation(); navigate(`/system/admin/tenant/${t.id}`); }}
-                      >상세 / PG 설정</button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </div>
+
+          {/* 1. 전체 단체 목록 뷰 */}
+          {tenantViewMode === 'all' && (
+            <div className={S.tableWrap}>
+              <div className="px-4 py-2.5 border-b border-[var(--hm-border)] flex items-center gap-2">
+                <Building2 size={13} className="text-[var(--hm-accent)]" />
+                <span className="text-[12.5px] font-medium text-[var(--hm-ink)]">승인 완료 단체</span>
+                <span className="text-[12px] text-[var(--hm-ink-3)]">(총 {tenants.length}개)</span>
+              </div>
+              <Table>
+                <TableHeader className={S.thead}>
+                  <TableRow>
+                    {['단체명','종교','연락처','PG사','MID','상태','작업'].map((h,i) => (
+                      <TableHead key={h} className={`${S.th} ${i===6?'text-center':''}`}>{h}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tList.map(t => (
+                    <TableRow
+                      key={t.id}
+                      className="cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors"
+                      onClick={() => navigate(`/system/admin/tenant/${t.id}`)}
+                    >
+                      <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
+                        <span className="flex items-center gap-1.5">
+                          {t.name}<ExternalLink size={10} className="text-[var(--hm-border)]"/>
+                        </span>
+                      </TableCell>
+                      <TableCell className={S.td}>
+                        <span className={S.chip('bg-transparent','text-[var(--hm-ink-2)]','border-[var(--hm-border)]')}>{religion(t.religionType)}</span>
+                      </TableCell>
+                      <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
+                      <TableCell className={S.td}>
+                        {t.slug === 'gakwonsa' || t.paymentConfig?.pgProvider
+                          ? <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>
+                          : <span className="text-[11px] text-[var(--hm-ink-3)]">미설정</span>}
+                      </TableCell>
+                      <TableCell className={`${S.td} font-mono text-[11.5px] text-[var(--hm-ink-2)]`}>
+                        {t.slug === 'gakwonsa' ? '240000006' : t.paymentConfig?.mid ?? <span className="text-[var(--hm-ink-3)]">—</span>}
+                      </TableCell>
+                      <TableCell className={S.td}>
+                        {t.live
+                          ? <span className={S.chip('bg-emerald-50','text-emerald-700','border-emerald-200')}><CheckCircle size={10}/>활성화</span>
+                          : <span className={S.chip('bg-red-50','text-red-600','border-red-200')}><AlertCircle size={10}/>미설정</span>}
+                      </TableCell>
+                      <TableCell className={`${S.td} text-center`}>
+                        <button
+                          className={S.btnOutline}
+                          onClick={e => { e.stopPropagation(); navigate(`/system/admin/tenant/${t.id}`); }}
+                        >상세 / PG 설정</button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* 2. 영업대리점별 묶어보기 뷰 */}
+          {tenantViewMode === 'agency' && (
+            <div className="space-y-6">
+              {agencyGroups.map(group => (
+                <div key={group.id} className="bg-white rounded-xl border border-purple-200 overflow-hidden shadow-2xs">
+                  {/* 대리점 헤더 */}
+                  <div className="px-5 py-4 bg-gradient-to-r from-purple-50/80 via-slate-50 to-white border-b border-purple-100 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center text-base shadow-2xs">
+                        🏢
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-slate-800">{group.name}</h3>
+                          <span className="px-2 py-0.5 rounded text-[10.5px] font-bold font-mono bg-purple-100 text-purple-800 border border-purple-200">
+                            대리점코드: {group.code}
+                          </span>
+                          {group.rate > 0 && (
+                            <span className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                              대리점 마진율 {group.rate}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          소속 영업자: <strong>{group.agentNames.join(', ')}</strong> · 관할 가맹점 단체: <strong>{group.items.length}개소</strong>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                        관할 단체 {group.items.length}개소 운용 중
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 관할 단체 목록 테이블 */}
+                  <Table>
+                    <TableHeader className={S.thead}>
+                      <TableRow>
+                        <TableHead className={`${S.th} w-12 text-center`}>No</TableHead>
+                        <TableHead className={S.th}>가맹점 단체명</TableHead>
+                        <TableHead className={S.th}>종교</TableHead>
+                        <TableHead className={S.th}>담당 영업자</TableHead>
+                        <TableHead className={S.th}>계약 수수료율</TableHead>
+                        <TableHead className={S.th}>결제 상태</TableHead>
+                        <TableHead className={`${S.th} text-center`}>작업</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {group.items.map((t, idx) => (
+                        <TableRow
+                          key={t.id}
+                          className="hover:bg-purple-50/20 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/system/admin/tenant/${t.id}`)}
+                        >
+                          <TableCell className="text-center font-mono text-xs font-bold text-slate-400">{idx + 1}</TableCell>
+                          <TableCell className="font-bold text-slate-800 text-xs">
+                            <div>
+                              <span className="flex items-center gap-1.5">
+                                {t.name} <ExternalLink size={10} className="text-slate-400" />
+                              </span>
+                              <span className="font-mono text-[10.5px] text-slate-400 font-normal">faithpay.kr/{t.slug}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <span className={S.chip('bg-transparent','text-[var(--hm-ink-2)]','border-[var(--hm-border)]')}>{religion(t.religionType)}</span>
+                          </TableCell>
+                          <TableCell className="text-xs font-bold text-purple-800">
+                            {t.agentName}
+                          </TableCell>
+                          <TableCell className="text-xs font-bold font-mono text-emerald-700">
+                            {t.contractRate}%
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {t.live
+                              ? <span className={S.chip('bg-emerald-50','text-emerald-700','border-emerald-200')}><CheckCircle size={10}/>활성화</span>
+                              : <span className={S.chip('bg-red-50','text-red-600','border-red-200')}><AlertCircle size={10}/>미설정</span>}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <button
+                              className={S.btnOutline}
+                              onClick={e => { e.stopPropagation(); navigate(`/system/admin/tenant/${t.id}`); }}
+                            >
+                              상세 / PG 설정
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
