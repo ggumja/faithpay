@@ -167,7 +167,7 @@ export default function PartnerDashboard() {
               <Badge className={`text-white text-[10px] hover:opacity-100 px-1.5 py-0 ${
                 isAgency ? 'bg-purple-500 hover:bg-purple-500' : 'bg-emerald-600 hover:bg-emerald-600'
               }`}>
-                {isAgency ? `🏢 Tier-1 대리점 (${(partner as any).agencyRate ?? 0.5}%)` : '💼 Tier-2 영업자'}
+                {isAgency ? `🏢 Tier-1 대리점 (${(partner as any).agencyRate ?? 0.5}%)` : `💼 Tier-2 영업자 (베이스 ${agentBaseFloor}%)`}
               </Badge>
             </div>
             <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white h-7 px-2"
@@ -237,19 +237,39 @@ export default function PartnerDashboard() {
         <main className="flex-1 overflow-y-auto p-6">
 
           {/* 대시보드 홈 */}
-          {section === 'home' && (
-            <div className="space-y-6 max-w-5xl">
-              <div>
-                <h1 className="text-[18px] font-bold text-slate-800">대시보드</h1>
-                <p className="text-[12.5px] text-slate-500 mt-0.5">영업 현황 요약</p>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { label: '관리 단체 수', value: `${myTenants.length}개소`, sub: '본인 귀속 영업 단체', icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                  { label: '당월 결제 총액', value: `${totalMonthlyVolume.toLocaleString()}원`, sub: '실시간 집계', icon: Landmark, color: 'text-slate-700', bg: 'bg-slate-100' },
-                  { label: '금월 정산 예정', value: `${totalMonthlyCommission.toLocaleString()}원`, sub: '익월 10일 입금', icon: BadgePercent, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                  { label: '정산 계좌', value: (partner as any).bankName ?? '—', sub: (partner as any).accountHolder ?? '예금주 미설정', icon: Landmark, color: 'text-slate-600', bg: 'bg-slate-50' },
-                ].map(({ label, value, sub, icon: Icon, color, bg }) => (
+          {section === 'home' && (() => {
+            let pgCostHome = 1.5, platformMarginHome = 0.5;
+            try {
+              const pgs = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]');
+              if (pgs.length > 0) pgCostHome = pgs[0].rate ?? 1.5;
+              const pm = parseFloat(localStorage.getItem('faithpay:platform_margin') || '');
+              if (!isNaN(pm)) platformMarginHome = pm;
+            } catch {}
+            const parentAgencyFee = (partner as any).agencyRate ?? 0.5;
+            const agentBaseFloor = +(pgCostHome + platformMarginHome + parentAgencyFee).toFixed(2);
+
+            const cards = isAgency ? [
+              { label: '소속 영업자', value: `${subAgents.length}명`, sub: '하위 영업 네트워크', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+              { label: '관리 단체 수', value: `${myTenants.length}개소`, sub: '본인 및 소속 영업자 단체', icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: '당월 결제 총액', value: `${totalMonthlyVolume.toLocaleString()}원`, sub: '실시간 집계', icon: Landmark, color: 'text-slate-700', bg: 'bg-slate-100' },
+              { label: '금월 정산 예정', value: `${totalMonthlyCommission.toLocaleString()}원`, sub: '익월 10일 입금', icon: BadgePercent, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            ] : [
+              { label: '내 베이스 수수료', value: `${agentBaseFloor}%`, sub: `PG ${pgCostHome}%+플랫폼 ${platformMarginHome}%+대리점 ${parentAgencyFee}%`, icon: BadgePercent, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: '관리 단체 수', value: `${myTenants.length}개소`, sub: '본인 귀속 영업 단체', icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: '당월 결제 총액', value: `${totalMonthlyVolume.toLocaleString()}원`, sub: '실시간 집계', icon: Landmark, color: 'text-slate-700', bg: 'bg-slate-100' },
+              { label: '금월 정산 예정', value: `${totalMonthlyCommission.toLocaleString()}원`, sub: '익월 10일 입금', icon: BadgePercent, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            ];
+
+            return (
+              <div className="space-y-6 max-w-5xl">
+                <div>
+                  <h1 className="text-[18px] font-bold text-slate-800">대시보드</h1>
+                  <p className="text-[12.5px] text-slate-500 mt-0.5">
+                    {isAgency ? '영업 대리점 실적 및 관리 현황' : '영업자 개별 수수료 및 영업 현황'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {cards.map(({ label, value, sub, icon: Icon, color, bg }) => (
                   <Card key={label} className="border-slate-200">
                     <CardContent className="p-4">
                       <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mb-3`}>
@@ -262,6 +282,67 @@ export default function PartnerDashboard() {
                   </Card>
                 ))}
               </div>
+              {!isAgency && (
+                <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/30 overflow-hidden shadow-sm">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-emerald-600 text-white text-[11px] hover:bg-emerald-600">영업자 핵심 가이드</Badge>
+                          <span className="text-[14px] font-bold text-slate-800">내 베이스 수수료 기반 고객 계약 체결</span>
+                        </div>
+                        <p className="text-[12px] text-slate-600 mt-1.5 leading-relaxed">
+                          영업자님의 <strong>내 베이스 수수료(하한선)는 {agentBaseFloor}%</strong>입니다.
+                          사찰·교회 고객과 계약 체결 시 베이스 수수료({agentBaseFloor}%) 이상으로 계약 수수료율을 설정하면, 초과되는 차액이 전액 <strong>영업자 수익 마진</strong>으로 적립됩니다.
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 p-3 bg-white rounded-xl border border-emerald-200 shadow-2xs">
+                        <div className="text-[10.5px] text-slate-500 font-bold">내 베이스 수수료</div>
+                        <div className="text-[26px] font-bold text-emerald-700 font-mono leading-none mt-1">{agentBaseFloor}%</div>
+                        <div className="text-[9.5px] text-emerald-600 mt-1 font-medium">PG+플랫폼+대리점 합산</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-white rounded-xl border border-emerald-100 space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-slate-700">베이스 수수료 ({agentBaseFloor}%) 구성:</span>
+                        <span className="font-mono text-slate-500">PG {pgCostHome}% + 플랫폼 {platformMarginHome}% + 소속대리점 {parentAgencyFee}% = {agentBaseFloor}%</span>
+                      </div>
+                      <div className="flex h-6 rounded-lg overflow-hidden text-[10px] font-bold">
+                        <div className="bg-red-200 text-red-800 flex items-center justify-center px-2">PG {pgCostHome}%</div>
+                        <div className="bg-amber-200 text-amber-800 flex items-center justify-center px-2">플랫폼 {platformMarginHome}%</div>
+                        <div className="bg-purple-200 text-purple-800 flex items-center justify-center px-2">대리점 {parentAgencyFee}%</div>
+                        <div className="bg-emerald-500 text-white flex items-center justify-center flex-1 font-bold">
+                          + 영업자 마진 (계약율 - {agentBaseFloor}%)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 text-center text-[11.5px]">
+                      <div className="p-3 rounded-xl bg-white border border-slate-200">
+                        <div className="text-slate-400 font-medium">고객 {agentBaseFloor}% 계약 시</div>
+                        <div className="font-bold text-slate-500 mt-1">마진 0.0% (수익 없음)</div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-emerald-100/60 border border-emerald-300">
+                        <div className="text-emerald-900 font-bold">고객 {(agentBaseFloor + 0.5).toFixed(1)}% 계약 시 (추천)</div>
+                        <div className="font-bold text-emerald-700 text-[13px] mt-1">마진 +0.5% 전액 수익!</div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-white border border-slate-200">
+                        <div className="text-slate-400 font-medium">고객 {(agentBaseFloor + 1.0).toFixed(1)}% 계약 시</div>
+                        <div className="font-bold text-emerald-700 text-[13px] mt-1">마진 +1.0% 전액 수익!</div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                        onClick={() => navigate('/partner/tenants/new')}>
+                        <Plus className="h-3.5 w-3.5 mr-1.5" /> 내 베이스 수수료로 신규 가맹점 개설하기
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -295,7 +376,8 @@ export default function PartnerDashboard() {
                 </CardContent>
               </Card>
             </div>
-          )}
+            );
+          })()}
 
           {/* 단체 관리 */}
           {section === 'tenants' && (
