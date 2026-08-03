@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 /* ── PG사 목록 ── */
 const DEFAULT_PGS = [
   { id: 'nanopay', name: '나노페이 (NanoPay)', rate: 1.5 },
+  { id: 'toss', name: '토스페이먼츠 (TossPayments)', rate: 1.5 },
 ];
 
 interface PGEntry { id: string; name: string; rate: number; }

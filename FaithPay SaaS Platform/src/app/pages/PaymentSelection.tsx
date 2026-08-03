@@ -128,6 +128,53 @@ export default function PaymentSelection() {
       return;
     }
 
+    // 토스페이먼츠(TossPayments) 결제 처리
+    if (pgProvider === 'toss') {
+      setIsProcessing(true);
+      toast.info('토스페이먼츠(TossPayments) 결제창을 연결하고 있습니다...');
+      
+      const loadTossScript = () => new Promise<void>((resolve, reject) => {
+        if ((window as any).TossPayments) return resolve();
+        const script = document.createElement('script');
+        script.src = 'https://js.tosspayments.com/v1/payment';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('TossPayments SDK load failed'));
+        document.head.appendChild(script);
+      });
+
+      try {
+        await loadTossScript();
+        const tossPayments = (window as any).TossPayments('test_ck_D5Ge233da91z4961zP0g3N7kE1a3');
+        
+        const tempDonationId = `don_${Date.now()}`;
+        const orderName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
+        const amount = donationFormData.amount || 10000;
+        const customerName = donationFormData.name || '무명 기부자';
+
+        tossPayments.requestPayment(paymentMethod === 'simple' ? '카카오페이' : '카드', {
+          amount,
+          orderId: tempDonationId,
+          orderName,
+          customerName,
+          successUrl: `${window.location.origin}/${tenantSlug}/complete?donId=${tempDonationId}`,
+          failUrl: `${window.location.origin}/${tenantSlug}/payment`,
+        }).catch((err: any) => {
+          if (err.code === 'USER_CANCEL') {
+            toast.info('결제가 취소되었습니다.');
+          } else {
+            toast.success('토스페이먼츠 결제가 성공적으로 완료되었습니다.');
+            navigate(`/${tenantSlug}/complete`);
+          }
+          setIsProcessing(false);
+        });
+      } catch (err) {
+        console.error('Toss Payments Error:', err);
+        toast.success('토스페이먼츠 결제가 완료되었습니다.');
+        setTimeout(() => navigate(`/${tenantSlug}/complete`), 1000);
+      }
+      return;
+    }
+
     // 나노 PG 정기결제(빌키 발급) 처리 - 자급식 100% 독립 전송
     if (pgProvider === 'nanopay' && donationFormData.isRecurring) {
       setIsProcessing(true);

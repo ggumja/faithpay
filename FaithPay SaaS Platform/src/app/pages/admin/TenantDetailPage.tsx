@@ -581,7 +581,7 @@ export default function TenantDetailPage() {
                   결제 정보 설정
                 </CardTitle>
                 <CardDescription>
-                  나노PG API 키 및 결제 설정을 관리합니다
+                  {pgProvider === 'toss' ? '토스페이먼츠(TossPayments) API 키 및 결제 설정을 관리합니다' : '나노PG API 키 및 결제 설정을 관리합니다'}
                 </CardDescription>
               </div>
               {paymentConfig && (
@@ -647,6 +647,7 @@ export default function TenantDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="nanopay">나노PG (NANO)</SelectItem>
+                      <SelectItem value="toss">토스페이먼츠 (TossPayments)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
