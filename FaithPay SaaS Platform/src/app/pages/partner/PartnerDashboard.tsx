@@ -609,12 +609,13 @@ export default function PartnerDashboard() {
               ) : (
                 <div className="space-y-4">
                   {subAgents.map(agent => {
-                    const rate = agentRates[agent.id] ?? 70;
-                    const agentEffective = (CHANNEL_POOL_RATE * rate / 100).toFixed(2);
-                    const total = AGENCY_SHARE + rate;
-                    const isValid = Math.abs(total - 100) < 0.01;
-                    const isActive = agent.status === 'active';
-
+                     const rate = agentRates[agent.id] ?? 0.4;     // 절대 수수료율 (%)
+                     // 수수료 구조 계산용
+                     let pgCost2 = 1.5, platformMargin2 = 0.5;
+                     try { const pgs2 = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]'); if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5; const pm2 = parseFloat(localStorage.getItem('faithpay:platform_margin') || ''); if (!isNaN(pm2)) platformMargin2 = pm2; } catch { /* ignore */ }
+                     const myAgencyRate2 = (partner as any).agencyRate ?? (partner as any).commissionRate ?? 0.7;
+                     const isValid = true;  // 절대값 입력이므로 항상 유효
+                     const isActive = agent.status === 'active';
                     return (
                       <Card key={agent.id} className={`border ${isActive ? 'border-slate-200' : 'border-amber-200 bg-amber-50/30'}`}>
                         <CardContent className="p-5 space-y-4">
