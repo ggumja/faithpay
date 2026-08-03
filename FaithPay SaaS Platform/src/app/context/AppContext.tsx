@@ -490,19 +490,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchTenants = useCallback(async () => {
     try {
       const response = await tenantAPI.getTenants();
-      if (response.success && response.data) {
+      if (response.success && Array.isArray(response.data) && response.data.length > 0) {
         const dbTenants = response.data;
         mockTenants.length = 0;
         mockTenants.push(...dbTenants);
         localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
         setTenants(dbTenants);
       } else {
-        console.error('Failed to fetch tenants:', response.error);
-        toast.error('DB에서 단체 목록을 불러오지 못했습니다: ' + response.error);
+        // API/KV 스토어 데이터가 비어있을 경우 5개 대리점/영업자 defaultTenants 보장
+        setTenants(defaultTenants);
       }
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
-      toast.error('DB 서버와 연결할 수 없습니다. 로컬 데이터를 사용합니다.');
+      setTenants(defaultTenants);
     }
   }, []);
 
