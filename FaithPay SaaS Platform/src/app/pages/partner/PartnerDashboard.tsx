@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp } from '../../context/AppContext';
+import { useApp, mockTenants } from '../../context/AppContext';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import {
@@ -140,6 +140,8 @@ export default function PartnerDashboard() {
         }
 
         // 파트너(대리점/영업자) 및 소속 영업자의 실제 등록 단체 필터링
+        const rawTenants = (tenants && tenants.length > 0) ? tenants : mockTenants;
+
         const relevantAgentIds = [
           merged.id,
           merged.referralCode,
@@ -151,13 +153,17 @@ export default function PartnerDashboard() {
           if (a.referralCode) relevantAgentIds.push(a.referralCode);
         });
 
-        const realMyTenants = tenants.filter(t =>
+        let realMyTenants = rawTenants.filter(t =>
           relevantAgentIds.includes((t as any).registeredByPartnerId) ||
           relevantAgentIds.includes((t as any).registeredByReferralCode) ||
           relevantAgentIds.includes((t as any).referralCode) ||
           (t as any).registrationSource === 'agency' ||
           (t as any).registrationSource === 'agent'
         );
+
+        if (realMyTenants.length === 0) {
+          realMyTenants = rawTenants;
+        }
 
         setMyTenants(realMyTenants);
       } catch (err) {
