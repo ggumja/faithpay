@@ -169,56 +169,6 @@ export function PartnerHomeSection({
           </Card>
         ))}
       </div>
-
-      {/* 관리 단체 목록 미리보기 */}
-      <Card className="border-slate-200">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-[14px] font-bold text-slate-800">관리 단체 현황</CardTitle>
-            <CardDescription className="text-[11px] mt-0.5">내가 유치한 사찰 및 교회 목록입니다.</CardDescription>
-          </div>
-          <Button variant="ghost" size="sm" className="text-xs text-slate-500 hover:text-slate-800" onClick={() => setSection('tenants')}>
-            전체보기 <ChevronRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {myTenants.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs">
-              <Building2 className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-              등록된 관리 단체가 없습니다. 가맹점을 개설해보세요.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {myTenants.map((t: any) => (
-                <div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs border border-emerald-100">
-                      {t.name?.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800 text-[13px]">{t.name}</p>
-                      <p className="text-[10.5px] text-slate-400 font-mono mt-0.5">faithpay.kr/{t.slug}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Badge variant={t.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
-                      {t.status === 'active' ? '운영중' : '승인대기'}
-                    </Badge>
-                    <a
-                      href={`/g/${t.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-emerald-600 font-semibold hover:underline"
-                    >
-                      페이지 이동 ➔
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
