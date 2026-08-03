@@ -941,174 +941,91 @@ export default function PartnerDashboard() {
                 );
               })()}
 
-              {subAgents.length === 0 ? (
-                <Card>
-                  <CardContent className="py-14 text-center">
-                    <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-sm text-slate-500 font-medium">소속 영업자가 없습니다</p>
-                    <p className="text-[12px] text-slate-400 mt-1">초대 링크를 공유하여 영업자를 등록하세요.</p>
-                    <Button size="sm" variant="outline" className="mt-4 text-xs"
-                      onClick={() => {
-                        const link = `${window.location.origin}/partner/apply?ref=${partner.referralCode}`;
-                        navigator.clipboard.writeText(link);
-                        toast.success('초대 링크가 복사되었습니다!');
-                      }}>
-                      <Copy className="h-3.5 w-3.5 mr-1.5" /> 초대 링크 복사
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {subAgents.map(agent => {
-                     const rate = agentRates[agent.id] ?? editAgencyRate ?? 0.3;     // 대리점 수수료율 (내 수수료 %)
-                     let pgCost2 = 1.5, platformMargin2 = 0.5;
-                     try { const pgs2 = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]'); if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5; const pm2 = parseFloat(localStorage.getItem('faithpay:platform_margin') || ''); if (!isNaN(pm2)) platformMargin2 = pm2; } catch { /* ignore */ }
-                     const subAgentFloor = +(pgCost2 + platformMargin2 + rate).toFixed(2);
-                     const isValid = true;
-                     const isActive = agent.status === 'active';
-                    return (
-                      <Card key={agent.id} className={`border ${isActive ? 'border-slate-200' : 'border-amber-200 bg-amber-50/30'}`}>
-                        <CardContent className="p-5 space-y-4">
-                          {/* 영업자 기본 정보 */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isActive ? 'bg-amber-100' : 'bg-slate-100'}`}>
-                                <span className={`font-bold text-sm ${isActive ? 'text-amber-700' : 'text-slate-400'}`}>
-                                  {agent.name?.charAt(0)}
-                                </span>
+              {/* 깔끔한 영업자 목록 카드 (클릭 시 상세정보 페이지로 이동) */}
+              <Card className="border-slate-200">
+                <CardHeader className="pb-3 border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-[14px] font-bold text-slate-800">소속 영업자 목록 ({subAgents.length}명)</CardTitle>
+                      <CardDescription className="text-[11px] mt-0.5">영업자를 클릭하면 상세정보 및 수수료 설정 화면으로 이동합니다.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {subAgents.length === 0 ? (
+                    <div className="py-14 text-center">
+                      <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                      <p className="text-sm text-slate-500 font-medium">소속 영업자가 없습니다</p>
+                      <p className="text-[12px] text-slate-400 mt-1">초대 링크를 공유하여 영업자를 등록하세요.</p>
+                      <Button size="sm" variant="outline" className="mt-4 text-xs"
+                        onClick={() => {
+                          const link = `${window.location.origin}/partner/apply?ref=${partner.referralCode}`;
+                          navigator.clipboard.writeText(link);
+                          toast.success('초대 링크가 복사되었습니다!');
+                        }}>
+                        <Copy className="h-3.5 w-3.5 mr-1.5" /> 초대 링크 복사
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {subAgents.map(agent => {
+                        const rate = agentRates[agent.id] ?? editAgencyRate ?? 0.3;
+                        let pgCost2 = 1.5, platformMargin2 = 0.5;
+                        try { const pgs2 = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]'); if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5; const pm2 = parseFloat(localStorage.getItem('faithpay:platform_margin') || ''); if (!isNaN(pm2)) platformMargin2 = pm2; } catch {}
+                        const subAgentFloor = +(pgCost2 + platformMargin2 + rate).toFixed(2);
+                        const isActive = agent.status === 'active';
+
+                        return (
+                          <div
+                            key={agent.id}
+                            onClick={() => setSelectedAgent(agent)}
+                            className="p-4 flex items-center justify-between hover:bg-purple-50/30 transition-colors cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3.5">
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all ${
+                                isActive ? 'bg-purple-100 border-purple-200 text-purple-800' : 'bg-slate-100 border-slate-200 text-slate-400'
+                              }`}>
+                                <span className="font-bold text-base">{agent.name?.charAt(0)}</span>
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="font-bold text-slate-800 text-[13px]">{agent.name}</p>
-                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold
-                                    ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                    {isActive ? '활성' : agent.status === 'pending' ? '대기' : '정지'}
-                                  </span>
+                                  <p className="font-bold text-slate-800 text-[14px] group-hover:text-purple-700 transition-colors">
+                                    {agent.name}
+                                  </p>
+                                  <Badge className={`text-[9.5px] px-1.5 py-0 ${
+                                    isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-100 text-amber-700 hover:bg-amber-100'
+                                  }`}>
+                                    {isActive ? '활성' : '대기/정지'}
+                                  </Badge>
                                 </div>
-                                <p className="text-[10.5px] text-slate-400 mt-0.5">
-                                  <span className="font-mono">{agent.referralCode}</span>
-                                  {agent.email && <> · {agent.email}</>}
+                                <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                                  {agent.referralCode} {agent.email && ` · ${agent.email}`}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {/* 상세보기 버튼 */}
-                              <Button size="sm" className="h-7 text-[11px] px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold"
-                                onClick={() => setSelectedAgent(agent)}>
-                                상세보기 및 수수료 설정 ➔
-                              </Button>
-                              {/* 초대 링크 */}
-                              <Button variant="outline" size="sm" className="h-7 text-[11px] px-2.5"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`${window.location.origin}/partner/dashboard?agent=${agent.referralCode}`);
-                                  toast.success(`${agent.name} 접속 링크가 복사되었습니다.`);
-                                }}>
-                                <Copy className="h-3 w-3 mr-1" /> 링크
-                              </Button>
-                              {/* 상태 토글 */}
-                              <Button variant="outline" size="sm"
-                                className={`h-7 text-[11px] px-2.5 ${isActive
-                                  ? 'border-red-200 text-red-500 hover:bg-red-50'
-                                  : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}`}
-                                onClick={() => {
-                                  toast.success(isActive
-                                    ? `${agent.name} 계정을 정지했습니다.`
-                                    : `${agent.name} 계정을 활성화했습니다.`);
-                                }}>
-                                {isActive ? '정지' : '활성화'}
+
+                            <div className="flex items-center gap-6">
+                              {/* 요약 마진 지표 */}
+                              <div className="text-right hidden sm:block">
+                                <div className="text-[11px] text-slate-400">대리점 수수료 / 영업자 베이스</div>
+                                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                                  <span className="text-[12px] font-bold text-purple-700">대리점 {rate}%</span>
+                                  <span className="text-slate-300">|</span>
+                                  <span className="text-[12px] font-bold text-slate-700">베이스 {subAgentFloor}%</span>
+                                </div>
+                              </div>
+
+                              <Button size="sm" className="bg-purple-600 group-hover:bg-purple-700 text-white font-bold text-xs px-3 shrink-0 shadow-2xs">
+                                상세정보 보기 ➔
                               </Button>
                             </div>
                           </div>
-
-                          {/* 관리 단체 현황 */}
-                          <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-slate-50">
-                            <div className="text-center">
-                              <div className="text-[14px] font-bold text-slate-700">—</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">관리 단체</div>
-                            </div>
-                            <div className="text-center border-x border-slate-200">
-                              <div className="text-[14px] font-bold text-slate-700">—</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">당월 결제액</div>
-                            </div>
-                             <div className="text-center">
-                               <div className="text-[14px] font-bold text-purple-600">{rate}%</div>
-                               <div className="text-[10px] text-slate-400 mt-0.5">대리점 수수료율 (내 수수료)</div>
-                             </div>
-                          </div>
-
-                           {/* 대리점 수수료율 (내 수수료) 입력 */}
-                           <div className="p-3.5 rounded-xl bg-purple-50/50 border border-purple-100 space-y-3">
-                             <div className="flex items-center justify-between gap-3">
-                               <div>
-                                 <p className="text-[12px] font-bold text-purple-950">대리점 수수료율 (내 수수료 %)</p>
-                                 <p className="text-[10.5px] text-purple-700 mt-0.5">
-                                   이 영업자가 유치하는 가맹점의 결제 발생 시 대리점(나)에 귀속되는 고정 수수료율입니다.
-                                 </p>
-                               </div>
-                               <div className="flex items-center gap-1.5 shrink-0">
-                                 <input
-                                   type="number"
-                                   step="0.1"
-                                   min="0"
-                                   max="3"
-                                   value={rate}
-                                   onChange={e => {
-                                     const v = parseFloat(e.target.value);
-                                     if (!isNaN(v)) setAgentRates(prev => ({ ...prev, [agent.id]: v }));
-                                   }}
-                                   className="w-20 px-2.5 py-1.5 rounded-lg border border-purple-200 bg-white text-[13px] font-bold text-right text-purple-800 outline-none focus:border-purple-500 transition-colors"
-                                 />
-                                 <span className="text-[13px] font-bold text-purple-900">%</span>
-                               </div>
-                             </div>
-
-                             {/* 영업자 베이스 수수료 및 안내 */}
-                             <div className="p-3 bg-white rounded-xl border border-purple-100 space-y-2">
-                               <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
-                                 <span>🎯 {agent.name} 님의 베이스 수수료 (하한선):</span>
-                                 <span className="font-mono text-[13px] text-purple-800 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                                   {subAgentFloor}%
-                                 </span>
-                               </div>
-                               <div className="flex items-center gap-1 flex-wrap text-[10px]">
-                                 <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">PG {pgCost2}%</span>
-                                 <span className="text-slate-300">+</span>
-                                 <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">플랫폼 {platformMargin2}%</span>
-                                 <span className="text-slate-300">+</span>
-                                 <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">대리점(나) {rate}%</span>
-                                 <span className="text-slate-300">=</span>
-                                 <span className="font-bold text-purple-900 font-mono">베이스 {subAgentFloor}%</span>
-                               </div>
-                               <p className="text-[10px] text-slate-500 mt-1">
-                                 * {agent.name} 님이 가맹점과 계약할 때 <strong>{subAgentFloor}% 이상</strong>으로 계약해야 영업자 마진 수익이 발생합니다.
-                               </p>
-                             </div>
-                           </div>
-
-                          {/* 저장 버튼 */}
-                          <div className="flex justify-end">
-                            <Button size="sm" disabled={savingAgentId === agent.id}
-                              onClick={async () => {
-                                setSavingAgentId(agent.id);
-                                try {
-                                  const res = await partnerAPI.updateAgentRate(agent.id, rate);
-                                  if (res.success) toast.success(`${agent.name} 대리점 수수료율 ${rate}%로 저장되었습니다.`);
-                                  else toast.error('저장에 실패했습니다.');
-                                } catch { toast.error('저장 중 오류가 발생했습니다.'); }
-                                finally { setSavingAgentId(null); }
-                              }}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
-                              {savingAgentId === agent.id
-                                ? <><RefreshCw className="h-3 w-3 mr-1 animate-spin" />저장 중...</>
-                                : '수수료율 저장'}
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
             )
           )}
