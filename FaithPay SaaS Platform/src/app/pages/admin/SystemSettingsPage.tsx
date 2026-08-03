@@ -2,25 +2,46 @@ import { useState, useEffect } from 'react';
 import { Percent, Save, RefreshCw, Building } from 'lucide-react';
 import { toast } from 'sonner';
 
-/* ── PG사 목록 ── */
-const DEFAULT_PGS = [
-  { id: 'nanopay', name: '나노페이 (NanoPay)', rate: 1.5 },
-  { id: 'toss', name: '토스페이먼츠 (TossPayments)', rate: 1.5 },
-];
+/* ── PG사 목록 및 기본 원가/마진 설정 ── */
+interface PGEntry {
+  id: string;
+  name: string;
+  rate: number;   // PG 원가 수수료율
+  margin: number; // 플랫폼 개별 마진율
+}
 
-interface PGEntry { id: string; name: string; rate: number; }
+const DEFAULT_PGS: PGEntry[] = [
+  { id: 'nanopay', name: '나노페이 (NanoPay)', rate: 1.5, margin: 0.5 },
+  { id: 'toss', name: '토스페이먼츠 (TossPayments)', rate: 1.5, margin: 0.5 },
+];
 
 const STORAGE_KEY        = 'faithpay:pg_rates';
 const STORAGE_KEY_MARGIN = 'faithpay:platform_margin';
 
 function loadRates(): PGEntry[] {
-  try { const r = localStorage.getItem(STORAGE_KEY); if (r) return JSON.parse(r); } catch {}
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (r) {
+      const parsed = JSON.parse(r);
+      return DEFAULT_PGS.map(d => {
+        const found = parsed.find((p: any) => p.id === d.id);
+        return {
+          ...d,
+          rate: found?.rate !== undefined ? Number(found.rate) : d.rate,
+          margin: found?.margin !== undefined ? Number(found.margin) : d.margin,
+        };
+      });
+    }
+  } catch {}
   return DEFAULT_PGS.map(p => ({ ...p }));
 }
-function saveRates(list: PGEntry[]) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
-function loadMargin(): number {
-  const v = parseFloat(localStorage.getItem(STORAGE_KEY_MARGIN) || '');
-  return isNaN(v) ? 0.5 : v;
+
+function saveRates(list: PGEntry[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  // 첫 번째 PG사의 마진율을 하위 호환용 기본 마진으로 저장
+  if (list.length > 0) {
+    localStorage.setItem(STORAGE_KEY_MARGIN, String(list[0].margin));
+  }
 }
 
 /* ── style atoms ── */
@@ -41,12 +62,9 @@ type TabKey = typeof TABS[number]['key'];
 
 /* ── 수수료 설정 탭 ── */
 function FeeSettingsTab() {
-  const [pgs, setPgs]                 = useState<PGEntry[]>([]);
-  const [dirty, setDirty]             = useState(false);
-  const [saving, setSaving]           = useState(false);
-  const [platformMargin, setPM]       = useState(loadMargin);
-  const [marginDirty, setMarginDirty] = useState(false);
-  const [marginSaving, setMarginSaving] = useState(false);
+  const [pgs, setPgs]       = useState<PGEntry[]>([]);
+  const [dirty, setDirty]   = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { setPgs(loadRates()); }, []);
 
@@ -56,129 +74,115 @@ function FeeSettingsTab() {
     setDirty(true);
   };
 
-  const handleSavePG = () => {
+  const updatePgMargin = (id: string, val: string) => {
+    const n = parseFloat(val);
+    setPgs(prev => prev.map(p => p.id === id ? { ...p, margin: isNaN(n) ? p.margin : n } : p));
+    setDirty(true);
+  };
+
+  const handleSaveAll = () => {
     setSaving(true);
-    setTimeout(() => { saveRates(pgs); setDirty(false); setSaving(false); toast.success('PG 원가율이 저장되었습니다.'); }, 400);
-  };
-
-  const handleSaveMargin = () => {
-    setMarginSaving(true);
     setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY_MARGIN, String(platformMargin));
-      setMarginDirty(false); setMarginSaving(false);
-      toast.success(`플랫폼 마진율 ${platformMargin}%로 저장되었습니다.`);
-    }, 300);
+      saveRates(pgs);
+      setDirty(false);
+      setSaving(false);
+      toast.success('PG별 수수료 원가 및 플랫폼 마진율 설정이 저장되었습니다.');
+    }, 400);
   };
-
-  const pgCost = pgs[0]?.rate ?? 1.5;
-  const floorPreview = +(pgCost + platformMargin).toFixed(2);
 
   return (
     <div className="space-y-4">
-
-      {/* PG 원가 수수료율 */}
+      {/* PG사별 원가 및 플랫폼 마진율 통합 관리 */}
       <div className={S.card}>
         <div className={S.head}>
           <Building size={13} className="text-[var(--hm-accent)] shrink-0" />
-          <span className="text-[12.5px] font-semibold text-[var(--hm-ink)]">PG사별 계약 수수료율 (원가)</span>
+          <span className="text-[12.5px] font-semibold text-[var(--hm-ink)]">PG사별 수수료 원가 및 플랫폼 마진율 설정</span>
           <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md ml-2">
             💳 신용카드 전용
           </span>
-          <span className="text-[10.5px] text-[var(--hm-ink-3)] ml-auto">플랫폼이 각 PG사에 지불하는 계약 원가율</span>
+          <span className="text-[10.5px] text-[var(--hm-ink-3)] ml-auto">PG별로 원가율과 플랫폼 수수료 마진율을 각각 독립 설정합니다</span>
         </div>
-        <div className="px-4 py-2 bg-blue-50/60 border-b border-blue-100 text-[11px] text-blue-700 flex items-center gap-2">
-          ℹ️ <span>현재 <strong>신용카드 결제</strong>만 지원합니다. 가상계좌·계좌이체 등 타 수단은 추후 지원 예정입니다.</span>
+
+        <div className="px-4 py-2.5 bg-blue-50/60 border-b border-blue-100 text-[11px] text-blue-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            ℹ️ <span>PG사별로 <strong>[PG 원가율]</strong>과 <strong>[플랫폼 마진율]</strong>을 각각 다르게 지정할 수 있으며, 두 값을 합산한 <strong>최저 하한선</strong>이 영업자 Guardrail 하한으로 적용됩니다.</span>
+          </div>
         </div>
+
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th className={S.th}>PG사</th>
-              <th className={`${S.th} text-right w-20`}>신용카드 수수료율 (%)</th>
-              <th className={`${S.th} text-right w-36`}>가상계좌</th>
-              <th className={`${S.th} text-right w-36`}>계좌이체</th>
+              <th className={S.th}>PG사명</th>
+              <th className={`${S.th} text-right w-36`}>PG 원가 수수료율 (%)</th>
+              <th className={`${S.th} text-right w-36`}>플랫폼 마진율 (%)</th>
+              <th className={`${S.th} text-right w-40`}>최저 계약 하한선 (%)</th>
+              <th className={`${S.th} text-center w-32`}>결제 수단</th>
             </tr>
           </thead>
           <tbody>
-            {pgs.map(pg => (
-              <tr key={pg.id} className="hover:bg-[var(--hm-paper-2)] transition-colors">
-                <td className={S.td}><span className="text-[var(--hm-ink)] font-medium">{pg.name}</span></td>
-                <td className={`${S.td} text-right`}>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <input type="number" step="0.1" min="0" max="20" value={pg.rate}
-                      onChange={e => updatePgRate(pg.id, e.target.value)}
-                      className="w-20 px-2.5 py-1.5 rounded-[7px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)] text-[13px] text-right font-mono text-[var(--hm-ink)] outline-none focus:border-[var(--hm-accent)] transition-colors"
-                    />
-                    <span className="text-[12px] text-[var(--hm-ink-3)]">%</span>
-                  </div>
-                </td>
-                <td className={`${S.td} text-right`}>
-                  <span className="text-[11px] text-[var(--hm-ink-3)] bg-[var(--hm-paper-2)] px-2 py-1 rounded">미지원</span>
-                </td>
-                <td className={`${S.td} text-right`}>
-                  <span className="text-[11px] text-[var(--hm-ink-3)] bg-[var(--hm-paper-2)] px-2 py-1 rounded">미지원</span>
-                </td>
-              </tr>
-            ))}
+            {pgs.map(pg => {
+              const floor = +(pg.rate + pg.margin).toFixed(2);
+              return (
+                <tr key={pg.id} className="hover:bg-[var(--hm-paper-2)] transition-colors">
+                  <td className={S.td}>
+                    <div className="font-bold text-[var(--hm-ink)] text-xs">
+                      {pg.name}
+                    </div>
+                    <div className="text-[10px] text-[var(--hm-ink-3)] font-mono">PG ID: {pg.id}</div>
+                  </td>
+                  <td className={`${S.td} text-right`}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="20"
+                        value={pg.rate}
+                        onChange={e => updatePgRate(pg.id, e.target.value)}
+                        className="w-24 px-2.5 py-1.5 rounded-[7px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)] text-[13px] text-right font-mono font-bold text-[var(--hm-ink)] outline-none focus:border-[var(--hm-accent)] transition-colors"
+                      />
+                      <span className="text-[12px] text-[var(--hm-ink-3)]">%</span>
+                    </div>
+                  </td>
+                  <td className={`${S.td} text-right`}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="10"
+                        value={pg.margin}
+                        onChange={e => updatePgMargin(pg.id, e.target.value)}
+                        className="w-24 px-2.5 py-1.5 rounded-[7px] border border-amber-300 bg-amber-50/50 text-[13px] text-right font-mono font-bold text-amber-800 outline-none focus:border-amber-500 transition-colors"
+                      />
+                      <span className="text-[12px] text-amber-700 font-bold">%</span>
+                    </div>
+                  </td>
+                  <td className={`${S.td} text-right`}>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-800 font-mono font-bold text-xs">
+                      <span>{floor}%</span>
+                      <span className="text-[10px] font-normal text-indigo-600">(원가{pg.rate}% + 마진{pg.margin}%)</span>
+                    </div>
+                  </td>
+                  <td className={`${S.td} text-center`}>
+                    <span className="text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                      💳 신용카드 지원
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        <div className="flex justify-end px-4 py-3 border-t border-[var(--hm-border)]">
-          <button onClick={handleSavePG} disabled={saving || !dirty} className={S.btnSave}>
-            {saving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
-            {saving ? '저장 중...' : 'PG 원가율 저장'}
-          </button>
-        </div>
-      </div>
 
-      {/* 플랫폼 마진율 */}
-      <div className={S.card}>
-        <div className={S.head}>
-          <Percent size={13} className="text-[var(--hm-accent)] shrink-0" />
-          <span className="text-[12.5px] font-semibold text-[var(--hm-ink)]">플랫폼 기본 마진율</span>
-          <span className="text-[10.5px] text-[var(--hm-ink-3)] ml-auto">
-            PG 원가 위에 플랫폼이 가산하는 수익 마진 — 영업자 Guardrail 하한에 실시간 반영
-          </span>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="flex items-start gap-5">
-            {/* 입력 */}
-            <div className="space-y-1">
-              <label className={S.label}>플랫폼 마진율 (%)</label>
-              <div className="flex items-center gap-2">
-                <input type="number" step="0.1" min="0" max="5" value={platformMargin}
-                  onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { setPM(v); setMarginDirty(true); } }}
-                  className="w-24 px-3 py-2 rounded-[7px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)] text-[14px] font-bold text-right text-[var(--hm-ink)] outline-none focus:border-[var(--hm-accent)] transition-colors"
-                />
-                <span className="text-[13px] font-bold text-[var(--hm-ink-2)]">%</span>
-              </div>
-            </div>
-
-            {/* Guardrail 미리보기 */}
-            <div className="flex-1 bg-[var(--hm-paper-2)] rounded-[10px] p-3 space-y-1.5 border border-[var(--hm-border)]">
-              <p className="text-[10.5px] font-bold text-[var(--hm-ink-3)] uppercase tracking-wide">Guardrail 하한선 미리보기</p>
-              {[
-                { label: 'PG 원가',          value: pgCost,          color: 'bg-red-100 text-red-700' },
-                { label: '플랫폼 마진',       value: platformMargin,  color: 'bg-amber-100 text-amber-700' },
-                { label: '기본 합산 하한선',  value: floorPreview,    color: 'bg-indigo-100 text-indigo-700', bold: true },
-              ].map(({ label, value, color, bold }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-[var(--hm-ink-2)]">{label}</span>
-                  <span className={`text-[11.5px] px-1.5 py-0.5 rounded font-mono ${color} ${bold ? 'font-bold' : ''}`}>{value}%</span>
-                </div>
-              ))}
-              <p className="text-[9.5px] text-[var(--hm-ink-3)] mt-1">※ 대리점·영업자 마진 추가 시 하한선 더 높아짐</p>
-            </div>
-          </div>
-
-          <p className="text-[11px] text-[var(--hm-ink-3)] bg-amber-50 border border-amber-100 rounded-[8px] px-3 py-2">
-            ⚠️ 이 값은 영업자가 가맹점 계약 수수료율을 입력할 때 역마진 방지(Guardrail) 하한선 계산에 실시간 반영됩니다.
+        <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 border-t border-[var(--hm-border)]">
+          <p className="text-[11px] text-[var(--hm-ink-3)]">
+            ⚠️ 수정 후 <strong>[설정 저장]</strong> 버튼을 누르면 신규 계약 등록 시 PG별 역마진 방지(Guardrail) 하한선이 자동 계산됩니다.
           </p>
-
-          <div className="flex justify-end">
-            <button onClick={handleSaveMargin} disabled={marginSaving || !marginDirty} className={S.btnSave}>
-              {marginSaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
-              {marginSaving ? '저장 중...' : '마진율 저장'}
-            </button>
-          </div>
+          <button onClick={handleSaveAll} disabled={saving || !dirty} className={S.btnSave}>
+            {saving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+            {saving ? '저장 중...' : 'PG사별 수수료 & 마진 저장'}
+          </button>
         </div>
       </div>
     </div>
