@@ -675,10 +675,10 @@ export default function PartnerDashboard() {
                               <div className="text-[14px] font-bold text-slate-700">—</div>
                               <div className="text-[10px] text-slate-400 mt-0.5">당월 결제액</div>
                             </div>
-                            <div className="text-center">
-                              <div className="text-[14px] font-bold text-emerald-600">{agentEffective}%</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">실효 수수료율</div>
-                            </div>
+                             <div className="text-center">
+                               <div className="text-[14px] font-bold text-emerald-600">{rate}%</div>
+                               <div className="text-[10px] text-slate-400 mt-0.5">영업자 수수료율</div>
+                             </div>
                           </div>
 
                            {/* 절대 수수료율 직접 입력 */}
