@@ -44,25 +44,29 @@ type TabKey = typeof TABS[number]['key'];
 export default function SettlementCenterPage() {
   const { tenants: appTenants } = useApp();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
-  const [tenants, setTenants] = useState<any[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [tenants, setTenants] = useState<any[]>(appTenants || []);
+  const [selectedTenantId, setSelectedTenantId] = useState(appTenants[0]?.id || '');
   const [testAmount, setTestAmount] = useState<number>(100000);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    // 1. AppContext tenants 우선 활용
-    if (appTenants && appTenants.length > 0) {
-      setTenants(appTenants);
-      setSelectedTenantId(appTenants[0].id);
-    }
-    // 2. API 직접 로드로 갱신
+    // DB 및 AppContext 가맹점 목록 전체 로드
     tenantAPI.getAll().then(res => {
       if (res.success && Array.isArray(res.data) && res.data.length > 0) {
         setTenants(res.data);
-        setSelectedTenantId(prev => prev || res.data[0].id);
+        if (!selectedTenantId) setSelectedTenantId(res.data[0].id);
+      } else if (appTenants && appTenants.length > 0) {
+        setTenants(appTenants);
+        if (!selectedTenantId) setSelectedTenantId(appTenants[0].id);
       }
-    }).catch(console.error);
+    }).catch(() => {
+      if (appTenants && appTenants.length > 0) {
+        setTenants(appTenants);
+        if (!selectedTenantId) setSelectedTenantId(appTenants[0].id);
+      }
+    });
   }, [appTenants]);
+
 
 
   const handleCreateTestDonation = async () => {
@@ -162,14 +166,15 @@ export default function SettlementCenterPage() {
               <select
                 value={selectedTenantId}
                 onChange={(e) => setSelectedTenantId(e.target.value)}
-                className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+                className="bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded border border-slate-700 outline-none cursor-pointer"
               >
                 {tenants.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-slate-900 text-white">
+                  <option key={t.id} value={t.id} className="bg-slate-900 text-white font-bold py-1">
                     {t.name}
                   </option>
                 ))}
               </select>
+
             </div>
 
             <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
