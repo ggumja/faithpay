@@ -166,14 +166,15 @@ export default function SettlementCenterPage() {
               <select
                 value={selectedTenantId}
                 onChange={(e) => setSelectedTenantId(e.target.value)}
-                className="bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded border border-slate-700 outline-none cursor-pointer"
+                className="bg-slate-800 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-600 outline-none cursor-pointer max-h-60"
               >
                 {tenants.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-slate-900 text-white font-bold py-1">
+                  <option key={t.id} value={t.id} className="bg-slate-900 text-white font-bold py-1.5">
                     {t.name}
                   </option>
                 ))}
               </select>
+
 
             </div>
 
