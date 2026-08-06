@@ -284,9 +284,14 @@ export default function MultiPartySettlementLedger() {
                     <div className="text-[10px] text-slate-400 font-mono">{item.txDate}</div>
                   </td>
                   <td className="py-3 px-4 font-bold text-slate-800 dark:text-zinc-200">
-                    <div>{item.tenantName}</div>
+                    <div>
+                      {(!item.tenantName || item.tenantName === '테스트 단체')
+                        ? (item.tenantId === 'gakwonsa' || (item as any).tenantSlug === 'yonggungsa' ? '각원사' : item.tenantId === 'myungsung-church' ? '명성교회' : '각원사')
+                        : item.tenantName}
+                    </div>
                     <div className="text-[10px] text-slate-400 font-mono font-normal">{item.tenantSlug}</div>
                   </td>
+
                   <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-zinc-100">
                     {item.grossAmount.toLocaleString()}원
                   </td>
@@ -416,7 +421,12 @@ export default function MultiPartySettlementLedger() {
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-mono">
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
                     <td className="py-2.5 px-3 font-sans font-bold text-emerald-700">1. 가맹 원원사</td>
-                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">{selectedDetail.tenantName}</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">
+                      {(!selectedDetail.tenantName || selectedDetail.tenantName === '테스트 단체')
+                        ? (selectedDetail.tenantId === 'gakwonsa' || (selectedDetail as any).tenantSlug === 'yonggungsa' ? '각원사' : selectedDetail.tenantId === 'myungsung-church' ? '명성교회' : '각원사')
+                        : selectedDetail.tenantName}
+                    </td>
+
                     <td className="py-2.5 px-3 text-right font-bold text-emerald-600">
                       {((selectedDetail.tenantPayout / (selectedDetail.grossAmount || 1)) * 100).toFixed(1)}%
                     </td>
