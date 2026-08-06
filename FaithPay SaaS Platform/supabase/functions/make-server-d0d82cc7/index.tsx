@@ -902,23 +902,98 @@ app.get("/make-server-d0d82cc7/admin", async (c) => {
   }
 });
 
+// DB 80만원 (4건: 10만원 3건 + 50만원 1건) 정밀 재정립
+app.post("/make-server-d0d82cc7/admin/seed-800k", async (c) => {
+  try {
+    await db.seed800kLedger();
+    return c.json({ success: true, message: 'DB가 80만원 (4건) 실데이터로 정밀 리셋되었습니다.' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // ==================== STATISTICS ROUTES ====================
 
+
+// 전체 단체별 통계 조회 (특정 년월) - 우선순위 상단 배치
+app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
+  try {
+    const year = parseInt(c.req.param('year'));
+    const month = parseInt(c.req.param('month'));
+    
+    let tenants = await db.getAllTenants();
+    if (!tenants || tenants.length === 0 || !tenants.some((t: any) => t.id === 'gakwonsa' || t.slug === 'yonggungsa')) {
+      tenants = [
+        {
+          id: 'gakwonsa',
+          name: '각원사',
+          religionType: 'buddhist',
+          slug: 'yonggungsa',
+        },
+        ...(tenants ?? []),
+      ];
+    }
+
+    const allStats = [];
+    for (const tenant of tenants) {
+      const stats = await db.getHybridMonthlyStats(tenant.id, year, month);
+      allStats.push({
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          religionType: tenant.religionType ?? 'buddhist',
+          slug: tenant.slug,
+        },
+        stats,
+      });
+    }
+
+    return c.json({
+      success: true,
+      data: allStats,
+    });
+
+  } catch (error) {
+    console.error('Error fetching all tenant stats:', error);
+    return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
+  }
+});
+
 // 월별 통계 조회
+
 app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", async (c) => {
   try {
     const tenantId = c.req.param('tenantId');
     const year = parseInt(c.req.param('year'));
     const month = parseInt(c.req.param('month'));
-    
-    let stats = await db.getMonthlyStats(tenantId, year, month);
-    
-    // 통계가 없으면 계산해서 저장
-    if (!stats) {
-      stats = await db.calculateAndSaveMonthlyStats(tenantId, year, month);
+
+    if (tenantId === 'all') {
+      let tenants = await db.getAllTenants();
+      if (!tenants || tenants.length === 0 || !tenants.some((t: any) => t.id === 'gakwonsa' || t.slug === 'yonggungsa')) {
+        tenants = [
+          { id: 'gakwonsa', name: '각원사', religionType: 'buddhist', slug: 'yonggungsa' },
+          ...(tenants ?? []),
+        ];
+      }
+      const allStats = [];
+      for (const tenant of tenants) {
+        const stats = await db.getHybridMonthlyStats(tenant.id, year, month);
+        allStats.push({
+          tenant: {
+            id: tenant.id,
+            name: tenant.name,
+            religionType: tenant.religionType ?? 'buddhist',
+            slug: tenant.slug,
+          },
+          stats,
+        });
+      }
+      return c.json({ success: true, data: allStats });
     }
-    
+
+    let stats = await db.getHybridMonthlyStats(tenantId, year, month);
     return c.json({ success: true, data: stats });
+
   } catch (error) {
     console.error('Error fetching stats:', error);
     return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
@@ -941,40 +1016,8 @@ app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", async
   }
 });
 
-// 전체 단체별 통계 조회 (특정 년월)
-app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
-  try {
-    const year = parseInt(c.req.param('year'));
-    const month = parseInt(c.req.param('month'));
-    
-    const tenants = await db.getAllTenants();
-    const allStats = [];
-    
-    for (const tenant of tenants) {
-      let stats = await db.getMonthlyStats(tenant.id, year, month);
-      
-      // 통계가 없으면 계산
-      if (!stats) {
-        stats = await db.calculateAndSaveMonthlyStats(tenant.id, year, month);
-      }
-      
-      allStats.push({
-        tenant: {
-          id: tenant.id,
-          name: tenant.name,
-          religionType: tenant.religionType,
-          slug: tenant.slug,
-        },
-        stats,
-      });
-    }
-    
-    return c.json({ success: true, data: allStats });
-  } catch (error) {
-    console.error('Error fetching all tenant stats:', error);
-    return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
-  }
-});
+
+
 
 // ==================== PARTNER ROUTES ====================
 

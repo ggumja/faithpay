@@ -33,6 +33,8 @@ import SettlementCenterPage from "./pages/admin/SettlementCenterPage";
 import PartnerManagement from "./pages/admin/PartnerManagement";
 import CommissionStatsPage from "./pages/admin/CommissionStatsPage";
 import MultiPartySettlementLedger from "./pages/admin/components/MultiPartySettlementLedger";
+import TenantStatsPage from "./pages/admin/TenantStatsPage";
+
 
 
 export const router = createBrowserRouter([

@@ -26,7 +26,9 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../../api/client';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+
 
 interface TenantStats {
   tenant: {
@@ -64,92 +66,36 @@ export default function TenantStatsPage() {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d0d82cc7/stats/all/${selectedYear}/${selectedMonth}`,
+        `${API_BASE_URL}/stats/all/${selectedYear}/${selectedMonth}`,
         {
           headers: {
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${publicAnonKey}`,
           },
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch statistics');
-      }
 
       const result = await response.json();
-      console.log('Stats API response:', result);
-      
-      const gakwonsaFallback: TenantStats = {
-        tenant: {
-          id: 'gakwonsa',
-          name: '각원사',
-          religionType: 'buddhist',
-          slug: 'yonggungsa',
-        },
-        stats: {
-          tenantId: 'gakwonsa',
-          year: selectedYear,
-          month: selectedMonth,
-          totalAmount: 300000,
-          totalCount: 3,
-          recurringAmount: 0,
-          recurringCount: 0,
-          oneTimeAmount: 300000,
-          oneTimeCount: 3,
-          byType: {
-            '주일 헌금': { amount: 150000, count: 1 },
-            '십일조 헌금': { amount: 90000, count: 1 },
-            '건축 헌금': { amount: 60000, count: 1 },
-          },
-          byPaymentMethod: {
-            '신용카드': { amount: 150000, count: 1 },
-            '카카오페이': { amount: 90000, count: 1 },
-            '토스페이': { amount: 60000, count: 1 },
-          },
-        },
-      };
-
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+      if (result.success && Array.isArray(result.data)) {
         setAllStats(result.data);
       } else {
-        setAllStats([gakwonsaFallback]);
+        setAllStats([]);
       }
+
+
+
+
+      setAllStats(statsList);
+
     } catch (error) {
       console.error('Error fetching stats:', error);
-      setAllStats([
-        {
-          tenant: {
-            id: 'gakwonsa',
-            name: '각원사',
-            religionType: 'buddhist',
-            slug: 'yonggungsa',
-          },
-          stats: {
-            tenantId: 'gakwonsa',
-            year: selectedYear,
-            month: selectedMonth,
-            totalAmount: 300000,
-            totalCount: 3,
-            recurringAmount: 0,
-            recurringCount: 0,
-            oneTimeAmount: 300000,
-            oneTimeCount: 3,
-            byType: {
-              '주일 헌금': { amount: 150000, count: 1 },
-              '십일조 헌금': { amount: 90000, count: 1 },
-              '건축 헌금': { amount: 60000, count: 1 },
-            },
-            byPaymentMethod: {
-              '신용카드': { amount: 150000, count: 1 },
-              '카카오페이': { amount: 90000, count: 1 },
-              '토스페이': { amount: 60000, count: 1 },
-            },
-          },
-        },
-      ]);
+      setAllStats([]);
+      toast.error('통계를 불러오는데 실패했습니다');
     } finally {
       setIsLoading(false);
     }
+
 
   };
 
@@ -186,10 +132,22 @@ export default function TenantStatsPage() {
       {/* Header Title & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">단체별 통계</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">단체별 통계</h1>
+            {`${selectedYear}-${String(selectedMonth).padStart(2, '0')}` < new Date().toISOString().slice(0, 7) ? (
+              <Badge variant="outline" className="bg-slate-100 text-slate-700 dark:bg-zinc-800 border-slate-300 text-[10.5px]">
+                🔒 마감 집계 완료 (캐시 스토어 직통)
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 border-emerald-300 text-[10.5px]">
+                ⚡ 당월 실시간 집계중 (하이브리드 갱신)
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">등록된 단체별 기부금/헌금 통계 및 수단별 집계 현황을 분석합니다.</p>
         </div>
         <div className="flex items-center gap-2">
+
 
           <Select
             value={selectedYear.toString()}

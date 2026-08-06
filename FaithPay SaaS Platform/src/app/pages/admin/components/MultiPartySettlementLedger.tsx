@@ -53,9 +53,13 @@ export default function MultiPartySettlementLedger() {
       const res = await partnerAPI.getLedger(queryParams);
       if (res.success && Array.isArray(res.data)) {
         setLedger(res.data);
+
       } else {
         setApiError(res.error ?? '데이터 조회 실패');
       }
+
+
+
     } catch (e: any) {
       setApiError(e.message || '원장 데이터 조회 중 오류가 발생했습니다.');
     } finally {
