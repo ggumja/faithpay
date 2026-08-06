@@ -724,6 +724,18 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'>):
   return newPartner;
 }
 
+export async function updatePartnerStatus(id: string, status: 'active' | 'suspended' | 'pending'): Promise<Partner | null> {
+  const partner = await getPartnerById(id);
+  if (!partner) return null;
+  const updated: Partner = {
+    ...partner,
+    status,
+  };
+  await kv.set(`partner:${id}`, updated);
+  return updated;
+}
+
+
 export async function getCommissionsByPartner(partnerId: string): Promise<PartnerCommission[]> {
   const stored = await kv.getByPrefix<PartnerCommission>(`commission:${partnerId}:`);
   if (stored && stored.length > 0) {

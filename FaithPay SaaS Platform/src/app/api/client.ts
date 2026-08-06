@@ -477,7 +477,16 @@ export const partnerAPI = {
   },
 
   /** updateProfile: 연락정보 + 정산계좌 수정 */
+
+  /** partnerAPI.updateStatus: 파트너 승인 / 정지 상태 갱신 */
+  async updateStatus(id: string, status: 'active' | 'suspended' | 'pending'): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>(`/partners/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
 };
+
 
 
 
