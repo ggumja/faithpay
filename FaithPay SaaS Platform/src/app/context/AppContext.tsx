@@ -320,30 +320,8 @@ const defaultTenants: Tenant[] = [
   },
 ];
 
-// 대리점/영업자 시드 6개 단체 보장
-let parsedTenants: Tenant[] = defaultTenants;
-if (typeof window !== 'undefined') {
-  const saved = localStorage.getItem('faithpay_tenants');
-  if (saved) {
-    try {
-      const arr = JSON.parse(saved);
-      if (Array.isArray(arr) && arr.length >= 6) {
-        parsedTenants = arr;
-      } else {
-        localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
-        parsedTenants = defaultTenants;
-      }
-    } catch {
-      localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
-      parsedTenants = defaultTenants;
-    }
-  } else {
-    localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
-  }
-}
+export const mockTenants: Tenant[] = defaultTenants;
 
-
-export const mockTenants: Tenant[] = parsedTenants;
 
 export const mockDonationItems: Record<string, DonationItem[]> = {
   'protestant': [

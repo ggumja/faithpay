@@ -59,7 +59,8 @@ const PENDING_MOCK: Tenant[] = []; // API 로드 전 빈 배열
 export default function SystemAdminDashboard() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { tenants, updateTenantInfo } = useApp();
+  const { tenants: appTenants, updateTenantInfo } = useApp();
+  const [dbTenants, setDbTenants] = useState<Tenant[]>([]);
   const [selectedForApproval, setSelectedForApproval] = useState<Tenant | null>(null);
   const [pendingList, setPendingList] = useState<Tenant[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
@@ -67,6 +68,19 @@ export default function SystemAdminDashboard() {
 
   const active = useActiveKey(location.pathname);
   const meta   = PAGE_META[active];
+
+  // 전체 단체 DB 직접 로드
+  useEffect(() => {
+    tenantAPI.getAll().then(res => {
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setDbTenants(res.data);
+      } else if (appTenants && appTenants.length > 0) {
+        setDbTenants(appTenants);
+      }
+    }).catch(() => {
+      if (appTenants && appTenants.length > 0) setDbTenants(appTenants);
+    });
+  }, [appTenants]);
 
   // 승인 대기 목록 API 로드
   useEffect(() => {
@@ -81,6 +95,9 @@ export default function SystemAdminDashboard() {
         .finally(() => setPendingLoading(false));
     }
   }, [active]);
+
+  const tenants = dbTenants.length > 0 ? dbTenants : appTenants;
+
 
   const religion = (t: string) =>
     ({ protestant: '기독교', catholic: '천주교', buddhist: '불교' }[t] ?? t);
