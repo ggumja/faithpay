@@ -364,75 +364,93 @@ export default function MultiPartySettlementLedger() {
             </div>
 
             {/* 정산 구성 통계 */}
-            <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-800 grid grid-cols-3 gap-3 text-xs">
+            <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-800 grid grid-cols-4 gap-3 text-xs">
               <div>
-                <span className="text-slate-500 block text-[11px]">총 결제 건수 / 금액</span>
+                <span className="text-slate-500 block text-[11px]">총 결제 금액</span>
                 <span className="font-bold font-mono text-slate-900 dark:text-zinc-100 text-sm">
-                  3건 ({selectedDetail.grossAmount.toLocaleString()}원)
+                  {selectedDetail.grossAmount.toLocaleString()}원
                 </span>
               </div>
               <div>
-                <span className="text-emerald-600 block text-[11px]">원원사 실입금액 (98%)</span>
+                <span className="text-emerald-600 block text-[11px]">가맹 단체 입금액</span>
                 <span className="font-bold font-mono text-emerald-600 text-sm">
                   {selectedDetail.tenantPayout.toLocaleString()}원
                 </span>
               </div>
               <div>
-                <span className="text-purple-600 block text-[11px]">플랫폼 수수료 (0.5%)</span>
+                <span className="text-purple-600 block text-[11px]">플랫폼 수익 (0.5%)</span>
                 <span className="font-bold font-mono text-purple-600 text-sm">
                   {selectedDetail.platformFee.toLocaleString()}원
                 </span>
               </div>
+              <div>
+                <span className="text-indigo-600 block text-[11px]">대리점 / 영업자 정산</span>
+                <span className="font-bold font-mono text-indigo-600 text-sm">
+                  {(selectedDetail.partnerFee + selectedDetail.agentFee).toLocaleString()}원
+                </span>
+              </div>
             </div>
 
-            {/* 세부 결제 건별 테이블 */}
+            {/* 실데이터 4자간 자동 수수료 분구 명세 */}
             <div className="p-4 overflow-y-auto flex-1 space-y-3">
               <h4 className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                📦 정산에 포함된 개별 헌금/결제 승인 내역 (3건)
+                ⚡ 4자간 자동 수수료 분구 명세 (Split Detail)
               </h4>
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100 dark:bg-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400">
-                    <th className="py-2 px-3">결제 일시</th>
-                    <th className="py-2 px-3">헌금자 성명</th>
-                    <th className="py-2 px-3">헌금 종류</th>
-                    <th className="py-2 px-3">결제 수단</th>
-                    <th className="py-2 px-3 text-right">결제 승인액</th>
-                    <th className="py-2 px-3 text-right">원원사 입금액</th>
-                    <th className="py-2 px-3 text-right">플랫폼 수익</th>
+                    <th className="py-2 px-3">분구 대상 (4자)</th>
+                    <th className="py-2 px-3">역할 / 명칭</th>
+                    <th className="py-2 px-3 text-right">계약 수수료율</th>
+                    <th className="py-2 px-3 text-right">분할 수수료액</th>
+                    <th className="py-2 px-3 text-center">정산 상태</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-mono">
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 text-slate-500">2026-08-06 14:32:10</td>
-                    <td className="py-2.5 px-3 font-sans font-bold text-slate-800 dark:text-zinc-200">홍길동 성도</td>
-                    <td className="py-2.5 px-3 font-sans">주일 헌금</td>
-                    <td className="py-2.5 px-3 font-sans">신용카드 (신한)</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{(selectedDetail.grossAmount * 0.5).toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">{(selectedDetail.tenantPayout * 0.5).toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-right text-purple-600 font-bold">{(selectedDetail.platformFee * 0.5).toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 font-sans font-bold text-emerald-700">1. 가맹 원원사</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">{selectedDetail.tenantName}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-600">
+                      {((selectedDetail.tenantPayout / (selectedDetail.grossAmount || 1)) * 100).toFixed(1)}%
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">{selectedDetail.tenantPayout.toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">지급 완료</span>
+                    </td>
                   </tr>
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 text-slate-500">2026-08-06 14:15:02</td>
-                    <td className="py-2.5 px-3 font-sans font-bold text-slate-800 dark:text-zinc-200">김미선 집사</td>
-                    <td className="py-2.5 px-3 font-sans">십일조 헌금</td>
-                    <td className="py-2.5 px-3 font-sans">카카오페이</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{(selectedDetail.grossAmount * 0.3).toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">{(selectedDetail.tenantPayout * 0.3).toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-right text-purple-600 font-bold">{(selectedDetail.platformFee * 0.3).toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 font-sans font-bold text-purple-700">2. FaithPay 본사</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">플랫폼 운영사</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-purple-600">0.5%</td>
+                    <td className="py-2.5 px-3 text-right text-purple-600 font-bold">{selectedDetail.platformFee.toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">플랫폼 귀속</span>
+                    </td>
                   </tr>
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 text-slate-500">2026-08-06 13:50:44</td>
-                    <td className="py-2.5 px-3 font-sans font-bold text-slate-800 dark:text-zinc-200">무명 성도</td>
-                    <td className="py-2.5 px-3 font-sans">건축 헌금</td>
-                    <td className="py-2.5 px-3 font-sans">토스페이</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{(selectedDetail.grossAmount * 0.2).toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">{(selectedDetail.tenantPayout * 0.2).toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-right text-purple-600 font-bold">{(selectedDetail.platformFee * 0.2).toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 font-sans font-bold text-indigo-700">3. 영업 파트너</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">총판 / 영업자 수수료</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-indigo-600">
+                      {(((selectedDetail.partnerFee + selectedDetail.agentFee) / (selectedDetail.grossAmount || 1)) * 100).toFixed(1)}%
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-indigo-600 font-bold">{(selectedDetail.partnerFee + selectedDetail.agentFee).toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">정산 대기</span>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                    <td className="py-2.5 px-3 font-sans font-bold text-slate-600">4. 결제 대행사 (PG)</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-600">카드/전자결제원가 (PG사)</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-500">1.5%</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 font-bold">{selectedDetail.pgFee.toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">원가 정산</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+
 
             {/* 모달 하단 푸터 */}
             <div className="p-4 bg-slate-50 dark:bg-zinc-800 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
