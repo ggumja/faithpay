@@ -437,18 +437,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchTenants]);
 
   const updateTenantBanners = useCallback(async (tenantId: string, bannerImages: string[]) => {
-    // 로컬 State & LocalStorage 동기화 (QuotaExceededError 방지)
-    const mockIdx = mockTenants.findIndex(t => t.id === tenantId);
-    if (mockIdx !== -1) {
-      mockTenants[mockIdx] = { ...mockTenants[mockIdx], bannerImages };
-      try {
-        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-      } catch (storageErr) {
-        console.warn('LocalStorage quota exceeded for bannerImages:', storageErr);
-        // 용량 초과 시 기본 데이터 저장은 건너뛰고 인메모리 state는 정상 작동
-      }
-      setTenants([...mockTenants]);
-    }
+    // DB API 연동 업데이트
+    setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, bannerImages } : t));
 
     try {
       const response = await tenantAPI.updateTenantBanners(tenantId, bannerImages);
@@ -467,13 +457,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const response = await tenantAPI.updateTenantInfo(tenantId, tenant);
       if (response.success && response.data) {
-        const mockIdx = mockTenants.findIndex(t => t.id === tenantId);
-        if (mockIdx !== -1) {
-          mockTenants[mockIdx] = { ...mockTenants[mockIdx], ...response.data };
-          localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-          setTenants([...mockTenants]);
-          toast.success('단체 정보가 DB에 저장되었습니다.');
-        }
+        setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, ...response.data } : t));
+        toast.success('단체 정보가 DB에 저장되었습니다.');
       } else {
         toast.error('DB 정보 저장 실패: ' + response.error);
       }
@@ -482,6 +467,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toast.error('DB 정보 저장 중 에러가 발생했습니다.');
     }
   }, []);
+
 
   const addTenant = useCallback(async (newTenantData: Omit<Tenant, 'createdAt' | 'updatedAt'>) => {
     const newId = newTenantData.id || (mockTenants.length + 1).toString();
@@ -504,9 +490,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const response = await tenantAPI.addTenant(newTenant);
       if (response.success && response.data) {
-        mockTenants.push(response.data!);
-        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-        setTenants([...mockTenants]);
+        setTenants(prev => [...prev, response.data!]);
         toast.success('단체가 DB에 성공적으로 등록되었습니다.');
       } else {
         toast.error('DB 단체 등록 실패: ' + response.error);
@@ -516,6 +500,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toast.error('DB 단체 등록 중 에러가 발생했습니다.');
     }
   }, []);
+
 
   // 테넌트별 봉헌 항목 상태 및 localStorage 초기화
   const [allDonationItems, setAllDonationItems] = useState<Record<string, DonationItem[]>>(() => {
