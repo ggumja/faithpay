@@ -141,7 +141,14 @@ export default function MultiPartySettlementLedger() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* ── 페이지 상단 헤더 ── */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">거래이력 (거래원장)</h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">영업자-단체-대리점별 전체 결제 및 수수료 분배 내역을 실시간으로 조회합니다.</p>
+      </div>
+
       {/* ── 필터 및 기간 검색 바 ── */}
+
       <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 space-y-3 shadow-2xs">
         {/* 상단 검색 및 상태 필터 */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-3">

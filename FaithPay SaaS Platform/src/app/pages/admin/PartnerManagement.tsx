@@ -199,8 +199,14 @@ export default function PartnerManagement() {
   /* ══════════════════════════════════════════════ */
   return (
     <div className="space-y-5">
+      {/* 페이지 상단 헤더 */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">영업 파트너 관리</h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">영업 파트너(대리점/영업자) 목록 및 수수료 구조를 관리합니다.</p>
+      </div>
 
       {/* KPI 카드 */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: '영업 대리점', value: `${agencies.length}개`, color: 'text-purple-600', bg: 'bg-purple-50', icon: Building2 },
