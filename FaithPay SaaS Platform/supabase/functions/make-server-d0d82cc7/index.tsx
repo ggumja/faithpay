@@ -1034,26 +1034,18 @@ app.post("/make-server-d0d82cc7/partners", async (c) => {
   }
 });
 
-// 영업자 수수료 내역 조회
+// 영업자 수수료 내역 조회 (PostgreSQL partner_commissions 테이블 직접 조회)
 app.get("/make-server-d0d82cc7/partners/:id/commissions", async (c) => {
   try {
     const partnerId = c.req.param('id');
-    // PostgreSQL 원장을 우선 조회, 없으면 KV 기반 계산으로 폴백
-    try {
-      const pgData = await db.getCommissionsByPartnerPg(partnerId);
-      if (pgData && pgData.length > 0) {
-        return c.json({ success: true, data: pgData });
-      }
-    } catch (pgErr) {
-      console.warn('PG commissions fallback to KV:', pgErr);
-    }
-    const commissions = await db.getCommissionsByPartner(partnerId);
-    return c.json({ success: true, data: commissions });
+    const pgData = await db.getCommissionsByPartnerPg(partnerId);
+    return c.json({ success: true, data: pgData ?? [] });
   } catch (error) {
     console.error('Error fetching commissions:', error);
     return c.json({ success: false, error: 'Failed to fetch commissions' }, 500);
   }
 });
+
 
 // 대리점 정산 배치 + 영업자별 지급 명세 조회
 app.get("/make-server-d0d82cc7/partners/:id/settlements", async (c) => {

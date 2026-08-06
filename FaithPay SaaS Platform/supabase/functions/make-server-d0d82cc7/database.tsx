@@ -985,31 +985,38 @@ export async function getAgentSettlementsByPartner(agentId: string): Promise<Par
  * 수수료 원장 PostgreSQL 직접 조회
  */
 export async function getCommissionsByPartnerPg(partnerId: string): Promise<any[]> {
-  const supabase = pgClient();
-  const { data, error } = await supabase
-    .from('partner_commissions')
-    .select('*')
-    .eq('partner_id', partnerId)
-    .order('created_at', { ascending: false });
+  try {
+    const supabase = pgClient();
+    const { data, error } = await supabase
+      .from('partner_commissions')
+      .select('*')
+      .eq('partner_id', partnerId)
+      .order('created_at', { ascending: false });
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((r: any) => ({
-    id: r.id,
-    partnerId: r.partner_id,
-    partnerRole: r.partner_role ?? 'sales_agent',
-    tenantId: r.tenant_id,
-    tenantName: r.tenant_name ?? '',
-    donationId: r.donation_id,
-    donationAmount: Number(r.donation_amount),
-    commissionAmount: Number(r.commission_amount),
-    contractRate: Number(r.contract_rate ?? 3.0),
-    agencyRate: Number(r.agency_rate ?? 0.5),
-    agentRate: Number(r.agent_rate ?? 0),
-    settlementStatus: r.settlement_status,
-    settlementMonth: r.settlement_month,
-    createdAt: r.created_at,
-  }));
+    if (error) return [];
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      partnerId: r.partner_id,
+      partnerRole: r.partner_role ?? 'sales_agent',
+      tenantId: r.tenant_id,
+      tenantName: r.tenant_name ?? '',
+      donationId: r.donation_id,
+      donationAmount: Number(r.donation_amount),
+      commissionAmount: Number(r.commission_amount),
+      contractRate: Number(r.contract_rate ?? 3.0),
+      agencyRate: Number(r.agency_rate ?? 0.5),
+      agentRate: Number(r.agent_rate ?? 0),
+      status: r.settlement_status ?? 'pending',
+      settlementStatus: r.settlement_status ?? 'pending',
+      settlementMonth: r.settlement_month,
+      createdAt: r.created_at,
+    }));
+  } catch {
+    return [];
+  }
 }
+
+
 
 /**
  * 파트너가 관할하는 단체(가맹점) 목록 조회 — partner_id 기준
