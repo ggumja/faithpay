@@ -85,10 +85,41 @@ export default function SystemAdminDashboard() {
   const religion = (t: string) =>
     ({ protestant: '기독교', catholic: '천주교', buddhist: '불교' }[t] ?? t);
 
-  const tList = tenants.map(t => ({
-    ...t,
-    live: t.slug === 'gakwonsa' || t.paymentConfig?.isActive || false,
-  }));
+  const tList = tenants.map(t => {
+    const isGakwonsa = t.slug === 'gakwonsa' || t.name.includes('각원사');
+    const isMyungsung = t.slug === 'myungsung-church' || t.name.includes('명성교회');
+
+    const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : (
+      isGakwonsa ? {
+        pgProvider: 'nanopay',
+        apiKey: '2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL',
+        secretKey: 'UfS2tccZNyz3HYxXJDhZH52Ujorqp5km',
+        mid: '240000006',
+        loginId: 'smbtestshop',
+        iv: 'vgqTyX5tBqnMXB68',
+        ver: 'smbtest',
+        enableCard: true,
+        enableEasyPayment: true,
+        enableVBank: true,
+        isActive: true,
+      } : isMyungsung ? {
+        pgProvider: 'toss',
+        apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+        secretKey: 'test_sk_zXL1G2MndWB257W3b983wnqwB86e',
+        mid: 'SELLER_MYUNGSUNG',
+        enableCard: true,
+        enableEasyPayment: true,
+        enableVBank: true,
+        isActive: true,
+      } : undefined
+    );
+
+    return {
+      ...t,
+      paymentConfig,
+      live: isGakwonsa || isMyungsung || (paymentConfig?.isActive ?? false),
+    };
+  });
   const liveCnt = tList.filter(t => t.live).length;
 
   // ── 대리점별 단체 묶음 그룹 생성 ──────────────────────────────────
@@ -241,12 +272,12 @@ export default function SystemAdminDashboard() {
                       <TableCell className={S.td}>
                         {t.paymentConfig?.pgProvider === 'toss'
                           ? <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
-                          : t.slug === 'gakwonsa' || t.paymentConfig?.pgProvider === 'nanopay' || t.paymentConfig?.isActive || true
-                          ? <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>
-                          : <span className="text-[11px] text-[var(--hm-ink-3)]">미설정</span>}
+                          : t.paymentConfig?.pgProvider === 'nanopay'
+                          ? <span className={S.chip('bg-purple-50','text-purple-700','border-purple-200')}>나노PG</span>
+                          : <span className="text-[11px] text-slate-400 font-medium font-sans">미지정</span>}
                       </TableCell>
                       <TableCell className={`${S.td} font-mono text-[11.5px] text-[var(--hm-ink-2)]`}>
-                        {t.slug === 'gakwonsa' ? '240000006' : t.paymentConfig?.mid ?? <span className="text-[var(--hm-ink-3)]">240000006</span>}
+                        {t.paymentConfig?.mid ? t.paymentConfig.mid : <span className="text-slate-400 font-sans">-</span>}
                       </TableCell>
                       <TableCell className={S.td}>
                         {t.live
@@ -338,9 +369,11 @@ export default function SystemAdminDashboard() {
                             {t.agentName}
                           </TableCell>
                           <TableCell className="text-xs">
-                            {t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss'
+                            {t.paymentConfig?.pgProvider === 'toss'
                               ? <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
-                              : <span className={S.chip('bg-[var(--hm-accent-bg)]','text-[var(--hm-accent)]','border-[var(--hm-accent-border)]')}>나노PG</span>}
+                              : t.paymentConfig?.pgProvider === 'nanopay'
+                              ? <span className={S.chip('bg-purple-50','text-purple-700','border-purple-200')}>나노PG</span>
+                              : <span className="text-[11px] text-slate-400 font-medium font-sans">미지정</span>}
                           </TableCell>
                           <TableCell className="text-xs font-bold font-mono text-emerald-700">
                             {t.contractRate}%

@@ -122,7 +122,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                           </Badge>
                         </div>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          도메인: faithpay.kr/{t.slug} · 종교: {t.religionType === 'buddhist' ? '불교' : t.religionType === 'catholic' ? '천주교' : '기독교'} · PG사: {t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : '나노PG'}
+                          도메인: faithpay.kr/{t.slug} · 종교: {t.religionType === 'buddhist' ? '불교' : t.religionType === 'catholic' ? '천주교' : '기독교'} · PG사: {t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : t.paymentConfig?.pgProvider === 'nanopay' ? '나노PG' : '미지정'}
                         </p>
                       </div>
                     </div>
@@ -133,8 +133,8 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                           <span className="text-[13px] font-bold text-emerald-700 font-mono">
                             {(t as any).contractRate ?? 3.0}%
                           </span>
-                          <Badge variant="outline" className={t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss' ? 'bg-blue-50 text-blue-700 border-blue-200 text-[9.5px]' : 'bg-purple-50 text-purple-700 border-purple-200 text-[9.5px]'}>
-                            {t.slug === 'myungsung-church' || t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : '나노PG'}
+                          <Badge variant="outline" className={t.paymentConfig?.pgProvider === 'toss' ? 'bg-blue-50 text-blue-700 border-blue-200 text-[9.5px]' : t.paymentConfig?.pgProvider === 'nanopay' ? 'bg-purple-50 text-purple-700 border-purple-200 text-[9.5px]' : 'bg-slate-50 text-slate-400 border-slate-200 text-[9.5px]'}>
+                            {t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : t.paymentConfig?.pgProvider === 'nanopay' ? '나노PG' : '미지정'}
                           </Badge>
                         </div>
                       </div>

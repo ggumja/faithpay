@@ -208,10 +208,26 @@ export default function TaxReceiptCenter() {
                   <Textarea 
                     id="note" 
                     placeholder="관리자에게 전달할 메모가 있다면 작성해 주세요."
-                    rows={3}
+                    rows={2}
                     value={formData.note}
                     onChange={(e) => setFormData({...formData, note: e.target.value})}
                   />
+                </div>
+
+                {/* NTS & Family Linking Options */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm text-slate-800 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-emerald-600" />
+                    국세청 연동 및 가족 공제 설정
+                  </h4>
+                  <label className="flex items-center gap-3 text-sm cursor-pointer">
+                    <input type="checkbox" defaultChecked className="h-4 w-4 rounded text-primary" />
+                    <span><strong>국세청 전자기부금영수증 일괄 전송 동의</strong> (연말정산 간소화 자동 조회를 위해 필요)</span>
+                  </label>
+                  <label className="flex items-center gap-3 text-sm cursor-pointer">
+                    <input type="checkbox" defaultChecked className="h-4 w-4 rounded text-primary" />
+                    <span><strong>가족(부모/자녀) 봉헌 내역 세대주 합산 발급 동의</strong></span>
+                  </label>
                 </div>
               </div>
 
@@ -220,8 +236,7 @@ export default function TaxReceiptCenter() {
                 <div className="space-y-1">
                   <p className="font-semibold">안내사항</p>
                   <p className="opacity-90 leading-relaxed">
-                    입력하신 정보는 오직 기부금 영수증 발행 목적으로만 사용되며 개인정보처리방침에 따라 안전하게 보호됩니다. 
-                    신청 후 발급까지는 영업일 기준 약 1~3일이 소요될 수 있습니다.
+                    주민등록번호는 국세청 전자기부금영수증 연동을 위해 AES-256 규격으로 안전하게 암호화되며, 세법상 법정 보관 기간(5년) 경과 시 자동 비식별 파기됩니다.
                   </p>
                 </div>
               </div>

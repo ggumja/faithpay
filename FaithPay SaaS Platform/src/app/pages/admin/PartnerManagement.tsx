@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -13,7 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import {
   Briefcase, Users, Plus, CheckCircle, FileText, Search,
-  Building2, UserCheck, Ban, Copy, ChevronDown, ChevronUp,
+  Building2, UserCheck, Ban, Copy, ChevronDown, ChevronUp, Eye, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Partner, partnerAPI } from '../../api/client';
@@ -21,6 +22,7 @@ import { Partner, partnerAPI } from '../../api/client';
 type TabKey = 'agency' | 'agent';
 
 export default function PartnerManagement() {
+  const navigate = useNavigate();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -225,7 +227,12 @@ export default function PartnerManagement() {
                   return (
                     <TableRow key={p.id} className="hover:bg-purple-50/30">
                       <TableCell>
-                        <div className="font-bold text-[12.5px] text-slate-900">{p.name}</div>
+                        <button
+                          onClick={() => navigate(`/system/admin/partners/${p.id}`)}
+                          className="font-bold text-[12.5px] text-purple-900 hover:text-purple-600 hover:underline bg-transparent border-0 p-0 text-left cursor-pointer"
+                        >
+                          {p.name}
+                        </button>
                         <div className="text-[10.5px] text-slate-400 mt-0.5">{p.email} · {p.phone}</div>
                       </TableCell>
                       <TableCell>
@@ -261,21 +268,24 @@ export default function PartnerManagement() {
                       <TableCell>{statusBadge(p.status)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[11px] px-2 text-purple-700 border-purple-200 hover:bg-purple-50 font-bold"
+                            onClick={() => navigate(`/system/admin/partners/${p.id}`)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" /> 상세보기
+                          </Button>
                           {p.status === 'pending' ? (
                             <Button size="sm" className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-2"
                               onClick={() => handleApprove(p.id)}>
                               <CheckCircle className="h-3 w-3 mr-1" /> 승인
                             </Button>
                           ) : p.status === 'active' ? (
-                            <>
-                              <Button variant="outline" size="sm" className="h-7 text-[11px] px-2">
-                                <FileText className="h-3 w-3 mr-1" /> 정산서
-                              </Button>
-                              <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-red-200 text-red-500 hover:bg-red-50"
-                                onClick={() => handleSuspend(p.id, p.name)}>
-                                <Ban className="h-3 w-3 mr-1" /> 정지
-                              </Button>
-                            </>
+                            <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-red-200 text-red-500 hover:bg-red-50"
+                              onClick={() => handleSuspend(p.id, p.name)}>
+                              <Ban className="h-3 w-3 mr-1" /> 정지
+                            </Button>
                           ) : (
                             <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                               onClick={() => handleApprove(p.id)}>
@@ -330,7 +340,12 @@ export default function PartnerManagement() {
                   return (
                     <TableRow key={p.id} className="hover:bg-indigo-50/30">
                       <TableCell>
-                        <div className="font-bold text-[12.5px] text-slate-900">{p.name}</div>
+                        <button
+                          onClick={() => navigate(`/system/admin/partners/${p.id}`)}
+                          className="font-bold text-[12.5px] text-indigo-900 hover:text-indigo-600 hover:underline bg-transparent border-0 p-0 text-left cursor-pointer"
+                        >
+                          {p.name}
+                        </button>
                         <div className="text-[10.5px] text-slate-400 mt-0.5">{p.email} · {p.phone}</div>
                       </TableCell>
                       <TableCell>
@@ -344,10 +359,13 @@ export default function PartnerManagement() {
                       </TableCell>
                       <TableCell>
                         {parentAgency ? (
-                          <div>
+                          <button
+                            onClick={() => navigate(`/system/admin/partners/${parentAgency.id}`)}
+                            className="text-left bg-transparent border-0 p-0 cursor-pointer hover:underline"
+                          >
                             <div className="text-[12px] font-semibold text-purple-700">{parentAgency.name}</div>
                             <div className="text-[10px] font-mono text-slate-400">{parentAgency.referralCode}</div>
-                          </div>
+                          </button>
                         ) : (
                           <span className="text-[11px] text-slate-400">플랫폼 직접</span>
                         )}
@@ -372,21 +390,24 @@ export default function PartnerManagement() {
                       <TableCell>{statusBadge(p.status)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[11px] px-2 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold"
+                            onClick={() => navigate(`/system/admin/partners/${p.id}`)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" /> 상세보기
+                          </Button>
                           {p.status === 'pending' ? (
                             <Button size="sm" className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-2"
                               onClick={() => handleApprove(p.id)}>
                               <CheckCircle className="h-3 w-3 mr-1" /> 승인
                             </Button>
                           ) : p.status === 'active' ? (
-                            <>
-                              <Button variant="outline" size="sm" className="h-7 text-[11px] px-2">
-                                <FileText className="h-3 w-3 mr-1" /> 정산서
-                              </Button>
-                              <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-red-200 text-red-500 hover:bg-red-50"
-                                onClick={() => handleSuspend(p.id, p.name)}>
-                                <Ban className="h-3 w-3 mr-1" /> 정지
-                              </Button>
-                            </>
+                            <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-red-200 text-red-500 hover:bg-red-50"
+                              onClick={() => handleSuspend(p.id, p.name)}>
+                              <Ban className="h-3 w-3 mr-1" /> 정지
+                            </Button>
                           ) : (
                             <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                               onClick={() => handleApprove(p.id)}>

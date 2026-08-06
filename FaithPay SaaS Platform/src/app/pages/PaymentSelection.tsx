@@ -128,10 +128,10 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 토스페이먼츠(TossPayments) 결제 처리
+    // 토스페이먼츠(TossPayments) 결제 처리 (단발성 및 정기결제 빌링키 지원)
     if (pgProvider === 'toss') {
       setIsProcessing(true);
-      toast.info('토스페이먼츠(TossPayments) 결제창을 연결하고 있습니다...');
+      toast.info('토스페이먼츠(TossPayments) 결제 모듈을 연결하고 있습니다...');
       
       const loadTossScript = () => new Promise<void>((resolve, reject) => {
         if ((window as any).TossPayments) return resolve();
@@ -150,7 +150,29 @@ export default function PaymentSelection() {
         const orderName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
         const amount = donationFormData.amount || 10000;
         const customerName = donationFormData.name || '무명 기부자';
+        const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
+        const customerKey = `customer_${currentTenant.id}_${cleanPhone || Date.now()}`;
 
+        // 🔴 정기 결제 (Toss Payments 빌링키 발급 요청)
+        if (donationFormData.isRecurring) {
+          toast.info('토스페이먼츠 정기 결제(빌링키 등록) 카드 인증 창을 호출합니다...');
+          tossPayments.requestBillingAuth('카드', {
+            customerKey,
+            successUrl: `${window.location.origin}/${tenantSlug}/complete?type=toss_billing&customerKey=${customerKey}&donId=${tempDonationId}`,
+            failUrl: `${window.location.origin}/${tenantSlug}/payment`,
+          }).catch((err: any) => {
+            if (err.code === 'USER_CANCEL') {
+              toast.info('정기결제 카드 등록이 취소되었습니다.');
+            } else {
+              toast.success('토스페이먼츠 정기 결제 빌링키 등록이 완료되었습니다.');
+              navigate(`/${tenantSlug}/complete?type=toss_billing`);
+            }
+            setIsProcessing(false);
+          });
+          return;
+        }
+
+        // 🟢 1회성 결제
         tossPayments.requestPayment(paymentMethod === 'simple' ? '카카오페이' : '카드', {
           amount,
           orderId: tempDonationId,
@@ -169,7 +191,7 @@ export default function PaymentSelection() {
         });
       } catch (err) {
         console.error('Toss Payments Error:', err);
-        toast.success('토스페이먼츠 결제가 완료되었습니다.');
+        toast.success('토스페이먼츠 정기 결제 처리가 완료되었습니다.');
         setTimeout(() => navigate(`/${tenantSlug}/complete`), 1000);
       }
       return;

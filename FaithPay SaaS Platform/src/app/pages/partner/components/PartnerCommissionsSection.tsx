@@ -35,6 +35,80 @@ export function PartnerCommissionsSection({ commissions, isAgency = false }: Par
         ))}
       </div>
 
+      {/* 정산 주기별 입금 시점 및 진행 상태 안내 바 */}
+      <div className="p-4 bg-slate-900 text-white rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Badge className="bg-blue-500 hover:bg-blue-600 text-white font-bold text-[10px]">
+              D+1 영업일 자동 정산 적용 중
+            </Badge>
+            <span className="text-xs font-bold text-slate-200">다음 입금 예정일: 익일 09:00</span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            * 토스페이먼츠 정산 주기에 따라 카드 승인 후 D+1 영업일에 수수료 계좌로 자동 송금됩니다.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <span className="text-[11px] font-mono px-2.5 py-1 bg-slate-800 rounded-lg text-emerald-400 font-bold border border-slate-700">
+            ⚡ 실시간 입금 지원 (Payouts v2)
+          </span>
+        </div>
+      </div>
+
+      {/* 사업자 유형별 세무 정산 카드 (법인 VAT 10% vs 개인 3.3% 원천징수) */}
+      <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-800">
+            세무 정산 및 이체 금액 산출 명세
+          </span>
+          <span className="text-[11px] text-blue-600 font-semibold">
+            [내 정보] 메뉴에서 사업자 유형을 변경할 수 있습니다
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* 🏢 법인 / 일반사업자 산식 */}
+          <div className="p-3.5 bg-blue-50/60 rounded-lg border border-blue-100 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold text-blue-900">
+              <span>🏢 법인 / 일반사업자 (전자세금계산서)</span>
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-[10px]">VAT 10% 별도</Badge>
+            </div>
+            <div className="flex justify-between text-xs text-slate-600 pt-1">
+              <span>수수료 공급가액:</span>
+              <span className="font-mono font-bold text-slate-800">{totalCommission.toLocaleString()}원</span>
+            </div>
+            <div className="flex justify-between text-xs text-blue-700">
+              <span>부가가치세 (10%):</span>
+              <span className="font-mono font-bold">+{Math.floor(totalCommission * 0.1).toLocaleString()}원</span>
+            </div>
+            <div className="flex justify-between text-xs font-bold text-blue-900 border-t border-blue-200 pt-1.5 mt-1">
+              <span>세금계산서 청구 총액:</span>
+              <span className="font-mono text-sm">{Math.floor(totalCommission * 1.1).toLocaleString()}원</span>
+            </div>
+          </div>
+
+          {/* 👤 개인 / 프리랜서 산식 */}
+          <div className="p-3.5 bg-emerald-50/60 rounded-lg border border-emerald-100 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+              <span>👤 개인 / 프리랜서 (3.3% 원천징수)</span>
+              <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">원천징수 차감</Badge>
+            </div>
+            <div className="flex justify-between text-xs text-slate-600 pt-1">
+              <span>수수료 총액:</span>
+              <span className="font-mono font-bold text-slate-800">{totalCommission.toLocaleString()}원</span>
+            </div>
+            <div className="flex justify-between text-xs text-red-600">
+              <span>3.3% 사업소득세 공제:</span>
+              <span className="font-mono font-bold">-{Math.floor(totalCommission * 0.033).toLocaleString()}원</span>
+            </div>
+            <div className="flex justify-between text-xs font-bold text-emerald-900 border-t border-emerald-200 pt-1.5 mt-1">
+              <span>계좌 실입금액:</span>
+              <span className="font-mono text-sm">{Math.floor(totalCommission * 0.967).toLocaleString()}원</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 수수료 구조 시각화 배너 */}
       <div className="flex items-center gap-2 flex-wrap p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px]">
         <span className="font-bold text-slate-700">수수료 정산 구조:</span>

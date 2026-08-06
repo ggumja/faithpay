@@ -1002,6 +1002,26 @@ app.get("/make-server-d0d82cc7/partners", async (c) => {
   }
 });
 
+// 개별 영업 파트너 상세 조회
+app.get("/make-server-d0d82cc7/partners/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const partner = await db.getPartnerById(id);
+    if (!partner) {
+      const all = await db.getAllPartners();
+      const found = all.find((p: db.Partner) => p.id === id || p.referralCode === id);
+      if (found) {
+        return c.json({ success: true, data: found });
+      }
+      return c.json({ success: false, error: 'Partner not found' }, 404);
+    }
+    return c.json({ success: true, data: partner });
+  } catch (error) {
+    console.error('Error fetching partner by id:', error);
+    return c.json({ success: false, error: 'Failed to fetch partner' }, 500);
+  }
+});
+
 // 신규 영업 파트너 생성 / 제휴 신청
 app.post("/make-server-d0d82cc7/partners", async (c) => {
   try {

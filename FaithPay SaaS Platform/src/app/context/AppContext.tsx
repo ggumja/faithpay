@@ -116,7 +116,54 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const defaultTenants: Tenant[] = [
-  // ── 대리점 본사 직접 유치 단체 (2개) ──
+  // ── 메인 샘플 단체 (각원사 - 나노PG 연동) ──
+  {
+    id: '1',
+    slug: 'gakwonsa',
+    name: '대한불교조계종 각원사',
+    religionType: 'buddhist',
+    primaryColor: '#8B4513',
+    logoUrl: 'https://images.unsplash.com/photo-1770149682823-0befb39aa86e?w=200',
+    bannerImages: [
+      'https://images.unsplash.com/photo-1770149682823-0befb39aa86e?w=1200',
+      'https://images.unsplash.com/photo-1548625361-186a51d08e5e?w=1200'
+    ],
+    description: '동양 최대의 청동아미타불이 모셔진 천안 태조산 각원사입니다.',
+    address: '충청남도 천안시 동남구 각원사길 245',
+    contact: {
+      phone: '041-561-3545',
+      email: 'gakwonsa@faithpay.or.kr',
+      name: '대원 스님',
+    },
+    schedule: [
+      { label: '새벽예불', time: '오전 05:00' },
+      { label: '사시마지', time: '오전 10:00' },
+    ],
+    terminology: { donation: '보시', member: '불자', prayer: '발원문' },
+    paymentConfig: {
+      pgProvider: 'nanopay',
+      apiKey: '2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL',
+      secretKey: 'UfS2tccZNyz3HYxXJDhZH52Ujorqp5km',
+      mid: '240000006',
+      loginId: 'smbtestshop',
+      iv: 'vgqTyX5tBqnMXB68',
+      ver: 'smbtest',
+      enableCard: true,
+      enableEasyPayment: true,
+      enableVBank: true,
+      isActive: true,
+    },
+    status: 'active',
+    appliedAt: '2026-01-15T09:00:00Z',
+    approvedAt: '2026-01-15T10:00:00Z',
+    registrationSource: 'agency',
+    registeredByPartnerId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    registeredByPartnerName: '한국종교솔루션(주)',
+    registeredByReferralCode: 'KRS2024',
+    referralCode: 'KRS2024',
+    contractRate: 3.0,
+  },
+  // ── 대리점 본사 직접 유치 단체 ──
   {
     id: 'tenant-direct-1',
     slug: 'bulguksa',
@@ -176,7 +223,7 @@ const defaultTenants: Tenant[] = [
     contractRate: 2.8,
   },
 
-  // ── 이수진 영업자 유치 단체 (3개) ──
+  // ── 이수진 영업자 유치 단체 ──
   {
     id: 'tenant-agent-1',
     slug: 'bongwonsa',
@@ -226,6 +273,13 @@ const defaultTenants: Tenant[] = [
       { label: '주일 3부 예배', time: '오전 11:30' },
     ],
     terminology: { donation: '헌금', member: '성도', prayer: '기도제목' },
+    paymentConfig: {
+      pgProvider: 'toss',
+      apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+      secretKey: 'test_sk_zXL1G2MndWB257W3b983wnqwB86e',
+      mid: 'SELLER_MYUNGSUNG',
+      isActive: true,
+    },
     status: 'active',
     appliedAt: '2026-07-25T11:00:00Z',
     registrationSource: 'agent',
@@ -266,14 +320,14 @@ const defaultTenants: Tenant[] = [
   },
 ];
 
-// 대리점/영업자 시드 5개 단체 보장 (구버전 캐시 무조건 재설정)
+// 대리점/영업자 시드 6개 단체 보장 (구버전 캐시 무조건 재설정)
 let parsedTenants: Tenant[] = defaultTenants;
 if (typeof window !== 'undefined') {
   const saved = localStorage.getItem('faithpay_tenants');
   if (saved) {
     try {
       const arr = JSON.parse(saved);
-      const isUpdatedSchema = Array.isArray(arr) && arr.some(x => x.slug === 'bulguksa' && x.registeredByPartnerId === 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+      const isUpdatedSchema = Array.isArray(arr) && arr.some(x => x.slug === 'gakwonsa' && x.paymentConfig?.pgProvider === 'nanopay');
       if (isUpdatedSchema) {
         parsedTenants = arr;
       } else {
@@ -498,6 +552,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const missingDefaults = defaultTenants.filter(d => !existingSlugs.has(d.slug));
         finalTenants = [...dbTenants, ...missingDefaults];
       }
+
+      // 저장된 PG 설정(localStorage) 반영 및 각원사/명성교회 기본 PG 보장
+      finalTenants = finalTenants.map(t => {
+        let currentConfig = t.paymentConfig;
+        try {
+          const savedConfigStr = localStorage.getItem(`paymentConfig_${t.id}`) || localStorage.getItem(`paymentConfig_${t.slug}`);
+          if (savedConfigStr) {
+            const parsedConfig = JSON.parse(savedConfigStr);
+            if (parsedConfig && parsedConfig.pgProvider) {
+              currentConfig = parsedConfig;
+            }
+          }
+        } catch (e) {}
+
+        const isGakwonsa = t.slug === 'gakwonsa' || t.name.includes('각원사');
+        const isMyungsung = t.slug === 'myungsung-church' || t.name.includes('명성교회');
+        if (!currentConfig || !currentConfig.pgProvider) {
+          if (isGakwonsa) {
+            currentConfig = {
+              pgProvider: 'nanopay',
+              apiKey: '2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL',
+              secretKey: 'UfS2tccZNyz3HYxXJDhZH52Ujorqp5km',
+              mid: '240000006',
+              loginId: 'smbtestshop',
+              iv: 'vgqTyX5tBqnMXB68',
+              ver: 'smbtest',
+              enableCard: true,
+              enableEasyPayment: true,
+              enableVBank: true,
+              isActive: true,
+            };
+          } else if (isMyungsung) {
+            currentConfig = {
+              pgProvider: 'toss',
+              apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+              secretKey: 'test_sk_zXL1G2MndWB257W3b983wnqwB86e',
+              mid: 'SELLER_MYUNGSUNG',
+              enableCard: true,
+              enableEasyPayment: true,
+              enableVBank: true,
+              isActive: true,
+            };
+          }
+        }
+
+        return {
+          ...t,
+          paymentConfig: currentConfig,
+        };
+      });
 
       mockTenants.length = 0;
       mockTenants.push(...finalTenants);

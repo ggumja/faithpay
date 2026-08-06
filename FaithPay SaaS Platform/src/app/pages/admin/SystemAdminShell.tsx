@@ -5,7 +5,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
-  Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen,
+  Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -16,7 +16,9 @@ import { tenantAPI } from '../../api/client';
 function useActiveKey(pathname: string) {
   if (pathname.match(/\/tenants\/pending\/.+/)) return 'pendingDetail';
   if (pathname.includes('/tenants/pending')) return 'pending';
+  if (pathname.includes('/settlement-center')) return 'settlementCenter';
   if (pathname.includes('/stats'))           return 'stats';
+  if (pathname.match(/\/partners\/.+/))      return 'partnerDetail';
   if (pathname.includes('/partners'))        return 'partners';
   if (pathname.includes('/commissions'))     return 'commissions';
   if (pathname.includes('/ledger'))          return 'ledger';
@@ -27,15 +29,17 @@ function useActiveKey(pathname: string) {
 
 
 const META: Record<string, { title: string; section: string }> = {
-  tenants:       { title: '단체 목록',           section: '단체 목록 관리' },
-  pending:       { title: '승인요청 목록',        section: '단체 목록 관리' },
-  pendingDetail: { title: '입점 신청 상세 심사',  section: '단체 목록 관리' },
-  tenantDetail:  { title: '단체 상세 정보',       section: '단체 목록 관리' },
-  stats:         { title: '단체별 통계',          section: '통계 분석'      },
-  commissions:   { title: '수수료 통계',          section: '통계 분석'      },
-  ledger:        { title: '거래이력 (거래원장)',    section: '통계 분석'      },
-  partners:      { title: '영업 파트너 관리',     section: '파트너 관리'    },
-  settings:      { title: '설정',                 section: '시스템 설정'    },
+  tenants:          { title: '단체 목록',           section: '단체 목록 관리' },
+  pending:          { title: '승인요청 목록',        section: '단체 목록 관리' },
+  pendingDetail:    { title: '입점 신청 상세 심사',  section: '단체 목록 관리' },
+  tenantDetail:     { title: '단체 상세 정보',       section: '단체 목록 관리' },
+  settlementCenter: { title: '정산 관리 센터',       section: '정산 관리 Center' },
+  stats:            { title: '단체별 통계',          section: '통계 분석'      },
+  commissions:      { title: '수수료 통계',          section: '통계 분석'      },
+  ledger:           { title: '거래이력 (거래원장)',    section: '통계 분석'      },
+  partners:         { title: '영업 파트너 관리',     section: '파트너 관리'    },
+  partnerDetail:    { title: '영업 파트너 상세 정보', section: '파트너 관리'    },
+  settings:         { title: '설정',                 section: '시스템 설정'    },
 };
 
 /* ─── style constants (token-ref only) ───────── */
@@ -152,13 +156,27 @@ export default function SystemAdminShell() {
               )}
             </div>
 
+            {/* 정산 관리 Center (독립 상위 메뉴 블록) */}
+            <div>
+              <p className={S.navSection}>정산 관리 Center</p>
+              <button
+                onClick={() => navigate('/system/admin/settlement-center')}
+                className={S.navItem(active === 'settlementCenter')}
+              >
+                <Landmark size={13} className={active === 'settlementCenter' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">🏦 정산 관리 센터</span>
+                <span className="ml-auto text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded-full">
+                  v2 API
+                </span>
+              </button>
+            </div>
+
             {/* 통계 분석 */}
             <div>
               <p className={S.navSection}>통계 분석</p>
               {[
-                { key: 'stats',       label: '단체별 통계',        Icon: BarChart3,  path: '/system/admin/stats'       },
-                { key: 'commissions', label: '수수료 통계',         Icon: TrendingUp, path: '/system/admin/commissions' },
-                { key: 'ledger',      label: '거래이력 (원장)',     Icon: BookOpen,   path: '/system/admin/ledger'      },
+                { key: 'stats',  label: '단체별 통계',    Icon: BarChart3, path: '/system/admin/stats'  },
+                { key: 'ledger', label: '거래이력 (원장)', Icon: BookOpen,   path: '/system/admin/ledger' },
               ].map(({ key, label, Icon, path }) => (
                 <button key={key} onClick={() => navigate(path)} className={S.navItem(active === key)}>
                   <Icon size={13} className={active === key ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
@@ -173,9 +191,9 @@ export default function SystemAdminShell() {
               <p className={S.navSection}>파트너 관리</p>
               <button
                 onClick={() => navigate('/system/admin/partners')}
-                className={S.navItem(active === 'partners')}
+                className={S.navItem(active === 'partners' || active === 'partnerDetail')}
               >
-                <Briefcase size={13} className={active === 'partners' ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
+                <Briefcase size={13} className={active === 'partners' || active === 'partnerDetail' ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
                 <span>영업 파트너 관리</span>
               </button>
             </div>

@@ -191,36 +191,145 @@ export function PartnerMyInfoSection({
             />
           </div>
 
-          <div className="border-t border-slate-100 pt-4 space-y-3">
-            <p className="text-xs font-bold text-slate-700">PG 수수료 자동 정산 계좌 정보</p>
+          <div className="border-t border-slate-100 pt-4 space-y-4">
+            <p className="text-xs font-bold text-slate-800 flex items-center justify-between">
+              <span>사업자 유형 및 PG 수수료 정산계좌 설정</span>
+              <span className="text-[10.5px] font-normal text-slate-500">사업자 유형에 따라 세무 서식이 자동 지정됩니다</span>
+            </p>
+
+            {/* 사업자 유형 선택 (법인/일반 vs 개인/프리랜서) */}
+            <div className="space-y-1.5 bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
+              <Label className="text-xs font-bold text-slate-700">사업자 유형 <span className="text-red-500">*</span></Label>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => localStorage.setItem(`faithpay:partner_type:${partner.id}`, 'CORPORATE')}
+                  className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                    (localStorage.getItem(`faithpay:partner_type:${partner.id}`) || 'CORPORATE') === 'CORPORATE'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  🏢 법인 / 일반과세 사업자 (세금계산서)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => localStorage.setItem(`faithpay:partner_type:${partner.id}`, 'INDIVIDUAL')}
+                  className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                    localStorage.getItem(`faithpay:partner_type:${partner.id}`) === 'INDIVIDUAL'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  👤 개인 / 프리랜서 (3.3% 원천징수)
+                </button>
+              </div>
+            </div>
+
+            {/* 법인 / 일반사업자 전용 세부 입력 필드 */}
+            {(localStorage.getItem(`faithpay:partner_type:${partner.id}`) || 'CORPORATE') === 'CORPORATE' ? (
+              <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 space-y-3">
+                <div className="text-[11px] font-bold text-blue-900 flex items-center justify-between">
+                  <span>🏢 법인 / 사업자 세무 정보 입력</span>
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-[10px]">
+                    전자세금계산서 (VAT 10%)
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-slate-600">상호 (법인명)</Label>
+                    <Input
+                      defaultValue={partner.name}
+                      placeholder="예: 주식회사 엠앤에스"
+                      className="text-xs h-9 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-slate-600">사업자 등록번호</Label>
+                    <Input
+                      defaultValue="107-88-39201"
+                      placeholder="123-45-67890"
+                      className="text-xs h-9 bg-white font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-slate-600">대표자 성명</Label>
+                    <Input
+                      defaultValue="김대표"
+                      placeholder="대표자 이름"
+                      className="text-xs h-9 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-slate-600">전자세금계산서 수신 이메일</Label>
+                    <Input
+                      defaultValue={partner.email || 'tax@partner.com'}
+                      placeholder="tax@domain.com"
+                      className="text-xs h-9 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* 개인 / 프리랜서 전용 세부 입력 필드 */
+              <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-3">
+                <div className="text-[11px] font-bold text-emerald-900 flex items-center justify-between">
+                  <span>👤 개인 / 프리랜서 세무 정보 입력</span>
+                  <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">
+                    3.3% 원천징수 공제
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-slate-600">개인 성명 (실명)</Label>
+                    <Input
+                      defaultValue={partner.name}
+                      placeholder="본인 실명"
+                      className="text-xs h-9 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-slate-600">주민등록번호 (원천징수 신고용)</Label>
+                    <Input
+                      defaultValue="920110-1******"
+                      placeholder="주민번호 13자리 입력"
+                      className="text-xs h-9 bg-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-600">정산 은행</Label>
+                <Label className="text-xs text-slate-600">정산 수령 은행</Label>
                 <Input
                   value={editBank}
                   onChange={e => setEditBank(e.target.value)}
-                  placeholder="예: 신한은행"
+                  placeholder="예: 신한은행, 국민은행"
                   className="text-xs h-9"
                 />
               </div>
+
               <div className="space-y-1">
-                <Label className="text-xs text-slate-600">예금주</Label>
+                <Label className="text-xs text-slate-600">예금주명 (명의 일치 필수)</Label>
                 <Input
                   value={editHolder}
                   onChange={e => setEditHolder(e.target.value)}
-                  placeholder="예금주명"
-                  className="text-xs h-9"
+                  placeholder="사업자명 또는 성명과 일치"
+                  className="text-xs h-9 font-bold"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs text-slate-600">계좌 번호</Label>
+              <Label className="text-xs text-slate-600">입금 계좌번호</Label>
               <Input
                 value={editAccount}
                 onChange={e => setEditAccount(e.target.value)}
-                placeholder="숫자만 입력"
+                placeholder="숫자 및 하이픈(-)"
                 className="text-xs h-9 font-mono"
               />
             </div>

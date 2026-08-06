@@ -203,6 +203,45 @@ export default function SettlementReports() {
             </div>
           </div>
 
+          {/* Toss Payments v2 Payouts Split Settlement Live Status Card */}
+          <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-3 bg-blue-600 rounded-lg text-white font-bold text-lg flex items-center justify-center">
+                    TOSS
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg text-slate-900">토스페이먼츠 v2 스플릿 정산 (지급대행)</h3>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">KYC 승인완료 (APPROVED)</Badge>
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">JWE 암호화 적용</Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1">
+                      공식 API 엔드포인트 <code className="bg-white px-1 py-0.5 rounded text-blue-700 font-mono">POST /v2/payouts</code> 기반 자동 분할 정산이 활성화되어 있습니다.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-sm bg-white/80 p-3 rounded-lg border border-blue-100">
+                  <div>
+                    <span className="text-slate-500 text-xs block">서브몰(셀러) ID</span>
+                    <span className="font-mono font-bold text-slate-800">SELLER_{currentTenant.slug.toUpperCase()}</span>
+                  </div>
+                  <div className="h-8 w-px bg-slate-200" />
+                  <div>
+                    <span className="text-slate-500 text-xs block">지급대행 수수료율</span>
+                    <span className="font-bold text-purple-700">0.5% (SaaS 수수료)</span>
+                  </div>
+                  <div className="h-8 w-px bg-slate-200" />
+                  <div>
+                    <span className="text-slate-500 text-xs block">정산 주기</span>
+                    <span className="font-bold text-blue-700">D+3일 실시간 분할입금</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Current Month Summary */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
@@ -224,29 +263,29 @@ export default function SettlementReports() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">1,263,225원</div>
-                <p className="text-xs text-muted-foreground mt-1">1.5%</p>
+                <p className="text-xs text-muted-foreground mt-1">1.5% (토스 PG)</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">플랫폼 수수료</CardTitle>
+                <CardTitle className="text-sm font-medium">SaaS 플랫폼 수수료</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600">421,075원</div>
-                <p className="text-xs text-muted-foreground mt-1">0.5%</p>
+                <p className="text-xs text-muted-foreground mt-1">0.5% (자동 스플릿 차감)</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">실 정산액</CardTitle>
+                <CardTitle className="text-sm font-medium">단체 계좌 최종 입금액</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">82,530,700원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <Calendar className="h-3 w-3 inline mr-1" />
-                  정산일: 2026-04-05
+                  정산일: 2026-04-05 (토스 입금)
                 </p>
               </CardContent>
             </Card>
@@ -255,6 +294,8 @@ export default function SettlementReports() {
           <Tabs defaultValue="monthly" className="space-y-6">
             <TabsList>
               <TabsTrigger value="monthly">월별 정산</TabsTrigger>
+              <TabsTrigger value="reconciliation">가상계좌 입금대조 (Reconciliation)</TabsTrigger>
+              <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
               <TabsTrigger value="category">항목별 분석</TabsTrigger>
               <TabsTrigger value="payment">결제 수단별</TabsTrigger>
             </TabsList>
@@ -351,6 +392,125 @@ export default function SettlementReports() {
                       <Bar dataKey="실정산액" fill={currentTenant.primaryColor} />
                     </BarChart>
                   </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Virtual Account Reconciliation Queue */}
+            <TabsContent value="reconciliation" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>가상계좌 입금 대조 & 미인식 매칭 큐 (Reconciliation)</CardTitle>
+                      <CardDescription>
+                        네트워크 장애로 인한 PG 웹훅 누락건 자동 복구 및 입금자명 불일치("홍길동십일조" 등) 수동 매칭 큐입니다.
+                      </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => toast.success('토스 PG 가상계좌 입금 대조 배치를 수행했습니다')}>
+                      입금 정합성 대조 실행
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>발급 가상계좌</TableHead>
+                        <TableHead>예정 입금자 / 입금액</TableHead>
+                        <TableHead>실제 입금자 / 금액</TableHead>
+                        <TableHead>입금 일시</TableHead>
+                        <TableHead>매칭 상태</TableHead>
+                        <TableHead className="text-right">매칭 조치</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-mono text-xs">토스 7088-12-998811</TableCell>
+                        <TableCell>
+                          <div className="font-semibold">홍길동</div>
+                          <div className="text-xs text-muted-foreground">1,000,000원 (십일조)</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-orange-700">홍길동 감사헌금</div>
+                          <div className="text-xs text-muted-foreground">1,000,000원</div>
+                        </TableCell>
+                        <TableCell className="text-xs">2026-04-05 11:20:15</TableCell>
+                        <TableCell>
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                            불일치 (유사도 85%)
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => toast.success('홍길동 성도님의 봉헌으로 수동 매칭이 완료되었습니다')}>
+                            수동 매칭 승인
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-mono text-xs">토스 7088-15-442100</TableCell>
+                        <TableCell>
+                          <div className="font-semibold">김미영</div>
+                          <div className="text-xs text-muted-foreground">500,000원 (건축헌금)</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-green-700">김미영</div>
+                          <div className="text-xs text-muted-foreground">500,000원</div>
+                        </TableCell>
+                        <TableCell className="text-xs">2026-04-04 15:40:00</TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                            웹훅 복구 완료 (Polling)
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-xs text-muted-foreground">자동 처리됨</span>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Negative Settlement / Refund Adjustments */}
+            <TabsContent value="negative" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>승인 취소 & 차기 정산 이월 차감 (Negative Settlement)</CardTitle>
+                  <CardDescription>
+                    이미 단체 계좌로 입금 완료된 정산건의 결제 취소/오입금 발생 시 차기 정산액에서 자동 이월 차감되는 명세입니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableRow className="border-none" />
+                        <TableHead>원 결제 승인일</TableHead>
+                        <TableHead>신도명 / 항목</TableHead>
+                        <TableHead className="text-right">취소 요청 금액</TableHead>
+                        <TableHead className="text-right">PG/SaaS 보정 차감액</TableHead>
+                        <TableHead>차기 이월 정산 반영일</TableHead>
+                        <TableHead>승인 상태</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs">2026-03-28</TableCell>
+                        <TableCell>
+                          <div className="font-semibold">박지성</div>
+                          <div className="text-xs text-muted-foreground">오입금 중복 결제 취소</div>
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-red-600">-10,000,000원</TableCell>
+                        <TableCell className="text-right text-slate-600">-9,800,000원</TableCell>
+                        <TableCell className="text-xs">2026-05-05 (차기 정산)</TableCell>
+                        <TableCell>
+                          <Badge className="bg-emerald-100 text-emerald-800">2단계 승인 완료</Badge>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>

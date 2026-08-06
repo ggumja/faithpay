@@ -396,6 +396,10 @@ export const partnerAPI = {
     return fetchAPI<Partner[]>('/partners');
   },
 
+  async getById(id: string): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>(`/partners/${id}`);
+  },
+
   async createPartner(partner: Omit<Partner, 'id' | 'createdAt'>): Promise<APIResponse<Partner>> {
     return fetchAPI<Partner>('/partners', {
       method: 'POST',
