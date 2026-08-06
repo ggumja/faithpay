@@ -158,12 +158,12 @@ export default function PartnerDetailPage() {
             (t as any).referralCode === targetPartner?.referralCode ||
             (targetPartner?.role === 'master_agency' && (t as any).registeredByAgencyId === targetPartner?.id)
           );
-          setTenants(matched.length > 0 ? matched : generateMockTenants(targetPartner));
+          setTenants(matched);
         } else {
-          setTenants(generateMockTenants(targetPartner));
+          setTenants([]);
         }
       } catch {
-        setTenants(generateMockTenants(targetPartner));
+        setTenants([]);
       }
 
     } catch (err) {
@@ -174,20 +174,6 @@ export default function PartnerDetailPage() {
     }
   };
 
-  // 모의 수수료 데이터 생성기
-  const generateMockCommissions = (p: Partner): PartnerCommission[] => [
-    { id: 'cm-101', partnerId: p.id, tenantId: 't-gakwonsa', tenantName: '각원사 (태고종)', donationId: 'd-901', donationAmount: 500000, commissionAmount: 10000, settlementStatus: 'paid', createdAt: '2026-08-02 15:30' },
-    { id: 'cm-102', partnerId: p.id, tenantId: 't-bongwonsa', tenantName: '봉원사', donationId: 'd-902', donationAmount: 1200000, commissionAmount: 24000, settlementStatus: 'paid', createdAt: '2026-08-01 11:20' },
-    { id: 'cm-103', partnerId: p.id, tenantId: 't-myungsung', tenantName: '명성교회', donationId: 'd-903', donationAmount: 300000, commissionAmount: 6000, settlementStatus: 'pending', createdAt: '2026-08-03 09:10' },
-    { id: 'cm-104', partnerId: p.id, tenantId: 't-gakwonsa', tenantName: '각원사 (태고종)', donationId: 'd-904', donationAmount: 2000000, commissionAmount: 40000, settlementStatus: 'pending', createdAt: '2026-08-03 14:05' },
-  ];
-
-  // 모의 가맹 단체 생성기
-  const generateMockTenants = (p: Partner): Tenant[] => [
-    { id: 't-gakwonsa', name: '각원사 (태고종)', category: '사찰', managerName: '법인스님', managerPhone: '010-1234-5678', managerEmail: 'gakwon@temple.kr', status: 'active', createdAt: '2026-02-01', slug: 'gakwonsa', stats: { totalDonations: 45000000, activeRecurringCount: 120, totalDonators: 350 } } as any,
-    { id: 't-bongwonsa', name: '봉원사', category: '사찰', managerName: '지선스님', managerPhone: '010-9876-5432', managerEmail: 'bongwon@temple.kr', status: 'active', createdAt: '2026-03-15', slug: 'bongwonsa', stats: { totalDonations: 28000000, activeRecurringCount: 85, totalDonators: 210 } } as any,
-    { id: 't-myungsung', name: '명성교회', category: '교회', managerName: '김사무엘 장로', managerPhone: '010-3333-2222', managerEmail: 'info@myungsung.or.kr', status: 'active', createdAt: '2026-05-10', slug: 'myungsung-church', stats: { totalDonations: 62000000, activeRecurringCount: 240, totalDonators: 510 } } as any,
-  ];
 
   // 상태 관리 핸들러
   const handleStatusChange = (newStatus: 'active' | 'suspended' | 'pending') => {

@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import {
   LayoutDashboard, Building2, TrendingUp, UserCircle,
   LogOut, Bell, Search, Menu, ChevronRight,
@@ -110,13 +111,13 @@ export default function AgentDashboard() {
         setEditHolder((activePartner as any).accountHolder ?? '');
 
         /* ── 관할 단체 필터링 ── */
-        const sourceTenants = (tenants && tenants.length > 0) ? tenants : mockTenants;
         const agentKeys = [activePartner.id, activePartner.referralCode].filter(Boolean);
-        setMyTenants(sourceTenants.filter(t =>
+        setMyTenants(tenants.filter(t =>
           agentKeys.includes((t as any).registeredByPartnerId) ||
           agentKeys.includes((t as any).registeredByReferralCode) ||
           agentKeys.includes((t as any).referralCode)
         ));
+
 
         /* ── 백그라운드 API 동기화 ── */
         try {
