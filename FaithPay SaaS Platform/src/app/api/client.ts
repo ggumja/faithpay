@@ -473,59 +473,98 @@ export const partnerAPI = {
       const raw = localStorage.getItem(key);
       if (raw) return { success: true, data: JSON.parse(raw) };
     } catch {}
-    // 기본 데모 데이터
+
+    // ── 실제 하위 영업자를 조회해서 동적으로 breakdown 생성 ──
+    let subAgents: Partner[] = [];
+    try {
+      const agRes = await fetchAPI<Partner[]>(`/partners?parentId=${partnerId}`);
+      if (agRes.success && Array.isArray(agRes.data)) subAgents = agRes.data;
+    } catch {}
+
+    /** 영업자 1명의 breakdown을 생성하는 헬퍼 */
+    const makeBreakdown = (
+      agent: Partner,
+      commBase: number,
+      marginRate = 0.1,
+    ) => {
+      const isCorp = agent.businessType === 'corporate' || agent.businessType === 'individual_business';
+      const commission    = commBase;
+      const agencyMargin  = Math.round(commission * marginRate);
+      const gross         = commission - agencyMargin;
+      const taxType       = isCorp ? 'vat' : 'withholding';
+      const taxAmount     = isCorp ? Math.round(gross * 0.1) : Math.round(gross * 0.033);
+      const net           = isCorp ? gross + taxAmount : gross - taxAmount;
+      return {
+        agentId: agent.id,
+        agentName: agent.name,
+        businessType: (agent as any).businessType ?? 'individual',
+        commissionAmount: commission,
+        agencyMargin,
+        grossAgentAmount: gross,
+        taxType: taxType as 'vat' | 'withholding',
+        taxAmount,
+        netAgentReceived: net,
+      };
+    };
+
+    /** 정산 1건의 totals를 breakdowns에서 역산 */
+    const sumUp = (bds: ReturnType<typeof makeBreakdown>[]) => ({
+      totalCommission: bds.reduce((s, b) => s + b.grossAgentAmount, 0),
+      taxAmount: bds.reduce((s, b) => s + (b.taxType === 'vat' ? b.taxAmount : -b.taxAmount), 0),
+      netAmount: bds.reduce((s, b) => s + b.netAgentReceived, 0),
+      taxType: bds.length === 0 ? 'mixed'
+        : bds.every(b => b.taxType === 'vat') ? 'vat'
+        : bds.every(b => b.taxType === 'withholding') ? 'withholding'
+        : 'mixed' as 'vat' | 'withholding' | 'mixed',
+    });
+
+    // 영업자가 없는 경우 (대리점 단독) — breakdown 없는 단순 정산
+    const noAgentSettlement = (id: string, ps: string, pe: string, base: number, status: 'paid'|'scheduled', settledAt?: string, note?: string): PartnerSettlement => ({
+      id, partnerId, partnerName: '',
+      periodStart: ps, periodEnd: pe,
+      totalCommission: base,
+      taxAmount: 0,
+      netAmount: base,
+      taxType: 'mixed',
+      status, settledAt, note,
+      createdAt: settledAt ?? new Date().toISOString(),
+    });
+
+    if (subAgents.length === 0) {
+      return {
+        success: true,
+        data: [
+          noAgentSettlement('stl-001', '2026-08-01', '2026-08-15', 284000, 'paid', '2026-08-16T09:00:00', '8월 상반기 정산'),
+          noAgentSettlement('stl-002', '2026-07-16', '2026-07-31', 196000, 'paid', '2026-08-01T09:00:00', '7월 하반기 정산'),
+          noAgentSettlement('stl-003', '2026-08-16', '2026-08-31', 0, 'scheduled', undefined, '8월 하반기 정산 (예정)'),
+        ],
+      };
+    }
+
+    // 영업자가 있으면 실제 인원 기반 breakdown 동적 생성
+    const bases1 = subAgents.map((_, i) => 80000 + i * 24000); // 영업자별 수수료 베이스
+    const bases2 = subAgents.map((_, i) => 60000 + i * 18000);
+    const bd1 = subAgents.map((a, i) => makeBreakdown(a, bases1[i]));
+    const bd2 = subAgents.map((a, i) => makeBreakdown(a, bases2[i]));
+    const s1 = sumUp(bd1);
+    const s2 = sumUp(bd2);
+
     const demo: PartnerSettlement[] = [
       {
         id: 'stl-001', partnerId, partnerName: '',
         periodStart: '2026-08-01', periodEnd: '2026-08-15',
-        // 이수진(사업자, VAT): 120000 - 12000마진 = 108000졌전, +10800 VAT = 118800
-        // 한수진(프리랜서, 원청징수): 96000 - 9600마진 = 86400졌전, -2851 원청징수 = 83549
-        totalCommission: 216000,  // 108000 + 86400 (gross, 세전)
-        taxAmount: 7949,          // +10800 - 2851 (혼용: 영업자별 합산)
-        netAmount: 202349,        // 118800 + 83549
-        taxType: 'mixed',
+        ...s1,
         status: 'paid', settledAt: '2026-08-16T09:00:00',
         note: '8월 상반기 정산', createdAt: '2026-08-16T09:00:00',
-        agentBreakdowns: [
-          {
-            agentId: 'ag-1', agentName: '이수진',
-            businessType: 'individual_business',
-            commissionAmount: 120000, agencyMargin: 12000, grossAgentAmount: 108000,
-            taxType: 'vat', taxAmount: 10800, netAgentReceived: 118800,
-          },
-          {
-            agentId: 'ag-2', agentName: '한수진',
-            businessType: 'individual',
-            commissionAmount: 96000, agencyMargin: 9600, grossAgentAmount: 86400,
-            taxType: 'withholding', taxAmount: 2851, netAgentReceived: 83549,
-          },
-        ],
+        agentBreakdowns: bd1,
       },
       {
         id: 'stl-002', partnerId, partnerName: '',
         periodStart: '2026-07-16', periodEnd: '2026-07-31',
-        // 이수진: 84000 - 8400 = 75600, +7560 VAT = 83160
-        // 한수진: 72000 - 7200 = 64800, -2138 원청징수 = 62662
-        totalCommission: 140400,
-        taxAmount: 5422,
-        netAmount: 145822,
-        taxType: 'mixed',
+        ...s2,
         status: 'paid', settledAt: '2026-08-01T09:00:00',
         note: '7월 하반기 정산', createdAt: '2026-08-01T09:00:00',
-        agentBreakdowns: [
-          {
-            agentId: 'ag-1', agentName: '이수진',
-            businessType: 'individual_business',
-            commissionAmount: 84000, agencyMargin: 8400, grossAgentAmount: 75600,
-            taxType: 'vat', taxAmount: 7560, netAgentReceived: 83160,
-          },
-          {
-            agentId: 'ag-2', agentName: '한수진',
-            businessType: 'individual',
-            commissionAmount: 72000, agencyMargin: 7200, grossAgentAmount: 64800,
-            taxType: 'withholding', taxAmount: 2138, netAgentReceived: 62662,
-          },
-        ],
+        agentBreakdowns: bd2,
       },
       {
         id: 'stl-003', partnerId, partnerName: '',
