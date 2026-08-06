@@ -304,44 +304,9 @@ export const mockDonationItems: Record<string, DonationItem[]> = {
   ],
 };
 
-// Mock admin users - 각 단체별로 관리자 계정
-export const mockAdmins: AdminUser[] = [
-  {
-    id: 'system_admin',
-    tenantId: 'system', // 통합관리자는 특정 단체에 속하지 않음
-    email: 'admin@faithpay.com',
-    name: '시스템 관리자',
-    role: 'system_admin',
-  },
-  {
-    id: 'admin1',
-    tenantId: '1',
-    email: 'admin@joyful-church.org',
-    name: '김목사',
-    role: 'tenant_admin',
-  },
-  {
-    id: 'admin2',
-    tenantId: '2',
-    email: 'admin@serenity-temple.org',
-    name: '혜민스님',
-    role: 'tenant_admin',
-  },
-  {
-    id: 'admin3',
-    tenantId: '3',
-    email: 'admin@grace-cathedral.org',
-    name: '베드로신부',
-    role: 'tenant_admin',
-  },
-  {
-    id: 'finance1',
-    tenantId: '1',
-    email: 'finance@joyful-church.org',
-    name: '이집사',
-    role: 'finance_manager',
-  },
-];
+export const mockAdmins: AdminUser[] = [];
+
+
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => {

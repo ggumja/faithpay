@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useApp, Tenant, mockAdmins } from '../../context/AppContext';
+import { useApp, Tenant } from '../../context/AppContext';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -554,7 +555,7 @@ export default function TenantDetailPage() {
                   <div>
                     <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
                       <User className="h-4 w-4 text-purple-600" />
-                      소속 관리자 계정 목록 (총 {mockAdmins.filter(a => a.tenantId === tenant.id || (tenant.slug === 'gakwonsa' && a.tenantId === '1')).length || 1}명)
+                      소속 관리자 계정 목록 (총 1명)
                     </h4>
                     <p className="text-xs text-muted-foreground">이 사찰/교회 시스템에 접근할 수 있는 관리 권한자 계정입니다.</p>
                   </div>
@@ -576,9 +577,8 @@ export default function TenantDetailPage() {
                     </thead>
                     <tbody className="divide-y">
                       {(() => {
-                        const filteredAdmins = mockAdmins.filter(a => a.tenantId === tenant.id || (tenant.slug === 'gakwonsa' && a.tenantId === '1'));
-                        const displayAdmins = filteredAdmins.length > 0 ? filteredAdmins : [
-                          { id: '1', name: tenant.contact?.name || '주지스님 / 담임목사', email: tenant.contact?.email || `${tenant.slug}@faithpay.or.kr`, role: 'tenant_admin', createdAt: '2026-01-15' }
+                        const displayAdmins = [
+                          { id: `admin-${tenant.id}`, name: tenant.contact?.name || '주지스님 / 담임목사', email: tenant.contact?.email || `${tenant.slug}@faithpay.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' }
                         ];
                         return displayAdmins.map((adminUser: any) => (
                         <tr key={adminUser.id} className="hover:bg-slate-50 dark:hover:bg-zinc-850">
@@ -588,6 +588,7 @@ export default function TenantDetailPage() {
                           <td className="px-4 py-3 font-mono font-semibold text-purple-700 dark:text-purple-400">
                             {adminUser.email}
                           </td>
+
                           <td className="px-4 py-3">
                             <Badge className={adminUser.role === 'tenant_admin' ? 'bg-purple-100 text-purple-800 font-bold' : 'bg-blue-100 text-blue-800'}>
                               {adminUser.role === 'tenant_admin' ? '최고 관리자' : '재무/보시 실무자'}
