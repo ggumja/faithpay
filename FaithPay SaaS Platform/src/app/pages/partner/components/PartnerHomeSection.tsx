@@ -154,20 +154,32 @@ export function PartnerHomeSection({
         </Card>
       )}
 
-      {/* KPI 카드 3종 */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: '관리 단체', value: `${myTenants.length}개소`, color: 'text-slate-800' },
-          { label: '누적 신도 결제액', value: `${totalDonation.toLocaleString()}원`, color: 'text-indigo-600' },
-          { label: '수수료 누적 적립', value: `${totalCommission.toLocaleString()}원`, color: 'text-emerald-600' },
-        ].map(({ label, value, color }) => (
-          <Card key={label} className="border-slate-200">
-            <CardContent className="p-5">
-              <div className={`text-[20px] font-bold ${color}`}>{value}</div>
-              <div className="text-[11.5px] text-slate-400 mt-1">{label}</div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* KPI 카드 4종 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {(() => {
+          const now = new Date();
+          const thisMonthCommissions = commissions.filter(c => {
+            try { return new Date(c.createdAt).getMonth() === now.getMonth() && new Date(c.createdAt).getFullYear() === now.getFullYear(); }
+            catch { return false; }
+          });
+          const pendingThisMonth = thisMonthCommissions
+            .filter(c => c.settlementStatus !== 'paid')
+            .reduce((sum, c) => sum + (c.commissionAmount ?? 0), 0);
+          return [
+            { label: '관리 단체',          value: `${myTenants.length}개소`,                 color: 'text-slate-800',   sub: '가맹점 총계' },
+            { label: '누적 신도 결제액',    value: `${totalDonation.toLocaleString()}원`,      color: 'text-indigo-600',  sub: '전체 누적' },
+            { label: '수수료 누적 적립',    value: `${totalCommission.toLocaleString()}원`,    color: 'text-emerald-600', sub: '전체 누적' },
+            { label: '이번 달 정산 예정액', value: `${pendingThisMonth.toLocaleString()}원`,   color: 'text-amber-600',   sub: `${now.getMonth() + 1}월 미지급 수수료` },
+          ].map(({ label, value, color, sub }) => (
+            <Card key={label} className="border-slate-200">
+              <CardContent className="p-5">
+                <div className={`text-[18px] font-bold ${color}`}>{value}</div>
+                <div className="text-[11.5px] text-slate-500 font-semibold mt-1">{label}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>
+              </CardContent>
+            </Card>
+          ));
+        })()}
       </div>
     </div>
   );

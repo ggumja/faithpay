@@ -56,6 +56,22 @@ export function PartnerMyInfoSection({
   const [isSaving, setIsSaving] = useState(false);
   const isAgency = partner.role === 'master_agency';
 
+  // 사업자 유형 — 단일 변수로 통일 (배지 + 세무 폼 분기 공유)
+  const businessType: string =
+    (partner as any).businessType ||
+    localStorage.getItem(`faithpay:partner_type:${partner.id}`) ||
+    'CORPORATE';
+  const isCorporate = businessType !== 'INDIVIDUAL' && businessType !== 'freelancer';
+
+  // 법인 세무 필드
+  const [editCorpName,  setEditCorpName]  = useState((partner as any).corpName  || partner.name || '');
+  const [editCorpReg,   setEditCorpReg]   = useState((partner as any).corpRegNo || '107-88-39201');
+  const [editCeoName,   setEditCeoName]   = useState((partner as any).ceoName   || '');
+  const [editTaxEmail,  setEditTaxEmail]  = useState((partner as any).taxEmail  || partner.email || '');
+  // 개인/프리랜서 세무 필드
+  const [editRealName,  setEditRealName]  = useState((partner as any).realName  || partner.name || '');
+  const [editResNo,     setEditResNo]     = useState((partner as any).resNo     || '920110-1******');
+
   const historyStorageKey = `faithpay:myinfo_history:${partner.id}`;
   const [history, setHistory] = useState<MyInfoHistoryEntry[]>(() => {
     try {
@@ -207,10 +223,7 @@ export function PartnerMyInfoSection({
               </div>
               <div className="pt-1">
                 {(() => {
-                  const bType = (partner as any).businessType ||
-                    localStorage.getItem(`faithpay:partner_type:${partner.id}`) ||
-                    'CORPORATE';
-                  if (bType === 'INDIVIDUAL' || bType === 'freelancer') {
+                  if (!isCorporate) {
                     return (
                       <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
                         <span className="text-lg">👤</span>
@@ -257,7 +270,7 @@ export function PartnerMyInfoSection({
 
 
             {/* 법인 / 일반사업자 전용 세부 입력 필드 */}
-            {(localStorage.getItem(`faithpay:partner_type:${partner.id}`) || 'CORPORATE') === 'CORPORATE' ? (
+            {isCorporate ? (
               <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 space-y-3">
                 <div className="text-[11px] font-bold text-blue-900 flex items-center justify-between">
                   <span>🏢 법인 / 사업자 세무 정보 입력</span>
@@ -268,37 +281,25 @@ export function PartnerMyInfoSection({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-[11px] text-slate-600">상호 (법인명)</Label>
-                    <Input
-                      defaultValue={partner.name}
-                      placeholder="예: 주식회사 엠앤에스"
-                      className="text-xs h-9 bg-white"
-                    />
+                    <Input value={editCorpName} onChange={e => setEditCorpName(e.target.value)}
+                      placeholder="예: 주식회사 엠앤에스" className="text-xs h-9 bg-white" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] text-slate-600">사업자 등록번호</Label>
-                    <Input
-                      defaultValue="107-88-39201"
-                      placeholder="123-45-67890"
-                      className="text-xs h-9 bg-white font-mono"
-                    />
+                    <Input value={editCorpReg} onChange={e => setEditCorpReg(e.target.value)}
+                      placeholder="123-45-67890" className="text-xs h-9 bg-white font-mono" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-[11px] text-slate-600">대표자 성명</Label>
-                    <Input
-                      defaultValue="김대표"
-                      placeholder="대표자 이름"
-                      className="text-xs h-9 bg-white"
-                    />
+                    <Input value={editCeoName} onChange={e => setEditCeoName(e.target.value)}
+                      placeholder="대표자 이름" className="text-xs h-9 bg-white" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] text-slate-600">전자세금계산서 수신 이메일</Label>
-                    <Input
-                      defaultValue={partner.email || 'tax@partner.com'}
-                      placeholder="tax@domain.com"
-                      className="text-xs h-9 bg-white"
-                    />
+                    <Input value={editTaxEmail} onChange={e => setEditTaxEmail(e.target.value)}
+                      placeholder="tax@domain.com" className="text-xs h-9 bg-white" />
                   </div>
                 </div>
               </div>
@@ -314,19 +315,13 @@ export function PartnerMyInfoSection({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-[11px] text-slate-600">개인 성명 (실명)</Label>
-                    <Input
-                      defaultValue={partner.name}
-                      placeholder="본인 실명"
-                      className="text-xs h-9 bg-white"
-                    />
+                    <Input value={editRealName} onChange={e => setEditRealName(e.target.value)}
+                      placeholder="본인 실명" className="text-xs h-9 bg-white" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] text-slate-600">주민등록번호 (원천징수 신고용)</Label>
-                    <Input
-                      defaultValue="920110-1******"
-                      placeholder="주민번호 13자리 입력"
-                      className="text-xs h-9 bg-white font-mono"
-                    />
+                    <Input value={editResNo} onChange={e => setEditResNo(e.target.value)}
+                      placeholder="주민번호 13자리 입력" className="text-xs h-9 bg-white font-mono" />
                   </div>
                 </div>
               </div>
@@ -372,12 +367,16 @@ export function PartnerMyInfoSection({
               onClick={async () => {
                 setIsSaving(true);
                 try {
+                  const taxFields = isCorporate
+                    ? { corpName: editCorpName, corpRegNo: editCorpReg, ceoName: editCeoName, taxEmail: editTaxEmail }
+                    : { realName: editRealName, resNo: editResNo };
                   const res = await partnerAPI.updateProfile(partner.id, {
                     phone: editPhone,
                     email: editEmail,
                     bankName: editBank,
                     accountNumber: editAccount,
                     accountHolder: editHolder,
+                    ...taxFields,
                   });
                   if (res.success) {
                     // 정보 수정 이력 기록

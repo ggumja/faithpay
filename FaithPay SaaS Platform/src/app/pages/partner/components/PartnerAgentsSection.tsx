@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Users, Copy, Trophy, Building2 } from 'lucide-react';
+import { Users, Copy, Trophy, Building2, UserPlus, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Partner } from '../../../api/client';
+import { Partner, partnerAPI } from '../../../api/client';
 import { PartnerAgentDetailView } from './PartnerAgentDetailView';
 import { toast } from 'sonner';
 
@@ -34,6 +36,44 @@ export function PartnerAgentsSection({
   tenants,
 }: PartnerAgentsSectionProps) {
   const [agentSubTab, setAgentSubTab] = useState<'list' | 'overriding'>('list');
+  const [showRegDialog, setShowRegDialog] = useState(false);
+  const [newAgentName,  setNewAgentName]  = useState('');
+  const [newAgentEmail, setNewAgentEmail] = useState('');
+  const [newAgentPhone, setNewAgentPhone] = useState('');
+  const [newAgentRate,  setNewAgentRate]  = useState(editAgencyRate);
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // 영업자별 수수료 합산 (저장된 commissions localStorage 감여)
+  const getAgentCommissionSum = (agentId: string): number => {
+    try {
+      const allComm = JSON.parse(localStorage.getItem('faithpay:commissions') || '[]');
+      return allComm.filter((c: any) => c.partnerId === agentId || c.agentId === agentId)
+        .reduce((s: number, c: any) => s + (c.commissionAmount ?? 0), 0);
+    } catch { return 0; }
+  };
+
+  const handleRegisterAgent = async () => {
+    if (!newAgentName.trim() || !newAgentEmail.trim()) {
+      toast.error('이름과 이메일은 필수입니다.');
+      return;
+    }
+    setIsRegistering(true);
+    try {
+      const res = await partnerAPI.create({
+        name: newAgentName, email: newAgentEmail, phone: newAgentPhone,
+        role: 'sales_agent', parentId: partner.id, agencyRate: newAgentRate,
+        commissionRate: newAgentRate, referralCode: '',
+      } as any);
+      if (res.success) {
+        toast.success(`영업자 ${newAgentName}님이 등록되었습니다.`);
+        setShowRegDialog(false);
+        setNewAgentName(''); setNewAgentEmail(''); setNewAgentPhone('');
+      } else {
+        toast.error(res.error || '등록에 실패했습니다.');
+      }
+    } catch { toast.error('등록 중 오류가 발생했습니다.'); }
+    finally { setIsRegistering(false); }
+  };
 
   // 대리점 본사 직접 유치 항목 생성 (영업자 목록 및 집계에 포함)
   const agencyDirectItem: Partner = {
@@ -69,6 +109,7 @@ export function PartnerAgentsSection({
   }
 
   return (
+    <>
     <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
       {/* 상단 헤더 & 초대 버튼 */}
       <div className="flex items-start justify-between gap-4">
@@ -76,17 +117,27 @@ export function PartnerAgentsSection({
           <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">영업자 관리</h1>
           <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">소속 영업자 및 대리점 직접유치 현황 관리</p>
         </div>
-        <Button
-          size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700 text-xs shrink-0"
-          onClick={() => {
-            const link = `${window.location.origin}/partner/apply?ref=${partner.referralCode}`;
-            navigator.clipboard.writeText(link);
-            toast.success('영업자 초대 링크가 복사되었습니다!');
-          }}
-        >
-          <Copy className="h-3.5 w-3.5 mr-1.5" /> 영업자 초대 링크 복사
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs border-purple-200 text-purple-700 hover:bg-purple-50 shrink-0"
+            onClick={() => setShowRegDialog(true)}
+          >
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" /> 영업자 직접 등록
+          </Button>
+          <Button
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-xs shrink-0"
+            onClick={() => {
+              const link = `${window.location.origin}/partner/apply?ref=${partner.referralCode}`;
+              navigator.clipboard.writeText(link);
+              toast.success('영업자 초대 링크가 복사되었습니다!');
+            }}
+          >
+            <Copy className="h-3.5 w-3.5 mr-1.5" /> 초대 링크 복사
+          </Button>
+        </div>
       </div>
 
       {/* 서브 탭 메뉴 (소속 영업자 목록 / 영업자별 오버라이딩 마진 집계) */}
@@ -188,14 +239,19 @@ export function PartnerAgentsSection({
 
                     <div className="flex items-center gap-6">
                       <div className="text-right hidden sm:block">
-                        <div className="text-[11px] text-slate-400">대리점 수수료 / 영업자 베이스</div>
+                        <div className="text-[11px] text-slate-400">대리점 수수료 / 베이스</div>
                         <div className="flex items-center justify-end gap-1.5 mt-0.5">
                           <span className="text-[12px] font-bold text-purple-700">대리점 {rate}%</span>
                           <span className="text-slate-300">|</span>
                           <span className="text-[12px] font-bold text-slate-700">베이스 {subAgentFloor}%</span>
                         </div>
                       </div>
-
+                      <div className="text-right hidden md:block">
+                        <div className="text-[11px] text-slate-400">수수료 누적</div>
+                        <div className="text-[13px] font-bold text-emerald-700 mt-0.5">
+                          {getAgentCommissionSum(agent.id).toLocaleString()}원
+                        </div>
+                      </div>
                       <Button size="sm" className="bg-purple-600 group-hover:bg-purple-700 text-white font-bold text-xs px-3 shrink-0 shadow-2xs">
                         상세정보 보기 ➔
                       </Button>
@@ -334,5 +390,57 @@ export function PartnerAgentsSection({
         </div>
       )}
     </div>
+
+      {/* ── 신규 영업자 직접 등록 Dialog ── */}
+      {showRegDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[var(--hm-paper)] rounded-2xl shadow-2xl border border-[var(--hm-border)] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--hm-border)] bg-purple-50/60">
+              <div>
+                <h2 className="text-[14px] font-bold text-purple-950">영업자 직접 등록</h2>
+                <p className="text-[11px] text-purple-700 mt-0.5">신규 영업자를 대리점에서 직접 등록합니다</p>
+              </div>
+              <button onClick={() => setShowRegDialog(false)} className="p-1.5 rounded-lg hover:bg-purple-100 text-purple-400 cursor-pointer border-none bg-transparent">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">이름 <span className="text-red-500">*</span></Label>
+                <Input value={newAgentName} onChange={e => setNewAgentName(e.target.value)} placeholder="홍길동" className="text-xs h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">이메일 <span className="text-red-500">*</span></Label>
+                <Input type="email" value={newAgentEmail} onChange={e => setNewAgentEmail(e.target.value)} placeholder="agent@email.com" className="text-xs h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">연락처</Label>
+                <Input value={newAgentPhone} onChange={e => setNewAgentPhone(e.target.value)} placeholder="010-0000-0000" className="text-xs h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">부여 수수료율 (%)</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="number" step="0.1" min="0" max="3"
+                    value={newAgentRate} onChange={e => setNewAgentRate(parseFloat(e.target.value) || 0)}
+                    className="text-xs h-9 w-24 text-right font-mono font-bold" />
+                  <span className="text-sm font-bold text-slate-600">%</span>
+                  <span className="text-[10.5px] text-slate-400 flex-1">← 대리점 마진율 ({editAgencyRate}%) 이하 설정 권장</span>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1 text-xs h-9" onClick={() => setShowRegDialog(false)}>취소</Button>
+                <Button
+                  className="flex-1 text-xs h-9 bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                  disabled={isRegistering}
+                  onClick={handleRegisterAgent}
+                >
+                  {isRegistering ? '등록 중...' : '영업자 등록'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

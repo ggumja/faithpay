@@ -131,21 +131,30 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                         <span className="text-[11px] text-slate-400 block">계약 수수료율 / PG</span>
                         <div className="flex items-center gap-1.5 justify-end">
                           <span className="text-[13px] font-bold text-emerald-700 font-mono">
-                            {(t as any).contractRate ?? 3.0}%
+                            {(t as any).contractRate != null ? `${(t as any).contractRate}%` : <span className="text-slate-400 text-[11px]">미설정</span>}
                           </span>
                           <Badge variant="outline" className={t.paymentConfig?.pgProvider === 'toss' ? 'bg-blue-50 text-blue-700 border-blue-200 text-[9.5px]' : t.paymentConfig?.pgProvider === 'nanopay' ? 'bg-purple-50 text-purple-700 border-purple-200 text-[9.5px]' : 'bg-slate-50 text-slate-400 border-slate-200 text-[9.5px]'}>
                             {t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : t.paymentConfig?.pgProvider === 'nanopay' ? '나노PG' : '미지정'}
                           </Badge>
                         </div>
                       </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/partner/tenant/${t.slug}`)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition-colors border-0 cursor-pointer"
+                      >
+                        단체 정보
+                      </button>
                       <a
                         href={`/g/${t.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
                       >
-                        페이지 이동 <ExternalLink className="h-3 w-3" />
+                        결제 페이지 <ExternalLink className="h-3 w-3" />
                       </a>
+                    </div>
                     </div>
                   </div>
                 ))}
@@ -199,7 +208,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-[12px] font-bold text-emerald-700 font-mono">{(t as any).contractRate ?? 3.0}%</span>
+                            <span className="text-[12px] font-bold text-emerald-700 font-mono">{(t as any).contractRate != null ? `${(t as any).contractRate}%` : <span className="text-slate-400 font-normal text-[11px]">미설정</span>}</span>
                             <a href={`/g/${t.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-700 hover:underline">
                               보기 ➔
                             </a>
@@ -286,7 +295,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                               <div className="text-right">
                                 <span className="text-[10.5px] text-slate-400 block">계약 수수료율</span>
                                 <span className="text-[12.5px] font-bold text-emerald-700 font-mono">
-                                  {(t as any).contractRate ?? 3.0}%
+                                  {(t as any).contractRate != null ? `${(t as any).contractRate}%` : <span className="text-slate-400 font-normal text-[11px]">미설정</span>}
                                 </span>
                               </div>
                               <a
