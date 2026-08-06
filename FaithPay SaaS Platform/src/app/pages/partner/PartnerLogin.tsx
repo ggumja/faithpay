@@ -42,15 +42,8 @@ export default function PartnerLogin() {
     }
   };
 
-  const fillDemo = async (idx: number) => {
-    try {
-      const res = await partnerAPI.getAll();
-      if (res.success && Array.isArray(res.data) && res.data[idx]) {
-        setEmail(res.data[idx].email || '');
-        setPassword('fp1234');
-      }
-    } catch {}
-  };
+
+
 
 
   return (
@@ -137,35 +130,6 @@ export default function PartnerLogin() {
               <>로그인 <ArrowRight className="h-4 w-4" /></>
             )}
           </button>
-
-          {/* 구분선 */}
-          <div className="flex items-center gap-3 pt-1">
-            <div className="flex-1 h-px bg-slate-800" />
-            <span className="text-[10.5px] text-slate-600">데모 계정으로 빠른 접속</span>
-            <div className="flex-1 h-px bg-slate-800" />
-          </div>
-
-          {/* 데모 계정 버튼 */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => fillDemo(0)}
-              className="flex flex-col items-center gap-0.5 py-2.5 px-3 rounded-xl border border-slate-700 hover:border-emerald-600/50 hover:bg-emerald-950/30
-                text-slate-400 hover:text-emerald-400 transition-all cursor-pointer bg-transparent text-left"
-            >
-              <span className="text-[11px] font-bold w-full">🏢 대리점 데모</span>
-              <span className="text-[10px] text-slate-600 w-full font-mono">agency@faithpay.kr</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillDemo(1)}
-              className="flex flex-col items-center gap-0.5 py-2.5 px-3 rounded-xl border border-slate-700 hover:border-amber-600/50 hover:bg-amber-950/30
-                text-slate-400 hover:text-amber-400 transition-all cursor-pointer bg-transparent text-left"
-            >
-              <span className="text-[11px] font-bold w-full">💼 영업자 데모</span>
-              <span className="text-[10px] text-slate-600 w-full font-mono">agent@faithpay.kr</span>
-            </button>
-          </div>
         </form>
 
         {/* 하단 링크 */}

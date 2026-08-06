@@ -201,36 +201,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         } catch (e) {}
 
-        const isGakwonsa = t.slug === 'gakwonsa' || t.name.includes('각원사');
-        const isMyungsung = t.slug === 'myungsung-church' || t.name.includes('명성교회');
-        if (!currentConfig || !currentConfig.pgProvider) {
-          if (isGakwonsa) {
-            currentConfig = {
-              pgProvider: 'nanopay',
-              apiKey: '2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL',
-              secretKey: 'UfS2tccZNyz3HYxXJDhZH52Ujorqp5km',
-              mid: '240000006',
-              loginId: 'smbtestshop',
-              iv: 'vgqTyX5tBqnMXB68',
-              ver: 'smbtest',
-              enableCard: true,
-              enableEasyPayment: true,
-              enableVBank: true,
-              isActive: true,
-            };
-          } else if (isMyungsung) {
-            currentConfig = {
-              pgProvider: 'toss',
-              apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
-              secretKey: 'test_sk_zXL1G2MndWB257W3b983wnqwB86e',
-              mid: 'SELLER_MYUNGSUNG',
-              enableCard: true,
-              enableEasyPayment: true,
-              enableVBank: true,
-              isActive: true,
-            };
-          }
-        }
+
 
         return {
           ...t,
