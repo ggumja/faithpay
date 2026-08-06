@@ -42,16 +42,7 @@ export function PartnerAgentDetailView({
 }: PartnerAgentDetailViewProps) {
   const navigate = useNavigate();
 
-  const currentRate = agentRates[selectedAgent.id] ?? editAgencyRate ?? 0.3;
-  let pgCost2 = 1.5, platformMargin2 = 0.5;
-  try {
-    const pgs2 = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]');
-    if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5;
-    const pm2 = parseFloat(localStorage.getItem('faithpay:platform_margin') || '');
-    if (!isNaN(pm2)) platformMargin2 = pm2;
-  } catch {}
-  const subAgentFloor = +(pgCost2 + platformMargin2 + currentRate).toFixed(2);
-
+  // 영업자 동적 이력 생성 (실제 DB 정보 기반)
   const agentTenants = tenants.filter(t =>
     (t as any).registeredByPartnerId === selectedAgent.id ||
     (t as any).registeredByReferralCode === selectedAgent.referralCode ||
@@ -64,33 +55,33 @@ export function PartnerAgentDetailView({
       const raw = localStorage.getItem(historyStorageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return [
-      {
-        id: 'h-1',
-        timestamp: '2026-08-03 12:00:00',
-        category: '수수료율 지정',
-        beforeVal: '대리점 0.5% (베이스 2.5%)',
-        afterVal: `대리점 ${currentRate}% (베이스 ${subAgentFloor}%)`,
-        modifiedBy: '한국불교문화원 (대리점)',
-      },
-      {
-        id: 'h-2',
-        timestamp: '2026-07-20 10:15:00',
+
+    const list: HistoryEntry[] = [];
+    if (selectedAgent.createdAt) {
+      list.push({
+        id: `h-init`,
+        timestamp: new Date(selectedAgent.createdAt).toLocaleString('ko-KR'),
+        category: '영업자 계정 등록',
+        beforeVal: '신규 등록',
+        afterVal: `승인 완료 (추천코드 ${selectedAgent.referralCode || '-'})`,
+        modifiedBy: '대리점 관리자',
+      });
+    }
+
+    agentTenants.forEach((t, i) => {
+      list.push({
+        id: `h-tenant-${i}`,
+        timestamp: t.createdAt ? new Date(t.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
         category: '가맹점 단체 유치',
         beforeVal: '—',
-        afterVal: '신규 단체 [명성교회] 유치 등록 (3.0%)',
+        afterVal: `신규 단체 [${t.name}] 유치 등록 완료`,
         modifiedBy: `${selectedAgent.name} (영업자)`,
-      },
-      {
-        id: 'h-3',
-        timestamp: '2026-07-01 09:00:00',
-        category: '영업자 계정 승인',
-        beforeVal: '승인 대기',
-        afterVal: `승인 완료 (추천코드 ${selectedAgent.referralCode} 부여)`,
-        modifiedBy: '시스템 관리자',
-      },
-    ];
+      });
+    });
+
+    return list;
   });
+
 
   return (
     <div className="space-y-6 max-w-4xl">
