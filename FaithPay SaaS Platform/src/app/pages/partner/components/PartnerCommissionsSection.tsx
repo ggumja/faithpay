@@ -3,10 +3,12 @@
  *   1. 수수료 발생 내역 (건별 원장)
  *   2. 정산 수령 내역  (메인 관리자 → 대리점 입금 확정)
  *   3. 영업자별 지급 현황 (대리점 전용: 대리점 → 영업자 하위 정산)
+ * 
+ * 기간 필터: 3개 탭 모두 이번달/지난달/특정월/전체 동일 적용
  */
 
-import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
@@ -34,11 +36,87 @@ const StatusBadge = ({ status }: { status: PartnerSettlement['status'] }) => {
   );
 };
 
-const fmt = (n: number) => new Intl.NumberFormat('ko-KR').format(Math.round(n)) + '원';
+const fmt     = (n: number) => new Intl.NumberFormat('ko-KR').format(Math.round(n)) + '원';
 const fmtDate = (s: string) => {
   try { return new Date(s).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
   catch { return s; }
 };
+
+/* ── 기간 필터 타입 ── */
+type PeriodKey = 'thisMonth' | 'lastMonth' | 'custom' | 'all';
+
+/* ── 공용 기간 필터 바 컴포넌트 ── */
+function PeriodFilter({
+  value, onChange, customFrom, customTo, onCustomFrom, onCustomTo,
+}: {
+  value: PeriodKey;
+  onChange: (v: PeriodKey) => void;
+  customFrom: string;
+  customTo: string;
+  onCustomFrom: (v: string) => void;
+  onCustomTo: (v: string) => void;
+}) {
+  const now = new Date();
+  const options: { key: PeriodKey; label: string }[] = [
+    { key: 'thisMonth', label: `${now.getMonth() + 1}월 (이번 달)` },
+    { key: 'lastMonth', label: `${now.getMonth()}월 (지난 달)` },
+    { key: 'custom',    label: '기간 직접 지정' },
+    { key: 'all',       label: '전체' },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <CalendarDays size={13} className="text-[var(--hm-ink-3)] shrink-0" />
+      <div className="flex items-center gap-1 flex-wrap">
+        {options.map(o => (
+          <button key={o.key} onClick={() => onChange(o.key)}
+            className={`px-3 py-1.5 rounded-[7px] text-[11.5px] font-semibold cursor-pointer border transition-colors ${
+              value === o.key
+                ? 'bg-slate-800 text-white border-slate-800'
+                : 'bg-[var(--hm-paper)] text-[var(--hm-ink-3)] border-[var(--hm-border)] hover:bg-[var(--hm-paper-2)]'
+            }`}>{o.label}
+          </button>
+        ))}
+      </div>
+      {/* 기간 직접 지정 입력 */}
+      {value === 'custom' && (
+        <div className="flex items-center gap-1.5 ml-1">
+          <input
+            type="date"
+            value={customFrom}
+            onChange={e => onCustomFrom(e.target.value)}
+            className="px-2 py-1.5 text-[11.5px] border border-[var(--hm-border)] rounded-[7px] bg-[var(--hm-paper)] text-[var(--hm-ink)] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+          <span className="text-[11px] text-[var(--hm-ink-3)]">~</span>
+          <input
+            type="date"
+            value={customTo}
+            onChange={e => onCustomTo(e.target.value)}
+            className="px-2 py-1.5 text-[11.5px] border border-[var(--hm-border)] rounded-[7px] bg-[var(--hm-paper)] text-[var(--hm-ink)] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── 날짜 포함 여부 체크 (공용) ── */
+function inPeriod(dateStr: string, period: PeriodKey, customFrom: string, customTo: string): boolean {
+  if (period === 'all') return true;
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (period === 'thisMonth') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (period === 'lastMonth') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1);
+      return d.getFullYear() === lm.getFullYear() && d.getMonth() === lm.getMonth();
+    }
+    if (period === 'custom' && customFrom && customTo) {
+      const from = new Date(customFrom); const to = new Date(customTo + 'T23:59:59');
+      return d >= from && d <= to;
+    }
+  } catch {}
+  return true;
+}
 
 /* ═══════════════════════════════════════════════════════════ */
 export function PartnerCommissionsSection({
@@ -50,13 +128,23 @@ export function PartnerCommissionsSection({
   type MainTab = 'commission' | 'settlement' | 'agentPayout';
   const [mainTab, setMainTab] = useState<MainTab>('commission');
 
-  /* ── 기간 필터 (수수료 발생 탭) ── */
-  const [periodTab, setPeriodTab] = useState<'thisMonth' | 'lastMonth' | 'all'>('all');
+  /* ── 공용 기간 필터 상태 (탭별 독립) ── */
+  const [commPeriod,       setCommPeriod]       = useState<PeriodKey>('all');
+  const [settlePeriod,     setSettlePeriod]     = useState<PeriodKey>('thisMonth');
+  const [agentPayPeriod,   setAgentPayPeriod]   = useState<PeriodKey>('thisMonth');
+
+  /* ── 기간 직접 지정 (탭별) ── */
+  const [commFrom,     setCommFrom]     = useState('');
+  const [commTo,       setCommTo]       = useState('');
+  const [settleFrom,   setSettleFrom]   = useState('');
+  const [settleTo,     setSettleTo]     = useState('');
+  const [agentFrom,    setAgentFrom]    = useState('');
+  const [agentTo,      setAgentTo]      = useState('');
 
   /* ── 정산 내역 데이터 ── */
-  const [settlements, setSettlements] = useState<PartnerSettlement[]>([]);
+  const [settlements,        setSettlements]        = useState<PartnerSettlement[]>([]);
   const [loadingSettlements, setLoadingSettlements] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId,         setExpandedId]         = useState<string | null>(null);
 
   useEffect(() => {
     if (mainTab === 'settlement' || mainTab === 'agentPayout') {
@@ -70,49 +158,72 @@ export function PartnerCommissionsSection({
     }
   }, [mainTab, partner.id, isAgency]);
 
-  /* ── 수수료 발생 탭 집계 ── */
+  /* ── now ── */
   const now = new Date();
-  const filtered = commissions.filter(c => {
-    if (periodTab === 'all') return true;
-    try {
-      const d = new Date(c.createdAt);
-      if (periodTab === 'thisMonth') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-      if (periodTab === 'lastMonth') {
-        const lm = new Date(now.getFullYear(), now.getMonth() - 1);
-        return d.getFullYear() === lm.getFullYear() && d.getMonth() === lm.getMonth();
-      }
-    } catch {}
-    return true;
-  });
-  const pendingList  = filtered.filter(c => c.settlementStatus !== 'paid');
-  const settledComms = filtered.filter(c => c.settlementStatus === 'paid');
-  const totalDonation   = filtered.reduce((s, c) => s + (c.donationAmount   ?? 0), 0);
-  const totalCommission = filtered.reduce((s, c) => s + (c.commissionAmount ?? 0), 0);
+
+  /* ════════════════════════════════════
+     탭 1: 수수료 발생 내역 집계
+  ════════════════════════════════════ */
+  const filteredComm = useMemo(() => commissions.filter(c =>
+    inPeriod(c.createdAt, commPeriod, commFrom, commTo)
+  ), [commissions, commPeriod, commFrom, commTo]);
+
+  const pendingList     = filteredComm.filter(c => c.settlementStatus !== 'paid');
+  const settledComms    = filteredComm.filter(c => c.settlementStatus === 'paid');
+  const totalDonation   = filteredComm.reduce((s, c) => s + (c.donationAmount   ?? 0), 0);
+  const totalCommission = filteredComm.reduce((s, c) => s + (c.commissionAmount ?? 0), 0);
   const totalSettledComm= settledComms.reduce((s, c) => s + (c.commissionAmount ?? 0), 0);
-  const periodLabel = periodTab === 'thisMonth' ? `${now.getMonth() + 1}월` : periodTab === 'lastMonth' ? `${now.getMonth()}월` : '전체';
 
-  /* ── 정산 내역 탭 집계 ── */
-  const paidSettlements     = settlements.filter(s => s.status === 'paid');
-  const totalReceived       = paidSettlements.reduce((s, x) => s + x.netAmount, 0);
-  const thisMonthReceived   = paidSettlements.filter(s => {
-    try { const d = new Date(s.settledAt ?? s.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }
-    catch { return false; }
-  }).reduce((s, x) => s + x.netAmount, 0);
+  const commPeriodLabel = commPeriod === 'thisMonth'
+    ? `${now.getMonth() + 1}월` : commPeriod === 'lastMonth'
+    ? `${now.getMonth()}월` : commPeriod === 'custom' && commFrom && commTo
+    ? `${commFrom} ~ ${commTo}` : '전체';
 
-  /* ── 영업자별 지급 현황 (대리점 전용) ── */
-  const allBreakdowns = settlements.flatMap(s => (s.agentBreakdowns ?? []).map(b => ({ ...b, period: `${s.periodStart} ~ ${s.periodEnd}`, settledAt: s.settledAt })));
-  const agentMap = new Map<string, { name: string; total: number; count: number }>();
-  allBreakdowns.forEach(b => {
-    const prev = agentMap.get(b.agentId) ?? { name: b.agentName, total: 0, count: 0 };
-    agentMap.set(b.agentId, { name: b.agentName, total: prev.total + b.agentReceived, count: prev.count + 1 });
+  /* ════════════════════════════════════
+     탭 2: 정산 수령 내역 집계
+  ════════════════════════════════════ */
+  const filteredSettlements = useMemo(() => settlements.filter(s =>
+    inPeriod(s.settledAt ?? s.createdAt, settlePeriod, settleFrom, settleTo)
+  ), [settlements, settlePeriod, settleFrom, settleTo]);
+
+  const paidSettlements   = filteredSettlements.filter(s => s.status === 'paid');
+  const totalReceived     = paidSettlements.reduce((s, x) => s + x.netAmount, 0);
+  const totalCommTotal    = paidSettlements.reduce((s, x) => s + x.totalCommission, 0);
+  const settlePeriodLabel = settlePeriod === 'thisMonth'
+    ? `${now.getMonth() + 1}월` : settlePeriod === 'lastMonth'
+    ? `${now.getMonth()}월` : settlePeriod === 'custom' && settleFrom && settleTo
+    ? `${settleFrom} ~ ${settleTo}` : '전체';
+
+  /* ════════════════════════════════════
+     탭 3: 영업자별 지급 현황 집계
+  ════════════════════════════════════ */
+  const filteredAgentBreakdowns = useMemo(() => {
+    return settlements
+      .filter(s => inPeriod(s.settledAt ?? s.createdAt, agentPayPeriod, agentFrom, agentTo))
+      .flatMap(s => (s.agentBreakdowns ?? []).map(b => ({
+        ...b,
+        period: `${s.periodStart} ~ ${s.periodEnd}`,
+        settledAt: s.settledAt,
+      })));
+  }, [settlements, agentPayPeriod, agentFrom, agentTo]);
+
+  const agentMap = new Map<string, { name: string; total: number; margin: number; count: number }>();
+  filteredAgentBreakdowns.forEach(b => {
+    const prev = agentMap.get(b.agentId) ?? { name: b.agentName, total: 0, margin: 0, count: 0 };
+    agentMap.set(b.agentId, { name: b.agentName, total: prev.total + b.agentReceived, margin: prev.margin + b.agencyMargin, count: prev.count + 1 });
   });
   const agentSummaries = Array.from(agentMap.entries()).map(([id, v]) => ({ id, ...v }));
 
+  const agentPayPeriodLabel = agentPayPeriod === 'thisMonth'
+    ? `${now.getMonth() + 1}월` : agentPayPeriod === 'lastMonth'
+    ? `${now.getMonth()}월` : agentPayPeriod === 'custom' && agentFrom && agentTo
+    ? `${agentFrom} ~ ${agentTo}` : '전체';
+
   /* ── 탭 정의 ── */
   const TABS: { key: MainTab; icon: any; label: string; badge?: number }[] = [
-    { key: 'commission', icon: TrendingUp, label: '수수료 발생 내역', badge: commissions.length },
-    { key: 'settlement', icon: Receipt,    label: '정산 수령 내역',   badge: settlements.length },
-    ...(isAgency ? [{ key: 'agentPayout' as MainTab, icon: Users, label: '영업자별 지급 현황', badge: agentSummaries.length }] : []),
+    { key: 'commission',  icon: TrendingUp, label: '수수료 발생 내역',   badge: filteredComm.length },
+    { key: 'settlement',  icon: Receipt,    label: '정산 수령 내역',     badge: filteredSettlements.length },
+    ...(isAgency ? [{ key: 'agentPayout' as MainTab, icon: Users, label: '영업자별 지급 현황', badge: filteredAgentBreakdowns.length }] : []),
   ];
 
   return (
@@ -153,22 +264,18 @@ export function PartnerCommissionsSection({
       {mainTab === 'commission' && (
         <>
           {/* 기간 필터 */}
-          <div className="flex items-center gap-1">
-            {([['thisMonth', '이번 달'], ['lastMonth', '지난 달'], ['all', '전체']] as const).map(([key, label]) => (
-              <button key={key} onClick={() => setPeriodTab(key)}
-                className={`px-3 py-1.5 rounded-[7px] text-[11.5px] font-semibold cursor-pointer border transition-colors ${
-                  periodTab === key ? 'bg-slate-800 text-white border-slate-800' : 'bg-[var(--hm-paper)] text-[var(--hm-ink-3)] border-[var(--hm-border)] hover:bg-[var(--hm-paper-2)]'
-                }`}>{label}
-              </button>
-            ))}
-          </div>
+          <PeriodFilter
+            value={commPeriod} onChange={setCommPeriod}
+            customFrom={commFrom} customTo={commTo}
+            onCustomFrom={setCommFrom} onCustomTo={setCommTo}
+          />
 
           {/* KPI */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: `총 결제액 (${periodLabel})`,    value: fmt(totalDonation),    color: 'text-slate-700' },
-              { label: `수수료 발생 (${periodLabel})`,  value: fmt(totalCommission),  color: 'text-emerald-600' },
-              { label: `정산 완료 (${periodLabel})`,    value: fmt(totalSettledComm), color: 'text-blue-600' },
+              { label: `총 결제액 (${commPeriodLabel})`,   value: fmt(totalDonation),    color: 'text-slate-700' },
+              { label: `수수료 발생 (${commPeriodLabel})`, value: fmt(totalCommission),  color: 'text-emerald-600' },
+              { label: `정산 완료 (${commPeriodLabel})`,   value: fmt(totalSettledComm), color: 'text-blue-600' },
             ].map(({ label, value, color }) => (
               <Card key={label} className="border-slate-200">
                 <CardContent className="p-4">
@@ -196,7 +303,7 @@ export function PartnerCommissionsSection({
           {/* 사업자 유형별 세무 산식 */}
           <div className="p-4 bg-[var(--hm-paper)] border border-[var(--hm-border)] rounded-xl space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[var(--hm-ink)]">세무 정산 및 이체 금액 산출 명세</span>
+              <span className="text-xs font-bold text-[var(--hm-ink)]">세무 정산 및 이체 금액 산출 명세 ({commPeriodLabel})</span>
               <span className="text-[10.5px] text-slate-500 font-medium">🔒 사업자 유형은 등록 시 확정되며 변경이 불가합니다</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -237,7 +344,7 @@ export function PartnerCommissionsSection({
           <Card className="border-slate-200">
             <CardHeader className="pb-3 border-b border-slate-100">
               <CardTitle className="text-[14px] font-bold text-[var(--hm-ink)]">
-                수수료 발생 원장 — {periodLabel} ({filtered.length}건 / 미정산 {pendingList.length}건)
+                수수료 발생 원장 — {commPeriodLabel} ({filteredComm.length}건 / 미정산 {pendingList.length}건)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -253,13 +360,13 @@ export function PartnerCommissionsSection({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.length === 0 ? (
+                  {filteredComm.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-10 text-slate-400 text-sm">
-                        {periodLabel} 수수료 발생 기록이 없습니다.
+                        {commPeriodLabel} 수수료 발생 기록이 없습니다.
                       </TableCell>
                     </TableRow>
-                  ) : filtered.map(c => (
+                  ) : filteredComm.map(c => (
                     <TableRow key={c.id} className="hover:bg-[var(--hm-paper-2)]">
                       <TableCell className="text-[11px] text-[var(--hm-ink-3)]">{fmtDate(c.createdAt)}</TableCell>
                       <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">{c.tenantName}</TableCell>
@@ -285,13 +392,20 @@ export function PartnerCommissionsSection({
       ══════════════════════════════════ */}
       {mainTab === 'settlement' && (
         <>
+          {/* 기간 필터 */}
+          <PeriodFilter
+            value={settlePeriod} onChange={setSettlePeriod}
+            customFrom={settleFrom} customTo={settleTo}
+            onCustomFrom={setSettleFrom} onCustomTo={setSettleTo}
+          />
+
           {/* KPI */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: '정산 수령 누적',      value: fmt(totalReceived),      color: 'text-emerald-600',  sub: '전체 입금 확정 합계' },
-              { label: '이번 달 수령',         value: fmt(thisMonthReceived),  color: 'text-amber-600',    sub: `${now.getMonth() + 1}월 입금 기준` },
-              { label: '정산 회차',            value: `${paidSettlements.length}회`,  color: 'text-indigo-600',  sub: '완료 정산 횟수' },
-              { label: '예정 정산',            value: `${settlements.filter(s => s.status === 'scheduled').length}건`, color: 'text-slate-600', sub: '처리 대기 중' },
+              { label: `수령 합계 (${settlePeriodLabel})`,    value: fmt(totalReceived),               color: 'text-emerald-600', sub: '실입금 기준' },
+              { label: `수수료 발생 (${settlePeriodLabel})`,  value: fmt(totalCommTotal),              color: 'text-slate-700',   sub: '세전 합계' },
+              { label: `정산 완료 회차 (${settlePeriodLabel})`, value: `${paidSettlements.length}회`,  color: 'text-indigo-600',  sub: '입금 확정 건' },
+              { label: '입금 예정',                            value: `${settlements.filter(s => s.status === 'scheduled').length}건`, color: 'text-amber-600', sub: '처리 대기 중' },
             ].map(({ label, value, color, sub }) => (
               <Card key={label} className="border-slate-200">
                 <CardContent className="p-4">
@@ -318,15 +432,18 @@ export function PartnerCommissionsSection({
           {/* 정산 내역 목록 (accordion) */}
           {loadingSettlements ? (
             <div className="py-10 text-center text-[var(--hm-ink-3)] text-sm">정산 내역을 불러오는 중...</div>
-          ) : settlements.length === 0 ? (
-            <div className="py-10 text-center text-[var(--hm-ink-3)] text-sm">정산 내역이 없습니다.</div>
+          ) : filteredSettlements.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
+              <Receipt size={28} className="text-slate-300" />
+              <p className="text-[13px] text-[var(--hm-ink-3)] font-semibold">{settlePeriodLabel} 정산 내역이 없습니다.</p>
+              <p className="text-[11px] text-slate-400">기간을 변경하거나 전체로 조회해 보세요.</p>
+            </div>
           ) : (
             <div className="space-y-3">
-              {settlements.map(s => {
+              {filteredSettlements.map(s => {
                 const isExpanded = expandedId === s.id;
                 return (
-                  <Card key={s.id} className={`border-[var(--hm-border)] overflow-hidden transition-all ${s.status === 'paid' ? '' : 'opacity-80'}`}>
-                    {/* 정산 행 헤더 */}
+                  <Card key={s.id} className={`border-[var(--hm-border)] overflow-hidden ${s.status === 'paid' ? '' : 'opacity-80'}`}>
                     <div
                       className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-[var(--hm-paper-2)] transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : s.id)}
@@ -362,14 +479,15 @@ export function PartnerCommissionsSection({
                             {s.settledAt ? fmtDate(s.settledAt) : '—'}
                           </div>
                         </div>
-                        {isExpanded ? <ChevronDown size={15} className="text-slate-400 shrink-0" /> : <ChevronRight size={15} className="text-slate-400 shrink-0" />}
+                        {isExpanded
+                          ? <ChevronDown size={15} className="text-slate-400 shrink-0" />
+                          : <ChevronRight size={15} className="text-slate-400 shrink-0" />}
                       </div>
                     </div>
 
-                    {/* 정산 상세 (펼쳐지는 accordion) */}
+                    {/* accordion 상세 */}
                     {isExpanded && (
                       <div className="border-t border-[var(--hm-border)] bg-[var(--hm-paper-2)] px-5 py-4 space-y-4">
-                        {/* 세무 산식 */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           {[
                             { label: '수수료 합계 (공급가액)', value: fmt(s.totalCommission), color: 'text-slate-700' },
@@ -386,8 +504,6 @@ export function PartnerCommissionsSection({
                             </div>
                           ))}
                         </div>
-
-                        {/* 영업자별 하위 지급 명세 (대리점 전용) */}
                         {isAgency && s.agentBreakdowns && s.agentBreakdowns.length > 0 && (
                           <div>
                             <div className="text-[11.5px] font-bold text-[var(--hm-ink)] mb-2 flex items-center gap-1.5">
@@ -435,35 +551,46 @@ export function PartnerCommissionsSection({
       ══════════════════════════════════ */}
       {mainTab === 'agentPayout' && isAgency && (
         <>
+          {/* 기간 필터 */}
+          <PeriodFilter
+            value={agentPayPeriod} onChange={setAgentPayPeriod}
+            customFrom={agentFrom} customTo={agentTo}
+            onCustomFrom={setAgentFrom} onCustomTo={setAgentTo}
+          />
+
           {loadingSettlements ? (
             <div className="py-10 text-center text-[var(--hm-ink-3)] text-sm">지급 내역을 불러오는 중...</div>
-          ) : agentSummaries.length === 0 ? (
-            <div className="py-10 text-center text-[var(--hm-ink-3)] text-sm">영업자 지급 내역이 없습니다.</div>
+          ) : filteredAgentBreakdowns.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
+              <Users size={28} className="text-slate-300" />
+              <p className="text-[13px] text-[var(--hm-ink-3)] font-semibold">{agentPayPeriodLabel} 영업자 지급 내역이 없습니다.</p>
+              <p className="text-[11px] text-slate-400">기간을 변경하거나 전체로 조회해 보세요.</p>
+            </div>
           ) : (
             <>
-              {/* 영업자 요약 카드 */}
+              {/* 영업자 요약 KPI 카드 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {agentSummaries.map(agent => (
                   <Card key={agent.id} className="border-[var(--hm-border)]">
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 font-bold text-[13px] flex items-center justify-center shrink-0 border border-purple-200">
+                      <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 font-bold text-[13px] flex items-center justify-center shrink-0 border border-purple-200">
                         {agent.name.charAt(0)}
                       </div>
-                      <div>
-                        <div className="text-[13px] font-bold text-[var(--hm-ink)]">{agent.name}</div>
-                        <div className="text-[11px] text-[var(--hm-ink-3)] mt-0.5">정산 {agent.count}회</div>
-                        <div className="text-[14px] font-bold text-purple-700 mt-0.5 font-mono">{fmt(agent.total)}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-bold text-[var(--hm-ink)] truncate">{agent.name}</div>
+                        <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">정산 {agent.count}회 · 마진 차감 {fmt(agent.margin)}</div>
+                        <div className="text-[15px] font-bold text-purple-700 mt-0.5 font-mono">{fmt(agent.total)}</div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
 
-              {/* 영업자별 정산 상세 테이블 */}
+              {/* 영업자별 상세 지급 이력 테이블 */}
               <Card className="border-[var(--hm-border)]">
                 <CardHeader className="pb-3 border-b border-[var(--hm-border)]">
                   <CardTitle className="text-[14px] font-bold text-[var(--hm-ink)]">
-                    영업자별 하위 지급 전체 이력
+                    영업자별 지급 이력 — {agentPayPeriodLabel} ({filteredAgentBreakdowns.length}건)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -479,7 +606,7 @@ export function PartnerCommissionsSection({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {allBreakdowns.map((b, i) => (
+                      {filteredAgentBreakdowns.map((b, i) => (
                         <TableRow key={`${b.agentId}-${i}`} className="hover:bg-[var(--hm-paper-2)]">
                           <TableCell className="text-[11px] text-[var(--hm-ink-3)]">{b.period}</TableCell>
                           <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">
