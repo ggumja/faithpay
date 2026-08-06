@@ -42,12 +42,14 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallbackDenylist: [/^\/system\/admin\/.*/, /^https:\/\/.*\.supabase\.co\/.*/],
         runtimeCaching: [
           {
-            // Supabase API — 결제 데이터 무결성을 위해 캐시하지 않음
+            // Supabase API 및 백엔드 API — 캐시하지 않고 즉시 직통
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkOnly',
           },
+
           {
             // 정적 이미지 자산 — 캐시 우선
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
