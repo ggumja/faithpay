@@ -242,26 +242,6 @@ export default function PaymentSelection() {
           recurringDay: donationFormData.recurringDay || 10,
         });
 
-        // 로컬 구독 세션에도 즉시 보관하여 내역 페이지에서 100% 즉시 노출되도록 보장
-        try {
-          const existingSubs = JSON.parse(localStorage.getItem('faithpay_subscriptions') || '[]');
-          const newSubRecord = {
-            id: tempSubId,
-            tenantId: currentTenant.id,
-            donorName: donationFormData.name || '신도',
-            donorPhone: cleanPhone,
-            itemId: donationFormData.itemId || 'recurring',
-            itemName: donationFormData.itemName || '정기 보시/봉헌금',
-            amount: donationFormData.amount,
-            recurringDay: donationFormData.recurringDay || 10,
-            cardName: '나노페이 신용카드',
-            cardNo: '4330-****-****-9872',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          };
-          existingSubs.unshift(newSubRecord);
-          localStorage.setItem('faithpay_subscriptions', JSON.stringify(existingSubs));
-        } catch (e) {}
 
         const reqUrl = 'https://dev3.nanopay.co.kr/api/payment/recure/reqkey.io';
 

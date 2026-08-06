@@ -89,17 +89,11 @@ export default function MyDonations() {
     try {
       const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
 
-      // 로컬 세션 저장소 쿼리
-      const localSubs = JSON.parse(localStorage.getItem('faithpay_subscriptions') || '[]');
-      const matchedLocalSubs = localSubs.filter((s: any) => (s.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone);
-
-      // 1. OTP 검증 API 호출
+      // 1. OTP 검증 및 DB 조회 API 호출
       const res = await otpAuthAPI.verifyOtp(phoneNumber, otpCode);
       if (res.success && res.data) {
         setIsAuthenticated(true);
-        const combinedSubs = [...(res.data.subscriptions || []), ...matchedLocalSubs];
-        const uniqueSubs = Array.from(new Map(combinedSubs.map(item => [item.id, item])).values());
-        setSubscriptions(uniqueSubs);
+        setSubscriptions(res.data.subscriptions || []);
 
         if (res.data.donations && res.data.donations.length > 0) {
           const matched: HistoryItem[] = res.data.donations.map(d => ({
@@ -119,10 +113,8 @@ export default function MyDonations() {
         }
         toast.success('본인 인증이 완료되었습니다.');
       } else {
-        // 2. Supabase DB 및 세션 기반 정기결제 바인딩
+        // 2. Supabase DB 전용 조율
         setIsAuthenticated(true);
-        setSubscriptions(matchedLocalSubs);
-
         const dbRes = await donationAPI.getByTenant(currentTenant.id);
         if (dbRes.success && dbRes.data) {
           const matched: HistoryItem[] = dbRes.data
@@ -146,16 +138,14 @@ export default function MyDonations() {
       }
     } catch (err) {
       setIsAuthenticated(true);
-      const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
-      const localSubs = JSON.parse(localStorage.getItem('faithpay_subscriptions') || '[]');
-      const matchedLocalSubs = localSubs.filter((s: any) => (s.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone);
-      setSubscriptions(matchedLocalSubs);
+      setSubscriptions([]);
       setHistory([]);
       toast.success('본인 인증이 완료되었습니다.');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const handleUpdateSubStatus = async (subId: string, newStatus: 'paused' | 'cancelled' | 'active') => {
     const labelMap = { paused: '일시정지', cancelled: '해지', active: '재개' };
