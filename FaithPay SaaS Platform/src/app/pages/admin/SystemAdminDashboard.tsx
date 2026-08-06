@@ -92,9 +92,10 @@ export default function SystemAdminDashboard() {
     return {
       ...t,
       paymentConfig,
-      live: isGakwonsa || isMyungsung || (paymentConfig?.isActive ?? false),
+      live: Boolean(paymentConfig?.isActive || t.status === 'active'),
     };
   });
+
   const liveCnt = tList.filter(t => t.live).length;
 
   // ── 대리점별 단체 묶음 그룹 생성 ──────────────────────────────────
