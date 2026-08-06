@@ -207,10 +207,10 @@ export function PartnerCommissionsSection({
       })));
   }, [settlements, agentPayPeriod, agentFrom, agentTo]);
 
-  const agentMap = new Map<string, { name: string; total: number; margin: number; count: number }>();
+  const agentMap = new Map<string, { name: string; businessType: string; taxType: string; totalNet: number; totalMargin: number; count: number }>();
   filteredAgentBreakdowns.forEach(b => {
-    const prev = agentMap.get(b.agentId) ?? { name: b.agentName, total: 0, margin: 0, count: 0 };
-    agentMap.set(b.agentId, { name: b.agentName, total: prev.total + b.agentReceived, margin: prev.margin + b.agencyMargin, count: prev.count + 1 });
+    const prev = agentMap.get(b.agentId) ?? { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: 0, totalMargin: 0, count: 0 };
+    agentMap.set(b.agentId, { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: prev.totalNet + (b.netAgentReceived ?? (b as any).agentReceived ?? 0), totalMargin: prev.totalMargin + b.agencyMargin, count: prev.count + 1 });
   });
   const agentSummaries = Array.from(agentMap.entries()).map(([id, v]) => ({ id, ...v }));
 
@@ -507,31 +507,51 @@ export function PartnerCommissionsSection({
                         {isAgency && s.agentBreakdowns && s.agentBreakdowns.length > 0 && (
                           <div>
                             <div className="text-[11.5px] font-bold text-[var(--hm-ink)] mb-2 flex items-center gap-1.5">
-                              <Users size={12} className="text-purple-600" /> 영업자별 하위 지급 명세
+                              <Users size={12} className="text-purple-600" /> 영업자별 하위 지급 명세 (각 영업자 사업자 유형별 개별 세무 처리)
                             </div>
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-[var(--hm-paper)]">
-                                  <TableHead className="text-[10.5px]">영업자</TableHead>
+                                  <TableHead className="text-[10.5px]">영업자 / 사업자 유형</TableHead>
                                   <TableHead className="text-right text-[10.5px]">수수료 발생</TableHead>
-                                  <TableHead className="text-right text-[10.5px]">대리점 마진 차감</TableHead>
-                                  <TableHead className="text-right text-[10.5px]">영업자 수령액</TableHead>
+                                  <TableHead className="text-right text-[10.5px]">대리점 마진</TableHead>
+                                  <TableHead className="text-right text-[10.5px]">세전 지급액</TableHead>
+                                  <TableHead className="text-right text-[10.5px]">세무 처리</TableHead>
+                                  <TableHead className="text-right text-[10.5px]">실수령액</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {s.agentBreakdowns.map(b => (
-                                  <TableRow key={b.agentId} className="hover:bg-[var(--hm-paper)]">
-                                    <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 font-bold text-[10px] flex items-center justify-center">{b.agentName.charAt(0)}</div>
-                                        {b.agentName}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-right text-[12px] font-mono text-[var(--hm-ink)]">{fmt(b.commissionAmount)}</TableCell>
-                                    <TableCell className="text-right text-[12px] font-mono text-red-500">-{fmt(b.agencyMargin)}</TableCell>
-                                    <TableCell className="text-right text-[13px] font-bold font-mono text-purple-700">{fmt(b.agentReceived)}</TableCell>
-                                  </TableRow>
-                                ))}
+                                {s.agentBreakdowns.map(b => {
+                                  const btLabel = b.businessType === 'corporate' ? { label: '법인', cls: 'bg-blue-100 text-blue-700' }
+                                    : b.businessType === 'individual_business' ? { label: '일반사업자', cls: 'bg-green-100 text-green-700' }
+                                    : { label: '프리랜서', cls: 'bg-emerald-100 text-emerald-700' };
+                                  const isVat = b.taxType === 'vat';
+                                  const grossAmt = b.grossAgentAmount ?? (b.commissionAmount - b.agencyMargin);
+                                  const netAmt   = b.netAgentReceived ?? (b as any).agentReceived ?? grossAmt;
+                                  return (
+                                    <TableRow key={b.agentId} className="hover:bg-[var(--hm-paper)]">
+                                      <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 font-bold text-[10px] flex items-center justify-center">{b.agentName.charAt(0)}</div>
+                                          <div>
+                                            <div>{b.agentName}</div>
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold ${btLabel.cls}`}>
+                                              {isVat ? '🏬' : '👤'} {btLabel.label}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-right text-[12px] font-mono text-[var(--hm-ink)]">{fmt(b.commissionAmount)}</TableCell>
+                                      <TableCell className="text-right text-[12px] font-mono text-red-500">-{fmt(b.agencyMargin)}</TableCell>
+                                      <TableCell className="text-right text-[12px] font-mono text-slate-600">{fmt(grossAmt)}</TableCell>
+                                      <TableCell className={`text-right text-[12px] font-mono ${isVat ? 'text-blue-600' : 'text-red-500'}`}>
+                                        {isVat ? '+' : '-'}{fmt(b.taxAmount ?? 0)}
+                                        <div className="text-[9px] text-[var(--hm-ink-3)] mt-0.5">{isVat ? 'VAT 10%' : '원천징수 3.3%'}</div>
+                                      </TableCell>
+                                      <TableCell className="text-right text-[13px] font-bold font-mono text-purple-700">{fmt(netAmt)}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
                               </TableBody>
                             </Table>
                           </div>
@@ -570,20 +590,35 @@ export function PartnerCommissionsSection({
             <>
               {/* 영업자 요약 KPI 카드 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {agentSummaries.map(agent => (
-                  <Card key={agent.id} className="border-[var(--hm-border)]">
-                    <CardContent className="p-4 flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 font-bold text-[13px] flex items-center justify-center shrink-0 border border-purple-200">
-                        {agent.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-bold text-[var(--hm-ink)] truncate">{agent.name}</div>
-                        <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">정산 {agent.count}회 · 마진 차감 {fmt(agent.margin)}</div>
-                        <div className="text-[15px] font-bold text-purple-700 mt-0.5 font-mono">{fmt(agent.total)}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {agentSummaries.map(agent => {
+                  const isVat = agent.taxType === 'vat';
+                  const btLabel = agent.businessType === 'corporate' ? '법인'
+                    : agent.businessType === 'individual_business' ? '일반사업자' : '프리랜서';
+                  return (
+                    <Card key={agent.id} className="border-[var(--hm-border)]">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 font-bold text-[13px] flex items-center justify-center shrink-0 border border-purple-200">
+                          {agent.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[13px] font-bold text-[var(--hm-ink)] truncate">{agent.name}</span>
+                            <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-bold border ${
+                              isVat ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>{isVat ? '🏬 ' + btLabel : '👤 ' + btLabel}</span>
+                          </div>
+                          <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">
+                            정산 {agent.count}회 · 마진 차감 {fmt(agent.totalMargin)}
+                            <span className={`ml-1.5 text-[9px] font-bold ${isVat ? 'text-blue-500' : 'text-red-500'}`}>
+                              {isVat ? 'VAT +10%' : '원천징수 -3.3%'}
+                            </span>
+                          </div>
+                          <div className="text-[15px] font-bold text-purple-700 mt-0.5 font-mono">{fmt(agent.totalNet)}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
 
               {/* 영업자별 상세 지급 이력 테이블 */}
@@ -597,32 +632,51 @@ export function PartnerCommissionsSection({
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-[var(--hm-paper-2)]">
-                        <TableHead className="text-[11px]">정산 기간</TableHead>
-                        <TableHead className="text-[11px]">영업자</TableHead>
+                     <TableHead className="text-[11px]">정산 기간</TableHead>
+                        <TableHead className="text-[11px]">영업자 / 유형</TableHead>
                         <TableHead className="text-right text-[11px]">수수료 발생</TableHead>
                         <TableHead className="text-right text-[11px]">대리점 마진</TableHead>
-                        <TableHead className="text-right text-[11px]">영업자 수령</TableHead>
+                        <TableHead className="text-right text-[11px]">세전 지급액</TableHead>
+                        <TableHead className="text-right text-[11px]">세무 처리</TableHead>
+                        <TableHead className="text-right text-[11px]">실수령액</TableHead>
                         <TableHead className="text-center text-[11px]">입금일</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredAgentBreakdowns.map((b, i) => (
-                        <TableRow key={`${b.agentId}-${i}`} className="hover:bg-[var(--hm-paper-2)]">
-                          <TableCell className="text-[11px] text-[var(--hm-ink-3)]">{b.period}</TableCell>
-                          <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-5 h-5 rounded-lg bg-purple-100 text-purple-700 font-bold text-[9px] flex items-center justify-center">{b.agentName.charAt(0)}</div>
-                              {b.agentName}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right text-[12px] font-mono text-[var(--hm-ink)]">{fmt(b.commissionAmount)}</TableCell>
-                          <TableCell className="text-right text-[12px] font-mono text-red-500">-{fmt(b.agencyMargin)}</TableCell>
-                          <TableCell className="text-right text-[13px] font-bold font-mono text-purple-700">{fmt(b.agentReceived)}</TableCell>
-                          <TableCell className="text-center text-[11px] text-[var(--hm-ink-3)]">
-                            {b.settledAt ? fmtDate(b.settledAt) : <span className="text-slate-300">—</span>}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredAgentBreakdowns.map((b, i) => {
+                        const isVat = b.taxType === 'vat';
+                        const btLabel = b.businessType === 'corporate' ? '법인'
+                          : b.businessType === 'individual_business' ? '일반사업자' : '프리랜서';
+                        const grossAmt = b.grossAgentAmount ?? (b.commissionAmount - b.agencyMargin);
+                        const netAmt   = b.netAgentReceived ?? (b as any).agentReceived ?? grossAmt;
+                        return (
+                          <TableRow key={`${b.agentId}-${i}`} className="hover:bg-[var(--hm-paper-2)]">
+                            <TableCell className="text-[11px] text-[var(--hm-ink-3)]">{b.period}</TableCell>
+                            <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-5 h-5 rounded-lg bg-purple-100 text-purple-700 font-bold text-[9px] flex items-center justify-center">{b.agentName.charAt(0)}</div>
+                                <div>
+                                  <div>{b.agentName}</div>
+                                  <span className={`text-[9px] px-1 py-0.5 rounded font-bold ${
+                                    isVat ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
+                                  }`}>{isVat ? '🏬' : '👤'} {btLabel}</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right text-[12px] font-mono text-[var(--hm-ink)]">{fmt(b.commissionAmount)}</TableCell>
+                            <TableCell className="text-right text-[12px] font-mono text-red-500">-{fmt(b.agencyMargin)}</TableCell>
+                            <TableCell className="text-right text-[12px] font-mono text-slate-600">{fmt(grossAmt)}</TableCell>
+                            <TableCell className={`text-right text-[12px] font-mono ${isVat ? 'text-blue-600' : 'text-red-500'}`}>
+                              {isVat ? '+' : '-'}{fmt(b.taxAmount ?? 0)}
+                              <div className="text-[9px] text-[var(--hm-ink-3)]">{isVat ? 'VAT 10%' : '원천 3.3%'}</div>
+                            </TableCell>
+                            <TableCell className="text-right text-[13px] font-bold font-mono text-purple-700">{fmt(netAmt)}</TableCell>
+                            <TableCell className="text-center text-[11px] text-[var(--hm-ink-3)]">
+                              {b.settledAt ? fmtDate(b.settledAt) : <span className="text-slate-300">—</span>}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>
