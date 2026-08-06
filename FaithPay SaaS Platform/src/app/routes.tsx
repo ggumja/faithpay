@@ -30,6 +30,10 @@ import NotFound from "./pages/NotFound";
 import SystemSettingsPage from "./pages/admin/SystemSettingsPage";
 import PartnerDetailPage from "./pages/admin/PartnerDetailPage";
 import SettlementCenterPage from "./pages/admin/SettlementCenterPage";
+import PartnerManagement from "./pages/admin/PartnerManagement";
+import CommissionStatsPage from "./pages/admin/CommissionStatsPage";
+import MultiPartySettlementLedger from "./pages/admin/components/MultiPartySettlementLedger";
+
 
 export const router = createBrowserRouter([
   {
@@ -77,10 +81,11 @@ export const router = createBrowserRouter([
           { path: "/system/admin/tenants/pending/:id", Component: PendingTenantDetailPage },
           { path: "/system/admin/settlement-center", Component: SettlementCenterPage },
           { path: "/system/admin/stats",            Component: SystemAdminDashboard },
-          { path: "/system/admin/partners",         Component: SystemAdminDashboard },
+          { path: "/system/admin/partners",         Component: PartnerManagement    },
           { path: "/system/admin/partners/:id",      Component: PartnerDetailPage    },
-          { path: "/system/admin/commissions",      Component: SystemAdminDashboard },
-          { path: "/system/admin/ledger",           Component: SystemAdminDashboard },
+          { path: "/system/admin/commissions",      Component: CommissionStatsPage  },
+          { path: "/system/admin/ledger",           Component: MultiPartySettlementLedger },
+
           { path: "/system/admin/tenant/:id",       Component: TenantDetailPage     },
           { path: "/system/admin/settings",          Component: SystemSettingsPage   },
 
