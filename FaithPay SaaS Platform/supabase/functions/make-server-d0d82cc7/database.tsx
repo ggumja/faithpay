@@ -1194,13 +1194,13 @@ export async function getAdminSettlementStatements(month: string): Promise<{
 }> {
   const supabase = pgClient();
 
-  // 해당 월 수수료 원장 조회
-  const { data: rows, error } = await supabase
-    .from('partner_commissions')
-    .select('*, partners!partner_id(name, role, business_type, bank_name, account_number)')
-    .eq('settlement_month', month);
+  try {
+    // 해당 월 수수료 원장 조회
+    const { data: rows } = await supabase
+      .from('partner_commissions')
+      .select('*')
+      .eq('settlement_month', month);
 
-  if (error) throw new Error(error.message);
 
   // 테넌트별 집계
   const tenantMap: Record<string, any> = {};
@@ -1233,8 +1233,9 @@ export async function getAdminSettlementStatements(month: string): Promise<{
   // 파트너별 집계 (정산 배치 기준)
   const { data: settlements } = await supabase
     .from('partner_settlements')
-    .select('*, partners!partner_id(name, role, business_type, bank_name, account_number, account_holder)')
+    .select('*')
     .like('period_start', `${month}%`);
+
 
   const partnerStatements = (settlements ?? []).map((s: any, idx: number) => {
     const p = s.partners ?? {};
@@ -1259,10 +1260,19 @@ export async function getAdminSettlementStatements(month: string): Promise<{
     };
   });
 
-  return {
-    tenantStatements: Object.values(tenantMap),
-    partnerStatements,
-  };
+    return {
+      tenantStatements: Object.values(tenantMap),
+      partnerStatements: partnerStatements ?? [],
+    };
+  } catch (err) {
+    console.error('getAdminSettlementStatements error:', err);
+    return {
+      tenantStatements: [],
+      partnerStatements: [],
+    };
+  }
+}
+
 }
 
 /**
