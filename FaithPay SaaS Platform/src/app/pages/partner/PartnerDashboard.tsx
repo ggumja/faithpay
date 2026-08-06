@@ -94,109 +94,90 @@ export default function PartnerDashboard() {
     async function load() {
       setIsLoading(true);
       try {
-        // 세션 파트너 정보 읽기
-        let sessionUser: any = {
-          id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-          name: '한국불교문화원',
-          email: 'sjlee@temple-pay.kr',
-          role: 'master_agency',
-          referralCode: 'BIT2024',
-          agencyRate: 0.5,
-        };
+        // 세션 파트너 정보 읽기 (로그인 세션 또는 기본 한국불교문화원 DB ID)
+        let sessionPartnerId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
         try {
           const raw = localStorage.getItem('faithpay_partner_session');
-          if (raw) sessionUser = { ...sessionUser, ...JSON.parse(raw) };
-        } catch {}
-
-        const activePartner: Partner = {
-          id:             sessionUser.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-          name:           sessionUser.name || '한국불교문화원',
-          email:          sessionUser.email || 'sjlee@temple-pay.kr',
-          phone:          sessionUser.phone || '02-567-8901',
-          role:           sessionUser.role || 'master_agency',
-          commissionRate: sessionUser.agencyRate ?? 0.5,
-          agencyRate:     sessionUser.agencyRate ?? 0.5,
-          referralCode:   sessionUser.referralCode || 'BIT2024',
-          bankName:       sessionUser.bankName || '국민은행',
-          accountNumber:  sessionUser.accountNumber || '620-21-0123456',
-          accountHolder:  sessionUser.accountHolder || '불교정보화협의회',
-          status:         'active',
-          createdAt:      new Date().toISOString(),
-        };
-
-        setPartner(activePartner);
-        setEditPhone(activePartner.phone ?? '');
-        setEditEmail(activePartner.email ?? '');
-        setEditBank((activePartner as any).bankName ?? '');
-        setEditAccount((activePartner as any).accountNumber ?? '');
-        setEditHolder((activePartner as any).accountHolder ?? '');
-
-        // 대리점 기본 수수료율 복원
-        const savedRate = localStorage.getItem(`faithpay:agency_default_rate_${activePartner.id}`) ||
-                          localStorage.getItem('faithpay:agency_default_rate');
-        const activeRate = savedRate ? parseFloat(savedRate) : (activePartner.agencyRate ?? 0.5);
-        setEditAgencyRate(activeRate);
-        (activePartner as any).agencyRate = activeRate;
-
-        // 기본 소속 영업자 데이터
-        const defaultSubAgents: Partner[] = [{
-          id:            'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
-          name:          '이수진',
-          email:         'agent.lee@temple-pay.kr',
-          phone:         '010-9876-5432',
-          role:          'sales_agent',
-          parentId:      activePartner.id,
-          commissionRate: 0.3,
-          agencyRate:    0.3,
-          referralCode:  'LSJ002',
-          bankName:      '신한은행',
-          accountNumber: '110-123-456789',
-          accountHolder: '이수진',
-          status:        'active',
-          createdAt:     new Date().toISOString(),
-        }];
-        setSubAgents(defaultSubAgents);
-
-        let savedMap: Record<string, number> = {};
-        try { savedMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
-        const rates: Record<string, number> = {};
-        defaultSubAgents.forEach(a => { rates[a.id] = savedMap[a.id] ?? (a as any).agencyRate ?? activeRate; });
-        setAgentRates(rates);
-
-        // 관할 단체 필터링
-        const sourceTenants = (tenants && tenants.length > 0) ? tenants : mockTenants;
-        const agencyIds = [
-          activePartner.id, activePartner.referralCode,
-          'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'BIT2024',
-          'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'LSJ002',
-          ...defaultSubAgents.flatMap(a => [a.id, a.referralCode].filter(Boolean)),
-        ];
-        setMyTenants(sourceTenants.filter(t =>
-          agencyIds.includes((t as any).registeredByPartnerId) ||
-          agencyIds.includes((t as any).registeredByReferralCode) ||
-          agencyIds.includes((t as any).referralCode) ||
-          (t as any).registrationSource === 'agency' ||
-          (t as any).registrationSource === 'agent'
-        ));
-
-        // 백그라운드 API 동기화
-        try {
-          const res = await partnerAPI.getAll();
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const found = res.data.find(x =>
-              x.id === activePartner.id || x.email === activePartner.email
-            );
-            if (found) setPartner({ ...found, name: '한국불교문화원', referralCode: 'BIT2024', role: 'master_agency' });
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.id) sessionPartnerId = parsed.id;
           }
         } catch {}
+
+        // 1. 파트너 본인 정보 DB 조회
+        let currentPartner: Partner | null = null;
         try {
-          const cr = await partnerAPI.getCommissions(activePartner.id);
-          if (cr.success && cr.data) setCommissions(cr.data);
+          const res = await partnerAPI.getById(sessionPartnerId);
+          if (res.success && res.data) {
+            currentPartner = res.data;
+          }
         } catch {}
+
+        if (!currentPartner) {
+          // 백업: getAll에서 찾기
+          try {
+            const allRes = await partnerAPI.getAll();
+            if (allRes.success && Array.isArray(allRes.data) && allRes.data.length > 0) {
+              currentPartner = allRes.data.find(p => p.id === sessionPartnerId) || allRes.data[0];
+            }
+          } catch {}
+        }
+
+        if (!currentPartner) {
+          toast.error('파트너 정보를 불러올 수 없습니다.');
+          setIsLoading(false);
+          return;
+        }
+
+        setPartner(currentPartner);
+        setEditPhone(currentPartner.phone ?? '');
+        setEditEmail(currentPartner.email ?? '');
+        setEditBank((currentPartner as any).bankName ?? '');
+        setEditAccount((currentPartner as any).accountNumber ?? '');
+        setEditHolder((currentPartner as any).accountHolder ?? '');
+
+        const activeRate = currentPartner.agencyRate ?? 0.5;
+        setEditAgencyRate(activeRate);
+
+        // 2. 소속 영업자 DB 조회
+        let fetchedSubAgents: Partner[] = [];
         try {
-          const ar = await partnerAPI.getByParent(activePartner.id);
-          if (ar.success && Array.isArray(ar.data) && ar.data.length > 0) setSubAgents(ar.data);
+          const ar = await partnerAPI.getByParent(currentPartner.id);
+          if (ar.success && Array.isArray(ar.data)) {
+            fetchedSubAgents = ar.data;
+          }
         } catch {}
+        setSubAgents(fetchedSubAgents);
+
+        const rates: Record<string, number> = {};
+        fetchedSubAgents.forEach(a => {
+          rates[a.id] = (a as any).agencyRate ?? (a as any).commissionRate ?? activeRate;
+        });
+        setAgentRates(rates);
+
+        // 3. 관할 가맹점(단체) DB 조회
+        try {
+          const tr = await partnerAPI.getPartnerTenants(currentPartner.id);
+          if (tr.success && Array.isArray(tr.data)) {
+            setMyTenants(tr.data);
+          } else {
+            setMyTenants([]);
+          }
+        } catch {
+          setMyTenants([]);
+        }
+
+        // 4. 수수료 원장 DB 조회
+        try {
+          const cr = await partnerAPI.getCommissions(currentPartner.id);
+          if (cr.success && Array.isArray(cr.data)) {
+            setCommissions(cr.data);
+          } else {
+            setCommissions([]);
+          }
+        } catch {
+          setCommissions([]);
+        }
       } catch (err) {
         console.error('Failed to load partner dashboard:', err);
       } finally {
@@ -204,7 +185,8 @@ export default function PartnerDashboard() {
       }
     }
     load();
-  }, [tenants]);
+  }, []);
+
 
   /* ── 로딩 / 인증 가드 ── */
   if (isLoading) {
@@ -435,6 +417,7 @@ export default function PartnerDashboard() {
               selectedAgent={selectedAgent}
               setSelectedAgent={setSelectedAgent}
               tenants={tenants}
+              commissions={commissions}
             />
           )}
 

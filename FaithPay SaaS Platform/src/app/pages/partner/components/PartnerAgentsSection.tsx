@@ -21,6 +21,7 @@ interface PartnerAgentsSectionProps {
   selectedAgent: Partner | null;
   setSelectedAgent: (agent: Partner | null) => void;
   tenants: any[];
+  commissions?: any[];
 }
 
 export function PartnerAgentsSection({
@@ -34,6 +35,7 @@ export function PartnerAgentsSection({
   selectedAgent,
   setSelectedAgent,
   tenants,
+  commissions = [],
 }: PartnerAgentsSectionProps) {
   const [agentSubTab, setAgentSubTab] = useState<'list' | 'overriding'>('list');
   const [showRegDialog, setShowRegDialog] = useState(false);
@@ -43,14 +45,13 @@ export function PartnerAgentsSection({
   const [newAgentRate,  setNewAgentRate]  = useState(editAgencyRate);
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // 영업자별 수수료 합산 (저장된 commissions localStorage 감여)
+  // 영업자별 수수료 합산 (실제 DB commissions 원장 기반)
   const getAgentCommissionSum = (agentId: string): number => {
-    try {
-      const allComm = JSON.parse(localStorage.getItem('faithpay:commissions') || '[]');
-      return allComm.filter((c: any) => c.partnerId === agentId || c.agentId === agentId)
-        .reduce((s: number, c: any) => s + (c.commissionAmount ?? 0), 0);
-    } catch { return 0; }
+    return commissions
+      .filter((c: any) => c.partnerId === agentId || c.agentId === agentId)
+      .reduce((s: number, c: any) => s + (c.commissionAmount ?? 0), 0);
   };
+
 
   const handleRegisterAgent = async () => {
     if (!newAgentName.trim() || !newAgentEmail.trim()) {

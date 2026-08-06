@@ -1011,6 +1011,35 @@ export async function getCommissionsByPartnerPg(partnerId: string): Promise<any[
   }));
 }
 
+/**
+ * 파트너가 관할하는 단체(가맹점) 목록 조회 — partner_id 기준
+ */
+export async function getTenantsByPartner(partnerId: string): Promise<any[]> {
+  const supabase = pgClient();
+
+  // 1. 본인 파트너 및 하위 영업자 ID 조회
+  const { data: subAgents } = await supabase
+    .from('partners')
+    .select('id')
+    .eq('parent_id', partnerId);
+
+  const partnerIds = [partnerId, ...((subAgents ?? []).map((a: any) => a.id))];
+
+  // 2. registered_by_partner_id 또는 partner_id에 해당하는 tenants 조회
+  const { data: tenants, error } = await supabase
+    .from('tenants')
+    .select('*')
+    .in('registered_by_partner_id', partnerIds);
+
+  if (error) {
+    // registered_by_partner_id 컬럼이 없을 시 전체 tenants 반환 폴백
+    const { data: allTenants } = await supabase.from('tenants').select('*');
+    return (allTenants ?? []).map(t => snakeToCamel(t));
+  }
+
+  return (tenants ?? []).map(t => snakeToCamel(t));
+}
+
 // ==================== 관리자 정산 원장 (Admin Ledger) ====================
 
 /**

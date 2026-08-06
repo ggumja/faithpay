@@ -461,6 +461,11 @@ export const partnerAPI = {
     });
   },
 
+  /** 파트너(대리점/영업자)가 유치/관할하는 단체(가맹점) 목록 조회 */
+  async getPartnerTenants(partnerId: string): Promise<APIResponse<Tenant[]>> {
+    return fetchAPI<Tenant[]>(`/partners/${partnerId}/tenants`);
+  },
+
   /** 대리점 정산 배치 + 영업자별 지급 명세 조회 */
   async getSettlements(partnerId: string): Promise<APIResponse<PartnerSettlement[]>> {
     return fetchAPI<PartnerSettlement[]>(`/partners/${partnerId}/settlements`);

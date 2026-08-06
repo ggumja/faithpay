@@ -1079,6 +1079,18 @@ app.get("/make-server-d0d82cc7/partners/:id/agent-settlements", async (c) => {
   }
 });
 
+// 파트너(대리점/영업자) 관할 단체(가맹점) 목록 조회
+app.get("/make-server-d0d82cc7/partners/:id/tenants", async (c) => {
+  try {
+    const partnerId = c.req.param('id');
+    const data = await db.getTenantsByPartner(partnerId);
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching partner tenants:', error);
+    return c.json({ success: false, error: 'Failed to fetch partner tenants' }, 500);
+  }
+});
+
 // ==================== ADMIN SETTLEMENT ROUTES ====================
 
 // 관리자 정산 개요 통계 (종합 현황 KPI)
