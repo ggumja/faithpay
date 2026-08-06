@@ -18,6 +18,9 @@ import PayoutExecutionManager from './components/PayoutExecutionManager';
 import SettlementStatementSection from './components/SettlementStatementSection';
 import SettlementRiskAndAuditSection from './components/SettlementRiskAndAuditSection';
 
+import { useApp } from '../../context/AppContext';
+import { tenantAPI } from '../../api/client';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /* ── 스타일 토큰 ── */
@@ -39,6 +42,7 @@ const TABS = [
 type TabKey = typeof TABS[number]['key'];
 
 export default function SettlementCenterPage() {
+  const { tenants: appTenants } = useApp();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [tenants, setTenants] = useState<any[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState('');
@@ -46,16 +50,20 @@ export default function SettlementCenterPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/make-server-d0d82cc7/tenants`)
-      .then(res => res.json())
-      .then(json => {
-        if (json.success && Array.isArray(json.data)) {
-          setTenants(json.data);
-          if (json.data.length > 0) setSelectedTenantId(json.data[0].id);
-        }
-      })
-      .catch(console.error);
-  }, []);
+    // 1. AppContext tenants 우선 활용
+    if (appTenants && appTenants.length > 0) {
+      setTenants(appTenants);
+      setSelectedTenantId(appTenants[0].id);
+    }
+    // 2. API 직접 로드로 갱신
+    tenantAPI.getAll().then(res => {
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setTenants(res.data);
+        setSelectedTenantId(prev => prev || res.data[0].id);
+      }
+    }).catch(console.error);
+  }, [appTenants]);
+
 
   const handleCreateTestDonation = async () => {
     if (!selectedTenantId || !testAmount) {
