@@ -80,7 +80,8 @@ export const router = createBrowserRouter([
           { path: "/system/admin/tenants/pending",  Component: SystemAdminDashboard },
           { path: "/system/admin/tenants/pending/:id", Component: PendingTenantDetailPage },
           { path: "/system/admin/settlement-center", Component: SettlementCenterPage },
-          { path: "/system/admin/stats",            Component: SystemAdminDashboard },
+          { path: "/system/admin/stats",            Component: TenantStatsPage },
+
           { path: "/system/admin/partners",         Component: PartnerManagement    },
           { path: "/system/admin/partners/:id",      Component: PartnerDetailPage    },
           { path: "/system/admin/commissions",      Component: CommissionStatsPage  },
