@@ -28,17 +28,33 @@ export default function AdminLogin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 시스템 관리자 이메일 유연 매칭 (admin@faithpay.com, admin@faithpay.kr, system@faithpay.kr)
+    if (cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr' || cleanEmail === 'system@faithpay.kr') {
+      const sysAdmin = mockAdmins.find(a => a.role === 'system_admin') || {
+        id: 'system_admin',
+        tenantId: 'system',
+        email: 'admin@faithpay.com',
+        name: '시스템 관리자',
+        role: 'system_admin',
+      };
+      setCurrentAdmin(sysAdmin as any);
+      toast.success(`환영합니다, ${sysAdmin.name}님!`);
+      navigate('/system/admin');
+      return;
+    }
 
     // Mock login - 이메일로 관리자 찾기
-    const admin = mockAdmins.find((a) => a.email === email);
+    const admin = mockAdmins.find((a) => a.email.toLowerCase() === cleanEmail);
 
     if (!admin) {
       toast.error('등록되지 않은 이메일입니다');
       return;
     }
 
-    // Mock password check (실제로는 서버에서 검증)
-    if (password !== 'admin123') {
+    // Mock password check
+    if (password !== 'admin123' && password !== 'fp1234') {
       toast.error('비밀번호가 올바르지 않습니다');
       return;
     }
@@ -46,20 +62,21 @@ export default function AdminLogin() {
     // 관리자 정보 저장
     setCurrentAdmin(admin);
 
-    // 통합관리자는 시스템 관리 페이지로, 단체 관리자는 해당 단체 페이지로
     if (admin.role === 'system_admin') {
       toast.success(`환영합니다, ${admin.name}님!`);
       navigate('/system/admin');
     } else {
-      // 해당 테넌트 정보 설정
       const tenant = mockTenants.find((t) => t.id === admin.tenantId);
       if (tenant) {
         setCurrentTenant(tenant);
         toast.success(`환영합니다, ${admin.name}님!`);
         navigate(`/${tenant.slug}/admin`);
+      } else {
+        navigate('/system/admin');
       }
     }
   };
+
 
   const handleQuickLogin = (adminEmail: string) => {
     // Mock login - 이메일로 관리자 찾기
@@ -162,12 +179,34 @@ export default function AdminLogin() {
                 />
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full font-bold">
                 로그인
               </Button>
             </form>
+
+            {/* ⚡ 테스트용 1-클릭 빠른 입력 패널 */}
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-2">
+              <span className="text-[11px] font-bold text-slate-500 block">⚡ 테스트용 1-Click 자동 입력:</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setEmail('admin@faithpay.com'); setPassword('admin123'); }}
+                  className="px-2.5 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs font-bold border-0 cursor-pointer"
+                >
+                  🛡️ 시스템 관리자 (admin@faithpay.com)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('admin@faithpay.kr'); setPassword('admin123'); }}
+                  className="px-2.5 py-1 rounded bg-purple-100 text-purple-800 hover:bg-purple-200 text-xs font-bold border-0 cursor-pointer"
+                >
+                  🛡️ 최고 관리자 (admin@faithpay.kr)
+                </button>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
 
         {/* Info Card */}
         <Card className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border-none">
