@@ -49,30 +49,23 @@ export default function SettlementCenterPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    // 백엔드 DB의 최신 전체 가맹 단체 목록 (6개) 최우선 조회
-    fetch(`${API_BASE}/make-server-d0d82cc7/tenants`)
-      .then(res => res.json())
-      .then(json => {
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          setTenants(json.data);
-          setSelectedTenantId(json.data[0].id);
-        } else if (appTenants && appTenants.length > 0) {
-          setTenants(appTenants);
-          setSelectedTenantId(appTenants[0].id);
-        }
-      })
-      .catch(() => {
-        tenantAPI.getAll().then(res => {
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            setTenants(res.data);
-            setSelectedTenantId(res.data[0].id);
-          } else if (appTenants && appTenants.length > 0) {
-            setTenants(appTenants);
-            setSelectedTenantId(appTenants[0].id);
-          }
-        });
-      });
-  }, []);
+    // 백엔드 DB의 최신 전체 가맹 단체 목록 최우선 조회
+    tenantAPI.getAll().then(res => {
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setTenants(res.data);
+        setSelectedTenantId(res.data[0].id);
+      } else if (appTenants && appTenants.length > 0) {
+        setTenants(appTenants);
+        setSelectedTenantId(appTenants[0].id);
+      }
+    }).catch(() => {
+      if (appTenants && appTenants.length > 0) {
+        setTenants(appTenants);
+        setSelectedTenantId(appTenants[0].id);
+      }
+    });
+  }, [appTenants]);
+
 
 
 
