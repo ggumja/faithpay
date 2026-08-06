@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useApp, mockTenants, DonationFormData } from '../context/AppContext';
+import { useApp, DonationFormData } from '../context/AppContext';
 import { donationAPI, otpAuthAPI, subscriptionAPI } from '../api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -37,7 +37,7 @@ export interface HistoryItem {
 export default function MyDonations() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant } = useApp();
+  const { tenants, currentTenant, setCurrentTenant } = useApp();
   
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -49,11 +49,12 @@ export default function MyDonations() {
   const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   if (!currentTenant) return null;
 

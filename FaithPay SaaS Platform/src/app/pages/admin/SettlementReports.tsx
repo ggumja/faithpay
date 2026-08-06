@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -32,62 +33,22 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
-// Mock data
-const monthlySettlement = [
-  {
-    month: '2026-01',
-    totalDonations: 42500000,
-    pgFees: 637500,
-    platformFees: 212500,
-    netAmount: 41650000,
-    settlementDate: '2026-02-05',
-    status: '완료',
-  },
-  {
-    month: '2026-02',
-    totalDonations: 53200000,
-    pgFees: 798000,
-    platformFees: 266000,
-    netAmount: 52136000,
-    settlementDate: '2026-03-05',
-    status: '완료',
-  },
-  {
-    month: '2026-03',
-    totalDonations: 84215000,
-    pgFees: 1263225,
-    platformFees: 421075,
-    netAmount: 82530700,
-    settlementDate: '2026-04-05',
-    status: '예정',
-  },
-];
-
-const categoryData = [
-  { name: '십일조', value: 45000000, color: '#3b82f6' },
-  { name: '감사헌금', value: 18000000, color: '#10b981' },
-  { name: '건축헌금', value: 21215000, color: '#f59e0b' },
-];
-
-const paymentMethodData = [
-  { name: '신용카드', value: 52000000, color: '#8b5cf6' },
-  { name: '간편결제', value: 28000000, color: '#ec4899' },
-  { name: '가상계좌', value: 4215000, color: '#6366f1' },
-];
-
-
-
 export default function SettlementReports() {
-  const { tenantSlug } = useParams();
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+
+  const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [paymentMethodData, setPaymentMethodData] = useState<any[]>([]);
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   if (!currentTenant) {
     return null;

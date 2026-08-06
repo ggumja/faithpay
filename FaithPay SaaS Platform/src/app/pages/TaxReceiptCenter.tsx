@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useApp, mockTenants } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Badge } from '../components/ui/badge';
 import { 
   FileText, 
   Send, 
@@ -13,15 +14,14 @@ import {
   CheckCircle2,
   Info,
   User,
-  CreditCard,
-  History
+  CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function TaxReceiptCenter() {
-  const { tenantSlug } = useParams();
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant } = useApp();
+  const { tenants, currentTenant, setCurrentTenant } = useApp();
   
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,11 +37,11 @@ export default function TaxReceiptCenter() {
   });
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   if (!currentTenant) return null;
 

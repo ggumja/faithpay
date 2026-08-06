@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -26,27 +27,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
-// Mock data
-const monthlyData = [
-  { month: '1월', amount: 42500000, key: 'jan' },
-  { month: '2월', amount: 53200000, key: 'feb' },
-  { month: '3월', amount: 84215000, key: 'mar' },
-];
-
-const recentDonations = [
-  { id: 'FP1205', name: '홍길동', item: '십일조', amount: 50000, time: '20:10', status: '완료' },
-  { id: 'FP1204', name: '김철수', item: '건축헌금', amount: 1000000, time: '19:45', status: '가상계좌' },
-  { id: 'FP1203', name: '이영희', item: '감사헌금', amount: 100000, time: '18:30', status: '완료' },
-  { id: 'FP1202', name: '박민수', item: '십일조', amount: 300000, time: '17:15', status: '완료' },
-  { id: 'FP1201', name: '정수진', item: '건축헌금', amount: 500000, time: '16:00', status: '완료' },
-];
-
 import { donationAPI } from '../../api/client';
 
 export default function AdminDashboard() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
   const [dbDonations, setDbDonations] = useState<any[]>([]);
   const [totalMonthlyAmount, setTotalMonthlyAmount] = useState<number>(0);
@@ -72,9 +58,10 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
+
       // Supabase DB 비동기 수납 실데이터 조율
       donationAPI.getByTenant(tenant.id).then((res) => {
         if (res.success && res.data) {
