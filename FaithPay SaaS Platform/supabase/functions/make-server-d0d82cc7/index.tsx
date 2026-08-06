@@ -3,14 +3,12 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
 import * as db from "./database.tsx";
-import { seedDatabase } from "./seed.tsx";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
 
 const app = new Hono();
 
-// Seed database on startup - Disabled to prevent mock/seed data overrides
-// seedDatabase() is now purely manual if ever needed via dedicated admin endpoint.
+
 
 
 // Enable logger
