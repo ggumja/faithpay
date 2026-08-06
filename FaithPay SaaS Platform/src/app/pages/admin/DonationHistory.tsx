@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -41,7 +40,8 @@ import { toast } from 'sonner';
 export default function DonationHistory() {
   const { tenantSlug } = useParams();
   const location = useLocation();
-  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+
 
   const [donations, setDonations] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -129,11 +129,12 @@ export default function DonationHistory() {
   };
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   useEffect(() => {
     const fetchDonations = async () => {

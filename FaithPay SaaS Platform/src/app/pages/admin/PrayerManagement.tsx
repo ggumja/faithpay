@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Checkbox } from '../../components/ui/checkbox';
@@ -24,18 +24,19 @@ import { donationAPI } from '../../api/client';
 export default function PrayerManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
   const [prayers, setPrayers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPrayers, setSelectedPrayers] = useState<number[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   useEffect(() => {
     async function loadPrayers() {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -23,7 +23,7 @@ import { donationAPI } from '../../api/client';
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,11 +31,12 @@ export default function MemberManagement() {
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   useEffect(() => {
     async function loadMembers() {
