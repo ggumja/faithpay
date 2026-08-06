@@ -1364,3 +1364,66 @@ export async function getAdminRiskAuditData(): Promise<{
   };
 }
 
+/**
+ * 테스트 기부 결제 생성 & 4자간 자동 분구(Split) 수수료 원장 DB 기입
+ */
+export async function createTestDonationWithSplit(data: {
+  tenantId: string;
+  donorName?: string;
+  amount: number;
+  paymentMethod?: string;
+}): Promise<any> {
+  const supabase = pgClient();
+
+  // 1. 단체 정보 조회
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('*')
+    .eq('id', data.tenantId)
+    .single();
+
+  const tenantName = tenant?.name || '테스트 단체';
+  const partnerId = tenant?.registered_by_partner_id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+  // 2. 파트너 정보 및 역할 조회
+  const { data: partner } = await supabase
+    .from('partners')
+    .select('*')
+    .eq('id', partnerId)
+    .single();
+
+  const partnerRole = partner?.role || 'master_agency';
+  const contractRate = Number(tenant?.contract_rate || 3.0);
+  const agencyRate = Number(partner?.agency_rate || 0.5);
+  const agentRate = partnerRole === 'sales_agent' ? 0.3 : 0.0;
+
+  const grossAmount = Number(data.amount);
+  const commissionAmount = Math.round(grossAmount * (contractRate / 100));
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const donationId = `DON-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // 3. partner_commissions 원장에 4자간 분구 내역 기입
+  const { data: inserted, error } = await supabase
+    .from('partner_commissions')
+    .insert({
+      partner_id: partnerId,
+      partner_role: partnerRole,
+      tenant_id: data.tenantId,
+      tenant_name: tenantName,
+      donation_id: donationId,
+      donation_amount: grossAmount,
+      commission_amount: commissionAmount,
+      contract_rate: contractRate,
+      agency_rate: agencyRate,
+      agent_rate: agentRate,
+      settlement_status: 'pending',
+      settlement_month: currentMonth,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return snakeToCamel(inserted);
+}
+
+

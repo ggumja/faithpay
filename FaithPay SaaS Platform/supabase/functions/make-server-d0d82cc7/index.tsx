@@ -1153,6 +1153,19 @@ app.get("/make-server-d0d82cc7/admin/settlements/risk-audit", async (c) => {
   }
 });
 
+// 테스트 결제 생성 샌드박스 (실데이터 기부 결제 ➔ 4자간 실시간 자동 수수료 분구 기입)
+app.post("/make-server-d0d82cc7/admin/test-donations", async (c) => {
+  try {
+    const body = await c.req.json();
+    const result = await db.createTestDonationWithSplit(body);
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error creating test donation:', error);
+    return c.json({ success: false, error: 'Failed to create test donation' }, 500);
+  }
+});
+
+
 
 // PATCH /partners/:id/channel-share  { channelShareRate: number }
 app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {

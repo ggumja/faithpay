@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   BarChart3,
   BookOpen,
@@ -7,12 +7,18 @@ import {
   Building2,
   DollarSign,
   ShieldCheck,
+  Zap,
+  PlusCircle,
+  RefreshCw,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import SettlementOverviewSection from './components/SettlementOverviewSection';
 import MultiPartySettlementLedger from './components/MultiPartySettlementLedger';
 import PayoutExecutionManager from './components/PayoutExecutionManager';
 import SettlementStatementSection from './components/SettlementStatementSection';
 import SettlementRiskAndAuditSection from './components/SettlementRiskAndAuditSection';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /* ── 스타일 토큰 ── */
 const S = {
@@ -34,6 +40,54 @@ type TabKey = typeof TABS[number]['key'];
 
 export default function SettlementCenterPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [testAmount, setTestAmount] = useState<number>(100000);
+  const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/make-server-d0d82cc7/tenants`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && Array.isArray(json.data)) {
+          setTenants(json.data);
+          if (json.data.length > 0) setSelectedTenantId(json.data[0].id);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const handleCreateTestDonation = async () => {
+    if (!selectedTenantId || !testAmount) {
+      toast.error('단체와 금액을 선택해 주세요.');
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/test-donations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: selectedTenantId,
+          amount: testAmount,
+          donorName: 'E2E 테스트 성도',
+          paymentMethod: '신용카드',
+        }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        toast.success(`⚡ ${json.data.tenantName}에 ${testAmount.toLocaleString()}원 결제 및 4자간 수수료 분구가 DB에 생성되었습니다!`);
+        // 탭 새로고침 유도
+        setActiveTab('ledger');
+      } else {
+        toast.error(json.error || '테스트 결제 생성 실패');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className={S.page}>
@@ -47,6 +101,70 @@ export default function SettlementCenterPage() {
           <p className={S.desc}>
             원원사(교회/성당/사찰), 페이스페이 플랫폼, 영업 총판 및 에이전트 간 4자간 자동 수수료 분구(Split) 및 지급대행을 관리합니다.
           </p>
+        </div>
+      </div>
+
+      {/* ── ⚡ 실데이터 결제 생성 테스트 샌드박스 패널 ── */}
+      <div className="bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 text-white p-4.5 rounded-2xl shadow-xl space-y-3 border border-blue-800/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-amber-400 animate-pulse" />
+            <h3 className="text-sm font-bold tracking-tight">
+              실데이터 결제 입력 샌드박스 (E2E Test Data Generator)
+            </h3>
+          </div>
+          <span className="text-[11px] bg-blue-500/30 text-blue-200 px-2.5 py-0.5 rounded-full font-mono border border-blue-400/30">
+            Real DB Postgres Trigger
+          </span>
+        </div>
+        <p className="text-xs text-blue-200/80">
+          테스트 헌금 결제 건을 클릭 한 번으로 생성하면, DB의 4자간 분구 엔진이 실시간 작동하여 대리점/영업자/플랫폼 수수료 원장으로 즉시 반영됩니다.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+            <Building2 className="h-4 w-4 text-blue-300" />
+            <span className="text-xs font-semibold text-slate-300">가맹 단체:</span>
+            <select
+              value={selectedTenantId}
+              onChange={(e) => setSelectedTenantId(e.target.value)}
+              className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+            >
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id} className="bg-slate-900 text-white">
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+            <DollarSign className="h-4 w-4 text-emerald-400" />
+            <span className="text-xs font-semibold text-slate-300">결제 금액:</span>
+            <div className="flex items-center gap-1.5 font-mono text-xs font-bold">
+              {[100000, 300000, 500000, 1000000].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setTestAmount(amt)}
+                  className={`px-2 py-0.5 rounded transition-colors cursor-pointer border-none ${
+                    testAmount === amt ? 'bg-emerald-500 text-white font-black' : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                  }`}
+                >
+                  {(amt / 10000).toLocaleString()}만원
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleCreateTestDonation}
+            disabled={isCreating}
+            className="px-4 py-2 text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer border-none transition-all disabled:opacity-50"
+          >
+            {isCreating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+            실데이터 테스트 결제 승인하기
+          </button>
         </div>
       </div>
 

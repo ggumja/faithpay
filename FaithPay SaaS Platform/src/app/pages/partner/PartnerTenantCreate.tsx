@@ -44,19 +44,35 @@ export default function PartnerTenantCreate() {
 
   useEffect(() => {
     const sessionRaw = localStorage.getItem('faithpay_partner_session');
+    let sessionPartnerId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    let sessionPartner: any = null;
+
     if (sessionRaw) {
       try {
-        const session = JSON.parse(sessionRaw);
-        partnerAPI.getAll().then(res => {
-          const all = res.success && Array.isArray(res.data) ? res.data : [];
-          const p = all.find((x: Partner) => x.id === session.id)
-            ?? all.find((x: Partner) => x.role === session.role)
-            ?? all[0];
-          if (p) setMyPartner({ ...p, role: session.role, name: session.name ?? p.name });
-        });
+        sessionPartner = JSON.parse(sessionRaw);
+        if (sessionPartner?.id) sessionPartnerId = sessionPartner.id;
       } catch { /* ignore */ }
     }
+
+    partnerAPI.getById(sessionPartnerId).then(res => {
+      if (res.success && res.data) {
+        setMyPartner({
+          ...res.data,
+          role: sessionPartner?.role ?? res.data.role,
+          name: sessionPartner?.name ?? res.data.name,
+        });
+      } else {
+        partnerAPI.getAll().then(allRes => {
+          const all = allRes.success && Array.isArray(allRes.data) ? allRes.data : [];
+          const found = all.find(x => x.id === sessionPartnerId || x.email === sessionPartner?.email);
+          if (found) {
+            setMyPartner({ ...found, role: sessionPartner?.role ?? found.role });
+          }
+        });
+      }
+    });
   }, []);
+
 
   // ── Guardrail 계산 ──────────────────────────────
   let savedRatesTC: Record<string, number> = {};
