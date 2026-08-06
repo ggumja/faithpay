@@ -17,7 +17,8 @@ const FEE = {
 
 /* ── style atoms ── */
 const S = {
-  page:     'p-6 space-y-5',
+  page:     'space-y-5',
+
   card:     'bg-[var(--hm-paper)] rounded-[12px] border border-[var(--hm-border)] overflow-hidden',
   head:     'px-5 py-3 border-b border-[var(--hm-border)] flex items-center gap-2',
   body:     'px-5 py-4',

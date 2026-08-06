@@ -334,9 +334,10 @@ export default function SystemAdminShell() {
         </header>
 
         {/* page content via Outlet */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <Outlet />
         </main>
+
       </div>
 
       {broadcastOpen && <GlobalBroadcastModal onClose={() => setBroadcastOpen(false)} />}

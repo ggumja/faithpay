@@ -24,7 +24,8 @@ import { tenantAPI, paymentAPI } from '../../api/client';
 
 /* ── 스타일 토큰 ── */
 const S = {
-  page: 'p-6 space-y-6 bg-slate-50/50 dark:bg-zinc-950 min-h-screen',
+  page: 'space-y-6 bg-slate-50/50 dark:bg-zinc-950 min-h-screen',
+
   head: 'flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800',
   title: 'text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2.5',
   desc: 'text-xs text-slate-500 dark:text-zinc-400 mt-1',
