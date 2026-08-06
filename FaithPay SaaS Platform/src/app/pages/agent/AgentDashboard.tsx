@@ -21,7 +21,7 @@ type Section = 'home' | 'tenants' | 'commissions' | 'myinfo';
 const NAV: { key: Section; icon: any; label: string; section: string }[] = [
   { key: 'home',        icon: LayoutDashboard, label: '대시보드',   section: '현황 요약'        },
   { key: 'tenants',     icon: Building2,       label: '단체 관리',   section: '내 관할 단체 목록' },
-  { key: 'commissions', icon: TrendingUp,       label: '수수료 조회', section: '수수료 발생 기록'  },
+  { key: 'commissions', icon: TrendingUp,       label: '정산 관리', section: '수수료 확인 및 정산 내역'  },
   { key: 'myinfo',      icon: UserCircle,       label: '내 정보 수정', section: '정산 계좌 · 연락처' },
 ];
 
@@ -317,7 +317,7 @@ export default function AgentDashboard() {
             />
           )}
           {section === 'commissions' && (
-            <PartnerCommissionsSection commissions={commissions} isAgency={false} />
+            <PartnerCommissionsSection commissions={commissions} isAgency={false} partner={partner} />
           )}
           {section === 'myinfo' && (
             <PartnerMyInfoSection

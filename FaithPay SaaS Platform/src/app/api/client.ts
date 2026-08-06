@@ -385,6 +385,33 @@ export interface PartnerCommission {
   commissionAmount: number;
   settlementStatus: 'pending' | 'paid';
   createdAt: string;
+  agencyRate?: number;    // 대리점 마진율
+  floorRate?: number;     // 영업자 베이스 수수료율
+  contractRate?: number;  // 가맹점 계약 수수료율
+}
+
+/** 메인 관리자 집행 정산 (batch 단위 입금 확정본) */
+export interface PartnerSettlement {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  periodStart: string;         // 정산 대상 시작일
+  periodEnd: string;           // 정산 대상 종료일
+  totalCommission: number;     // 수수료 합계
+  taxAmount: number;           // 세무 처리금액 (VAT 10% or 원천징수 3.3%)
+  netAmount: number;           // 실수령액 (= totalCommission +/- taxAmount)
+  taxType: 'vat' | 'withholding'; // 세무 유형
+  status: 'scheduled' | 'processing' | 'paid' | 'cancelled';
+  settledAt?: string;          // 실제 입금일
+  note?: string;
+  agentBreakdowns?: {          // 영업자별 하위 지급 명세 (대리점 전용)
+    agentId: string;
+    agentName: string;
+    commissionAmount: number;
+    agencyMargin: number;      // 대리점 차감 마진
+    agentReceived: number;     // 영업자 실수령액
+  }[];
+  createdAt: string;
 }
 
 export const partnerAPI = {
@@ -429,6 +456,87 @@ export const partnerAPI = {
       body: JSON.stringify(tenantData),
     });
   },
+
+  /** 대리점 정산 내역 조회 (API 없으면 localStorage mock fallback) */
+  async getSettlements(partnerId: string): Promise<APIResponse<PartnerSettlement[]>> {
+    try {
+      const res = await fetchAPI<PartnerSettlement[]>(`/partners/${partnerId}/settlements`);
+      if (res.success && res.data && res.data.length > 0) return res;
+    } catch {}
+    // localStorage mock (API 구현 전 데모데이터)
+    const key = `faithpay:settlements:${partnerId}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return { success: true, data: JSON.parse(raw) };
+    } catch {}
+    // 기본 데모 데이터
+    const demo: PartnerSettlement[] = [
+      {
+        id: 'stl-001', partnerId, partnerName: '',
+        periodStart: '2026-08-01', periodEnd: '2026-08-15',
+        totalCommission: 284000, taxAmount: 28400, netAmount: 312400,
+        taxType: 'vat', status: 'paid', settledAt: '2026-08-16T09:00:00',
+        note: '8월 상반기 정산', createdAt: '2026-08-16T09:00:00',
+        agentBreakdowns: [
+          { agentId: 'ag-1', agentName: '이수진', commissionAmount: 120000, agencyMargin: 12000, agentReceived: 108000 },
+          { agentId: 'ag-2', agentName: '한수진', commissionAmount: 96000,  agencyMargin: 9600,  agentReceived: 86400 },
+        ],
+      },
+      {
+        id: 'stl-002', partnerId, partnerName: '',
+        periodStart: '2026-07-16', periodEnd: '2026-07-31',
+        totalCommission: 196000, taxAmount: 19600, netAmount: 215600,
+        taxType: 'vat', status: 'paid', settledAt: '2026-08-01T09:00:00',
+        note: '7월 하반기 정산', createdAt: '2026-08-01T09:00:00',
+        agentBreakdowns: [
+          { agentId: 'ag-1', agentName: '이수진', commissionAmount: 84000, agencyMargin: 8400, agentReceived: 75600 },
+          { agentId: 'ag-2', agentName: '한수진', commissionAmount: 72000, agencyMargin: 7200, agentReceived: 64800 },
+        ],
+      },
+      {
+        id: 'stl-003', partnerId, partnerName: '',
+        periodStart: '2026-08-16', periodEnd: '2026-08-31',
+        totalCommission: 0, taxAmount: 0, netAmount: 0,
+        taxType: 'vat', status: 'scheduled',
+        note: '8월 하반기 정산 (예정)', createdAt: new Date().toISOString(),
+      },
+    ];
+    return { success: true, data: demo };
+  },
+
+  /** 영업자 포털 전용 선상위 대리점으로부터의 렬다운 정산 */
+  async getAgentSettlements(agentId: string): Promise<APIResponse<PartnerSettlement[]>> {
+    try {
+      const res = await fetchAPI<PartnerSettlement[]>(`/partners/${agentId}/agent-settlements`);
+      if (res.success && res.data && res.data.length > 0) return res;
+    } catch {}
+    const demo: PartnerSettlement[] = [
+      {
+        id: 'astl-001', partnerId: agentId, partnerName: '',
+        periodStart: '2026-08-01', periodEnd: '2026-08-15',
+        totalCommission: 108000, taxAmount: 3564, netAmount: 104436,
+        taxType: 'withholding', status: 'paid', settledAt: '2026-08-16T09:00:00',
+        note: '8월 상반기 정산 (대리점 지급)', createdAt: '2026-08-16T09:00:00',
+      },
+      {
+        id: 'astl-002', partnerId: agentId, partnerName: '',
+        periodStart: '2026-07-16', periodEnd: '2026-07-31',
+        totalCommission: 75600, taxAmount: 2494, netAmount: 73106,
+        taxType: 'withholding', status: 'paid', settledAt: '2026-08-01T09:00:00',
+        note: '7월 하반기 정산 (대리점 지급)', createdAt: '2026-08-01T09:00:00',
+      },
+      {
+        id: 'astl-003', partnerId: agentId, partnerName: '',
+        periodStart: '2026-08-16', periodEnd: '2026-08-31',
+        totalCommission: 0, taxAmount: 0, netAmount: 0,
+        taxType: 'withholding', status: 'scheduled',
+        note: '8월 하반기 정산 예정', createdAt: new Date().toISOString(),
+      },
+    ];
+    return { success: true, data: demo };
+  },
+
+  /** updateProfile: 연락정보 + 정산계좌 수정 */
 };
 
 // ==================== STATISTICS API ====================
