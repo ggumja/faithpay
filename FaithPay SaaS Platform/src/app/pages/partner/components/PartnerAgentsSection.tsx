@@ -69,12 +69,12 @@ export function PartnerAgentsSection({
   }
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
       {/* 상단 헤더 & 초대 버튼 */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-bold text-slate-800">영업자 관리</h1>
-          <p className="text-[12.5px] text-slate-500 mt-0.5">소속 영업자 및 대리점 직접유치 현황 관리</p>
+          <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">영업자 관리</h1>
+          <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">소속 영업자 및 대리점 직접유치 현황 관리</p>
         </div>
         <Button
           size="sm"

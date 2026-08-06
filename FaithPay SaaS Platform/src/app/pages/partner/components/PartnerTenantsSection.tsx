@@ -35,12 +35,12 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
   });
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
       {/* 헤더 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-bold text-slate-800">관리 단체 목록</h1>
-          <p className="text-[12.5px] text-slate-500 mt-0.5">내가 유치하거나 관할 영업자가 유치한 사찰 · 교회 가맹점 현황</p>
+          <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">관리 단체 목록</h1>
+          <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">내가 유치하거나 관할 영업자가 유치한 사찰 · 교회 가맹점 현황</p>
         </div>
         <Button
           size="sm"

@@ -83,12 +83,12 @@ export function PartnerMyInfoSection({
   });
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
       <div>
-        <h1 className="text-[18px] font-bold text-slate-800">
+        <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">
           {isAgency ? '대리점 정보 및 기본 수수료 설정' : '내 정보 수정'}
         </h1>
-        <p className="text-[12.5px] text-slate-500 mt-0.5">정산 계좌 정보 및 기본 수수료 설정을 관리합니다.</p>
+        <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">정산 계좌 정보 및 기본 수수료 설정을 관리합니다.</p>
       </div>
 
       {/* 대리점 전용 기본 수수료율 설정 카드 */}

@@ -47,10 +47,10 @@ export function PartnerHomeSection({
   const agentBaseFloor = +(pgCost + platformMargin + agencyRateForAgent).toFixed(2);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
       {/* 파트너 환영 카드 */}
-      <Card className="border-slate-800 bg-slate-900 text-white shadow-lg overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+      <Card className="border-emerald-200 bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
         <CardContent className="p-6 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">

@@ -13,10 +13,10 @@ export function PartnerCommissionsSection({ commissions, isAgency = false }: Par
   const totalCommission = commissions.reduce((sum, c) => sum + (c.commissionAmount ?? 0), 0);
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
       <div>
-        <h1 className="text-[18px] font-bold text-slate-800">수수료 적립 및 조회</h1>
-        <p className="text-[12.5px] text-slate-500 mt-0.5">내 가맹점에서 발생한 실시간 수수료 적립 및 정산 원장</p>
+        <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">수수료 적립 및 조회</h1>
+        <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">내 가맹점에서 발생한 실시간 수수료 적립 및 정산 원장</p>
       </div>
 
       {/* 수수료 KPI */}
