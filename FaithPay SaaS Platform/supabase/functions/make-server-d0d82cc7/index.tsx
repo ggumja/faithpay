@@ -9,16 +9,9 @@ import { Buffer } from "node:buffer";
 
 const app = new Hono();
 
-// Seed database on startup (only once)
-let isSeeded = false;
-if (!isSeeded) {
-  seedDatabase().then(() => {
-    isSeeded = true;
-    console.log('✅ Server ready with seeded data');
-  }).catch(error => {
-    console.error('❌ Failed to seed database:', error);
-  });
-}
+// Seed database on startup - Disabled to prevent mock/seed data overrides
+// seedDatabase() is now purely manual if ever needed via dedicated admin endpoint.
+
 
 // Enable logger
 app.use('*', logger(console.log));
