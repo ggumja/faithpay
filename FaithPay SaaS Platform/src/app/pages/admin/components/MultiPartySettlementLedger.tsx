@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { toast } from 'sonner';
+import { partnerAPI } from '../../../api/client';
 
 interface LedgerItem {
   id: string;
@@ -45,23 +46,23 @@ export default function MultiPartySettlementLedger() {
     setLoading(true);
     setApiError(null);
     try {
-      const params = new URLSearchParams();
-      if (startDate) params.set('startDate', startDate);
-      if (endDate)   params.set('endDate', endDate);
-      if (statusFilter !== 'ALL') params.set('status', statusFilter);
-      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/ledger?${params}`);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setLedger(json.data);
+      const queryParams: Record<string, string> = {};
+      if (startDate) queryParams.startDate = startDate;
+      if (endDate)   queryParams.endDate = endDate;
+      if (statusFilter !== 'ALL') queryParams.status = statusFilter;
+      const res = await partnerAPI.getLedger(queryParams);
+      if (res.success && Array.isArray(res.data)) {
+        setLedger(res.data);
       } else {
-        setApiError(json.error ?? '데이터 조회 실패');
+        setApiError(res.error ?? '데이터 조회 실패');
       }
     } catch (e: any) {
-      setApiError(e.message);
+      setApiError(e.message || '원장 데이터 조회 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   }, [startDate, endDate, statusFilter]);
+
 
   useEffect(() => { fetchLedger(); }, [fetchLedger]);
 

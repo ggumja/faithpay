@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Printer, Download, Building2, User, CheckCircle2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+import { API_BASE_URL } from '../../../api/client';
 
 export default function SettlementStatementSection() {
   const [statementType, setStatementType] = useState<'tenant' | 'partner'>('tenant');
@@ -17,7 +17,8 @@ export default function SettlementStatementSection() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/statements?month=${selectedMonth}`);
+        const res = await fetch(`${API_BASE_URL}/admin/settlements/statements?month=${selectedMonth}`);
+
         const json = await res.json();
         if (json.success && json.data) {
           setTenantStatements(json.data.tenantStatements ?? []);

@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+import { API_BASE_URL } from '../../../api/client';
+
 
 const S = {
   card: 'bg-white dark:bg-zinc-900 rounded-[12px] border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs',
@@ -45,7 +46,8 @@ export default function SettlementOverviewSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/overview`);
+      const res = await fetch(`${API_BASE_URL}/admin/settlements/overview`);
+
       if (!res.ok) {
         throw new Error(`HTTP error ${res.status}`);
       }

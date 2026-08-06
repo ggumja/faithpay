@@ -16,7 +16,7 @@ import {
 import { Badge } from '../../../components/ui/badge';
 import { toast } from 'sonner';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+import { API_BASE_URL } from '../../../api/client';
 
 export default function SettlementRiskAndAuditSection() {
   const [minThreshold, setMinThreshold] = useState<number>(10000);
@@ -32,7 +32,8 @@ export default function SettlementRiskAndAuditSection() {
     const fetchRiskAudit = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/risk-audit`);
+        const res = await fetch(`${API_BASE_URL}/admin/settlements/risk-audit`);
+
         const json = await res.json();
         if (json.success && json.data) {
           setClawbackItems(json.data.clawbackItems ?? []);

@@ -12,7 +12,7 @@ import {
 import { toast } from 'sonner';
 import { Badge } from '../../../components/ui/badge';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+import { API_BASE_URL } from '../../../api/client';
 
 interface PayoutExceptionItem {
   id: string;
@@ -39,7 +39,8 @@ export default function PayoutExecutionManager() {
     const fetchExceptions = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/exceptions`);
+        const res = await fetch(`${API_BASE_URL}/admin/settlements/exceptions`);
+
         const json = await res.json();
         if (json.success && json.data) {
           setExceptions(json.data.exceptions ?? []);

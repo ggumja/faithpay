@@ -7,7 +7,8 @@
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import type { Tenant, DonationItem, AdminUser } from '../context/AppContext';
 
-const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-d0d82cc7`;
+export const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-d0d82cc7`;
+
 
 interface APIResponse<T> {
   success: boolean;
@@ -478,6 +479,13 @@ export const partnerAPI = {
   /** 파트너(대리점/영업자)가 유치/관할하는 단체(가맹점) 목록 조회 */
   async getPartnerTenants(partnerId: string): Promise<APIResponse<Tenant[]>> {
     return fetchAPI<Tenant[]>(`/partners/${partnerId}/tenants`);
+  },
+
+  /** 전체 4자간 수수료 분구 원장 조회 */
+  async getLedger(params?: Record<string, string>): Promise<APIResponse<any[]>> {
+    const searchParams = new URLSearchParams(params).toString();
+    const query = searchParams ? `?${searchParams}` : '';
+    return fetchAPI<any[]>(`/admin/settlements/ledger${query}`);
   },
 
   /** 대리점 정산 배치 + 영업자별 지급 명세 조회 */
