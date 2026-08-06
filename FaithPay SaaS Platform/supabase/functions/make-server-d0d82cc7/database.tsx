@@ -1426,4 +1426,25 @@ export async function createTestDonationWithSplit(data: {
   return snakeToCamel(inserted);
 }
 
+/**
+ * 거래 및 수수료 원장 0건 깔끔 초기화 (대리점/영업자 조직 구조만 유지)
+ */
+export async function resetTestDonationsAndLedger(): Promise<boolean> {
+  const supabase = pgClient();
+
+  // 1. partner_settlement_commissions / agent_payouts 삭제
+  await supabase.from('partner_settlement_commissions').delete().neq('settlement_id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('partner_settlement_agent_payouts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  // 2. partner_settlements 삭제
+  await supabase.from('partner_settlements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  // 3. partner_commissions 원장 0건으로 리셋
+  const { error } = await supabase.from('partner_commissions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+
 

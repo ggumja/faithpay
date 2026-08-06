@@ -1165,6 +1165,18 @@ app.post("/make-server-d0d82cc7/admin/test-donations", async (c) => {
   }
 });
 
+// 거래 및 수수료 원장 0건 초기화 (대리점/영업자 조직만 보존)
+app.post("/make-server-d0d82cc7/admin/test-donations/reset", async (c) => {
+  try {
+    await db.resetTestDonationsAndLedger();
+    return c.json({ success: true, message: 'All transaction ledger data reset to 0.' });
+  } catch (error) {
+    console.error('Error resetting test donations:', error);
+    return c.json({ success: false, error: 'Failed to reset test ledger' }, 500);
+  }
+});
+
+
 
 
 // PATCH /partners/:id/channel-share  { channelShareRate: number }

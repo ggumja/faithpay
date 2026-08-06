@@ -89,6 +89,31 @@ export default function SettlementCenterPage() {
     }
   };
 
+  const handleResetTestLedger = async () => {
+
+    if (!confirm('현재 거래 원장을 모두 0건으로 리셋하시겠습니까?\n(대리점/영업자 조직 및 가맹점 구조는 그대로 보존됩니다.)')) {
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/test-donations/reset`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success('🧹 거래 원장이 0건으로 깔끔히 초기화되었습니다. 샌드박스로 새로 입력해 보세요!');
+        setActiveTab('ledger');
+        window.location.reload();
+      } else {
+        toast.error(json.error || '초기화 실패');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className={S.page}>
       {/* ── 헤더 ── */}
@@ -121,52 +146,63 @@ export default function SettlementCenterPage() {
           테스트 헌금 결제 건을 클릭 한 번으로 생성하면, DB의 4자간 분구 엔진이 실시간 작동하여 대리점/영업자/플랫폼 수수료 원장으로 즉시 반영됩니다.
         </p>
 
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-            <Building2 className="h-4 w-4 text-blue-300" />
-            <span className="text-xs font-semibold text-slate-300">가맹 단체:</span>
-            <select
-              value={selectedTenantId}
-              onChange={(e) => setSelectedTenantId(e.target.value)}
-              className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
-            >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id} className="bg-slate-900 text-white">
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-            <DollarSign className="h-4 w-4 text-emerald-400" />
-            <span className="text-xs font-semibold text-slate-300">결제 금액:</span>
-            <div className="flex items-center gap-1.5 font-mono text-xs font-bold">
-              {[100000, 300000, 500000, 1000000].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setTestAmount(amt)}
-                  className={`px-2 py-0.5 rounded transition-colors cursor-pointer border-none ${
-                    testAmount === amt ? 'bg-emerald-500 text-white font-black' : 'bg-white/10 text-slate-300 hover:bg-white/20'
-                  }`}
-                >
-                  {(amt / 10000).toLocaleString()}만원
-                </button>
-              ))}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+              <Building2 className="h-4 w-4 text-blue-300" />
+              <span className="text-xs font-semibold text-slate-300">가맹 단체:</span>
+              <select
+                value={selectedTenantId}
+                onChange={(e) => setSelectedTenantId(e.target.value)}
+                className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+              >
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id} className="bg-slate-900 text-white">
+                    {t.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+              <DollarSign className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs font-semibold text-slate-300">결제 금액:</span>
+              <div className="flex items-center gap-1.5 font-mono text-xs font-bold">
+                {[100000, 300000, 500000, 1000000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setTestAmount(amt)}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer border-none ${
+                      testAmount === amt ? 'bg-emerald-500 text-white font-black' : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                    }`}
+                  >
+                    {(amt / 10000).toLocaleString()}만원
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleCreateTestDonation}
+              disabled={isCreating}
+              className="px-4 py-2 text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer border-none transition-all disabled:opacity-50"
+            >
+              {isCreating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+              실데이터 테스트 결제 승인하기
+            </button>
           </div>
 
           <button
-            onClick={handleCreateTestDonation}
+            onClick={handleResetTestLedger}
             disabled={isCreating}
-            className="px-4 py-2 text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer border-none transition-all disabled:opacity-50"
+            className="px-3 py-2 text-xs font-bold bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
           >
-            {isCreating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
-            실데이터 테스트 결제 승인하기
+            🧹 거래 원장 0건 초기화
           </button>
         </div>
       </div>
+
 
       {/* ── 메인 탭 내비게이션 ── */}
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-zinc-800 overflow-x-auto">
