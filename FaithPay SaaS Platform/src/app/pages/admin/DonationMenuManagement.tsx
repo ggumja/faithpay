@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
-import { useApp, mockTenants, mockDonationItems, DonationItem } from '../../context/AppContext';
+import { useApp, DonationItem } from '../../context/AppContext';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -176,11 +175,12 @@ export default function DonationMenuManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug) || mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   if (!currentTenant) {
     return null;

@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -57,9 +56,10 @@ export default function BannerManagement() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug) || mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
+
       const bannerList = tenant.bannerImages || [];
       const bannerItems: BannerItem[] = bannerList.map((url, index) => ({
         id: `banner-${index}`,
