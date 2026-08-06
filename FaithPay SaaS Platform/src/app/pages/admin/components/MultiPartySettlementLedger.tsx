@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -29,104 +29,7 @@ interface LedgerItem {
   payoutCycle: 'REALTIME' | 'D+1' | 'D+2' | 'D+3' | 'D+7' | 'WEEKLY' | 'MONTHLY';
 }
 
-const MOCK_LEDGER: LedgerItem[] = [
-  {
-    id: 'TX-20260806-001',
-    txDate: '2026-08-06 14:32:10',
-    tenantName: '대한불교조계종 각원사',
-    tenantSlug: 'gakwonsa',
-    pgProvider: 'nanopay',
-    grossAmount: 500000,
-    pgFee: 7500,
-    tenantPayout: 490000,
-    platformFee: 2500,
-    partnerFee: 750,
-    agentFee: 250,
-    netProfit: 1500,
-    status: 'COMPLETED',
-    payoutCycle: 'REALTIME',
-  },
-  {
-    id: 'TX-20260806-002',
-    txDate: '2026-08-06 15:10:45',
-    tenantName: '명성교회',
-    tenantSlug: 'myungsung-church',
-    pgProvider: 'toss',
-    grossAmount: 1200000,
-    pgFee: 18000,
-    tenantPayout: 1176000,
-    platformFee: 6000,
-    partnerFee: 1800,
-    agentFee: 600,
-    netProfit: 3600,
-    status: 'COMPLETED',
-    payoutCycle: 'D+1',
-  },
-  {
-    id: 'TX-20260806-003',
-    txDate: '2026-08-06 16:05:00',
-    tenantName: '은혜성당',
-    tenantSlug: 'grace-cathedral',
-    pgProvider: 'toss',
-    grossAmount: 300000,
-    pgFee: 4500,
-    tenantPayout: 294000,
-    platformFee: 1500,
-    partnerFee: 450,
-    agentFee: 150,
-    netProfit: 900,
-    status: 'SCHEDULED',
-    payoutCycle: 'D+1',
-  },
-  {
-    id: 'TX-20260806-004',
-    txDate: '2026-08-06 17:20:18',
-    tenantName: '여의도순복음교회',
-    tenantSlug: 'yoido-fullgospel',
-    pgProvider: 'toss',
-    grossAmount: 2500000,
-    pgFee: 37500,
-    tenantPayout: 2450000,
-    platformFee: 12500,
-    partnerFee: 3750,
-    agentFee: 1250,
-    netProfit: 7500,
-    status: 'HOLD',
-    payoutCycle: 'WEEKLY',
-  },
-  {
-    id: 'TX-20260806-005',
-    txDate: '2026-08-06 18:40:00',
-    tenantName: '불국사',
-    tenantSlug: 'bulguksa',
-    pgProvider: 'nanopay',
-    grossAmount: 150000,
-    pgFee: 2250,
-    tenantPayout: 147000,
-    platformFee: 750,
-    partnerFee: 225,
-    agentFee: 75,
-    netProfit: 450,
-    status: 'FAILED',
-    payoutCycle: 'D+7',
-  },
-  {
-    id: 'TX-20260806-006',
-    txDate: '2026-08-06 19:05:00',
-    tenantName: '서울중앙성당',
-    tenantSlug: 'central-cathedral',
-    pgProvider: 'toss',
-    grossAmount: 800000,
-    pgFee: 12000,
-    tenantPayout: 784000,
-    platformFee: 4000,
-    partnerFee: 1200,
-    agentFee: 400,
-    netProfit: 2400,
-    status: 'SCHEDULED',
-    payoutCycle: 'MONTHLY',
-  },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export default function MultiPartySettlementLedger() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,20 +37,41 @@ export default function MultiPartySettlementLedger() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [selectedDetail, setSelectedDetail] = useState<LedgerItem | null>(null);
+  const [ledger, setLedger] = useState<LedgerItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const filteredList = MOCK_LEDGER.filter((item) => {
-    const matchesSearch =
+  const fetchLedger = useCallback(async () => {
+    setLoading(true);
+    setApiError(null);
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.set('startDate', startDate);
+      if (endDate)   params.set('endDate', endDate);
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
+      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/ledger?${params}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setLedger(json.data);
+      } else {
+        setApiError(json.error ?? '데이터 조회 실패');
+      }
+    } catch (e: any) {
+      setApiError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate, statusFilter]);
+
+  useEffect(() => { fetchLedger(); }, [fetchLedger]);
+
+  const filteredList = ledger.filter((item) => {
+    if (!searchQuery) return true;
+    return (
       item.tenantName.includes(searchQuery) ||
-      item.tenantSlug.includes(searchQuery) ||
-      item.id.includes(searchQuery);
-    const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
-    
-    // 날짜 기간 필터 (txDate: YYYY-MM-DD HH:mm:ss)
-    const itemDate = item.txDate.split(' ')[0];
-    const matchesStart = !startDate || itemDate >= startDate;
-    const matchesEnd = !endDate || itemDate <= endDate;
-
-    return matchesSearch && matchesStatus && matchesStart && matchesEnd;
+      (item as any).tenantId?.includes(searchQuery) ||
+      item.id.includes(searchQuery)
+    );
   });
 
   const handleQuickDateRange = (preset: 'today' | '7days' | 'month' | 'all') => {
@@ -296,6 +220,17 @@ export default function MultiPartySettlementLedger() {
 
       {/* ── 4자간 분구 원장 테이블 ── */}
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-2xs">
+        {/* 로딩 / 에러 */}
+        {loading && (
+          <div className="py-12 text-center text-xs text-slate-400 animate-pulse">DB에서 원장 데이터를 불러오는 중...</div>
+        )}
+        {!loading && apiError && (
+          <div className="py-8 text-center text-xs text-red-500">{apiError}</div>
+        )}
+        {!loading && !apiError && filteredList.length === 0 && (
+          <div className="py-12 text-center text-xs text-slate-400">조회된 원장 항목이 없습니다.</div>
+        )}
+        {!loading && !apiError && filteredList.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -401,6 +336,7 @@ export default function MultiPartySettlementLedger() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* ── 🔍 세부 헌금/결제 건별 내역 드릴다운 모달 ── */}

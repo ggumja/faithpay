@@ -1010,3 +1010,201 @@ export async function getCommissionsByPartnerPg(partnerId: string): Promise<any[
     createdAt: r.created_at,
   }));
 }
+
+// ==================== 관리자 정산 원장 (Admin Ledger) ====================
+
+/**
+ * 4자간 수수료 분구 원장 — partner_commissions 기반
+ * grossAmount → PG fee(1.5%) → tenantPayout → platformFee → partnerFee → agentFee
+ */
+export async function getAdminSettlementLedger(opts?: {
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  limit?: number;
+}): Promise<any[]> {
+  const supabase = pgClient();
+  let query = supabase
+    .from('partner_commissions')
+    .select('*, partners!partner_id(name, role, parent_id)')
+    .order('created_at', { ascending: false })
+    .limit(opts?.limit ?? 100);
+
+  if (opts?.startDate) query = query.gte('created_at', opts.startDate);
+  if (opts?.endDate)   query = query.lte('created_at', opts.endDate);
+  if (opts?.status && opts.status !== 'ALL') {
+    query = query.eq('settlement_status', opts.status.toLowerCase());
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((r: any) => {
+    const gross = Number(r.donation_amount);
+    const pgFee = Math.round(gross * 0.015);           // PG 1.5%
+    const tenantPayout = gross - pgFee;
+    const commissionTotal = Number(r.commission_amount);
+    const contractRate = Number(r.contract_rate ?? 3.0);
+    const agencyRate = Number(r.agency_rate ?? 0.5);
+    const agentRate = Number(r.agent_rate ?? 0);
+    const platformFee = Math.round(gross * 0.005);     // 플랫폼 0.5%
+    const partnerFee = Math.round(gross * (agencyRate / 100));
+    const agentFee = Math.round(gross * (agentRate / 100));
+    const netProfit = commissionTotal - partnerFee - agentFee;
+
+    // status 매핑: settlement_status → LedgerItem status
+    const rawStatus = (r.settlement_status ?? 'pending').toLowerCase();
+    const statusMap: Record<string, string> = {
+      paid: 'COMPLETED',
+      pending: 'SCHEDULED',
+      cancelled: 'FAILED',
+      hold: 'HOLD',
+    };
+
+    return {
+      id: r.id,
+      txDate: r.created_at,
+      tenantName: r.tenant_name ?? '',
+      tenantId: r.tenant_id,
+      pgProvider: 'toss' as const,
+      grossAmount: gross,
+      pgFee,
+      tenantPayout,
+      platformFee,
+      partnerFee,
+      agentFee,
+      netProfit: Math.max(0, netProfit),
+      status: statusMap[rawStatus] ?? 'SCHEDULED',
+      payoutCycle: rawStatus === 'paid' ? 'D+1' : 'MONTHLY',
+      partnerName: r.partners?.name ?? '',
+      partnerRole: r.partner_role ?? r.partners?.role ?? 'sales_agent',
+      settlementMonth: r.settlement_month,
+    };
+  });
+}
+
+/**
+ * 관리자 정산 개요 통계 — partner_commissions + partner_settlements 집계
+ */
+export async function getAdminSettlementOverview(): Promise<{
+  thisMonth: { grossAmount: number; commissionTotal: number; paidCount: number; pendingCount: number; pendingAmount: number };
+  allTime:   { grossAmount: number; commissionTotal: number; paidCount: number };
+  partners:  { masterAgency: number; salesAgent: number };
+}> {
+  const supabase = pgClient();
+  const now = new Date();
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [{ data: monthData }, { data: allData }, { data: partnerData }] = await Promise.all([
+    supabase.from('partner_commissions').select('donation_amount, commission_amount, settlement_status').eq('settlement_month', monthStr),
+    supabase.from('partner_commissions').select('donation_amount, commission_amount, settlement_status'),
+    supabase.from('partners').select('role').eq('status', 'active'),
+  ]);
+
+  const sumMonthGross = (monthData ?? []).reduce((s: number, r: any) => s + Number(r.donation_amount), 0);
+  const sumMonthComm  = (monthData ?? []).reduce((s: number, r: any) => s + Number(r.commission_amount), 0);
+  const sumAllGross   = (allData ?? []).reduce((s: number, r: any) => s + Number(r.donation_amount), 0);
+  const sumAllComm    = (allData ?? []).reduce((s: number, r: any) => s + Number(r.commission_amount), 0);
+  const monthPaid     = (monthData ?? []).filter((r: any) => r.settlement_status === 'paid');
+  const monthPending  = (monthData ?? []).filter((r: any) => r.settlement_status !== 'paid');
+  const allPaid       = (allData ?? []).filter((r: any) => r.settlement_status === 'paid');
+
+  return {
+    thisMonth: {
+      grossAmount:    sumMonthGross,
+      commissionTotal: sumMonthComm,
+      paidCount:      monthPaid.length,
+      pendingCount:   monthPending.length,
+      pendingAmount:  monthPending.reduce((s: number, r: any) => s + Number(r.commission_amount), 0),
+    },
+    allTime: {
+      grossAmount:    sumAllGross,
+      commissionTotal: sumAllComm,
+      paidCount:      allPaid.length,
+    },
+    partners: {
+      masterAgency: (partnerData ?? []).filter((p: any) => p.role === 'master_agency').length,
+      salesAgent:   (partnerData ?? []).filter((p: any) => p.role === 'sales_agent').length,
+    },
+  };
+}
+
+/**
+ * 관리자 정산 명세서 — 단체(tenant) 입금 명세 + 파트너 세무 증빙 목록
+ */
+export async function getAdminSettlementStatements(month: string): Promise<{
+  tenantStatements: any[];
+  partnerStatements: any[];
+}> {
+  const supabase = pgClient();
+
+  // 해당 월 수수료 원장 조회
+  const { data: rows, error } = await supabase
+    .from('partner_commissions')
+    .select('*, partners!partner_id(name, role, business_type, bank_name, account_number)')
+    .eq('settlement_month', month);
+
+  if (error) throw new Error(error.message);
+
+  // 테넌트별 집계
+  const tenantMap: Record<string, any> = {};
+  for (const r of (rows ?? [])) {
+    const tid = r.tenant_id;
+    if (!tenantMap[tid]) {
+      tenantMap[tid] = {
+        id: `ST-${month.replace('-', '')}-${tid.slice(-4)}`,
+        month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
+        tenantId: tid,
+        name: r.tenant_name ?? tid,
+        totalCount: 0,
+        grossAmount: 0,
+        pgFee: 0,
+        netPayout: 0,
+        payoutDate: '',
+      };
+    }
+    const gross = Number(r.donation_amount);
+    const pgFee = Math.round(gross * 0.015);
+    tenantMap[tid].totalCount += 1;
+    tenantMap[tid].grossAmount += gross;
+    tenantMap[tid].pgFee += pgFee;
+    tenantMap[tid].netPayout += gross - pgFee;
+    if (r.settlement_status === 'paid') {
+      tenantMap[tid].payoutDate = r.created_at?.slice(0, 10) ?? '';
+    }
+  }
+
+  // 파트너별 집계 (정산 배치 기준)
+  const { data: settlements } = await supabase
+    .from('partner_settlements')
+    .select('*, partners!partner_id(name, role, business_type, bank_name, account_number, account_holder)')
+    .like('period_start', `${month}%`);
+
+  const partnerStatements = (settlements ?? []).map((s: any, idx: number) => {
+    const p = s.partners ?? {};
+    const isCorp = p.business_type === 'corporate' || p.business_type === 'individual_business';
+    const gross = Number(s.total_commission);
+    const taxAmount = Number(s.tax_amount);
+    return {
+      id: `TAX-${month.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
+      month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
+      partnerName: p.name ?? '',
+      partnerRole: p.role ?? 'sales_agent',
+      businessType: p.business_type ?? 'individual',
+      isCorporate: isCorp,
+      grossCommission: gross,
+      vatAmount: isCorp ? taxAmount : 0,
+      withholdingTax: isCorp ? 0 : taxAmount,
+      netPayout: Number(s.net_amount),
+      status: s.status === 'paid' ? 'ISSUED' : 'SCHEDULED',
+      bankName: p.bank_name ?? '',
+      accountNumber: p.account_number ?? '',
+      accountHolder: p.account_holder ?? '',
+    };
+  });
+
+  return {
+    tenantStatements: Object.values(tenantMap),
+    partnerStatements,
+  };
+}

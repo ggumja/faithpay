@@ -1079,8 +1079,46 @@ app.get("/make-server-d0d82cc7/partners/:id/agent-settlements", async (c) => {
   }
 });
 
+// ==================== ADMIN SETTLEMENT ROUTES ====================
 
-// 대리점이 소속 영업자의 체널풀 배분율 설정
+// 관리자 정산 개요 통계 (종합 현황 KPI)
+app.get("/make-server-d0d82cc7/admin/settlements/overview", async (c) => {
+  try {
+    const data = await db.getAdminSettlementOverview();
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching admin settlement overview:', error);
+    return c.json({ success: false, error: 'Failed to fetch overview' }, 500);
+  }
+});
+
+// 4자간 수수료 분구 원장
+app.get("/make-server-d0d82cc7/admin/settlements/ledger", async (c) => {
+  try {
+    const startDate = c.req.query('startDate');
+    const endDate   = c.req.query('endDate');
+    const status    = c.req.query('status');
+    const limit     = c.req.query('limit') ? Number(c.req.query('limit')) : 200;
+    const data = await db.getAdminSettlementLedger({ startDate, endDate, status, limit });
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching settlement ledger:', error);
+    return c.json({ success: false, error: 'Failed to fetch ledger' }, 500);
+  }
+});
+
+// 정산 명세서 & 세무 서식 (월별)
+app.get("/make-server-d0d82cc7/admin/settlements/statements", async (c) => {
+  try {
+    const month = c.req.query('month') ?? new Date().toISOString().slice(0, 7);
+    const data = await db.getAdminSettlementStatements(month);
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching settlement statements:', error);
+    return c.json({ success: false, error: 'Failed to fetch statements' }, 500);
+  }
+});
+
 // PATCH /partners/:id/channel-share  { channelShareRate: number }
 app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
   try {
