@@ -19,9 +19,8 @@ import SettlementStatementSection from './components/SettlementStatementSection'
 import SettlementRiskAndAuditSection from './components/SettlementRiskAndAuditSection';
 
 import { useApp } from '../../context/AppContext';
-import { tenantAPI } from '../../api/client';
+import { tenantAPI, paymentAPI } from '../../api/client';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /* ── 스타일 토큰 ── */
 const S = {
@@ -85,55 +84,45 @@ export default function SettlementCenterPage() {
     }
     setIsCreating(true);
     try {
-      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/test-donations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId: selectedTenantId,
-          amount: testAmount,
-          donorName: 'E2E 테스트 성도',
-          paymentMethod: '신용카드',
-        }),
+      const res = await paymentAPI.createTestDonation({
+        tenantId: selectedTenantId,
+        amount: testAmount,
+        donorName: 'E2E 테스트 성도',
+        paymentMethod: '신용카드',
       });
-      const json = await res.json();
-      if (json.success && json.data) {
-        toast.success(`⚡ ${json.data.tenantName}에 ${testAmount.toLocaleString()}원 결제 및 4자간 수수료 분구가 DB에 생성되었습니다!`);
-        // 탭 새로고침 유도
+      if (res.success && res.data) {
+        toast.success(`⚡ ${res.data.tenantName}에 ${testAmount.toLocaleString()}원 결제 및 4자간 수수료 분구가 DB에 생성되었습니다!`);
         setActiveTab('ledger');
       } else {
-        toast.error(json.error || '테스트 결제 생성 실패');
+        toast.error(res.error || '테스트 결제 생성 실패');
       }
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || '결제 생성 중 에러가 발생했습니다.');
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleResetTestLedger = async () => {
-
     if (!confirm('현재 거래 원장을 모두 0건으로 리셋하시겠습니까?\n(대리점/영업자 조직 및 가맹점 구조는 그대로 보존됩니다.)')) {
       return;
     }
-    setIsCreating(true);
+    setIsResetting(true);
     try {
-      const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/test-donations/reset`, {
-        method: 'POST',
-      });
-      const json = await res.json();
-      if (json.success) {
-        toast.success('🧹 거래 원장이 0건으로 깔끔히 초기화되었습니다. 샌드박스로 새로 입력해 보세요!');
-        setActiveTab('ledger');
-        window.location.reload();
+      const res = await paymentAPI.resetLedger();
+      if (res.success) {
+        toast.success('거래 내역 및 수수료 원장이 0건으로 깔끔하게 리셋되었습니다.');
+        setActiveTab('overview');
       } else {
-        toast.error(json.error || '초기화 실패');
+        toast.error(res.error || '원장 리셋 실패');
       }
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || '원장 리셋 중 에러가 발생했습니다.');
     } finally {
-      setIsCreating(false);
+      setIsResetting(false);
     }
   };
+
 
   return (
     <div className={S.page}>

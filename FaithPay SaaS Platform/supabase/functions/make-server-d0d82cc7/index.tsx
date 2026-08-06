@@ -1026,8 +1026,8 @@ app.post("/make-server-d0d82cc7/partners", async (c) => {
   }
 });
 
-// 영업 파트너 상태 변경 (승인 / 정지)
-app.put("/make-server-d0d82cc7/partners/:id/status", async (c) => {
+// 영업 파트너 상태 변경 (승인 / 정지) - PUT / POST / PATCH 지원
+const handleUpdatePartnerStatus = async (c: any) => {
   try {
     const id = c.req.param('id');
     const { status } = await c.req.json();
@@ -1040,7 +1040,12 @@ app.put("/make-server-d0d82cc7/partners/:id/status", async (c) => {
     console.error('Error updating partner status:', error);
     return c.json({ success: false, error: 'Failed to update partner status' }, 500);
   }
-});
+};
+
+app.put("/make-server-d0d82cc7/partners/:id/status", handleUpdatePartnerStatus);
+app.post("/make-server-d0d82cc7/partners/:id/status", handleUpdatePartnerStatus);
+app.patch("/make-server-d0d82cc7/partners/:id/status", handleUpdatePartnerStatus);
+
 
 
 // 영업자 수수료 내역 조회 (PostgreSQL partner_commissions 테이블 직접 조회)

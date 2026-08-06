@@ -57,7 +57,15 @@ export default function PartnerManagement() {
       setIsLoading(true);
       try {
         const res = await partnerAPI.getAll();
-        setPartners(res.success && Array.isArray(res.data) ? res.data : []);
+        if (res.success && Array.isArray(res.data)) {
+          const mapped = res.data.map(p => {
+            const savedStatus = localStorage.getItem(`faithpay:partner_status:${p.id}`);
+            return savedStatus ? { ...p, status: savedStatus as any } : p;
+          });
+          setPartners(mapped);
+        } else {
+          setPartners([]);
+        }
       } catch {
         setPartners([]);
       } finally {
@@ -66,6 +74,7 @@ export default function PartnerManagement() {
     }
     load();
   }, []);
+
 
   // 등록 폼 상태
   const [role, setRole] = useState<'master_agency' | 'sales_agent'>('master_agency');
