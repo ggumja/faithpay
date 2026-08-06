@@ -119,19 +119,18 @@ export default function SystemAdminDashboard() {
   const agencyGroups = [
     {
       id: 'agency-bit',
-      name: '한국불교문화원',
+      name: '불교정보화협의회',
       code: 'BIT2024',
       rate: 0.5,
       agentNames: ['이수진', '박지훈'],
       items: tList.filter(t => {
         const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
         const name = (t as any).registeredByPartnerName;
-        return ref === 'BIT2024' || ref === 'LSJ002' || name === '이수진' || name === '한국불교문화원' ||
-               ['bongwonsa', 'myungsung-church', 'myeongdong-cathedral', 'bulguksa', 'yoido-fullgospel'].includes(t.slug);
+        return ref === 'BIT2024' || ref === 'LSJ002' || name === '이수진' || name === '불교정보화협의회';
       }).map(t => ({
         ...t,
-        agentName: ['bongwonsa', 'myungsung-church', 'myeongdong-cathedral'].includes(t.slug) ? '이수진 (영업자)' : '대리점 본사 직접',
-        contractRate: (t as any).contractRate ?? (t.slug === 'bongwonsa' ? 3.2 : t.slug === 'myeongdong-cathedral' ? 2.9 : 3.0),
+        agentName: (t as any).registrationSource === 'agent' ? `${(t as any).registeredByPartnerName || '영업자'} (영업자)` : '대리점 본사 직접',
+        contractRate: (t as any).contractRate ?? 3.0,
       })),
     },
     {
@@ -143,12 +142,11 @@ export default function SystemAdminDashboard() {
       items: tList.filter(t => {
         const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
         const name = (t as any).registeredByPartnerName;
-        return ref === 'KRS2024' || ref === 'KJS001' || ref === 'PMH003' || name === '김정수' || name === '박민호' ||
-               ['gakwonsa', 'joyful-church', 'serenity-temple', 'grace-cathedral'].includes(t.slug);
+        return ref === 'KRS2024' || ref === 'KJS001' || ref === 'PMH003' || name === '한국종교솔루션(주)' || name === '김정수' || name === '박민호';
       }).map(t => ({
         ...t,
-        agentName: ['gakwonsa', 'joyful-church'].includes(t.slug) ? '김정수 (영업자)' : '박민호 (영업자)',
-        contractRate: (t as any).contractRate ?? (t.slug === 'gakwonsa' ? 3.0 : 3.2),
+        agentName: (t as any).registrationSource === 'agent' ? `${(t as any).registeredByPartnerName || '영업자'} (영업자)` : '대리점 본사 직접',
+        contractRate: (t as any).contractRate ?? 3.0,
       })),
     },
   ];
@@ -171,6 +169,7 @@ export default function SystemAdminDashboard() {
       items: directItems,
     });
   }
+
 
   return (
     <div className={S.inner}>
