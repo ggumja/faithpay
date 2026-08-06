@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router';
 import { useApp, mockTenants } from '../../context/AppContext';
 import {
   LayoutDashboard, Building2, TrendingUp, Users, UserCircle,
-  LogOut, Bell, Search, Menu, ChevronRight, Coins,
+  LogOut, Bell, Search, Menu, ChevronRight,
 } from 'lucide-react';
 import { Partner, PartnerCommission, partnerAPI } from '../../api/client';
 import { toast } from 'sonner';
@@ -297,21 +297,6 @@ export default function PartnerDashboard() {
               );
             })}
           </nav>
-
-          {/* 하단 수수료율 표시 */}
-          <div className="mx-2 mb-1 px-3 py-2 rounded-[8px] bg-emerald-50 border border-emerald-100">
-            <div className="text-[10px] text-emerald-700 font-semibold">내 수수료율</div>
-            <div className="text-[18px] font-black text-emerald-700 leading-tight">
-              {(partner.commissionRate ?? 0).toFixed(2)}%
-              <span className="text-[10px] font-normal ml-1 text-emerald-600">/ 결제 건당</span>
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <Coins size={10} className="text-emerald-500" />
-              <span className="text-[9.5px] text-emerald-600">
-                {isAgency ? '대리점 고정 수수료' : '영업자 지급 수수료'}
-              </span>
-            </div>
-          </div>
 
           {/* 로그아웃 */}
           <div className={S.sidefoot}>
