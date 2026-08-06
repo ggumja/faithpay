@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Play,
   RefreshCw,
@@ -12,6 +12,8 @@ import {
 import { toast } from 'sonner';
 import { Badge } from '../../../components/ui/badge';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+
 interface PayoutExceptionItem {
   id: string;
   tenantName: string;
@@ -23,39 +25,37 @@ interface PayoutExceptionItem {
   isHold: boolean;
 }
 
-const MOCK_EXCEPTIONS: PayoutExceptionItem[] = [
-  {
-    id: 'PO-FAIL-001',
-    tenantName: '불국사',
-    bankName: 'NH농협',
-    accountNumber: '302-1928-3921-01',
-    holderName: '불국사 주지',
-    amount: 147000,
-    failureReason: '예금주 불일치 (등록 예금주: 대한불교조계종불국사)',
-    isHold: true,
-  },
-  {
-    id: 'PO-FAIL-002',
-    tenantName: '여의도순복음교회 (청년부)',
-    bankName: 'KB국민',
-    accountNumber: '817290-04-192031',
-    holderName: '여의도순복음',
-    amount: 2450000,
-    failureReason: '계좌 상태 이상 (입금 제한 계좌)',
-    isHold: true,
-  },
-];
-
 export default function PayoutExecutionManager() {
-  const [exceptions, setExceptions] = useState<PayoutExceptionItem[]>(MOCK_EXCEPTIONS);
+  const [exceptions, setExceptions] = useState<PayoutExceptionItem[]>([]);
+  const [balanceInfo, setBalanceInfo] = useState({
+    availableBalance: 0,
+    pendingPayoutBalance: 0,
+    payoutCycle: 'D+1 영업일 09:00',
+  });
+  const [loading, setLoading] = useState(true);
   const [isExecutingBatch, setIsExecutingBatch] = useState(false);
 
-  // 토스 지급대행 예치금 잔액 (tossPayoutService mock)
-  const balanceInfo = {
-    availableBalance: 125400000,
-    pendingPayoutBalance: 42150000,
-    payoutCycle: 'D+1 영업일 09:00',
-  };
+  useEffect(() => {
+    const fetchExceptions = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/exceptions`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          setExceptions(json.data.exceptions ?? []);
+          if (json.data.balanceInfo) {
+            setBalanceInfo(json.data.balanceInfo);
+          }
+        }
+      } catch (e: any) {
+        console.error('Failed to fetch payout exceptions:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExceptions();
+  }, []);
+
 
   const handleRunBatch = () => {
     setIsExecutingBatch(true);

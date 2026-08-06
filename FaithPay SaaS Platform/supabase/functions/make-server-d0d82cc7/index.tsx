@@ -1131,6 +1131,29 @@ app.get("/make-server-d0d82cc7/admin/settlements/statements", async (c) => {
   }
 });
 
+// 지급 실행 예외 및 예치금 잔액
+app.get("/make-server-d0d82cc7/admin/settlements/exceptions", async (c) => {
+  try {
+    const data = await db.getAdminPayoutExceptions();
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching payout exceptions:', error);
+    return c.json({ success: false, error: 'Failed to fetch exceptions' }, 500);
+  }
+});
+
+// 정산 리스크 & 대조 검증 데이터
+app.get("/make-server-d0d82cc7/admin/settlements/risk-audit", async (c) => {
+  try {
+    const data = await db.getAdminRiskAuditData();
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching risk audit data:', error);
+    return c.json({ success: false, error: 'Failed to fetch risk audit' }, 500);
+  }
+});
+
+
 // PATCH /partners/:id/channel-share  { channelShareRate: number }
 app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
   try {

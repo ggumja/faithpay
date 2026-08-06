@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ShieldAlert,
   RotateCcw,
@@ -11,66 +11,43 @@ import {
   Unlock,
   Save,
   ArrowRightLeft,
+  RefreshCw,
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
 import { toast } from 'sonner';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export default function SettlementRiskAndAuditSection() {
   const [minThreshold, setMinThreshold] = useState<number>(10000);
   const [enableAlertKakao, setEnableAlertKakao] = useState(true);
   const [enableAlertEmail, setEnableAlertEmail] = useState(true);
 
-  // 1. 환불 소급 상계 샘플 데이터
-  const clawbackItems = [
-    {
-      id: 'CLAW-202608-01',
-      date: '2026-08-05 16:20',
-      tenantName: '명성교회',
-      donorName: '박환불',
-      originalAmount: 100000,
-      clawbackPgFee: -1500,
-      clawbackPlatformFee: -500,
-      clawbackNetPayout: -98000,
-      status: 'ADJUSTED',
-    },
-    {
-      id: 'CLAW-202608-02',
-      date: '2026-08-06 11:10',
-      tenantName: '은혜성당',
-      donorName: '이취소',
-      originalAmount: 50000,
-      clawbackPgFee: -750,
-      clawbackPlatformFee: -250,
-      clawbackNetPayout: -49000,
-      status: 'PENDING_NEXT_PAYOUT',
-    },
-  ];
+  const [clawbackItems, setClawbackItems] = useState<any[]>([]);
+  const [rolloverAccounts, setRolloverAccounts] = useState<any[]>([]);
+  const [auditReport, setAuditReport] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 2. 이월 누적 소액 계좌 샘플
-  const rolloverAccounts = [
-    { id: 'ROLL-01', partnerName: '최영업 (개인에이전트)', accumAmount: 4250, targetDate: '10,000원 달성 시' },
-    { id: 'ROLL-02', partnerName: '박대리 (개인에이전트)', accumAmount: 8900, targetDate: '10,000원 달성 시' },
-  ];
+  useEffect(() => {
+    const fetchRiskAudit = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/risk-audit`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          setClawbackItems(json.data.clawbackItems ?? []);
+          setRolloverAccounts(json.data.rolloverAccounts ?? []);
+          setAuditReport(json.data.auditReport ?? []);
+        }
+      } catch (e: any) {
+        console.error('Failed to fetch risk audit data:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRiskAudit();
+  }, []);
 
-  // 3. 기부금 영수증 대조 검증 샘플
-  const auditReport = [
-    {
-      id: 'AUD-01',
-      tenantName: '대한불교조계종 각원사',
-      grossDonation100: 48500000,
-      pgNetPayout98: 47530000,
-      feeAmount2: 970000,
-      matchStatus: 'MATCHED',
-    },
-    {
-      id: 'AUD-02',
-      tenantName: '명성교회',
-      grossDonation100: 94200000,
-      pgNetPayout98: 92316000,
-      feeAmount2: 1884000,
-      matchStatus: 'MATCHED',
-    },
-  ];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -246,16 +223,17 @@ export default function SettlementRiskAndAuditSection() {
                     {rep.grossDonation100.toLocaleString()}원
                   </td>
                   <td className="py-2.5 px-3 text-right font-bold text-emerald-600">
-                    {rep.pgNetPayout98.toLocaleString()}원
+                    {(rep.netSettlement98 ?? rep.pgNetPayout98 ?? 0).toLocaleString()}원
                   </td>
                   <td className="py-2.5 px-3 text-right text-purple-600 font-bold">
-                    {rep.feeAmount2.toLocaleString()}원
+                    {(rep.pgFee15 ?? rep.feeAmount2 ?? 0).toLocaleString()}원
                   </td>
                   <td className="py-2.5 px-3 text-center font-sans">
                     <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold text-[10px]">
                       <CheckCircle2 className="h-3 w-3 mr-1" /> 대조 매칭 완료
                     </Badge>
                   </td>
+
                 </tr>
               ))}
             </tbody>
