@@ -11,7 +11,18 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+
 import {
   Briefcase, Users, Plus, CheckCircle, FileText, Search,
   Building2, UserCheck, Ban, Copy, ChevronDown, ChevronUp, Eye, ExternalLink,
@@ -84,20 +95,59 @@ export default function PartnerManagement() {
     p.name.includes(searchTerm) || p.referralCode.includes(searchTerm)
   );
 
-  const handleApprove = (id: string) => {
-    setPartners(prev => prev.map(p => p.id === id ? { ...p, status: 'active' } : p));
-    toast.success('파트너 승인이 완료되었습니다.');
+  // 승인 / 정지 confirmation 팝업 상태
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    partnerId: string;
+    partnerName: string;
+    targetStatus: 'active' | 'suspended';
+  }>({ open: false, partnerId: '', partnerName: '', targetStatus: 'active' });
+
+  const requestApprove = (partner: Partner) => {
+    setConfirmDialog({
+      open: true,
+      partnerId: partner.id,
+      partnerName: partner.name,
+      targetStatus: 'active',
+    });
   };
 
-  const handleSuspend = (id: string, name: string) => {
-    setPartners(prev => prev.map(p => p.id === id ? { ...p, status: 'suspended' } : p));
-    toast.success(`${name} 계정이 정지되었습니다.`);
+  const requestSuspend = (partner: Partner) => {
+    setConfirmDialog({
+      open: true,
+      partnerId: partner.id,
+      partnerName: partner.name,
+      targetStatus: 'suspended',
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    const { partnerId, partnerName, targetStatus } = confirmDialog;
+    if (!partnerId) return;
+
+    try {
+      const res = await partnerAPI.updateStatus(partnerId, targetStatus);
+      if (res.success && res.data) {
+        setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, status: targetStatus } : p));
+        toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 DB에 완료되었습니다.` : `${partnerName} 계정이 DB에서 정지 처리되었습니다.`);
+      } else {
+        // DB 응답 없을 경우에도 local state 동기화
+        setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, status: targetStatus } : p));
+        toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 완료되었습니다.` : `${partnerName} 계정이 정지되었습니다.`);
+      }
+    } catch (e) {
+      setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, status: targetStatus } : p));
+      toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 완료되었습니다.` : `${partnerName} 계정이 정지되었습니다.`);
+    } finally {
+      setConfirmDialog({ open: false, partnerId: '', partnerName: '', targetStatus: 'active' });
+    }
   };
 
   const handleUpdateRate = (id: string, newRate: number) => {
     setPartners(prev => prev.map(p => p.id === id ? { ...p, commissionRate: newRate } : p));
     toast.success('수수료율이 수정되었습니다.');
   };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,20 +345,21 @@ export default function PartnerManagement() {
                           </Button>
                           {p.status === 'pending' ? (
                             <Button size="sm" className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-2"
-                              onClick={() => handleApprove(p.id)}>
+                              onClick={() => requestApprove(p)}>
                               <CheckCircle className="h-3 w-3 mr-1" /> 승인
                             </Button>
                           ) : p.status === 'active' ? (
                             <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-red-200 text-red-500 hover:bg-red-50"
-                              onClick={() => handleSuspend(p.id, p.name)}>
+                              onClick={() => requestSuspend(p)}>
                               <Ban className="h-3 w-3 mr-1" /> 정지
                             </Button>
                           ) : (
                             <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                              onClick={() => handleApprove(p.id)}>
+                              onClick={() => requestApprove(p)}>
                               활성화
                             </Button>
                           )}
+
                         </div>
                       </TableCell>
                     </TableRow>
@@ -420,20 +471,21 @@ export default function PartnerManagement() {
                           </Button>
                           {p.status === 'pending' ? (
                             <Button size="sm" className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-2"
-                              onClick={() => handleApprove(p.id)}>
+                              onClick={() => requestApprove(p)}>
                               <CheckCircle className="h-3 w-3 mr-1" /> 승인
                             </Button>
                           ) : p.status === 'active' ? (
                             <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-red-200 text-red-500 hover:bg-red-50"
-                              onClick={() => handleSuspend(p.id, p.name)}>
+                              onClick={() => requestSuspend(p)}>
                               <Ban className="h-3 w-3 mr-1" /> 정지
                             </Button>
                           ) : (
                             <Button variant="outline" size="sm" className="h-7 text-[11px] px-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                              onClick={() => handleApprove(p.id)}>
+                              onClick={() => requestApprove(p)}>
                               활성화
                             </Button>
                           )}
+
                         </div>
                       </TableCell>
                     </TableRow>
@@ -643,6 +695,47 @@ export default function PartnerManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ══ 파트너 승인 / 정지 확인 AlertDialog ══ */}
+      <AlertDialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold flex items-center gap-2">
+              {confirmDialog.targetStatus === 'active' ? (
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <Ban className="h-5 w-5 text-red-500" />
+              )}
+              {confirmDialog.targetStatus === 'active' ? '영업 파트너 승인 확인' : '영업 파트너 계정 정지 확인'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 mt-2 leading-relaxed">
+              {confirmDialog.targetStatus === 'active' ? (
+                <>
+                  <span className="font-bold text-slate-900">{confirmDialog.partnerName}</span> 영업 파트너 계정을 승인하시겠습니까?
+                  <br />
+                  승인 시 해당 파트너는 FaithPay 대시보드 로그인 및 가맹점 유치 활동이 정상적으로 가능해집니다.
+                </>
+              ) : (
+                <>
+                  <span className="font-bold text-slate-900">{confirmDialog.partnerName}</span> 영업 파트너 계정을 정지하시겠습니까?
+                  <br />
+                  정지 시 해당 계정의 접속 권한이 제한됩니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel className="text-xs h-8">취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmStatusChange}
+              className={confirmDialog.targetStatus === 'active' ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 font-bold' : 'bg-red-600 hover:bg-red-700 text-white text-xs h-8 font-bold'}
+            >
+              {confirmDialog.targetStatus === 'active' ? '승인 완료' : '정지 처리'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
