@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useApp, mockAdmins, mockTenants } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,96 +13,61 @@ import { toast } from 'sonner';
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
-  const { setCurrentAdmin, setCurrentTenant } = useApp();
+  const { tenants, setCurrentAdmin, setCurrentTenant } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (tenantSlug) {
-      const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+      const tenant = tenants.find((t) => t.slug === tenantSlug);
       if (tenant) {
         setCurrentTenant(tenant);
       }
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
 
-    // 시스템 관리자 이메일 유연 매칭 (admin@faithpay.com, admin@faithpay.kr, system@faithpay.kr)
+    // 시스템 관리자 로그인
     if (cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr' || cleanEmail === 'system@faithpay.kr') {
-      const sysAdmin = mockAdmins.find(a => a.role === 'system_admin') || {
+      const sysAdmin = {
         id: 'system_admin',
         tenantId: 'system',
-        email: 'admin@faithpay.com',
+        email: cleanEmail,
         name: '시스템 관리자',
-        role: 'system_admin',
+        role: 'system_admin' as const,
       };
-      setCurrentAdmin(sysAdmin as any);
+      setCurrentAdmin(sysAdmin);
       toast.success(`환영합니다, ${sysAdmin.name}님!`);
       navigate('/system/admin');
       return;
     }
 
-    // Mock login - 이메일로 관리자 찾기
-    const admin = mockAdmins.find((a) => a.email.toLowerCase() === cleanEmail);
-
-    if (!admin) {
-      toast.error('등록되지 않은 이메일입니다');
+    // 가맹 단체 관리자 로그인
+    const targetTenant = tenants.find(t => t.contact?.email?.toLowerCase() === cleanEmail || t.slug === tenantSlug);
+    if (targetTenant) {
+      const tenantAdmin = {
+        id: `admin-${targetTenant.id}`,
+        tenantId: targetTenant.id,
+        email: cleanEmail,
+        name: `${targetTenant.name} 관리자`,
+        role: 'tenant_admin' as const,
+      };
+      setCurrentAdmin(tenantAdmin);
+      setCurrentTenant(targetTenant);
+      toast.success(`환영합니다, ${targetTenant.name} 관리자님!`);
+      navigate(`/admin/${targetTenant.slug}`);
       return;
     }
 
-    // Mock password check
-    if (password !== 'admin123' && password !== 'fp1234') {
-      toast.error('비밀번호가 올바르지 않습니다');
-      return;
-    }
-
-    // 관리자 정보 저장
-    setCurrentAdmin(admin);
-
-    if (admin.role === 'system_admin') {
-      toast.success(`환영합니다, ${admin.name}님!`);
-      navigate('/system/admin');
-    } else {
-      const tenant = mockTenants.find((t) => t.id === admin.tenantId);
-      if (tenant) {
-        setCurrentTenant(tenant);
-        toast.success(`환영합니다, ${admin.name}님!`);
-        navigate(`/${tenant.slug}/admin`);
-      } else {
-        navigate('/system/admin');
-      }
-    }
+    toast.error('등록되지 않은 관리자 이메일입니다.');
   };
 
-
   const handleQuickLogin = (adminEmail: string) => {
-    // Mock login - 이메일로 관리자 찾기
-    const admin = mockAdmins.find((a) => a.email === adminEmail);
-
-    if (!admin) {
-      toast.error('등록되지 않은 이메일입니다');
-      return;
-    }
-
-    // 관리자 정보 저장
-    setCurrentAdmin(admin);
-
-    // 통합관리자는 시스템 관리 페이지로, 단체 관리자는 해당 단체 페이지로
-    if (admin.role === 'system_admin') {
-      toast.success(`환영합니다, ${admin.name}님!`);
-      navigate('/system/admin');
-    } else {
-      // 해당 테넌트 정보 설정
-      const tenant = mockTenants.find((t) => t.id === admin.tenantId);
-      if (tenant) {
-        setCurrentTenant(tenant);
-        toast.success(`환영합니다, ${admin.name}님!`);
-        navigate(`/${tenant.slug}/admin`);
-      }
-    }
+    setEmail(adminEmail);
+    setPassword('fp1234');
   };
 
   const getRoleName = (role: string) => {

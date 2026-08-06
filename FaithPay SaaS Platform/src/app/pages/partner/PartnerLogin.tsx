@@ -2,35 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Briefcase, Eye, EyeOff, ArrowRight, ArrowLeft, Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
-
-// ── 데모 파트너 계정 ──────────────────────────────────────
-const DEMO_ACCOUNTS = [
-  {
-    id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-    email: 'agency@faithpay.kr',
-    password: 'fp1234',
-    name: '한국불교문화원',
-    role: 'master_agency' as const,
-    referralCode: 'BIT2024',
-    phone: '02-567-8901',
-    bankName: '국민은행',
-    accountNumber: '620-21-0123456',
-    accountHolder: '불교정보화협의회',
-  },
-  {
-    id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
-    email: 'agent@faithpay.kr',
-    password: 'fp1234',
-    name: '이수진',
-    role: 'sales_agent' as const,
-    referralCode: 'LSJ002',
-    parentId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-    phone: '010-9876-5432',
-    bankName: '신한은행',
-    accountNumber: '110-123-456789',
-    accountHolder: '이수진',
-  },
-];
+import { partnerAPI } from '../../api/client';
 
 export default function PartnerLogin() {
   const navigate = useNavigate();
@@ -39,35 +11,47 @@ export default function PartnerLogin() {
   const [showPw, setShowPw] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error('이메일과 비밀번호를 입력해 주세요.');
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      const found = DEMO_ACCOUNTS.find(a => a.email === email && a.password === password);
-      if (found) {
-        // 세션 저장 (실제 환경에서는 JWT 등으로 대체)
-        localStorage.setItem('faithpay_partner_session', JSON.stringify(found));
-        toast.success(`${found.name}님, 환영합니다!`);
-        if (found.role === 'sales_agent') {
-          navigate('/agent/dashboard');
-        } else {
-          navigate('/partner/dashboard');
+
+    try {
+      const res = await partnerAPI.getAll();
+      if (res.success && Array.isArray(res.data)) {
+        const found = res.data.find(a => a.email?.toLowerCase() === email.toLowerCase());
+        if (found) {
+          localStorage.setItem('faithpay_partner_session', JSON.stringify(found));
+          toast.success(`${found.name}님, 환영합니다!`);
+          if (found.role === 'sales_agent') {
+            navigate('/agent/dashboard');
+          } else {
+            navigate('/partner/dashboard');
+          }
+          return;
         }
-      } else {
-        toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
-        setIsLoading(false);
       }
-    }, 800);
+      toast.error('등록된 파트너 계정을 찾을 수 없거나 비밀번호가 올바르지 않습니다.');
+    } catch {
+      toast.error('로그인 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const fillDemo = (idx: number) => {
-    setEmail(DEMO_ACCOUNTS[idx].email);
-    setPassword(DEMO_ACCOUNTS[idx].password);
+  const fillDemo = async (idx: number) => {
+    try {
+      const res = await partnerAPI.getAll();
+      if (res.success && Array.isArray(res.data) && res.data[idx]) {
+        setEmail(res.data[idx].email || '');
+        setPassword('fp1234');
+      }
+    } catch {}
   };
+
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
