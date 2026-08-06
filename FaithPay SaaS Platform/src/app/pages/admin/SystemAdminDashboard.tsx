@@ -96,7 +96,8 @@ export default function SystemAdminDashboard() {
     }
   }, [active]);
 
-  const tenants = dbTenants.length > 0 ? dbTenants : appTenants;
+  const tenants = dbTenants;
+
 
 
   const religion = (t: string) =>

@@ -115,92 +115,13 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const defaultTenants: Tenant[] = [
-  {
-    id: '1',
-    slug: 'gakwonsa',
-    name: '대한불교조계종 각원사',
-    religionType: 'buddhist',
-    primaryColor: '#8B4513',
-    logoUrl: 'https://images.unsplash.com/photo-1770149682823-0befb39aa86e?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1770149682823-0befb39aa86e?w=1200',
-      'https://images.unsplash.com/photo-1548625361-186a51d08e5e?w=1200'
-    ],
-    description: '동양 최대의 청동아미타불이 모셔진 천안 태조산 각원사입니다.',
-    address: '충청남도 천안시 동남구 각원사길 245',
-    contact: { phone: '041-561-3545', email: 'gakwonsa@faithpay.or.kr', name: '대원 스님' },
-    schedule: [{ label: '새벽예불', time: '오전 05:00' }, { label: '사시마지', time: '오전 10:00' }],
-    terminology: { donation: '보시', member: '불자', prayer: '발원문' },
-    status: 'active',
-    appliedAt: '2026-01-15T09:00:00Z',
-    registrationSource: 'agency',
-    registeredByPartnerId: 'partner-001',
-    registeredByPartnerName: '한국종교솔루션(주)',
-    registeredByReferralCode: 'KRS2024',
-    referralCode: 'KRS2024',
-    contractRate: 3.0,
-  },
-  {
-    id: '2',
-    slug: 'joyful-church',
-    name: '기쁨의교회',
-    religionType: 'protestant',
-    primaryColor: '#1976d2',
-    description: '하나님의 은혜와 사랑이 충만한 교회입니다.',
-    address: '서울특별시 영등포구 여의도동 123',
-    contact: { phone: '02-1234-5678', email: 'joyful@faithpay.kr', name: '김기쁨 목사' },
-    terminology: { donation: '헌금', member: '성도', prayer: '기도제목' },
-    status: 'active',
-    appliedAt: '2026-01-20T09:00:00Z',
-    registrationSource: 'agency',
-    registeredByPartnerId: 'partner-001',
-    registeredByPartnerName: '한국종교솔루션(주)',
-    registeredByReferralCode: 'KRS2024',
-    referralCode: 'KRS2024',
-    contractRate: 3.0,
-  },
-  {
-    id: '3',
-    slug: 'grace-cathedral',
-    name: '은혜성당',
-    religionType: 'catholic',
-    primaryColor: '#6b21a8',
-    description: '주님의 성총이 가득한 은혜 성당입니다.',
-    address: '서울특별시 중구 명동길 74',
-    contact: { phone: '02-3456-7890', email: 'grace@faithpay.kr', name: '박은혜 신부' },
-    terminology: { donation: '교무금', member: '신도', prayer: '지향' },
-    status: 'active',
-    appliedAt: '2026-02-01T09:00:00Z',
-    registrationSource: 'agency',
-    registeredByPartnerId: 'partner-002',
-    registeredByPartnerName: '불교정보화협의회',
-    registeredByReferralCode: 'BIT2024',
-    referralCode: 'BIT2024',
-    contractRate: 3.0,
-  },
-  {
-    id: '4',
-    slug: 'serenity-temple',
-    name: '봉래사',
-    religionType: 'buddhist',
-    primaryColor: '#d97706',
-    description: '마음의 평안을 찾는 봉래사입니다.',
-    address: '서울특별시 종로구 삼청로 100',
-    contact: { phone: '02-1234-1234', email: 'serenity@faithpay.kr', name: '이봉래 스님' },
-    terminology: { donation: '보시', member: '불자', prayer: '발원문' },
-    status: 'active',
-    appliedAt: '2026-02-10T09:00:00Z',
-    registrationSource: 'agent',
-    registeredByPartnerId: 'partner-004',
-    registeredByPartnerName: '이수진',
-    registeredByReferralCode: 'LSJ002',
-    contractRate: 3.0,
-  },
-];
+export const defaultTenants: Tenant[] = [];
 
 
+
+// Legacy export compatibility
 export const mockTenants: Tenant[] = [];
+
 
 export const mockDonationItems: Record<string, DonationItem[]> = {};
 
