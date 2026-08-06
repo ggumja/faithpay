@@ -227,16 +227,17 @@ export default function CommissionStatsPage() {
                             </thead>
                             <tbody>
                               {p.commissions.map(c => {
-                                const channelPool = Math.round(c.donationAmount * FEE.channelPoolRate / 100);
+                                const platformFee = Math.round(c.donationAmount * 0.005);
                                 return (
                                   <tr key={c.id} className="border-b border-[var(--hm-border)] last:border-0">
                                     <td className="text-[11.5px] py-2 px-2 text-[var(--hm-ink)]">{c.tenantName}</td>
                                     <td className="text-[11.5px] py-2 px-2 font-mono text-[var(--hm-ink)]">{fmt(c.donationAmount)}</td>
-                                    <td className="text-[11.5px] py-2 px-2 font-mono text-[var(--hm-ink-3)]">{fmt(channelPool)}</td>
+                                    <td className="text-[11.5px] py-2 px-2 font-mono text-[var(--hm-ink-3)]">{fmt(platformFee)}</td>
                                     <td className="text-[11.5px] py-2 px-2 font-mono font-semibold text-[var(--hm-ink)]">
                                       {fmt(c.commissionAmount)}
                                       <span className="text-[9.5px] text-[var(--hm-ink-3)] ml-1">({((c.commissionAmount/c.donationAmount)*100).toFixed(2)}%)</span>
                                     </td>
+
                                     <td className="py-2 px-2">
                                       <span className={c.status === 'settled'
                                         ? S.chip('bg-emerald-50','text-emerald-700','border-emerald-200')
