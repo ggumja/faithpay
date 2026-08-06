@@ -93,12 +93,18 @@ export default function SystemAdminShell() {
   useEffect(() => {
     const load = () =>
       tenantAPI.getPending()
-        .then(res => { if (res.success && res.data) setPendingCount(res.data.length); })
+        .then(res => {
+          if (res.success && Array.isArray(res.data)) {
+            const validPending = res.data.filter((t: any) => t.id !== 'pending-yonggungsa' && t.slug !== 'yonggungsa');
+            setPendingCount(validPending.length);
+          }
+        })
         .catch(() => {});
     load();
     const timer = setInterval(load, 30_000); // 30초마다 갱신
     return () => clearInterval(timer);
   }, []);
+
 
   // 단체 관련 페이지일 때 자동 펼침
   useEffect(() => {
