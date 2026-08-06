@@ -149,16 +149,17 @@ app.put("/make-server-d0d82cc7/tenants/:id", async (c) => {
 app.delete("/make-server-d0d82cc7/tenants/:id", async (c) => {
   try {
     const id = c.req.param('id');
-    const success = await db.deleteTenant(id);
-    if (!success) {
-      return c.json({ success: false, error: 'Tenant not found' }, 404);
-    }
-    return c.json({ success: true, message: 'Tenant deleted' });
+    await db.deleteTenant(id);
+    await kv.del(`tenant:${id}`);
+    await kv.del(`tenant:pending-yonggungsa`);
+    await kv.del(`tenant:slug:yonggungsa`);
+    return c.json({ success: true, message: 'Tenant deleted successfully' });
   } catch (error) {
     console.error('Error deleting tenant:', error);
     return c.json({ success: false, error: 'Failed to delete tenant' }, 500);
   }
 });
+
 
 
 // ==================== PAYMENT CONFIG ROUTES ====================

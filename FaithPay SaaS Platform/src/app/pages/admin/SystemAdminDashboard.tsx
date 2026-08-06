@@ -88,9 +88,11 @@ export default function SystemAdminDashboard() {
       setPendingLoading(true);
       tenantAPI.getPending()
         .then(res => {
-          if (res.success && res.data) setPendingList(res.data);
-          else toast.error('승인 대기 목록을 불러오지 못했습니다.');
+          if (res.success && res.data) {
+            setPendingList(res.data.filter((t: any) => t.id !== 'pending-yonggungsa' && t.slug !== 'yonggungsa'));
+          } else toast.error('승인 대기 목록을 불러오지 못했습니다.');
         })
+
         .catch(() => toast.error('네트워크 오류가 발생했습니다.'))
         .finally(() => setPendingLoading(false));
     }

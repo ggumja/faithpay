@@ -162,14 +162,15 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 
 export async function getAllTenants(status?: 'pending' | 'active' | 'suspended'): Promise<Tenant[]> {
   const tenants = await kv.getByPrefix('tenant:');
-  // slug 매핑 제외 (id가 있는 것만)
-  const filtered = tenants.filter((t: any) => t && t.id);
+  // slug 매핑 제외 (id가 있는 것만) 및 yonggungsa 완벽 배제
+  const filtered = tenants.filter((t: any) => t && t.id && t.id !== 'pending-yonggungsa' && t.slug !== 'yonggungsa');
   if (status) {
     return filtered.filter((t: any) => t.status === status);
   }
   // status 없으면 active만 반환 (기본값 — 하위 호환)
   return filtered.filter((t: any) => !t.status || t.status === 'active');
 }
+
 
 export async function getPendingTenants(): Promise<Tenant[]> {
   return getAllTenants('pending');
@@ -224,13 +225,14 @@ export async function updateTenant(id: string, updates: Partial<Tenant>): Promis
 
 export async function deleteTenant(id: string): Promise<boolean> {
   const tenant = await getTenantById(id);
-  if (!tenant) return false;
-  
+  if (tenant) {
+    await kv.del(`tenant:slug:${tenant.slug}`);
+  }
   await kv.del(`tenant:${id}`);
-  await kv.del(`tenant:slug:${tenant.slug}`);
-  
+  await kv.del(`tenant:slug:${id}`);
   return true;
 }
+
 
 // ==================== PAYMENT CONFIG OPERATIONS ====================
 
