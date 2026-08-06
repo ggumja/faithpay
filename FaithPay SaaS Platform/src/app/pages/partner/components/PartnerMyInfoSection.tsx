@@ -237,7 +237,7 @@ export function PartnerMyInfoSection({
                       </div>
                     );
                   }
-                  if (bType === 'individual_business') {
+                  if (businessType === 'individual_business') {
                     return (
                       <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200">
                         <span className="text-lg">🏬</span>
