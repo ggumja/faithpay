@@ -1192,73 +1192,67 @@ export async function getAdminSettlementStatements(month: string): Promise<{
   tenantStatements: any[];
   partnerStatements: any[];
 }> {
-  const supabase = pgClient();
-
   try {
-    // 해당 월 수수료 원장 조회
+    const supabase = pgClient();
     const { data: rows } = await supabase
       .from('partner_commissions')
       .select('*')
       .eq('settlement_month', month);
 
+    const tenantMap: Record<string, any> = {};
+    for (const r of (rows ?? [])) {
+      const tid = r.tenant_id;
+      if (!tenantMap[tid]) {
+        tenantMap[tid] = {
+          id: `ST-${month.replace('-', '')}-${tid.slice(-4)}`,
+          month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
+          tenantId: tid,
+          name: r.tenant_name ?? tid,
+          totalCount: 0,
+          grossAmount: 0,
+          pgFee: 0,
+          netPayout: 0,
+          payoutDate: '',
+        };
+      }
+      const gross = Number(r.donation_amount || 0);
+      const pgFee = Math.round(gross * 0.015);
+      tenantMap[tid].totalCount += 1;
+      tenantMap[tid].grossAmount += gross;
+      tenantMap[tid].pgFee += pgFee;
+      tenantMap[tid].netPayout += gross - pgFee;
+      if (r.settlement_status === 'paid') {
+        tenantMap[tid].payoutDate = r.created_at?.slice(0, 10) ?? '';
+      }
+    }
 
-  // 테넌트별 집계
-  const tenantMap: Record<string, any> = {};
-  for (const r of (rows ?? [])) {
-    const tid = r.tenant_id;
-    if (!tenantMap[tid]) {
-      tenantMap[tid] = {
-        id: `ST-${month.replace('-', '')}-${tid.slice(-4)}`,
+    const { data: settlements } = await supabase
+      .from('partner_settlements')
+      .select('*')
+      .like('period_start', `${month}%`);
+
+    const partnerStatements = (settlements ?? []).map((s: any, idx: number) => {
+      const p = s.partners ?? {};
+      const isCorp = p.business_type === 'corporate' || p.business_type === 'individual_business';
+      const gross = Number(s.total_commission || 0);
+      const taxAmount = Number(s.tax_amount || 0);
+      return {
+        id: `TAX-${month.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
         month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
-        tenantId: tid,
-        name: r.tenant_name ?? tid,
-        totalCount: 0,
-        grossAmount: 0,
-        pgFee: 0,
-        netPayout: 0,
-        payoutDate: '',
+        partnerName: p.name ?? '',
+        partnerRole: p.role ?? 'sales_agent',
+        businessType: p.business_type ?? 'individual',
+        isCorporate: isCorp,
+        grossCommission: gross,
+        vatAmount: isCorp ? taxAmount : 0,
+        withholdingTax: isCorp ? 0 : taxAmount,
+        netPayout: Number(s.net_amount || 0),
+        status: s.status === 'paid' ? 'ISSUED' : 'SCHEDULED',
+        bankName: p.bank_name ?? '',
+        accountNumber: p.account_number ?? '',
+        accountHolder: p.account_holder ?? '',
       };
-    }
-    const gross = Number(r.donation_amount);
-    const pgFee = Math.round(gross * 0.015);
-    tenantMap[tid].totalCount += 1;
-    tenantMap[tid].grossAmount += gross;
-    tenantMap[tid].pgFee += pgFee;
-    tenantMap[tid].netPayout += gross - pgFee;
-    if (r.settlement_status === 'paid') {
-      tenantMap[tid].payoutDate = r.created_at?.slice(0, 10) ?? '';
-    }
-  }
-
-  // 파트너별 집계 (정산 배치 기준)
-  const { data: settlements } = await supabase
-    .from('partner_settlements')
-    .select('*')
-    .like('period_start', `${month}%`);
-
-
-  const partnerStatements = (settlements ?? []).map((s: any, idx: number) => {
-    const p = s.partners ?? {};
-    const isCorp = p.business_type === 'corporate' || p.business_type === 'individual_business';
-    const gross = Number(s.total_commission);
-    const taxAmount = Number(s.tax_amount);
-    return {
-      id: `TAX-${month.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
-      month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
-      partnerName: p.name ?? '',
-      partnerRole: p.role ?? 'sales_agent',
-      businessType: p.business_type ?? 'individual',
-      isCorporate: isCorp,
-      grossCommission: gross,
-      vatAmount: isCorp ? taxAmount : 0,
-      withholdingTax: isCorp ? 0 : taxAmount,
-      netPayout: Number(s.net_amount),
-      status: s.status === 'paid' ? 'ISSUED' : 'SCHEDULED',
-      bankName: p.bank_name ?? '',
-      accountNumber: p.account_number ?? '',
-      accountHolder: p.account_holder ?? '',
-    };
-  });
+    });
 
     return {
       tenantStatements: Object.values(tenantMap),
@@ -1272,6 +1266,7 @@ export async function getAdminSettlementStatements(month: string): Promise<{
     };
   }
 }
+
 
 }
 

@@ -18,19 +18,26 @@ export default function SettlementStatementSection() {
       setError(null);
       try {
         const res = await fetch(`${API_BASE_URL}/admin/settlements/statements?month=${selectedMonth}`);
-
+        if (!res.ok) {
+          setTenantStatements([]);
+          setPartnerStatements([]);
+          return;
+        }
         const json = await res.json();
         if (json.success && json.data) {
           setTenantStatements(json.data.tenantStatements ?? []);
           setPartnerStatements(json.data.partnerStatements ?? []);
         } else {
-          setError(json.error ?? '데이터 조회 실패');
+          setTenantStatements([]);
+          setPartnerStatements([]);
         }
       } catch (e: any) {
-        setError(e.message);
+        setTenantStatements([]);
+        setPartnerStatements([]);
       } finally {
         setLoading(false);
       }
+
     };
     fetchStatements();
   }, [selectedMonth]);
