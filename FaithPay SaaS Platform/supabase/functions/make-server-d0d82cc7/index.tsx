@@ -1038,6 +1038,15 @@ app.post("/make-server-d0d82cc7/partners", async (c) => {
 app.get("/make-server-d0d82cc7/partners/:id/commissions", async (c) => {
   try {
     const partnerId = c.req.param('id');
+    // PostgreSQL 원장을 우선 조회, 없으면 KV 기반 계산으로 폴백
+    try {
+      const pgData = await db.getCommissionsByPartnerPg(partnerId);
+      if (pgData && pgData.length > 0) {
+        return c.json({ success: true, data: pgData });
+      }
+    } catch (pgErr) {
+      console.warn('PG commissions fallback to KV:', pgErr);
+    }
     const commissions = await db.getCommissionsByPartner(partnerId);
     return c.json({ success: true, data: commissions });
   } catch (error) {
@@ -1045,6 +1054,31 @@ app.get("/make-server-d0d82cc7/partners/:id/commissions", async (c) => {
     return c.json({ success: false, error: 'Failed to fetch commissions' }, 500);
   }
 });
+
+// 대리점 정산 배치 + 영업자별 지급 명세 조회
+app.get("/make-server-d0d82cc7/partners/:id/settlements", async (c) => {
+  try {
+    const partnerId = c.req.param('id');
+    const data = await db.getSettlementsByPartner(partnerId);
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching settlements:', error);
+    return c.json({ success: false, error: 'Failed to fetch settlements' }, 500);
+  }
+});
+
+// 영업자 본인 정산 수령 내역 조회
+app.get("/make-server-d0d82cc7/partners/:id/agent-settlements", async (c) => {
+  try {
+    const agentId = c.req.param('id');
+    const data = await db.getAgentSettlementsByPartner(agentId);
+    return c.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching agent settlements:', error);
+    return c.json({ success: false, error: 'Failed to fetch agent settlements' }, 500);
+  }
+});
+
 
 // 대리점이 소속 영업자의 체널풀 배분율 설정
 // PATCH /partners/:id/channel-share  { channelShareRate: number }

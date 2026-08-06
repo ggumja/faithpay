@@ -812,3 +812,201 @@ export async function getCommissionsByPartner(partnerId: string): Promise<Partne
   return generated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+
+// ==================== SETTLEMENTS (PostgreSQL 직접 쿼리) ====================
+
+import { createClient as createSupabaseClient } from "jsr:@supabase/supabase-js@2.49.8";
+
+const pgClient = () => createSupabaseClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
+
+/** snake_case 객체 → camelCase */
+function snakeToCamel(obj: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [
+      k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()),
+      v,
+    ]),
+  );
+}
+
+export interface PartnerSettlement {
+  id: string;
+  partnerId: string;
+  partnerName?: string;
+  periodStart: string;
+  periodEnd: string;
+  totalCommission: number;
+  taxType: 'vat' | 'withholding' | 'mixed';
+  taxAmount: number;
+  netAmount: number;
+  status: 'scheduled' | 'processing' | 'paid' | 'cancelled';
+  settledAt?: string | null;
+  note?: string | null;
+  createdAt: string;
+  agentBreakdowns?: AgentPayout[];
+}
+
+export interface AgentPayout {
+  agentId: string;
+  agentName?: string;
+  businessType: string;
+  commissionAmount: number;
+  agencyMargin: number;
+  grossAgentAmount: number;
+  taxType: 'vat' | 'withholding';
+  taxAmount: number;
+  netAgentReceived: number;
+  paidAt?: string | null;
+  period?: string;
+  settledAt?: string | null;
+}
+
+/**
+ * 대리점(master_agency) 정산 배치 목록 + 영업자 지급 명세 조회
+ */
+export async function getSettlementsByPartner(partnerId: string): Promise<PartnerSettlement[]> {
+  const supabase = pgClient();
+
+  const { data: rows, error } = await supabase
+    .from('partner_settlements')
+    .select('*')
+    .eq('partner_id', partnerId)
+    .order('period_start', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  if (!rows || rows.length === 0) return [];
+
+  const settlementIds = rows.map((r: any) => r.id);
+
+  const { data: payouts } = await supabase
+    .from('partner_settlement_agent_payouts')
+    .select('*, partners!agent_id(name)')
+    .in('settlement_id', settlementIds);
+
+  const { data: partnerRow } = await supabase
+    .from('partners')
+    .select('name')
+    .eq('id', partnerId)
+    .maybeSingle();
+
+  const partnerName = partnerRow?.name ?? '';
+
+  return rows.map((r: any): PartnerSettlement => {
+    const settlementPayouts = (payouts ?? [])
+      .filter((p: any) => p.settlement_id === r.id)
+      .map((p: any): AgentPayout => ({
+        agentId: p.agent_id,
+        agentName: p.partners?.name ?? '',
+        businessType: p.business_type ?? 'individual',
+        commissionAmount: Number(p.commission_amount),
+        agencyMargin: Number(p.agency_margin),
+        grossAgentAmount: Number(p.gross_agent_amount),
+        taxType: p.tax_type as 'vat' | 'withholding',
+        taxAmount: Number(p.tax_amount),
+        netAgentReceived: Number(p.net_agent_received),
+        paidAt: p.paid_at,
+        period: `${r.period_start} ~ ${r.period_end}`,
+        settledAt: p.paid_at,
+      }));
+
+    return {
+      id: r.id,
+      partnerId: r.partner_id,
+      partnerName,
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      totalCommission: Number(r.total_commission),
+      taxType: r.tax_type as 'vat' | 'withholding' | 'mixed',
+      taxAmount: Number(r.tax_amount),
+      netAmount: Number(r.net_amount),
+      status: r.status,
+      settledAt: r.settled_at,
+      note: r.note,
+      createdAt: r.created_at,
+      agentBreakdowns: settlementPayouts.length > 0 ? settlementPayouts : undefined,
+    };
+  });
+}
+
+/**
+ * 영업자(sales_agent) 자신의 정산 수령 내역 조회
+ */
+export async function getAgentSettlementsByPartner(agentId: string): Promise<PartnerSettlement[]> {
+  const supabase = pgClient();
+
+  const { data: rows, error } = await supabase
+    .from('partner_settlements')
+    .select('*')
+    .eq('partner_id', agentId)
+    .order('period_start', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  if (!rows || rows.length === 0) return [];
+
+  const settlementIds = rows.map((r: any) => r.id);
+
+  const { data: payouts } = await supabase
+    .from('partner_settlement_agent_payouts')
+    .select('*')
+    .in('settlement_id', settlementIds)
+    .eq('agent_id', agentId);
+
+  const { data: agentRow } = await supabase
+    .from('partners')
+    .select('name')
+    .eq('id', agentId)
+    .maybeSingle();
+
+  return rows.map((r: any): PartnerSettlement => {
+    const myPayout = (payouts ?? []).find((p: any) => p.settlement_id === r.id);
+
+    return {
+      id: r.id,
+      partnerId: r.partner_id,
+      partnerName: agentRow?.name ?? '',
+      periodStart: r.period_start,
+      periodEnd: r.period_end,
+      totalCommission: myPayout ? Number(myPayout.gross_agent_amount) : Number(r.total_commission),
+      taxType: r.tax_type as any,
+      taxAmount: myPayout ? Number(myPayout.tax_amount) : Number(r.tax_amount),
+      netAmount: myPayout ? Number(myPayout.net_agent_received) : Number(r.net_amount),
+      status: r.status,
+      settledAt: r.settled_at,
+      note: r.note,
+      createdAt: r.created_at,
+    };
+  });
+}
+
+/**
+ * 수수료 원장 PostgreSQL 직접 조회
+ */
+export async function getCommissionsByPartnerPg(partnerId: string): Promise<any[]> {
+  const supabase = pgClient();
+  const { data, error } = await supabase
+    .from('partner_commissions')
+    .select('*')
+    .eq('partner_id', partnerId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    partnerId: r.partner_id,
+    partnerRole: r.partner_role ?? 'sales_agent',
+    tenantId: r.tenant_id,
+    tenantName: r.tenant_name ?? '',
+    donationId: r.donation_id,
+    donationAmount: Number(r.donation_amount),
+    commissionAmount: Number(r.commission_amount),
+    contractRate: Number(r.contract_rate ?? 3.0),
+    agencyRate: Number(r.agency_rate ?? 0.5),
+    agentRate: Number(r.agent_rate ?? 0),
+    settlementStatus: r.settlement_status,
+    settlementMonth: r.settlement_month,
+    createdAt: r.created_at,
+  }));
+}

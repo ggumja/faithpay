@@ -461,156 +461,20 @@ export const partnerAPI = {
     });
   },
 
-  /** 대리점 정산 내역 조회 (API 없으면 localStorage mock fallback) */
+  /** 대리점 정산 배치 + 영업자별 지급 명세 조회 */
   async getSettlements(partnerId: string): Promise<APIResponse<PartnerSettlement[]>> {
-    try {
-      const res = await fetchAPI<PartnerSettlement[]>(`/partners/${partnerId}/settlements`);
-      if (res.success && res.data && res.data.length > 0) return res;
-    } catch {}
-    // localStorage mock (API 구현 전 데모데이터)
-    const key = `faithpay:settlements:${partnerId}`;
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) return { success: true, data: JSON.parse(raw) };
-    } catch {}
-
-    // ── 실제 하위 영업자를 조회해서 동적으로 breakdown 생성 ──
-    let subAgents: Partner[] = [];
-    try {
-      const agRes = await fetchAPI<Partner[]>(`/partners?parentId=${partnerId}`);
-      if (agRes.success && Array.isArray(agRes.data)) subAgents = agRes.data;
-    } catch {}
-
-    /** 영업자 1명의 breakdown을 생성하는 헬퍼 */
-    const makeBreakdown = (
-      agent: Partner,
-      commBase: number,
-      marginRate = 0.1,
-    ) => {
-      const isCorp = agent.businessType === 'corporate' || agent.businessType === 'individual_business';
-      const commission    = commBase;
-      const agencyMargin  = Math.round(commission * marginRate);
-      const gross         = commission - agencyMargin;
-      const taxType       = isCorp ? 'vat' : 'withholding';
-      const taxAmount     = isCorp ? Math.round(gross * 0.1) : Math.round(gross * 0.033);
-      const net           = isCorp ? gross + taxAmount : gross - taxAmount;
-      return {
-        agentId: agent.id,
-        agentName: agent.name,
-        businessType: (agent as any).businessType ?? 'individual',
-        commissionAmount: commission,
-        agencyMargin,
-        grossAgentAmount: gross,
-        taxType: taxType as 'vat' | 'withholding',
-        taxAmount,
-        netAgentReceived: net,
-      };
-    };
-
-    /** 정산 1건의 totals를 breakdowns에서 역산 */
-    const sumUp = (bds: ReturnType<typeof makeBreakdown>[]) => ({
-      totalCommission: bds.reduce((s, b) => s + b.grossAgentAmount, 0),
-      taxAmount: bds.reduce((s, b) => s + (b.taxType === 'vat' ? b.taxAmount : -b.taxAmount), 0),
-      netAmount: bds.reduce((s, b) => s + b.netAgentReceived, 0),
-      taxType: bds.length === 0 ? 'mixed'
-        : bds.every(b => b.taxType === 'vat') ? 'vat'
-        : bds.every(b => b.taxType === 'withholding') ? 'withholding'
-        : 'mixed' as 'vat' | 'withholding' | 'mixed',
-    });
-
-    // 영업자가 없는 경우 (대리점 단독) — breakdown 없는 단순 정산
-    const noAgentSettlement = (id: string, ps: string, pe: string, base: number, status: 'paid'|'scheduled', settledAt?: string, note?: string): PartnerSettlement => ({
-      id, partnerId, partnerName: '',
-      periodStart: ps, periodEnd: pe,
-      totalCommission: base,
-      taxAmount: 0,
-      netAmount: base,
-      taxType: 'mixed',
-      status, settledAt, note,
-      createdAt: settledAt ?? new Date().toISOString(),
-    });
-
-    if (subAgents.length === 0) {
-      return {
-        success: true,
-        data: [
-          noAgentSettlement('stl-001', '2026-08-01', '2026-08-15', 284000, 'paid', '2026-08-16T09:00:00', '8월 상반기 정산'),
-          noAgentSettlement('stl-002', '2026-07-16', '2026-07-31', 196000, 'paid', '2026-08-01T09:00:00', '7월 하반기 정산'),
-          noAgentSettlement('stl-003', '2026-08-16', '2026-08-31', 0, 'scheduled', undefined, '8월 하반기 정산 (예정)'),
-        ],
-      };
-    }
-
-    // 영업자가 있으면 실제 인원 기반 breakdown 동적 생성
-    const bases1 = subAgents.map((_, i) => 80000 + i * 24000); // 영업자별 수수료 베이스
-    const bases2 = subAgents.map((_, i) => 60000 + i * 18000);
-    const bd1 = subAgents.map((a, i) => makeBreakdown(a, bases1[i]));
-    const bd2 = subAgents.map((a, i) => makeBreakdown(a, bases2[i]));
-    const s1 = sumUp(bd1);
-    const s2 = sumUp(bd2);
-
-    const demo: PartnerSettlement[] = [
-      {
-        id: 'stl-001', partnerId, partnerName: '',
-        periodStart: '2026-08-01', periodEnd: '2026-08-15',
-        ...s1,
-        status: 'paid', settledAt: '2026-08-16T09:00:00',
-        note: '8월 상반기 정산', createdAt: '2026-08-16T09:00:00',
-        agentBreakdowns: bd1,
-      },
-      {
-        id: 'stl-002', partnerId, partnerName: '',
-        periodStart: '2026-07-16', periodEnd: '2026-07-31',
-        ...s2,
-        status: 'paid', settledAt: '2026-08-01T09:00:00',
-        note: '7월 하반기 정산', createdAt: '2026-08-01T09:00:00',
-        agentBreakdowns: bd2,
-      },
-      {
-        id: 'stl-003', partnerId, partnerName: '',
-        periodStart: '2026-08-16', periodEnd: '2026-08-31',
-        totalCommission: 0, taxAmount: 0, netAmount: 0,
-        taxType: 'mixed', status: 'scheduled',
-        note: '8월 하반기 정산 (예정)', createdAt: new Date().toISOString(),
-      },
-    ];
-    return { success: true, data: demo };
+    return fetchAPI<PartnerSettlement[]>(`/partners/${partnerId}/settlements`);
   },
 
-  /** 영업자 포털 전용 선상위 대리점으로부터의 렬다운 정산 */
+  /** 영업자 본인 정산 수령 내역 조회 */
   async getAgentSettlements(agentId: string): Promise<APIResponse<PartnerSettlement[]>> {
-    try {
-      const res = await fetchAPI<PartnerSettlement[]>(`/partners/${agentId}/agent-settlements`);
-      if (res.success && res.data && res.data.length > 0) return res;
-    } catch {}
-    const demo: PartnerSettlement[] = [
-      {
-        id: 'astl-001', partnerId: agentId, partnerName: '',
-        periodStart: '2026-08-01', periodEnd: '2026-08-15',
-        totalCommission: 108000, taxAmount: 3564, netAmount: 104436,
-        taxType: 'withholding', status: 'paid', settledAt: '2026-08-16T09:00:00',
-        note: '8월 상반기 정산 (대리점 지급)', createdAt: '2026-08-16T09:00:00',
-      },
-      {
-        id: 'astl-002', partnerId: agentId, partnerName: '',
-        periodStart: '2026-07-16', periodEnd: '2026-07-31',
-        totalCommission: 75600, taxAmount: 2494, netAmount: 73106,
-        taxType: 'withholding', status: 'paid', settledAt: '2026-08-01T09:00:00',
-        note: '7월 하반기 정산 (대리점 지급)', createdAt: '2026-08-01T09:00:00',
-      },
-      {
-        id: 'astl-003', partnerId: agentId, partnerName: '',
-        periodStart: '2026-08-16', periodEnd: '2026-08-31',
-        totalCommission: 0, taxAmount: 0, netAmount: 0,
-        taxType: 'withholding', status: 'scheduled',
-        note: '8월 하반기 정산 예정', createdAt: new Date().toISOString(),
-      },
-    ];
-    return { success: true, data: demo };
+    return fetchAPI<PartnerSettlement[]>(`/partners/${agentId}/agent-settlements`);
   },
 
   /** updateProfile: 연락정보 + 정산계좌 수정 */
 };
+
+
 
 // ==================== STATISTICS API ====================
 
