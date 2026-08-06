@@ -1111,11 +1111,17 @@ export async function getAdminSettlementLedger(opts?: {
       hold: 'HOLD',
     };
 
+    const rawTenantName = r.tenant_name ?? '';
+    const resolvedTenantName = (!rawTenantName || rawTenantName === '테스트 단체')
+      ? (r.tenant_id === 'gakwonsa' ? '각원사' : r.tenant_id === 'myungsung-church' ? '명성교회' : '가맹 단체')
+      : rawTenantName;
+
     return {
       id: r.id,
       txDate: r.created_at,
-      tenantName: r.tenant_name ?? '',
+      tenantName: resolvedTenantName,
       tenantId: r.tenant_id,
+
       pgProvider: 'toss' as const,
       grossAmount: gross,
       pgFee,
@@ -1396,15 +1402,17 @@ export async function createTestDonationWithSplit(data: {
 }): Promise<any> {
   const supabase = pgClient();
 
-  // 1. 단체 정보 조회
+  // 1. KV 및 PostgreSQL 단체 정보 조회
+  const kvTenant = await getTenantById(data.tenantId) || await getTenantBySlug(data.tenantId);
   const { data: tenant } = await supabase
     .from('tenants')
     .select('*')
     .eq('id', data.tenantId)
     .single();
 
-  const tenantName = tenant?.name || '테스트 단체';
-  const partnerId = tenant?.registered_by_partner_id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+  const tenantName = kvTenant?.name || tenant?.name || (data.tenantId === 'gakwonsa' ? '각원사' : data.tenantId === 'myungsung-church' ? '명성교회' : '가맹 단체');
+  const partnerId = tenant?.registered_by_partner_id || kvTenant?.registeredByPartnerId || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
 
   // 2. 파트너 정보 및 역할 조회
   const { data: partner } = await supabase
