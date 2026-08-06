@@ -1,11 +1,11 @@
 /* Hallmark · shell: N3 Side-rail (persistent) · genre: modern-minimal · theme: Cobalt */
 
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router';
-import { useApp } from '../../context/AppContext';
+import { useNavigate, useLocation, Outlet } from 'react-router';
+import { useApp, mockTenants } from '../../context/AppContext';
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
-  Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark,
+  Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -73,6 +73,17 @@ export default function SystemAdminShell() {
   const [tenantsOpen, setTenantsOpen] = useState(true);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocus, setSearchFocus] = useState(false);
+
+  // 단체 검색 필터
+  const searchResults = searchQuery.trim().length >= 1
+    ? mockTenants.filter(t =>
+        t.name.includes(searchQuery) ||
+        t.slug.includes(searchQuery) ||
+        (t.address ?? '').includes(searchQuery)
+      ).slice(0, 6)
+    : [];
 
   const active = useActiveKey(location.pathname);
   const meta   = META[active] ?? META.tenants;
@@ -175,8 +186,9 @@ export default function SystemAdminShell() {
             <div>
               <p className={S.navSection}>통계 분석</p>
               {[
-                { key: 'stats',  label: '단체별 통계',    Icon: BarChart3, path: '/system/admin/stats'  },
-                { key: 'ledger', label: '거래이력 (원장)', Icon: BookOpen,   path: '/system/admin/ledger' },
+                { key: 'stats',       label: '단체별 통계',    Icon: BarChart3,  path: '/system/admin/stats'       },
+                { key: 'commissions', label: '수수료 통계',    Icon: Coins,      path: '/system/admin/commissions' },
+                { key: 'ledger',      label: '거래이력 (원장)', Icon: BookOpen,   path: '/system/admin/ledger'      },
               ].map(({ key, label, Icon, path }) => (
                 <button key={key} onClick={() => navigate(path)} className={S.navItem(active === key)}>
                   <Icon size={13} className={active === key ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
@@ -245,9 +257,43 @@ export default function SystemAdminShell() {
               <Search size={12} className="absolute left-2.5 text-[var(--hm-ink-3)] pointer-events-none" />
               <input
                 className="pl-7 pr-8 py-[5px] text-[12px] border border-[var(--hm-border)] rounded-[7px] bg-[var(--hm-paper-2)] text-[var(--hm-ink)] placeholder:text-[var(--hm-ink-3)] focus:outline-none focus:ring-1 focus:ring-[var(--hm-accent)] w-44 transition"
-                placeholder="Search..."
+                placeholder="단체명 검색..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocus(true)}
+                onBlur={() => setTimeout(() => setSearchFocus(false), 150)}
               />
               <span className="absolute right-2 text-[10px] text-[var(--hm-ink-3)] font-mono bg-[var(--hm-paper-3)] px-1 rounded">⌘K</span>
+
+              {/* 검색 결과 드롭다운 */}
+              {searchFocus && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 mt-1 w-72 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100">
+                    단체 검색 결과 ({searchResults.length}건)
+                  </div>
+                  {searchResults.map(t => (
+                    <button
+                      key={t.slug}
+                      type="button"
+                      onClick={() => { navigate(`/system/admin/tenant/${t.slug}`); setSearchQuery(''); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-800 text-left cursor-pointer border-none bg-transparent transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 text-[12px]">
+                        {t.type === 'protestant' ? '⛪' : t.type === 'catholic' ? '✝️' : '🛷'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-semibold text-slate-900 dark:text-zinc-100 truncate">{t.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{t.slug}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchFocus && searchQuery.trim().length >= 1 && searchResults.length === 0 && (
+                <div className="absolute top-full left-0 mt-1 w-60 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-xl z-50 px-4 py-3 text-[11.5px] text-slate-400">
+                  검색 결과가 없습니다.
+                </div>
+              )}
             </div>
 
             <button

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   ArrowLeft, Building2, Users, CheckCircle, Ban, Copy, FileText, Percent,
   Landmark, TrendingUp, Coins, Calendar, Mail, Phone, UserCheck, ChevronRight,
-  Edit3, Save, RefreshCw, AlertCircle, ExternalLink, ShieldCheck, Layers, Search, Briefcase
+  Edit3, Save, RefreshCw, AlertCircle, ExternalLink, ShieldCheck, Layers, Search, Briefcase, Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Partner, PartnerCommission, partnerAPI, tenantAPI, Tenant } from '../../api/client';
@@ -82,6 +82,11 @@ export default function PartnerDetailPage() {
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAssignAgentModalOpen, setIsAssignAgentModalOpen] = useState(false);
+  // 배속 등록 폼
+  const [assignAgentName, setAssignAgentName] = useState('');
+  const [assignAgentEmail, setAssignAgentEmail] = useState('');
+  const [assignAgentPhone, setAssignAgentPhone] = useState('');
 
   // 폼 입력 상태
   const [newRate, setNewRate] = useState<number>(0.7);
@@ -99,6 +104,19 @@ export default function PartnerDetailPage() {
     { id: 'h-3', date: '2026-07-05 11:00', type: '정산 완료', detail: '2026년 6월분 정산금 845,000원 입금 완료', by: '재무팀' },
     { id: 'h-4', date: '2026-02-10 09:30', type: '계정 승인', detail: '영업 파트너 자격 승인 및 추천코드 부여', by: '승인담당자' },
   ]);
+
+  // PG 원가율 로드 (SystemSettings localStorage)
+  const pgCostRate: number = (() => {
+    try {
+      const raw = localStorage.getItem('faithpay:pg_rates');
+      if (raw) {
+        const parsed: { id: string; rate: number }[] = JSON.parse(raw);
+        const first = parsed[0];
+        if (first?.rate != null) return Number(first.rate);
+      }
+    } catch {}
+    return 1.5;
+  })();
 
   useEffect(() => {
     loadPartnerData();
@@ -539,10 +557,66 @@ export default function PartnerDetailPage() {
                 <span className="col-span-2 font-mono font-bold text-purple-700">{partner.referralCode}</span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 py-1">
+              <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-50">
                 <span className="text-slate-400">등록/승인 일자</span>
                 <span className="col-span-2 text-slate-700">{partner.createdAt}</span>
               </div>
+
+              {/* 사업자 유형 세무 정보 */}
+              {(partner as any).businessType && (
+                <>
+                  <div className="pt-2 pb-1 border-t border-slate-100">
+                    <div className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <Receipt className="h-3 w-3" /> 세무 증빙 정보
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-50">
+                    <span className="text-slate-400">사업자 유형</span>
+                    <span className="col-span-2">
+                      {(partner as any).businessType === 'corporation' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          🏢 법인사업자 (전자세금계산서)
+                        </span>
+                      )}
+                      {(partner as any).businessType === 'individual_business' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                          🏬 일반과세자 (전자세금계산서)
+                        </span>
+                      )}
+                      {(partner as any).businessType === 'freelancer' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                          👤 프리랜서 (3.3% 원천징수)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {(partner as any).businessNumber && (
+                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-50">
+                      <span className="text-slate-400">
+                        {(partner as any).businessType === 'freelancer' ? '주민번호 (앞 6자리)' : '사업자등록번호'}
+                      </span>
+                      <span className="col-span-2 font-mono text-slate-700">{(partner as any).businessNumber}</span>
+                    </div>
+                  )}
+                  {(partner as any).representativeName && (
+                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-50">
+                      <span className="text-slate-400">대표자명</span>
+                      <span className="col-span-2 text-slate-700">{(partner as any).representativeName}</span>
+                    </div>
+                  )}
+                  {(partner as any).taxEmail && (
+                    <div className="grid grid-cols-3 gap-2 py-1">
+                      <span className="text-slate-400">전자세금계산서 이메일</span>
+                      <span className="col-span-2 font-mono text-slate-700">{(partner as any).taxEmail}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {!(partner as any).businessType && (
+                <div className="py-2 px-3 bg-amber-50 border border-amber-200 rounded-lg text-[10.5px] text-amber-800 flex items-center gap-1.5 mt-1">
+                  ⚠️ 사업자 유형이 없습니다. 정보 수정에서 사업자 유형을 추가해 주세요.
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -562,12 +636,12 @@ export default function PartnerDetailPage() {
                   <span className="text-purple-700 text-sm font-black">{partner.commissionRate}%</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
-                  <div className="bg-slate-400 h-full" style={{ width: '45%' }} title="PG원가 (1.5%)" />
+                  <div className="bg-slate-400 h-full" style={{ width: '45%' }} title={`PG원가 (${pgCostRate}%)`} />
                   <div className="bg-slate-600 h-full" style={{ width: '15%' }} title="플랫폼 (0.5%)" />
                   <div className="bg-purple-600 h-full" style={{ width: '40%' }} title={`파트너 (${partner.commissionRate}%)`} />
                 </div>
                 <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
-                  <span>PG 원가: 1.5%</span>
+                  <span>PG 원가: {pgCostRate}%</span>
                   <span>플랫폼: 0.5%</span>
                   <span className="text-purple-700 font-bold">파트너 몫: {partner.commissionRate}%</span>
                 </div>
@@ -602,7 +676,8 @@ export default function PartnerDetailPage() {
               </CardTitle>
               <CardDescription className="text-[11.5px]">이 대리점 하위에 소속되어 현장 영업을 전개하는 영업자들입니다.</CardDescription>
             </div>
-            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-xs font-bold">
+            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-xs font-bold"
+              onClick={() => setIsAssignAgentModalOpen(true)}>
               <Users className="h-3.5 w-3.5 mr-1" /> 영업자 배속 등록
             </Button>
           </CardHeader>
@@ -876,6 +951,90 @@ export default function PartnerDetailPage() {
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(false)}>취소</Button>
             <Button size="sm" className="bg-purple-600 hover:bg-purple-700 font-bold" onClick={handleSaveEditInfo}>저장하기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── 영업자 배속 등록 모달 ── */}
+      <Dialog open={isAssignAgentModalOpen} onOpenChange={setIsAssignAgentModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-600" /> [{partner?.name}] 소속 영업자 배속 등록
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              이 대리점 하위에 새 영업자(Tier-2)를 배속 등록합니다.<br />
+              등록된 영업자에게는 이 대리점의 추천 코드가 자동 연결됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-xs">
+            <div>
+              <Label className="text-xs font-bold text-slate-700">영업자 성명 *</Label>
+              <Input
+                value={assignAgentName}
+                onChange={e => setAssignAgentName(e.target.value)}
+                className="mt-1 text-xs"
+                placeholder="홍길동"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-700">이메일 주소 *</Label>
+              <Input
+                type="email"
+                value={assignAgentEmail}
+                onChange={e => setAssignAgentEmail(e.target.value)}
+                className="mt-1 text-xs"
+                placeholder="agent@faithpay.kr"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-700">전화번호 *</Label>
+              <Input
+                value={assignAgentPhone}
+                onChange={e => setAssignAgentPhone(e.target.value)}
+                className="mt-1 text-xs"
+                placeholder="010-1234-5678"
+              />
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-[11px] text-purple-800">
+              💡 배속 등록 후 <strong>파트너 관리 목록</strong>에서도 이 대리점 하위 영업자로 확인할 수 있습니다.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setIsAssignAgentModalOpen(false)}>취소</Button>
+            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 font-bold"
+              onClick={() => {
+                if (!assignAgentName || !assignAgentEmail || !assignAgentPhone) {
+                  toast.error('영업자 성명, 이메일, 전화번호를 모두 입력해 주세요.');
+                  return;
+                }
+                const newAgent = {
+                  id: `agent-${Date.now()}`,
+                  name: assignAgentName,
+                  email: assignAgentEmail,
+                  phone: assignAgentPhone,
+                  role: 'sales_agent' as const,
+                  parentId: partner?.id,
+                  commissionRate: 0.4,
+                  referralCode: `AGENT_${Math.floor(100 + Math.random() * 900)}`,
+                  bankName: '신한은행',
+                  accountNumber: '110-000-000000',
+                  accountHolder: assignAgentName,
+                  status: 'active' as const,
+                  createdAt: new Date().toISOString().split('T')[0],
+                };
+                setSubAgents(prev => [newAgent, ...prev]);
+                setHistory(prev => [
+                  { id: `h-${Date.now()}`, date: new Date().toLocaleString(), type: '영업자 배속', detail: `[${assignAgentName}] 영업자가 배속 등록됨`, by: '시스템 최고관리자' },
+                  ...prev,
+                ]);
+                toast.success(`[${assignAgentName}] 영업자 배속 등록이 완료되었습니다.`);
+                setIsAssignAgentModalOpen(false);
+                setAssignAgentName(''); setAssignAgentEmail(''); setAssignAgentPhone('');
+              }}
+            >
+              배속 등록 완료
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

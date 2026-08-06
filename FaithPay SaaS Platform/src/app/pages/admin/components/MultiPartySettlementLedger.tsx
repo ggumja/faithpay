@@ -26,6 +26,7 @@ interface LedgerItem {
   agentFee: number;
   netProfit: number;
   status: 'COMPLETED' | 'SCHEDULED' | 'FAILED' | 'HOLD';
+  payoutCycle: 'REALTIME' | 'D+1' | 'D+2' | 'D+3' | 'D+7' | 'WEEKLY' | 'MONTHLY';
 }
 
 const MOCK_LEDGER: LedgerItem[] = [
@@ -36,13 +37,14 @@ const MOCK_LEDGER: LedgerItem[] = [
     tenantSlug: 'gakwonsa',
     pgProvider: 'nanopay',
     grossAmount: 500000,
-    pgFee: 7500, // 1.5%
-    tenantPayout: 490000, // 98.0%
-    platformFee: 2500, // 0.5%
-    partnerFee: 750, // 0.15%
-    agentFee: 250, // 0.05%
-    netProfit: 1500, // 0.30%
+    pgFee: 7500,
+    tenantPayout: 490000,
+    platformFee: 2500,
+    partnerFee: 750,
+    agentFee: 250,
+    netProfit: 1500,
     status: 'COMPLETED',
+    payoutCycle: 'REALTIME',
   },
   {
     id: 'TX-20260806-002',
@@ -58,6 +60,7 @@ const MOCK_LEDGER: LedgerItem[] = [
     agentFee: 600,
     netProfit: 3600,
     status: 'COMPLETED',
+    payoutCycle: 'D+1',
   },
   {
     id: 'TX-20260806-003',
@@ -73,6 +76,7 @@ const MOCK_LEDGER: LedgerItem[] = [
     agentFee: 150,
     netProfit: 900,
     status: 'SCHEDULED',
+    payoutCycle: 'D+1',
   },
   {
     id: 'TX-20260806-004',
@@ -88,6 +92,7 @@ const MOCK_LEDGER: LedgerItem[] = [
     agentFee: 1250,
     netProfit: 7500,
     status: 'HOLD',
+    payoutCycle: 'WEEKLY',
   },
   {
     id: 'TX-20260806-005',
@@ -103,6 +108,23 @@ const MOCK_LEDGER: LedgerItem[] = [
     agentFee: 75,
     netProfit: 450,
     status: 'FAILED',
+    payoutCycle: 'D+7',
+  },
+  {
+    id: 'TX-20260806-006',
+    txDate: '2026-08-06 19:05:00',
+    tenantName: '서울중앙성당',
+    tenantSlug: 'central-cathedral',
+    pgProvider: 'toss',
+    grossAmount: 800000,
+    pgFee: 12000,
+    tenantPayout: 784000,
+    platformFee: 4000,
+    partnerFee: 1200,
+    agentFee: 400,
+    netProfit: 2400,
+    status: 'SCHEDULED',
+    payoutCycle: 'MONTHLY',
   },
 ];
 
@@ -365,7 +387,13 @@ export default function MultiPartySettlementLedger() {
                       </Badge>
                     )}
                     <div className="text-[9.5px] font-mono text-slate-400">
-                      {item.status === 'COMPLETED' ? '실시간 이체' : 'D+1 익일 09:00'}
+                      {item.payoutCycle === 'REALTIME' && '⚡ 실시간 즉시 이체'}
+                      {item.payoutCycle === 'D+1' && '🕘 D+1 익일 09:00'}
+                      {item.payoutCycle === 'D+2' && '📅 D+2 입금 예정'}
+                      {item.payoutCycle === 'D+3' && '📅 D+3 입금 예정'}
+                      {item.payoutCycle === 'D+7' && '📅 D+7 입금 예정'}
+                      {item.payoutCycle === 'WEEKLY' && '📆 주간 정산 (매주)'}
+                      {item.payoutCycle === 'MONTHLY' && '🗓️ 월간 정산 (매월 지정일)'}
                     </div>
                   </td>
                 </tr>

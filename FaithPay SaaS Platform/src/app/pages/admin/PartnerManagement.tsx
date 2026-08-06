@@ -67,6 +67,11 @@ export default function PartnerManagement() {
   const [bankName, setBankName] = useState('신한은행');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
+  // 사업자 유형 및 세무 관련
+  const [businessType, setBusinessType] = useState<'corporation' | 'individual_business' | 'freelancer'>('corporation');
+  const [businessNumber, setBusinessNumber] = useState('');
+  const [taxEmail, setTaxEmail] = useState('');
+  const [representativeName, setRepresentativeName] = useState('');
 
   // 파생 목록
   const agencies = partners.filter(p => p.role === 'master_agency');
@@ -97,6 +102,7 @@ export default function PartnerManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !phone) { toast.error('필수 정보를 입력해 주세요.'); return; }
+    if (!businessNumber.trim()) { toast.error('사업자등록번호(또는 주민번호 앞 6자리)를 입력해 주세요.'); return; }
 
     const newPartner: Partner = {
       id: `partner-${Date.now()}`,
@@ -109,13 +115,20 @@ export default function PartnerManagement() {
       accountHolder: accountHolder || name,
       status: 'active',
       createdAt: new Date().toISOString().split('T')[0],
-    };
+      // 사업자 유형 정보
+      businessType,
+      businessNumber,
+      taxEmail: businessType !== 'freelancer' ? taxEmail : undefined,
+      representativeName: businessType === 'corporation' ? representativeName : undefined,
+    } as any;
 
     setPartners([newPartner, ...partners]);
     setIsModalOpen(false);
     toast.success(`[${name}] ${role === 'master_agency' ? '영업 대리점' : '영업자'} 등록 완료!`);
     setName(''); setEmail(''); setPhone(''); setReferralCode(''); setAccountNumber(''); setAccountHolder('');
+    setBusinessNumber(''); setTaxEmail(''); setRepresentativeName(''); setBusinessType('corporation');
   };
+
 
   const statusBadge = (status: string) => {
     if (status === 'active')    return <Badge className="bg-emerald-100 text-emerald-700 text-[10px] hover:bg-emerald-100">활성</Badge>;
@@ -134,7 +147,11 @@ export default function PartnerManagement() {
           { label: '영업 대리점', value: `${agencies.length}개`, color: 'text-purple-600', bg: 'bg-purple-50', icon: Building2 },
           { label: '영업자',     value: `${agents.length}명`,   color: 'text-indigo-600', bg: 'bg-indigo-50',  icon: Users },
           { label: '승인 대기',  value: `${partners.filter(p => p.status === 'pending').length}건`, color: 'text-amber-600',  bg: 'bg-amber-50',  icon: UserCheck },
-          { label: '당월 정산 예정', value: '903,000원', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Briefcase },
+          {
+            label: '당월 정산 예정',
+            value: `${partners.reduce((sum, p) => sum + Math.floor((p as any).pendingAmount ?? 0), 0).toLocaleString()}원`,
+            color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Briefcase,
+          },
         ].map(({ label, value, color, bg, icon: Icon }) => (
           <Card key={label} className="border-slate-200">
             <CardContent className="p-4">
@@ -371,7 +388,10 @@ export default function PartnerManagement() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="text-[12px] font-bold text-slate-600">—</span>
+                        <div className="text-center">
+                          <span className="text-[12.5px] font-bold text-indigo-700">{p.commissionRate}%</span>
+                          <div className="text-[10px] text-slate-400 mt-0.5">지급 확정율</div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="text-[11px]">
@@ -507,6 +527,82 @@ export default function PartnerManagement() {
               <div className="space-y-1">
                 <Label className="text-xs font-bold">추천 코드 (미입력 시 자동)</Label>
                 <Input placeholder="AGENCY_001" value={referralCode} onChange={e => setReferralCode(e.target.value.toUpperCase())} className="h-8 text-xs font-mono uppercase" />
+              </div>
+            </div>
+
+            {/* 사업자 유형 및 세무 정보 */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+              <div className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                🧾 사업자 유형 &amp; 세무 증빙 정보
+              </div>
+              {/* 사업자 유형 선택 */}
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { key: 'corporation',         label: '🏢 법인사업자',   desc: '전자세금계산서', color: 'border-blue-500 bg-blue-50 text-blue-900' },
+                  { key: 'individual_business', label: '🏬 일반과세자',   desc: '전자세금계산서', color: 'border-green-500 bg-green-50 text-green-900' },
+                  { key: 'freelancer',          label: '👤 프리랜서',     desc: '3.3% 원천징수',  color: 'border-orange-500 bg-orange-50 text-orange-900' },
+                ].map(({ key, label, desc, color }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setBusinessType(key as any)}
+                    className={`py-2 px-2 rounded-lg border text-[10.5px] font-bold text-center cursor-pointer transition-all flex flex-col items-center gap-0.5
+                      ${businessType === key ? color : 'bg-white border-slate-200 text-slate-500'}`}
+                  >
+                    {label}
+                    <span className="font-normal text-[9px] opacity-70">{desc}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 사업자등록번호 */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[10.5px] font-bold">
+                    {businessType === 'freelancer' ? '주민등록번호 앞 6자리 *' : '사업자등록번호 *'}
+                  </Label>
+                  <Input
+                    placeholder={businessType === 'freelancer' ? '920110' : '107-88-39201'}
+                    value={businessNumber}
+                    onChange={e => setBusinessNumber(e.target.value)}
+                    className="h-7 text-xs bg-white font-mono"
+                  />
+                </div>
+                {businessType === 'corporation' && (
+                  <div className="space-y-1">
+                    <Label className="text-[10.5px] font-bold">대표자명</Label>
+                    <Input
+                      placeholder="홍길동"
+                      value={representativeName}
+                      onChange={e => setRepresentativeName(e.target.value)}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 세금계산서 이메일 (법인/일반과세자) */}
+              {businessType !== 'freelancer' && (
+                <div className="space-y-1">
+                  <Label className="text-[10.5px] font-bold">전자세금계산서 수신 이메일</Label>
+                  <Input
+                    type="email"
+                    placeholder="tax@partner.co.kr"
+                    value={taxEmail}
+                    onChange={e => setTaxEmail(e.target.value)}
+                    className="h-7 text-xs bg-white"
+                  />
+                </div>
+              )}
+
+              <div className={`text-[10px] px-2 py-1 rounded-md font-medium ${
+                businessType === 'freelancer'
+                  ? 'bg-orange-100 text-orange-800'
+                  : 'bg-blue-100 text-blue-800'
+              }`}>
+                {businessType === 'freelancer'
+                  ? '⚡ 3.3% 사업소득세 원천징수 후 지급 → 원천징수 영수증 발행'
+                  : '⚡ 부가가치세 포함 전자세금계산서 발행 → 세금계산서 합계액 지급'}
               </div>
             </div>
 
