@@ -320,15 +320,14 @@ const defaultTenants: Tenant[] = [
   },
 ];
 
-// 대리점/영업자 시드 6개 단체 보장 (구버전 캐시 무조건 재설정)
+// 대리점/영업자 시드 6개 단체 보장
 let parsedTenants: Tenant[] = defaultTenants;
 if (typeof window !== 'undefined') {
   const saved = localStorage.getItem('faithpay_tenants');
   if (saved) {
     try {
       const arr = JSON.parse(saved);
-      const isUpdatedSchema = Array.isArray(arr) && arr.some(x => x.slug === 'gakwonsa' && x.paymentConfig?.pgProvider === 'nanopay');
-      if (isUpdatedSchema) {
+      if (Array.isArray(arr) && arr.length >= 6) {
         parsedTenants = arr;
       } else {
         localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
@@ -342,6 +341,7 @@ if (typeof window !== 'undefined') {
     localStorage.setItem('faithpay_tenants', JSON.stringify(defaultTenants));
   }
 }
+
 
 export const mockTenants: Tenant[] = parsedTenants;
 
