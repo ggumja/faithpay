@@ -1292,4 +1292,43 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
   }
 });
 
+// Admin 샌드박스 테스트 결제 생성 (실제 PostgreSQL 원장 분구 반영)
+app.post("/make-server-d0d82cc7/admin/test-donations", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { tenantId, amount, donorName, paymentMethod } = body;
+    if (!tenantId || !amount) {
+      return c.json({ success: false, error: 'tenantId and amount are required' }, 400);
+    }
+    const tenant = await db.getTenantById(tenantId);
+    const result = await db.recordDonationAndDistributeCommission({
+      tenantId,
+      amount: Number(amount),
+      donorName: donorName || 'E2E 테스트 성도',
+      paymentMethod: paymentMethod || '신용카드',
+    });
+    return c.json({
+      success: true,
+      data: {
+        ...result,
+        tenantName: tenant?.name || '가맹 단체',
+      },
+    });
+  } catch (error: any) {
+    console.error('Error creating test donation:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Admin 테스트 원장 0건 리셋
+app.post("/make-server-d0d82cc7/admin/reset-ledger", async (c) => {
+  try {
+    await db.resetTestDonationsAndLedger();
+    return c.json({ success: true, message: 'Ledger reset completed' });
+  } catch (error: any) {
+    console.error('Error resetting ledger:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 Deno.serve(app.fetch);
