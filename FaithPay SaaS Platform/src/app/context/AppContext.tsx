@@ -503,27 +503,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const [tenants, setTenants] = useState<Tenant[]>(mockTenants);
 
-  // 로컬 브라우저 구형 샘플 배너 캐시 자동 클리닝 마이그레이션
+  // DB 기반 실시간 단체(가맹점) 데이터 동기화
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const savedTenants = localStorage.getItem('faithpay_tenants');
-      if (savedTenants) {
-        const parsed: Tenant[] = JSON.parse(savedTenants);
-        // 구형 unsplash 예시 이미지 URL이 포함되어 있다면 캐시 정리
-        const hasOutdatedBanner = parsed.some(t =>
-          t.bannerImages?.some(url => url.includes('unsplash.com'))
-        );
-        if (hasOutdatedBanner) {
-          localStorage.removeItem('faithpay_tenants');
-          localStorage.removeItem('faithpay_current_tenant');
-          console.log('Outdated sample banner cache cleared automatically.');
+    async function syncTenantsWithDB() {
+      try {
+        const res = await tenantAPI.getAll();
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setTenants(res.data);
         }
+      } catch (e) {
+        console.warn('Failed to sync tenants with DB:', e);
       }
-    } catch (e) {
-      console.warn('Cache check failed:', e);
     }
+    syncTenantsWithDB();
   }, []);
+
 
   React.useEffect(() => {
     if (currentAdmin) {

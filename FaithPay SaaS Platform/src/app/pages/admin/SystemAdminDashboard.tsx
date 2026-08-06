@@ -86,33 +86,8 @@ export default function SystemAdminDashboard() {
     ({ protestant: '기독교', catholic: '천주교', buddhist: '불교' }[t] ?? t);
 
   const tList = tenants.map(t => {
-    const isGakwonsa = t.slug === 'gakwonsa' || t.name.includes('각원사');
-    const isMyungsung = t.slug === 'myungsung-church' || t.name.includes('명성교회');
+    const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : undefined;
 
-    const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : (
-      isGakwonsa ? {
-        pgProvider: 'nanopay',
-        apiKey: '2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL',
-        secretKey: 'UfS2tccZNyz3HYxXJDhZH52Ujorqp5km',
-        mid: '240000006',
-        loginId: 'smbtestshop',
-        iv: 'vgqTyX5tBqnMXB68',
-        ver: 'smbtest',
-        enableCard: true,
-        enableEasyPayment: true,
-        enableVBank: true,
-        isActive: true,
-      } : isMyungsung ? {
-        pgProvider: 'toss',
-        apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
-        secretKey: 'test_sk_zXL1G2MndWB257W3b983wnqwB86e',
-        mid: 'SELLER_MYUNGSUNG',
-        enableCard: true,
-        enableEasyPayment: true,
-        enableVBank: true,
-        isActive: true,
-      } : undefined
-    );
 
     return {
       ...t,

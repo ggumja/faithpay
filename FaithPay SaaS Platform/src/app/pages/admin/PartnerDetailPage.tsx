@@ -18,55 +18,8 @@ import { Partner, PartnerCommission, partnerAPI, tenantAPI, Tenant } from '../..
 
 type TabKey = 'info' | 'subagents' | 'tenants' | 'commissions' | 'history';
 
-// 기본 가상 파트너 데이터 (ID가 새로 추가되었거나 백엔드가 404를 줄 때 폴백)
-const MOCK_FALLBACK_PARTNERS: Record<string, Partner> = {
-  'partner-001': {
-    id: 'partner-001',
-    name: '한국불교문화원',
-    email: 'contact@kbcu.or.kr',
-    phone: '02-730-1008',
-    role: 'master_agency',
-    commissionRate: 0.7,
-    referralCode: 'BIT2024',
-    bankName: '신한은행',
-    accountNumber: '110-482-991023',
-    accountHolder: '한국불교문화원',
-    status: 'active',
-    createdAt: '2026-01-15',
-  },
-  'partner-004': {
-    id: 'partner-004',
-    name: '이수진',
-    email: 'sujin.lee@faithpay.kr',
-    phone: '010-4829-1029',
-    role: 'sales_agent',
-    parentId: 'partner-001',
-    commissionRate: 0.4,
-    referralCode: 'LSJ002',
-    bankName: 'KB국민은행',
-    accountNumber: '928-1029-48102',
-    accountHolder: '이수진',
-    status: 'active',
-    createdAt: '2026-02-10',
-  },
-  'partner-002': {
-    id: 'partner-002',
-    name: '김정수',
-    email: 'js.kim@faithpay.kr',
-    phone: '010-3849-2019',
-    role: 'sales_agent',
-    parentId: 'partner-001',
-    commissionRate: 0.35,
-    referralCode: 'KJS001',
-    bankName: '우리은행',
-    accountNumber: '1002-391-482910',
-    accountHolder: '김정수',
-    status: 'active',
-    createdAt: '2026-02-18',
-  },
-};
-
 export default function PartnerDetailPage() {
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -140,30 +93,11 @@ export default function PartnerDetailPage() {
       }
 
       if (!targetPartner) {
-        // 목록에서 찾기 시도
-        const allRes = await partnerAPI.getAll();
-        if (allRes.success && Array.isArray(allRes.data)) {
-          targetPartner = allRes.data.find(p => p.id === id || p.referralCode === id) || null;
-        }
+        toast.error(`ID [${id}]에 해당하는 파트너 정보를 찾을 수 없습니다.`);
+        setIsLoading(false);
+        return;
       }
 
-      // 그래도 없으면 폴백 데이터 사용
-      if (!targetPartner) {
-        targetPartner = MOCK_FALLBACK_PARTNERS[id] || {
-          id: id,
-          name: id.startsWith('partner') ? `파트너 (${id})` : `파트너 ${id}`,
-          email: `${id}@faithpay.kr`,
-          phone: '010-5555-4321',
-          role: id.includes('agent') ? 'sales_agent' : 'master_agency',
-          commissionRate: 0.7,
-          referralCode: id.toUpperCase(),
-          bankName: '신한은행',
-          accountNumber: '110-293-849102',
-          accountHolder: '대표자',
-          status: 'active',
-          createdAt: '2026-01-10',
-        };
-      }
 
       setPartner(targetPartner);
       setNewRate(targetPartner.commissionRate);
