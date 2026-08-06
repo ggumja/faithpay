@@ -197,34 +197,64 @@ export function PartnerMyInfoSection({
               <span className="text-[10.5px] font-normal text-slate-500">사업자 유형에 따라 세무 서식이 자동 지정됩니다</span>
             </p>
 
-            {/* 사업자 유형 선택 (법인/일반 vs 개인/프리랜서) */}
+            {/* 사업자 유형 — 등록 시 확정, 읽기 전용 */}
             <div className="space-y-1.5 bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
-              <Label className="text-xs font-bold text-slate-700">사업자 유형 <span className="text-red-500">*</span></Label>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => localStorage.setItem(`faithpay:partner_type:${partner.id}`, 'CORPORATE')}
-                  className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                    (localStorage.getItem(`faithpay:partner_type:${partner.id}`) || 'CORPORATE') === 'CORPORATE'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  🏢 법인 / 일반과세 사업자 (세금계산서)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => localStorage.setItem(`faithpay:partner_type:${partner.id}`, 'INDIVIDUAL')}
-                  className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                    localStorage.getItem(`faithpay:partner_type:${partner.id}`) === 'INDIVIDUAL'
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  👤 개인 / 프리랜서 (3.3% 원천징수)
-                </button>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-700">사업자 유형</Label>
+                <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                  🔒 등록 시 확정 · 변경 불가
+                </span>
+              </div>
+              <div className="pt-1">
+                {(() => {
+                  const bType = (partner as any).businessType ||
+                    localStorage.getItem(`faithpay:partner_type:${partner.id}`) ||
+                    'CORPORATE';
+                  if (bType === 'INDIVIDUAL' || bType === 'freelancer') {
+                    return (
+                      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                        <span className="text-lg">👤</span>
+                        <div>
+                          <div className="text-[12.5px] font-bold text-emerald-900">개인 / 프리랜서</div>
+                          <div className="text-[10.5px] text-emerald-700 mt-0.5">3.3% 사업소득세 원천징수 후 지급 → 원천징수 영수증 발행</div>
+                        </div>
+                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-600 text-white">
+                          원천징수
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (bType === 'individual_business') {
+                    return (
+                      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200">
+                        <span className="text-lg">🏬</span>
+                        <div>
+                          <div className="text-[12.5px] font-bold text-green-900">일반과세자 (개인사업자)</div>
+                          <div className="text-[10.5px] text-green-700 mt-0.5">부가가치세 10% 포함 전자세금계산서 발행</div>
+                        </div>
+                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-green-600 text-white">
+                          세금계산서
+                        </span>
+                      </div>
+                    );
+                  }
+                  // CORPORATE / corporation (기본값)
+                  return (
+                    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200">
+                      <span className="text-lg">🏢</span>
+                      <div>
+                        <div className="text-[12.5px] font-bold text-blue-900">법인사업자</div>
+                        <div className="text-[10.5px] text-blue-700 mt-0.5">부가가치세 10% 포함 전자세금계산서 발행</div>
+                      </div>
+                      <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-600 text-white">
+                        세금계산서
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
+
 
             {/* 법인 / 일반사업자 전용 세부 입력 필드 */}
             {(localStorage.getItem(`faithpay:partner_type:${partner.id}`) || 'CORPORATE') === 'CORPORATE' ? (
