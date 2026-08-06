@@ -225,7 +225,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
-  const [tenants, setTenants] = useState<Tenant[]>(mockTenants);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+
 
   // DB 기반 실시간 단체(가맹점) 데이터 동기화
   React.useEffect(() => {
@@ -319,17 +320,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...t,
           paymentConfig: currentConfig,
         };
-      });
-
-      mockTenants.length = 0;
-      mockTenants.push(...finalTenants);
-      try {
-        localStorage.setItem('faithpay_tenants', JSON.stringify(mockTenants));
-      } catch {}
-      setTenants(finalTenants);
+      });      setTenants(finalTenants);
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
-      setTenants(defaultTenants);
     }
   }, []);
 
@@ -371,9 +364,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   const addTenant = useCallback(async (newTenantData: Omit<Tenant, 'createdAt' | 'updatedAt'>) => {
-    const newId = newTenantData.id || (mockTenants.length + 1).toString();
+    const newId = newTenantData.id || `tenant-${Date.now()}`;
     const newTenant: Tenant = {
       id: newId,
+
       logoUrl: newTenantData.logoUrl || 'https://images.unsplash.com/photo-1620495137036-fccf4af581bf?w=200',
       bannerImages: newTenantData.bannerImages && newTenantData.bannerImages.length > 0
         ? newTenantData.bannerImages

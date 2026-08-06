@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
   Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins,
