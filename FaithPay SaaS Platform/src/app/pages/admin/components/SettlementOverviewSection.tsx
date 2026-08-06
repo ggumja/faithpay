@@ -46,11 +46,19 @@ export default function SettlementOverviewSection() {
     setError(null);
     try {
       const res = await fetch(`${API_BASE}/make-server-d0d82cc7/admin/settlements/overview`);
-      const json = await res.json();
-      if (json.success && json.data) {
-        setOverview(json.data);
-      } else {
-        setError(json.error ?? '데이터 조회 실패');
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        if (json.success && json.data) {
+          setOverview(json.data);
+        } else {
+          setError(json.error ?? '데이터 조회 실패');
+        }
+      } catch {
+        setError('서버 응답 형식 오류');
       }
     } catch (e: any) {
       setError(e.message);
@@ -58,6 +66,7 @@ export default function SettlementOverviewSection() {
       setLoading(false);
     }
   };
+
 
   useEffect(() => { fetchOverview(); }, []);
 
