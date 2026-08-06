@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp, mockTenants } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
+
 import {
   LayoutDashboard, Building2, TrendingUp, Users, UserCircle,
   LogOut, Bell, Search, Menu, ChevronRight,

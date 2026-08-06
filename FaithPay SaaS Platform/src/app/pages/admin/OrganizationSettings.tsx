@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router';
-import { useApp, mockTenants, Tenant } from '../../context/AppContext';
+import { useApp, Tenant } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -36,7 +36,7 @@ interface ScheduleItem {
 export default function OrganizationSettings() {
   const { tenantSlug } = useParams();
   const location = useLocation();
-  const { currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo } = useApp();
   
   // Form state
   const [name, setName] = useState('');
@@ -49,9 +49,10 @@ export default function OrganizationSettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const tenant = mockTenants.find((t) => t.slug === tenantSlug);
+    const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
+
       // 폼 초기화
       setName(tenant.name);
       setDescription(tenant.description);

@@ -67,7 +67,7 @@ const S = {
 export default function SystemAdminShell() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentAdmin, setCurrentAdmin } = useApp();
+  const { tenants, currentAdmin, setCurrentAdmin } = useApp();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tenantsOpen, setTenantsOpen] = useState(true);
@@ -78,7 +78,7 @@ export default function SystemAdminShell() {
 
   // 단체 검색 필터
   const searchResults = searchQuery.trim().length >= 1
-    ? mockTenants.filter(t =>
+    ? tenants.filter(t =>
         t.name.includes(searchQuery) ||
         t.slug.includes(searchQuery) ||
         (t.address ?? '').includes(searchQuery)

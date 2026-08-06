@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useApp, mockTenants, mockDonationItems, DonationItem } from '../context/AppContext';
+import { useApp, mockDonationItems, DonationItem } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { useTenantPWA } from '../hooks/useTenantPWA';
@@ -120,7 +120,8 @@ const RESPONSIVE_CSS = `
 export default function TenantHome() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, getTenantDonationItems } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, getTenantDonationItems } = useApp();
+
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recurring' | 'onetime'>('all');
   const heroRef = useRef<HTMLDivElement>(null);
@@ -142,9 +143,10 @@ export default function TenantHome() {
   }, [currentTenant]);
 
   useEffect(() => {
-    const t = mockTenants.find(t => t.slug === tenantSlug);
+    const t = tenants.find(t => t.slug === tenantSlug);
     if (t) setCurrentTenant(t);
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
+
 
   useEffect(() => {
     const el = heroRef.current;
