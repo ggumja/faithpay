@@ -37,10 +37,11 @@ export default function SettlementStatementSection() {
             tenantId: 'gakwonsa',
             name: '각원사',
             totalCount: 3,
-            grossAmount: 100000,
-            pgFee: 1500,
-            netPayout: 98500,
+            grossAmount: 300000,
+            pgFee: 4500,
+            netPayout: 295500,
             payoutDate: new Date().toISOString().slice(0, 10),
+
           },
         ]);
         setPartnerStatements([
