@@ -100,7 +100,7 @@ export default function PrayerManagement() {
 
   const currentPath = `/${tenantSlug}/admin/prayers`;
 
-  const filteredPrayers = prayerRequests.filter((prayer) => {
+  const filteredPrayers = prayers.filter((prayer) => {
     if (filter === 'unprinted') return !prayer.printed;
     if (filter === 'printed') return prayer.printed;
     return true;
@@ -179,7 +179,7 @@ export default function PrayerManagement() {
                 <CardTitle className="text-sm font-medium">전체 {currentTenant.terminology.prayer}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{prayerRequests.length}건</div>
+                <div className="text-2xl font-bold">{prayers.length}건</div>
               </CardContent>
             </Card>
 
@@ -198,7 +198,7 @@ export default function PrayerManagement() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {prayerRequests.length - unprintedCount}건
+                  {prayers.length - unprintedCount}건
                 </div>
               </CardContent>
             </Card>
