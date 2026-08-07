@@ -131,7 +131,13 @@ export const mockAdmins: AdminUser[] = [];
 
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('faithpay_current_tenant');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
 
   const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {

@@ -111,10 +111,17 @@ export default function AdminDashboard() {
         setIsLoading(false);
       });
     }
-  }, [tenantSlug, setCurrentTenant, currentMonthNum, prevMonthNum, prevPrevMonthNum]);
+  }, [tenantSlug, tenants, setCurrentTenant, currentMonthNum, prevMonthNum, prevPrevMonthNum]);
 
   if (!currentTenant) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
+        <div className="text-center space-y-3">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
+          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">단체 정보를 불러오는 중입니다...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!currentAdmin) {
