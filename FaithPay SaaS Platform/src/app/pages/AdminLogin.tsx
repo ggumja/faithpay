@@ -58,7 +58,7 @@ export default function AdminLogin() {
       setCurrentAdmin(tenantAdmin);
       setCurrentTenant(targetTenant);
       toast.success(`환영합니다, ${targetTenant.name} 관리자님!`);
-      navigate(`/admin/${targetTenant.slug}`);
+      navigate(`/${targetTenant.slug}/admin`);
       return;
     }
 
