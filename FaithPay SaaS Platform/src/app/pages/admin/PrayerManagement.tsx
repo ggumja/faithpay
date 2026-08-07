@@ -27,7 +27,7 @@ export default function PrayerManagement() {
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
   const [prayers, setPrayers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPrayers, setSelectedPrayers] = useState<number[]>([]);
+  const [selectedPrayers, setSelectedPrayers] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function PrayerManagement() {
           const prayerList = res.data
             .filter((d: any) => d.prayerText && d.prayerText.trim() !== '')
             .map((d: any, idx: number) => ({
-              id: d.id || idx + 1,
+              id: d.id ? `${d.id}_${idx}` : `prayer_${idx}_${Date.now()}`,
               name: d.donorName || '익명',
               item: d.itemName || '보시/헌금',
               prayer: d.prayerText,
@@ -108,13 +108,13 @@ export default function PrayerManagement() {
 
   const unprintedCount = prayers.filter((p) => !p.printed).length;
 
-  const togglePrayer = (id: number) => {
+  const togglePrayer = (id: any) => {
     setSelectedPrayers((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
   };
 
-  const handlePrint = (ids: number[]) => {
+  const handlePrint = (ids: any[]) => {
     if (ids.length === 0) {
       toast.error('인쇄할 항목을 선택해주세요');
       return;
