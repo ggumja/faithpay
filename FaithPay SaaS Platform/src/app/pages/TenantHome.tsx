@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp, mockDonationItems, DonationItem } from '../context/AppContext';
+import { donationItemsAPI } from '../api/client';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { useTenantPWA } from '../hooks/useTenantPWA';
@@ -147,6 +148,17 @@ export default function TenantHome() {
     if (t) setCurrentTenant(t);
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  const [dbItems, setDbItems] = useState<DonationItem[]>([]);
+
+  useEffect(() => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [currentTenant]);
 
   useEffect(() => {
     const el = heroRef.current;
@@ -169,7 +181,7 @@ export default function TenantHome() {
   }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-  const allItems: DonationItem[] = getTenantDonationItems(currentTenant);
+  const allItems: DonationItem[] = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
 
   const filtered = allItems.filter(item => {
     const q = search.toLowerCase();
