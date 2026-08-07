@@ -139,7 +139,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(null);
+  const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('faithpay_donation_form_data');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('faithpay_current_admin');
@@ -181,6 +187,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('faithpay_current_tenant');
     }
   }, [currentTenant]);
+
+  React.useEffect(() => {
+    if (donationFormData) {
+      sessionStorage.setItem('faithpay_donation_form_data', JSON.stringify(donationFormData));
+    } else {
+      sessionStorage.removeItem('faithpay_donation_form_data');
+    }
+  }, [donationFormData]);
 
   const fetchTenants = useCallback(async () => {
     try {

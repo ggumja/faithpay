@@ -70,8 +70,31 @@ export default function PaymentSelection() {
     }
   }, [currentTenant]);
 
-  if (!currentTenant || !donationFormData) {
-    return null;
+  if (!currentTenant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
+        <div className="text-center space-y-3">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
+          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">결제 정보를 준비하는 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!donationFormData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 p-4">
+        <Card className="max-w-md w-full text-center p-6 space-y-4">
+          <CardTitle className="text-lg font-bold">봉헌 신청 정보가 없습니다</CardTitle>
+          <CardDescription className="text-sm text-zinc-500">
+            결제를 진행할 봉헌 항목이 선택되지 않았습니다. 메인 화면으로 이동하여 항목을 선택해 주세요.
+          </CardDescription>
+          <Button className="w-full font-bold cursor-pointer" onClick={() => navigate(`/${tenantSlug || ''}`)}>
+            메인 봉헌 화면으로 이동
+          </Button>
+        </Card>
+      </div>
+    );
   }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
