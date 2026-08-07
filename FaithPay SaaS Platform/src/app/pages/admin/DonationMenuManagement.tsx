@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp, DonationItem } from '../../context/AppContext';
+import { donationItemsAPI } from '../../api/client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -214,7 +215,19 @@ export default function DonationMenuManagement() {
   }
 
   const currentPath = `/${tenantSlug}/admin/menu`;
-  const donationItems = getTenantDonationItems(currentTenant);
+  const [dbItems, setDbItems] = useState<DonationItem[]>([]);
+
+  useEffect(() => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [currentTenant]);
+
+  const donationItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
 
   const handleSave = (itemData: Partial<DonationItem>) => {
     saveDonationItem(currentTenant.slug, currentTenant.religionType, {

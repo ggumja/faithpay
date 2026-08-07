@@ -262,8 +262,39 @@ export async function setDonationItems(tenantId: string, items: DonationItem[]):
 }
 
 export async function getDonationItems(tenantId: string): Promise<DonationItem[]> {
-  const items = await kv.get(`donation-items:${tenantId}`);
-  return items || [];
+  const items = await kv.get<DonationItem[]>(`donation-items:${tenantId}`);
+  if (items && items.length > 0) return items;
+
+  // 등록된 항목이 없으면 종교유형별 표준 기본 템플릿을 보장
+  const tenant = await getTenantById(tenantId);
+  const religionType = tenant?.religionType || 'buddhist';
+
+  let defaultItems: DonationItem[] = [];
+  if (religionType === 'buddhist') {
+    defaultItems = [
+      { id: 'b1', name: '특별 보시', description: '발원문 작성 및 자율 보시금액 입력', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'b2', name: '불사 보시금', description: '사찰 대웅전 및 시설 불사 보시', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'b3', name: '인등 / 연등 보시', description: '1년 인등 및 대웅전 연등 접수 보시', amountType: 'fixed', fixedAmount: 100000, allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'b4', name: '대중 공양금', description: '스님 및 대중 공양 보시', amountType: 'flexible', allowRecurring: false, allowOneTime: true, enablePrayerField: false, enabled: true },
+    ];
+  } else if (religionType === 'catholic') {
+    defaultItems = [
+      { id: 'c1', name: '주일 미사 예물', description: '주일 미사 봉헌 예물', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'c2', name: '교무금', description: '월 정액 교무금 봉헌', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: false, enabled: true },
+      { id: 'c3', name: '연미사 지향', description: '세상을 떠난 이들을 위한 미사지향 예물', amountType: 'fixed', fixedAmount: 50000, allowRecurring: false, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'c4', name: '생미사 지향', description: '살아있는 이를 위한 축원 미사지향', amountType: 'fixed', fixedAmount: 50000, allowRecurring: false, allowOneTime: true, enablePrayerField: true, enabled: true },
+    ];
+  } else {
+    defaultItems = [
+      { id: 'p1', name: '십일조 헌금', description: '소득의 십분의 일을 드리는 헌금', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: false, enabled: true },
+      { id: 'p2', name: '주일 헌금', description: '매주일 드리는 감사 헌금', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'p3', name: '감사 헌금', description: '범사에 감사하여 드리는 헌금', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+      { id: 'p4', name: '건축 / 선교 헌금', description: '교회 건축 및 해외 선교 후원 헌금', amountType: 'flexible', allowRecurring: true, allowOneTime: true, enablePrayerField: true, enabled: true },
+    ];
+  }
+
+  await kv.set(`donation-items:${tenantId}`, defaultItems);
+  return defaultItems;
 }
 
 export async function addDonationItem(tenantId: string, item: DonationItem): Promise<DonationItem[]> {
