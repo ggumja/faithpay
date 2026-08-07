@@ -95,8 +95,7 @@ export default function SystemAdminShell() {
       tenantAPI.getPending()
         .then(res => {
           if (res.success && Array.isArray(res.data)) {
-            const validPending = res.data.filter((t: any) => t.id !== 'pending-yonggungsa' && t.slug !== 'yonggungsa');
-            setPendingCount(validPending.length);
+            setPendingCount(res.data.length);
           }
         })
         .catch(() => {});

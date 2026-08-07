@@ -89,7 +89,7 @@ export default function SystemAdminDashboard() {
       tenantAPI.getPending()
         .then(res => {
           if (res.success && res.data) {
-            setPendingList(res.data.filter((t: any) => t.id !== 'pending-yonggungsa' && t.slug !== 'yonggungsa'));
+            setPendingList(res.data);
           } else toast.error('승인 대기 목록을 불러오지 못했습니다.');
         })
 

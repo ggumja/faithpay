@@ -83,11 +83,6 @@ export default function TenantStatsPage() {
         setAllStats([]);
       }
 
-
-
-
-      setAllStats(statsList);
-
     } catch (error) {
       console.error('Error fetching stats:', error);
       setAllStats([]);

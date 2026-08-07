@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Printer, Download, Building2, User, CheckCircle2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-
-
+import { partnerAPI } from '../../../api/client';
 
 export default function SettlementStatementSection() {
   const [statementType, setStatementType] = useState<'tenant' | 'partner'>('tenant');
@@ -13,40 +12,28 @@ export default function SettlementStatementSection() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    setTenantStatements([
-      {
-        id: `ST-${selectedMonth.replace('-', '')}-001`,
-        month: `${selectedMonth.slice(0, 4)}년 ${selectedMonth.slice(5, 7)}월`,
-        tenantId: 'gakwonsa',
-        name: '각원사',
-        totalCount: 3,
-        grossAmount: 300000,
-        pgFee: 4500,
-        netPayout: 295500,
-        payoutDate: new Date().toISOString().slice(0, 10),
-      },
-    ]);
-    setPartnerStatements([
-      {
-        id: `TAX-${selectedMonth.replace('-', '')}-01`,
-        month: `${selectedMonth.slice(0, 4)}년 ${selectedMonth.slice(5, 7)}월`,
-        partnerName: '한국종교솔루션(주)',
-        partnerRole: 'master_agency',
-        businessType: 'corporation',
-        isCorporate: true,
-        grossCommission: 500,
-        vatAmount: 50,
-        withholdingTax: 0,
-        netPayout: 550,
-        status: 'ISSUED',
-        bankName: '신한은행',
-        accountNumber: '100-032-456789',
-        accountHolder: '한국종교솔루션',
-      },
-    ]);
-    setLoading(false);
+    async function loadStatements() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await partnerAPI.getStatements(selectedMonth);
+        if (res.success && res.data) {
+          setTenantStatements(res.data.tenantStatements || []);
+          setPartnerStatements(res.data.partnerStatements || []);
+        } else {
+          setTenantStatements([]);
+          setPartnerStatements([]);
+        }
+      } catch (err: any) {
+        console.error('Failed to load settlement statements:', err);
+        setError('명세서 데이터를 불러오는데 실패했습니다.');
+        setTenantStatements([]);
+        setPartnerStatements([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStatements();
   }, [selectedMonth]);
 
 

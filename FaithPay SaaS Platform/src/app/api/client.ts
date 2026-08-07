@@ -275,6 +275,10 @@ export const paymentAPI = {
       method: 'POST',
     });
   },
+
+  async getStatements(month: string): Promise<APIResponse<{ tenantStatements: any[]; partnerStatements: any[] }>> {
+    return fetchAPI<{ tenantStatements: any[]; partnerStatements: any[] }>(`/admin/settlements/statements?month=${month}`);
+  },
 };
 
 

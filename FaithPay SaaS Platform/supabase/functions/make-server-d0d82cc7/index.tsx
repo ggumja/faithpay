@@ -151,8 +151,6 @@ app.delete("/make-server-d0d82cc7/tenants/:id", async (c) => {
     const id = c.req.param('id');
     await db.deleteTenant(id);
     await kv.del(`tenant:${id}`);
-    await kv.del(`tenant:pending-yonggungsa`);
-    await kv.del(`tenant:slug:yonggungsa`);
     return c.json({ success: true, message: 'Tenant deleted successfully' });
   } catch (error) {
     console.error('Error deleting tenant:', error);
@@ -666,8 +664,8 @@ app.post("/make-server-d0d82cc7/auth/otp/send", async (c) => {
 
     await db.createSmsOtp(cleanPhone, otpCode);
 
-    console.log(`[SMS OTP Sent] Phone: ${cleanPhone}, Code: ${otpCode} (테스트용: 1234 사용 가능)`);
-    return c.json({ success: true, message: "1초 SMS 인증번호가 발송되었습니다. (테스트용 코드: 1234)" });
+    console.log(`[SMS OTP Sent] Phone: ${cleanPhone}, Code: ${otpCode}`);
+    return c.json({ success: true, message: "1초 SMS 인증번호가 발송되었습니다." });
   } catch (error) {
     return c.json({ success: false, error: "Failed to send OTP" }, 500);
   }
@@ -922,17 +920,7 @@ app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
     const month = parseInt(c.req.param('month'));
     
     let tenants = await db.getAllTenants();
-    if (!tenants || tenants.length === 0 || !tenants.some((t: any) => t.id === 'gakwonsa' || t.slug === 'yonggungsa')) {
-      tenants = [
-        {
-          id: 'gakwonsa',
-          name: '각원사',
-          religionType: 'buddhist',
-          slug: 'yonggungsa',
-        },
-        ...(tenants ?? []),
-      ];
-    }
+    if (!tenants) tenants = [];
 
     const allStats = [];
     for (const tenant of tenants) {
@@ -969,12 +957,7 @@ app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", async (c) => {
 
     if (tenantId === 'all') {
       let tenants = await db.getAllTenants();
-      if (!tenants || tenants.length === 0 || !tenants.some((t: any) => t.id === 'gakwonsa' || t.slug === 'yonggungsa')) {
-        tenants = [
-          { id: 'gakwonsa', name: '각원사', religionType: 'buddhist', slug: 'yonggungsa' },
-          ...(tenants ?? []),
-        ];
-      }
+      if (!tenants) tenants = [];
       const allStats = [];
       for (const tenant of tenants) {
         const stats = await db.getHybridMonthlyStats(tenant.id, year, month);

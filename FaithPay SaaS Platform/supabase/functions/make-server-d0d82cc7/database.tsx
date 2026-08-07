@@ -162,12 +162,11 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 
 export async function getAllTenants(status?: 'pending' | 'active' | 'suspended'): Promise<Tenant[]> {
   const tenants = await kv.getByPrefix('tenant:');
-  // slug 매핑 제외 (id가 있는 것만) 및 yonggungsa 완벽 배제
-  const filtered = tenants.filter((t: any) => t && t.id && t.id !== 'pending-yonggungsa' && t.slug !== 'yonggungsa');
+  const filtered = tenants.filter((t: any) => t && t.id);
   if (status) {
     return filtered.filter((t: any) => t.status === status);
   }
-  // status 없으면 active만 반환 (기본값 — 하위 호환)
+  // status 없으면 active만 반환 (기본값)
   return filtered.filter((t: any) => !t.status || t.status === 'active');
 }
 
@@ -696,7 +695,7 @@ export async function verifySmsOtp(phone: string, inputCode: string): Promise<bo
   const otpObj = await kv.get<SmsOtp>(`sms_otp:${cleanPhone}`);
   if (!otpObj) return false;
   if (new Date().toISOString() > otpObj.expiresAt) return false;
-  if (otpObj.otpCode === inputCode || inputCode === '1234') { // 테스트용 모의 1234 통과 허용
+  if (otpObj.otpCode === inputCode) {
     otpObj.isVerified = true;
     await kv.set(`sms_otp:${cleanPhone}`, otpObj);
     return true;
@@ -1115,15 +1114,12 @@ export async function getAdminSettlementLedger(opts?: {
       hold: 'HOLD',
     };
 
-    const rawTenantName = r.tenant_name ?? '';
-    const resolvedTenantName = (!rawTenantName || rawTenantName === '테스트 단체')
-      ? (r.tenant_id === 'gakwonsa' ? '각원사' : r.tenant_id === 'myungsung-church' ? '명성교회' : '가맹 단체')
-      : rawTenantName;
+    const tenantName = r.tenant_name || r.tenant_id || '가맹 단체';
 
     return {
       id: r.id,
       txDate: r.created_at,
-      tenantName: resolvedTenantName,
+      tenantName: tenantName,
       tenantId: r.tenant_id,
 
       pgProvider: 'toss' as const,
@@ -1141,9 +1137,6 @@ export async function getAdminSettlementLedger(opts?: {
       settlementMonth: r.settlement_month,
     };
   });
-}
-
-/**
  * 관리자 정산 개요 통계 — partner_commissions + partner_settlements 집계
  */
 export async function getAdminSettlementOverview(): Promise<{
@@ -1283,14 +1276,14 @@ export async function getAdminPayoutExceptions(): Promise<{
     bankName: r.partners?.bank_name ?? 'NH농협',
     accountNumber: r.partners?.account_number ?? '계좌 정보 확인 필요',
     holderName: r.partners?.account_holder ?? r.partners?.name ?? '예금주 불일치',
-    amount: Number(r.net_amount || r.total_commission || 100000),
+    amount: Number(r.net_amount || r.total_commission || 0),
     failureReason: r.note || (r.status === 'hold' ? '예금주 불일치 (검증 필요)' : '입금 제한 계좌'),
     isHold: r.status === 'hold' || r.status === 'scheduled',
   }));
 
   return {
     balanceInfo: {
-      availableBalance: Math.max(100000000, totalGross - pendingAmount),
+      availableBalance: totalGross > pendingAmount ? totalGross - pendingAmount : 0,
       pendingPayoutBalance: pendingAmount,
       payoutCycle: 'D+1 영업일 09:00 (실시간 배치)',
     },
@@ -1397,7 +1390,7 @@ export async function createTestDonationWithSplit(data: {
     .eq('id', data.tenantId)
     .single();
 
-  const tenantName = kvTenant?.name || tenant?.name || (data.tenantId === 'gakwonsa' ? '각원사' : data.tenantId === 'myungsung-church' ? '명성교회' : '가맹 단체');
+  const tenantName = kvTenant?.name || tenant?.name || '가맹 단체';
   const partnerId = tenant?.registered_by_partner_id || kvTenant?.registeredByPartnerId || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 
@@ -1500,16 +1493,16 @@ export async function getHybridMonthlyStats(tenantId: string, year: number, mont
   // 2. 당월이거나 캐시가 없을 경우 DB/트랜잭션 온디맨드 재계산
   const supabase = pgClient();
 
-  // tenantId (gakwonsa 등) 양방향 쿼리 지원 + created_at 일시 검색 지원
+  // tenant_id 기반 순수 SQL 조회
   const { data: commRows } = await supabase
     .from('partner_commissions')
     .select('*')
-    .or(`tenant_id.eq.${tenantId},tenant_name.ilike.%각원사%,tenant_id.eq.gakwonsa`);
+    .eq('tenant_id', tenantId);
 
   const { data: donRows } = await supabase
     .from('donations')
     .select('*')
-    .or(`tenant_id.eq.${tenantId},tenant_id.eq.gakwonsa`);
+    .eq('tenant_id', tenantId);
 
   const rawRows = (commRows && commRows.length > 0) ? commRows : (donRows ?? []);
   let rows = rawRows.filter((r: any) => {
