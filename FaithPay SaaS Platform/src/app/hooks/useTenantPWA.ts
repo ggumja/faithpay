@@ -16,9 +16,9 @@ function injectTenantManifest(tenant: Tenant) {
     theme_color: tenant.primaryColor || '#1a1a2e',
     background_color: '#ffffff',
     display: 'standalone',
-    scope: '/faithpay/',
+    scope: `${window.location.origin}/`,
     // 앱 실행 시 해당 테넌트 홈으로 바로 진입
-    start_url: `/faithpay/${tenant.slug}`,
+    start_url: `${window.location.origin}/${tenant.slug}`,
     lang: 'ko',
     icons: [
       {
