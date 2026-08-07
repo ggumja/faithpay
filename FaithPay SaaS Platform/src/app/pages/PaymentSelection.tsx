@@ -645,13 +645,7 @@ export default function PaymentSelection() {
                         </div>
                       )}
                       
-                      {pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring ? (
-                        <div className="bg-zinc-50 dark:bg-zinc-900/60 p-5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-650 dark:text-zinc-400 flex flex-col gap-2.5 justify-center items-center">
-                          <CreditCard className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-pulse" />
-                          <p className="font-bold">안전한 카드 결제창이 호출됩니다</p>
-                          <p className="text-[10px] text-zinc-500 leading-relaxed max-w-sm">결제 완료 버튼을 누르시면 카드사별 안심클릭 및 모바일 App카드 결제 공식 팝업창이 열립니다.</p>
-                        </div>
-                      ) : (
+                      {cardPaymentType === 'manual' && pgProvider === 'nanopay' && !donationFormData.isRecurring ? (
                         <div className="flex flex-col gap-4">
                           {donationFormData.isRecurring && (
                             <div className="p-3.5 rounded-xl text-xs font-medium bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 leading-relaxed">
@@ -737,6 +731,16 @@ export default function PaymentSelection() {
                               )}
                             </div>
                           )}
+                        </div>
+                      ) : (
+                        <div className="bg-zinc-50 dark:bg-zinc-900/60 p-5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-650 dark:text-zinc-400 flex flex-col gap-2.5 justify-center items-center">
+                          <CreditCard className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-pulse" />
+                          <p className="font-bold">
+                            {pgProvider === 'toss' ? '토스페이먼츠(TossPayments) 공식 안전 결제창이 호출됩니다' : '안전한 카드 결제창이 호출됩니다'}
+                          </p>
+                          <p className="text-[10px] text-zinc-500 leading-relaxed max-w-sm">
+                            결제 완료 버튼을 누르시면 {pgProvider === 'toss' ? '토스페이먼츠 결제 모듈' : '카드사별 안심클릭 및 모바일 App카드'} 공식 결제창이 호출됩니다.
+                          </p>
                         </div>
                       )}
                     </div>
