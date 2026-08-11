@@ -41,7 +41,7 @@ export default function DonationComplete() {
         isRecurring: donationFormData.isRecurring,
         recurringDay: donationFormData.recurringDay,
         paymentStatus: 'completed',
-        paymentMethod: '카드결제',
+        paymentMethod: donationFormData.paymentMethod || (donationFormData.isRecurring ? '빌링키 정기결제' : '카드 인증결제'),
         transactionId: receiptId,
       }).then((res) => {
         if (res.success) {

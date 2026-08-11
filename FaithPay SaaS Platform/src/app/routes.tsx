@@ -37,6 +37,8 @@ import TenantStatsPage from "./pages/admin/TenantStatsPage";
 
 
 
+import TenantKiosk from "./pages/TenantKiosk";
+
 export const router = createBrowserRouter([
   {
     Component: RootLayout,
@@ -105,6 +107,10 @@ export const router = createBrowserRouter([
       {
         path: "/:tenantSlug/donate",
         Component: DonationFlow,
+      },
+      {
+        path: "/:tenantSlug/kiosk",
+        Component: TenantKiosk,
       },
       {
         path: "/:tenantSlug/payment",

@@ -324,6 +324,141 @@ export async function deleteDonationItem(tenantId: string, itemId: string): Prom
 
 // ==================== DONATION OPERATIONS ====================
 
+/** PII 성명 마스킹 헬퍼 (홍길동 → 홍*동, 홍길 → 홍*) */
+export function maskName(name?: string): string {
+  if (!name) return '';
+  const str = name.trim();
+  if (str.length <= 1) return str;
+  if (str.length === 2) return str[0] + '*';
+  return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
+}
+
+/** PII 연락처 마스킹 헬퍼 (010-1234-5678 → 010-****-5678) */
+export function maskPhone(phone?: string): string {
+  if (!phone) return '';
+  const clean = phone.replace(/[^0-9]/g, '');
+  if (clean.length === 11) {
+    return clean.replace(/(\d{3})\d{4}(\d{4})/, '$1-****-$2');
+  }
+  if (clean.length === 10) {
+    return clean.replace(/(\d{3})\d{3}(\d{4})/, '$1-***-$2');
+  }
+  return phone;
+}
+
+export async function recordDonationToLedger(donation: Donation): Promise<any> {
+  try {
+    const supabase = pgClient();
+
+    // 1. 가맹 단체 정보 조회 (ID 또는 slug 기준)
+    const kvTenant = await getTenantById(donation.tenantId) || await getTenantBySlug(donation.tenantId);
+    let tenantDb: any = null;
+    try {
+      const { data } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', donation.tenantId)
+        .maybeSingle();
+      tenantDb = data;
+    } catch (e) {
+      console.warn('Tenant DB lookup warning:', e);
+    }
+
+    const tenantName = kvTenant?.name || tenantDb?.name || '가맹 단체';
+    const partnerId = tenantDb?.registered_by_partner_id || (kvTenant as any)?.registeredByPartnerId || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+    // 2. 파트너 정보 조회 (대리점명, 영업자명 도출)
+    let partnerDb: any = null;
+    try {
+      const { data } = await supabase
+        .from('partners')
+        .select('*')
+        .eq('id', partnerId)
+        .maybeSingle();
+      partnerDb = data;
+    } catch (e) {
+      console.warn('Partner DB lookup warning:', e);
+    }
+
+    let agencyName = 'HQ (본사)';
+    let agentName = partnerDb?.name || '직접 영업';
+
+    if (partnerDb?.role === 'master_agency') {
+      agencyName = partnerDb?.name || '마스터 대리점';
+    } else if (partnerDb?.parent_id) {
+      try {
+        const { data: parent } = await supabase
+          .from('partners')
+          .select('name')
+          .eq('id', partnerDb.parent_id)
+          .maybeSingle();
+        if (parent) agencyName = parent.name;
+      } catch {}
+    }
+
+    const partnerRole = partnerDb?.role || 'master_agency';
+    const contractRate = Number(tenantDb?.contract_rate || 3.0);
+    const agencyRate = Number(partnerDb?.agency_rate || 0.5);
+    const agentRate = partnerRole === 'sales_agent' ? 0.3 : 0.0;
+
+    const grossAmount = Number(donation.amount || 0);
+    const pgFeeAmount = Math.round(grossAmount * 0.015);
+    const platformFeeAmount = Math.round(grossAmount * 0.005);
+    const commissionAmount = Math.round(grossAmount * (contractRate / 100));
+    const currentMonth = (donation.createdAt ? new Date(donation.createdAt) : new Date()).toISOString().slice(0, 7);
+    const donationId = donation.id || donation.transactionId || `DON-${Date.now()}`;
+
+    // 개인정보 마스킹 처리 적용 (홍*동, 010-****-5678)
+    const maskedDonorName = maskName(donation.donorName);
+    const maskedDonorPhone = maskPhone(donation.donorPhone);
+    const maskedBaptismName = maskName(donation.baptismName);
+
+    // 3. partner_commissions 원장에 4자간 분구 내역 기입 (확장 필드 적용)
+    const { data: inserted, error } = await supabase
+      .from('partner_commissions')
+      .insert({
+        partner_id: partnerId,
+        partner_role: partnerRole,
+        tenant_id: donation.tenantId,
+        tenant_name: tenantName,
+        donation_id: donationId,
+        donation_amount: grossAmount,
+        commission_amount: commissionAmount,
+        contract_rate: contractRate,
+        agency_rate: agencyRate,
+        agent_rate: agentRate,
+        settlement_status: 'pending',
+        settlement_month: currentMonth,
+        payment_method: donation.paymentMethod || (donation.isRecurring ? '빌링키 정기결제' : '카드 인증결제'),
+        pg_provider: 'toss',
+        pg_tid: donation.transactionId || donationId,
+        item_name: donation.itemName || '일반 헌금',
+        donor_name: maskedDonorName,
+        donor_phone: maskedDonorPhone,
+        baptism_name: maskedBaptismName,
+        agency_name: agencyName,
+        agent_name: agentName,
+        pg_fee_amount: pgFeeAmount,
+        platform_fee_amount: platformFeeAmount,
+        is_recurring: donation.isRecurring || false,
+        payment_type: donation.isRecurring ? 'BILLING' : 'AUTH',
+        device_type: donation.deviceType || ((donation.paymentMethod || '').includes('OffPG') || (donation.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+      })
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error('Failed to insert into partner_commissions:', error.message);
+    } else {
+      console.log('Successfully recorded donation ledger in partner_commissions:', inserted?.id);
+    }
+    return inserted;
+  } catch (err: any) {
+    console.error('Error recording donation ledger:', err.message || err);
+    return null;
+  }
+}
+
 export async function createDonation(donation: Omit<Donation, 'createdAt' | 'updatedAt'>): Promise<Donation> {
   const now = new Date().toISOString();
   const newDonation: Donation = {
@@ -335,6 +470,11 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
   // Key format: donation:{tenantId}:{timestamp}-{id}
   const key = `donation:${donation.tenantId}:${Date.now()}-${donation.id}`;
   await kv.set(key, newDonation);
+
+  // 결제 완료(completed) 상태인 경우 4자간 수수료 분구 원장 DB(partner_commissions)에 즉시 기입
+  if (!newDonation.paymentStatus || newDonation.paymentStatus === 'completed') {
+    await recordDonationToLedger(newDonation);
+  }
   
   return newDonation;
 }
@@ -861,10 +1001,12 @@ export async function getCommissionsByPartner(partnerId: string): Promise<Partne
 
 import { createClient as createSupabaseClient } from "jsr:@supabase/supabase-js@2.49.8";
 
-const pgClient = () => createSupabaseClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+function pgClient() {
+  return createSupabaseClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+}
 
 /** snake_case 객체 → camelCase */
 function snakeToCamel(obj: Record<string, any>): Record<string, any> {
@@ -1153,11 +1295,23 @@ export async function getAdminSettlementLedger(opts?: {
       tenantName: tenantName,
       tenantId: r.tenant_id,
 
-      pgProvider: 'toss' as const,
+      paymentMethod: r.payment_method || (r.is_recurring ? '빌링키 정기결제' : '카드 인증결제'),
+      pgProvider: (r.pg_provider || 'toss') as 'toss' | 'nanopay',
+      pgTid: r.pg_tid || r.donation_id || r.id,
+      itemName: r.item_name || '일반 헌금',
+      donorName: r.donor_name || '',
+      donorPhone: r.donor_phone || '',
+      baptismName: r.baptism_name || '',
+      agencyName: r.agency_name || r.partners?.name || 'HQ (본사)',
+      agentName: r.agent_name || r.partners?.name || '직접 영업',
+      isRecurring: r.is_recurring ?? false,
+      paymentType: (r.payment_type || (r.is_recurring ? 'BILLING' : 'AUTH')) as 'BILLING' | 'AUTH',
+      deviceType: (r.device_type || ((r.payment_method || '').includes('OffPG') ? 'KIOSK' : 'WEB_MOBILE')) as 'KIOSK' | 'WEB_MOBILE',
+
       grossAmount: gross,
-      pgFee,
+      pgFee: Number(r.pg_fee_amount || pgFee),
       tenantPayout,
-      platformFee,
+      platformFee: Number(r.platform_fee_amount || platformFee),
       partnerFee,
       agentFee,
       netProfit: Math.max(0, netProfit),

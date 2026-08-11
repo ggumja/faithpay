@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useCallback } fr
 import { tenantAPI } from '../api/client';
 import { toast } from 'sonner';
 
-export type ReligionType = 'protestant' | 'buddhist' | 'catholic';
+export type ReligionType = 'protestant' | 'buddhist' | 'catholic' | 'charity' | 'general';
 export type UserRole = 'system_admin' | 'tenant_admin' | 'finance_manager' | 'member';
 
 export interface Tenant {
@@ -83,6 +83,7 @@ export interface DonationFormData {
   familyMembers?: Array<{ name: string; birthDate: string; calendar: string }>;
   baptismName?: string;
   isRecurring: boolean;
+  paymentMethod?: string;
   recurringInterval?: 'daily' | 'weekly' | 'monthly';
   recurringDay?: number;
   recurringDayOfWeek?: string;

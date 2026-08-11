@@ -28,6 +28,20 @@ export function Motif({ kind, size = 24, color = 'currentColor', style = {} }: M
       </svg>
     );
   }
+  if (kind === 'heart') {
+    return (
+      <svg viewBox="0 0 24 24" style={s} fill="none">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill={color} />
+      </svg>
+    );
+  }
+  if (kind === 'sparkles') {
+    return (
+      <svg viewBox="0 0 24 24" style={s} fill="none">
+        <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2zM5 5l1.25 3.75L10 10l-3.75 1.25L5 15l-1.25-3.75L0 10l3.75-1.25L5 5z" fill={color} />
+      </svg>
+    );
+  }
   // rosary
   return (
     <svg viewBox="0 0 24 24" style={s} fill="none">
@@ -77,6 +91,20 @@ export function MotifLarge({ kind, color = 'currentColor', opacity = 0.08, style
           <path d="M154 142c-11 5-23 8-36 8-4 0-9 0-13-1 4-7 8-16 8-25 0-1 0-2 0-3 4-1 8 0 12 0 16 2 28 11 37 21z" opacity=".7" />
           <circle cx="100" cy="118" r="14" />
         </g>
+      </svg>
+    );
+  }
+  if (kind === 'heart') {
+    return (
+      <svg viewBox="0 0 200 200" style={s}>
+        <path d="M100 178l-12-11C45 128 17 102 17 71c0-26 20-46 46-46 14 0 28 7 37 17 9-10 23-17 37-17 26 0 46 20 46 46 0 31-28 57-71 96l-12 11z" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (kind === 'sparkles') {
+    return (
+      <svg viewBox="0 0 200 200" style={s}>
+        <path d="M100 17L79 79 17 100l62 21 21 62 21-62 62-21-62-21-21-62zM42 42l10 31 31 10-31 10-10 31-10-31-31-10 31-10 10-31z" fill="currentColor" />
       </svg>
     );
   }

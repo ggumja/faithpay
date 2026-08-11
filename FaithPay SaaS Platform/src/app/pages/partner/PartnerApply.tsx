@@ -108,7 +108,7 @@ export default function PartnerApply() {
             <p className="text-slate-400 text-sm leading-relaxed">
               {isAgencyMode
                 ? 'FaithPay 영업 대리점(Tier-1)은 하위 영업자(Tier-2)를 직접 모집·관리하고 오버라이딩 방식으로 수수료 수익을 창출합니다. 법인 또는 팀 단위 신청 가능합니다.'
-                : 'FaithPay는 전국 종교 단체를 위한 SaaS 기반 디지털 보시/헌금 수납 플랫폼입니다. 사찰 및 교회를 온보딩하고 매월 수납되는 결제액에 대한 파트너 정산 수수료를 받으실 수 있습니다.'}
+                : 'FaithPay는 전국 종교 및 구호 단체를 위한 SaaS 기반 디지털 보시/헌금/후원 수납 플랫폼입니다. 사찰, 교회, 구호재단을 가입 신청 완료하고 매월 수납되는 결제액에 대한 파트너 정산 수수료를 받으실 수 있습니다.'}
             </p>
           </div>
 

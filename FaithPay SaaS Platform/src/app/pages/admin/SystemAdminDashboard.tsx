@@ -103,7 +103,7 @@ export default function SystemAdminDashboard() {
 
 
   const religion = (t: string) =>
-    ({ protestant: '기독교', catholic: '천주교', buddhist: '불교' }[t] ?? t);
+    ({ protestant: '기독교', catholic: '천주교', buddhist: '불교', charity: '구호/기부재단', general: '비영리/사회공헌' }[t] ?? t);
 
   const tList = tenants.map(t => {
     const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : undefined;

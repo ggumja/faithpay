@@ -790,6 +790,33 @@ app.get("/make-server-d0d82cc7/donations", async (c) => {
   }
 });
 
+// 전화번호 기반 기부자 자동 조회 (키오스크용)
+app.get("/make-server-d0d82cc7/donations/lookup-by-phone/:tenantId/:phone", async (c) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    const phone = c.req.param('phone');
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const donations = await db.getDonationsByTenant(tenantId);
+    const matched = donations.filter(d => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone);
+    if (matched.length > 0) {
+      const last = matched[0];
+      return c.json({
+        success: true,
+        data: {
+          found: true,
+          donorName: last.donorName,
+          baptismName: last.baptismName,
+          count: matched.length,
+        }
+      });
+    }
+    return c.json({ success: true, data: { found: false } });
+  } catch (error) {
+    console.error('Error looking up phone:', error);
+    return c.json({ success: false, error: 'Failed to lookup phone' }, 500);
+  }
+});
+
 // 특정 단체의 봉헌 내역 조회
 app.get("/make-server-d0d82cc7/donations/:tenantId", async (c) => {
   try {

@@ -32,6 +32,7 @@ interface Donation {
   paymentStatus: 'pending' | 'completed' | 'failed' | 'cancelled';
   paymentMethod?: string;
   transactionId?: string;
+  deviceType?: 'KIOSK' | 'WEB_MOBILE';
   createdAt: string;
   updatedAt: string;
 }
@@ -351,6 +352,10 @@ export const donationAPI = {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
+  },
+
+  async lookupByPhone(tenantId: string, phone: string): Promise<APIResponse<{ found: boolean; donorName?: string; baptismName?: string; count?: number }>> {
+    return fetchAPI<any>(`/donations/lookup-by-phone/${tenantId}/${phone}`);
   },
 };
 

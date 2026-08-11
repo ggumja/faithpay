@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation } from 'react-router';
 import { useApp, Tenant } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -22,8 +22,10 @@ import {
   Clock,
   Info,
   Upload,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { openDaumPostcode } from '../../utils/daumPostcode';
 import { Separator } from '../../components/ui/separator';
 import { Switch } from '../../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -39,9 +41,11 @@ export default function OrganizationSettings() {
   const { tenants, currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo } = useApp();
   
   // Form state
+  const addressDetailRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
+  const [addressDetail, setAddressDetail] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -150,7 +154,7 @@ export default function OrganizationSettings() {
       ...currentTenant,
       name: name.trim(),
       description: description.trim(),
-      address: address.trim(),
+      address: addressDetail.trim() ? `${address.trim()} ${addressDetail.trim()}` : address.trim(),
       logoUrl: logoUrl.trim(),
       contact: {
         phone: phone.trim(),
@@ -333,15 +337,54 @@ export default function OrganizationSettings() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    주소 *
-                  </Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="address" className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      주소 *
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs font-bold text-[#3182F6] hover:bg-blue-50 cursor-pointer"
+                      onClick={() => openDaumPostcode((res) => {
+                        setAddress(`[${res.zonecode}] ${res.address}`);
+                        setTimeout(() => addressDetailRef.current?.focus(), 100);
+                      })}
+                    >
+                      <Search className="h-3.5 w-3.5 mr-1" />
+                      우편번호 검색
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="서울특별시 강남구 테헤란로 123"
+                      className="flex-1 font-semibold"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-10 px-3.5 font-bold cursor-pointer whitespace-nowrap"
+                      onClick={() => openDaumPostcode((res) => {
+                        setAddress(`[${res.zonecode}] ${res.address}`);
+                        setTimeout(() => addressDetailRef.current?.focus(), 100);
+                      })}
+                    >
+                      <Search className="h-4 w-4 mr-1" />
+                      주소 검색
+                    </Button>
+                  </div>
                   <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="서울특별시 강남구 테헤란로 123"
+                    ref={addressDetailRef}
+                    id="addressDetail"
+                    value={addressDetail}
+                    onChange={(e) => setAddressDetail(e.target.value)}
+                    placeholder="상세 주소를 입력하세요 (예: 2층 종무소 / 101동 202호)"
+                    className="h-10 text-xs font-medium focus:ring-2 focus:ring-[#3182F6]"
                   />
                 </div>
 

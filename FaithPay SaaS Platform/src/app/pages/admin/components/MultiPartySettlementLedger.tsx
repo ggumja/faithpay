@@ -18,7 +18,19 @@ interface LedgerItem {
   txDate: string;
   tenantName: string;
   tenantSlug: string;
+  tenantId?: string;
+  paymentMethod?: string;
   pgProvider: 'toss' | 'nanopay';
+  pgTid?: string;
+  itemName?: string;
+  donorName?: string;
+  donorPhone?: string;
+  baptismName?: string;
+  agencyName?: string;
+  agentName?: string;
+  isRecurring?: boolean;
+  paymentType?: 'BILLING' | 'AUTH';
+  deviceType?: 'KIOSK' | 'WEB_MOBILE';
   grossAmount: number;
   pgFee: number;
   tenantPayout: number;
@@ -35,6 +47,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 export default function MultiPartySettlementLedger() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [deviceFilter, setDeviceFilter] = useState<string>('ALL');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [selectedDetail, setSelectedDetail] = useState<LedgerItem | null>(null);
@@ -71,12 +84,24 @@ export default function MultiPartySettlementLedger() {
   useEffect(() => { fetchLedger(); }, [fetchLedger]);
 
   const filteredList = ledger.filter((item) => {
-    if (!searchQuery) return true;
-    return (
-      item.tenantName.includes(searchQuery) ||
-      (item as any).tenantId?.includes(searchQuery) ||
-      item.id.includes(searchQuery)
-    );
+    const q = searchQuery.toLowerCase();
+    const matchesQuery = !q || 
+      item.tenantName.toLowerCase().includes(q) ||
+      (item.tenantId && item.tenantId.toLowerCase().includes(q)) ||
+      (item.itemName && item.itemName.toLowerCase().includes(q)) ||
+      (item.donorName && item.donorName.toLowerCase().includes(q)) ||
+      (item.agencyName && item.agencyName.toLowerCase().includes(q)) ||
+      (item.agentName && item.agentName.toLowerCase().includes(q)) ||
+      item.id.toLowerCase().includes(q);
+
+    const matchesStatus =
+      statusFilter === 'ALL' || item.status === statusFilter;
+    const matchesDevice =
+      deviceFilter === 'ALL' ||
+      (deviceFilter === 'KIOSK' && item.deviceType === 'KIOSK') ||
+      (deviceFilter === 'WEB_MOBILE' && item.deviceType !== 'KIOSK');
+
+    return matchesQuery && matchesStatus && matchesDevice;
   });
 
   const handleQuickDateRange = (preset: 'today' | '7days' | 'month' | 'all') => {
@@ -104,21 +129,35 @@ export default function MultiPartySettlementLedger() {
     const headers = [
       '거래번호',
       '결제일시',
-      '단체명',
+      '가맹단체명',
+      '봉헌항목',
+      '기부자(마스킹)',
+      '연락처(마스킹)',
+      '결제유형',
+      '결제기기',
+      '결제수단',
       'PG사',
       '총결제액',
       'PG원가수수료(1.5%)',
-      '원원사정산액(98%)',
+      '가맹점정산액(98%)',
       '플랫폼수수료(0.5%)',
-      '총판수수료(0.15%)',
-      '에이전트수수료(0.05%)',
-      '플랫폼순수익(0.3%)',
+      '대리점수수료',
+      '영업자수수료',
+      '플랫폼순수익',
+      '대리점명',
+      '영업자명',
       '정산상태',
     ];
     const rows = filteredList.map((i) => [
       i.id,
       i.txDate,
       i.tenantName,
+      i.itemName || '일반 헌금',
+      i.donorName || '미지정',
+      i.donorPhone || '',
+      i.isRecurring || i.paymentType === 'BILLING' ? '빌링키 정기' : '카드 인증',
+      i.deviceType === 'KIOSK' ? '현장 키오스크' : '온라인 웹/모바일',
+      i.paymentMethod || '신용카드',
       i.pgProvider.toUpperCase(),
       i.grossAmount,
       i.pgFee,
@@ -127,6 +166,8 @@ export default function MultiPartySettlementLedger() {
       i.partnerFee,
       i.agentFee,
       i.netProfit,
+      i.agencyName || 'HQ (본사)',
+      i.agentName || '직접 영업',
       i.status,
     ]);
 
@@ -178,6 +219,16 @@ export default function MultiPartySettlementLedger() {
               <option value="SCHEDULED">지급 예정 (D+1)</option>
               <option value="HOLD">지급 유예 (보류)</option>
               <option value="FAILED">송금 오류</option>
+            </select>
+
+            <select
+              value={deviceFilter}
+              onChange={(e) => setDeviceFilter(e.target.value)}
+              className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 outline-none cursor-pointer"
+            >
+              <option value="ALL">전체 결제기기</option>
+              <option value="KIOSK">🖥️ 현장 키오스크</option>
+              <option value="WEB_MOBILE">📱 온라인 웹/모바일</option>
             </select>
           </div>
 
@@ -249,6 +300,7 @@ export default function MultiPartySettlementLedger() {
               <tr className="bg-slate-50 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
                 <th className="py-3 px-4">거래번호 / 일시</th>
                 <th className="py-3 px-4">원원사 (교회/성당/사찰)</th>
+                <th className="py-3 px-4 text-center">결제기기</th>
                 <th className="py-3 px-4 text-right">총 결제액</th>
                 <th className="py-3 px-4 text-right bg-purple-50/50 dark:bg-purple-950/20 text-purple-700">
                   PG 원가 (1.5%)
@@ -292,6 +344,18 @@ export default function MultiPartySettlementLedger() {
                       {item.tenantName || item.tenantId || '가맹 단체'}
                     </div>
                     <div className="text-[10px] text-slate-400 font-mono font-normal">{item.tenantSlug}</div>
+                  </td>
+
+                  <td className="py-3 px-4 text-center">
+                    {item.deviceType === 'KIOSK' ? (
+                      <span className="px-2 py-0.5 rounded text-[10.5px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+                        🖥️ 키오스크
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-slate-100 text-slate-700 border border-slate-300 inline-flex items-center gap-1">
+                        📱 웹/모바일
+                      </span>
+                    )}
                   </td>
 
                   <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-zinc-100">
@@ -402,6 +466,64 @@ export default function MultiPartySettlementLedger() {
                 <span className="font-bold font-mono text-indigo-600 text-sm">
                   {(selectedDetail.partnerFee + selectedDetail.agentFee).toLocaleString()}원
                 </span>
+              </div>
+            </div>
+
+            {/* 🔒 기부자 및 결제 상세 정보 (개인정보보호법 마스킹 적용) */}
+            <div className="p-4 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 space-y-2">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <span>🔒 거래 상세 및 기부자 정보</span>
+                <span className="text-[10px] text-amber-700 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded font-mono border border-amber-200">개인정보보호법 마스킹 적용</span>
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-slate-50 dark:bg-zinc-800/40 p-3 rounded-lg">
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">봉헌 항목</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">{selectedDetail.itemName || '일반 헌금'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">기부자 성명 (마스킹)</span>
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{selectedDetail.donorName || '미지정'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">연락처 (마스킹)</span>
+                  <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">{selectedDetail.donorPhone || '미지정'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">결제 수단 및 방식</span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                    {selectedDetail.isRecurring || selectedDetail.paymentType === 'BILLING' ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">⚡ 빌링키 정기결제</span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">💳 카드 인증결제</span>
+                    )}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">결제 기기 (Device)</span>
+                  <span className="font-extrabold flex items-center gap-1 mt-0.5">
+                    {selectedDetail.deviceType === 'KIOSK' ? (
+                      <span className="px-2 py-0.5 rounded text-[10.5px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">🖥️ 현장 키오스크</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-slate-100 text-slate-700 border border-slate-300">📱 온라인 웹/모바일</span>
+                    )}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">담당 대리점</span>
+                  <span className="font-semibold text-slate-700 dark:text-zinc-300">{selectedDetail.agencyName || 'HQ (본사)'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">담당 영업자</span>
+                  <span className="font-semibold text-slate-700 dark:text-zinc-300">{selectedDetail.agentName || '직접 영업'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">PG 승인 번호</span>
+                  <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400">{selectedDetail.pgTid || selectedDetail.id}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] block">승인 일시</span>
+                  <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400">{selectedDetail.txDate}</span>
+                </div>
               </div>
             </div>
 

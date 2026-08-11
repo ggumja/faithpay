@@ -4,8 +4,9 @@ import { useApp, DonationItem } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { donationItemsAPI } from '../api/client';
 
 interface FamilyMember {
   name: string;
@@ -21,10 +22,10 @@ export default function DonationFlow() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentTenant, setDonationFormData, getTenantDonationItems } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, setDonationFormData, getTenantDonationItems } = useApp();
 
   const [step, setStep] = useState(1);
-  const [selectedItem] = useState<DonationItem | null>(() => {
+  const [selectedItem, setSelectedItem] = useState<DonationItem | null>(() => {
     if (location.state?.selectedItem) return location.state.selectedItem;
     if (currentTenant) {
       const items = getTenantDonationItems(currentTenant);
@@ -38,16 +39,122 @@ export default function DonationFlow() {
   const [prayerText, setPrayerText] = useState('');
   const [baptismName, setBaptismName] = useState('');
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [isRecurring, setIsRecurring] = useState(false);
+  const formatPhoneNumber = (val: string) => {
+    const clean = val.replace(/[^0-9]/g, '').slice(0, 11);
+    if (clean.length <= 3) return clean;
+    if (clean.length <= 7) return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+    return `${clean.slice(0, 3)}-${clean.slice(3, 7)}-${clean.slice(7)}`;
+  };
+
+  const [saveDonorInfo, setSaveDonorInfo] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const savedFlag = localStorage.getItem('faithpay_save_donor_info_enabled');
+      return savedFlag !== null ? savedFlag === 'true' : true;
+    }
+    return true;
+  });
+
+  // 💾 저장된 교인 성명 및 전화번호 자동 불러오기
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem('faithpay_saved_donor_name');
+      const savedPhone = localStorage.getItem('faithpay_saved_donor_phone');
+      if (savedName && !name) {
+        setName(savedName);
+      }
+      if (savedPhone && !phone) {
+        setPhone(savedPhone);
+      }
+    }
+  }, []);
+
+  // 💾 성명 및 전화번호 실시간 기기 저장 동기화
+  useEffect(() => {
+    if (saveDonorInfo && typeof window !== 'undefined') {
+      if (name) localStorage.setItem('faithpay_saved_donor_name', name);
+      if (phone) localStorage.setItem('faithpay_saved_donor_phone', phone);
+    }
+  }, [name, phone, saveDonorInfo]);
+
+  const handleSaveDonorInfoToggle = (checked: boolean) => {
+    setSaveDonorInfo(checked);
+    if (typeof window !== 'undefined') {
+      if (checked) {
+        localStorage.setItem('faithpay_save_donor_info_enabled', 'true');
+        if (name) localStorage.setItem('faithpay_saved_donor_name', name);
+        if (phone) localStorage.setItem('faithpay_saved_donor_phone', phone);
+      } else {
+        localStorage.removeItem('faithpay_save_donor_info_enabled');
+        localStorage.removeItem('faithpay_saved_donor_name');
+        localStorage.removeItem('faithpay_saved_donor_phone');
+      }
+    }
+  };
+  const [isRecurring, setIsRecurring] = useState<boolean>(() => location.state?.isRecurring ?? false);
   const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>('일');
   const [recurringDay, setRecurringDay] = useState<number>(5);
 
   useEffect(() => {
-    if (!currentTenant) navigate('/');
-  }, [currentTenant, navigate]);
+    if (tenantSlug && tenants.length > 0) {
+      const matched = tenants.find(t => t.slug === tenantSlug || t.id === tenantSlug);
+      if (matched && (!currentTenant || currentTenant.slug !== matched.slug)) {
+        setCurrentTenant(matched);
+      }
+    }
+  }, [tenantSlug, tenants, currentTenant, setCurrentTenant]);
 
-  if (!currentTenant || !selectedItem) return null;
+  useEffect(() => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          if (!selectedItem || !res.data.some(i => i.id === selectedItem.id)) {
+            setSelectedItem(res.data[0]);
+          }
+        } else {
+          if (!selectedItem) {
+            const items = getTenantDonationItems(currentTenant);
+            if (items && items.length > 0) setSelectedItem(items[0]);
+          }
+        }
+      }).catch(() => {
+        if (!selectedItem) {
+          const items = getTenantDonationItems(currentTenant);
+          if (items && items.length > 0) setSelectedItem(items[0]);
+        }
+      });
+    }
+  }, [currentTenant, selectedItem, getTenantDonationItems]);
+
+  useEffect(() => {
+    if (location.state?.isRecurring !== undefined) {
+      setIsRecurring(location.state.isRecurring);
+    }
+    if (location.state?.selectedItem) {
+      setSelectedItem(location.state.selectedItem);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (selectedItem) {
+      if (selectedItem.amountType === 'fixed' && selectedItem.fixedAmount && selectedItem.fixedAmount > 0) {
+        setAmount(selectedItem.fixedAmount);
+      } else if (!amount || amount < 1000) {
+        setAmount(10000);
+      }
+    }
+  }, [selectedItem]);
+
+  if (!currentTenant || !selectedItem) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-slate-600 font-sans">
+          <Loader2 className="w-8 h-8 animate-spin text-[#3182F6]" />
+          <span className="text-sm font-bold">봉헌 폼을 불러오는 중입니다...</span>
+        </div>
+      </div>
+    );
+  }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
   const totalSteps = 4;
@@ -64,7 +171,14 @@ export default function DonationFlow() {
 
   const handleNext = () => {
     if (step === 1 && amount < 1000) { toast.error('1,000원 이상 입력해주세요'); return; }
-    if (step === 2 && (!name || !phone)) { toast.error('이름과 전화번호를 입력해주세요'); return; }
+    if (step === 2) {
+      if (!name || !phone) { toast.error('이름과 전화번호를 입력해주세요'); return; }
+      if (saveDonorInfo && typeof window !== 'undefined') {
+        localStorage.setItem('faithpay_save_donor_info_enabled', 'true');
+        localStorage.setItem('faithpay_saved_donor_name', name);
+        localStorage.setItem('faithpay_saved_donor_phone', phone);
+      }
+    }
     if (step < totalSteps) setStep(step + 1);
   };
 
@@ -258,7 +372,70 @@ export default function DonationFlow() {
 
                 <div className="flex flex-col gap-4">
                   <FPInput label="성명 *" value={name} onChange={setName} placeholder="홍길동" />
-                  <FPInput label="전화번호 *" value={phone} onChange={setPhone} placeholder="010-1234-5678" type="tel" />
+                  <FPInput 
+                    label="전화번호 *" 
+                    value={phone} 
+                    onChange={(val) => setPhone(formatPhoneNumber(val))} 
+                    placeholder="010-1234-5678" 
+                    type="tel" 
+                  />
+
+                  {/* 💾 이 기기에 내 정보 저장 체크박스 */}
+                  <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-zinc-850 rounded-xl border border-slate-200 dark:border-zinc-700/60 transition-colors hover:bg-slate-100/70">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-700 dark:text-zinc-300 select-none flex-1">
+                      <input
+                        type="checkbox"
+                        checked={saveDonorInfo}
+                        onChange={(e) => handleSaveDonorInfoToggle(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#3182F6] accent-[#3182F6] focus:ring-[#3182F6] cursor-pointer"
+                      />
+                      <span>💾 다음에도 이 기기에서 내 정보(성명·전화번호) 사용하기</span>
+                    </label>
+                    {saveDonorInfo && (name || phone) && (
+                      <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                        ✓ 기기 저장됨
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 💖 구호/기부재단 특화 서식 */}
+                  {currentTenant.religionType === 'charity' && (
+                    <div className="p-4 bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-2xl space-y-3 mt-1">
+                      <span className="text-xs font-bold text-rose-900 dark:text-rose-200 flex items-center gap-1.5">
+                        💖 희망 후원 분야 (선택)
+                      </span>
+                      <div>
+                        <select 
+                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150"
+                          defaultValue="child"
+                        >
+                          <option value="child">👶 국내외 결식·빈곤 아동 지원</option>
+                          <option value="emergency">🚨 지구촌 긴급구호 및 재난 복구</option>
+                          <option value="medical">🏥 저소득층 수술 및 의료비 지원</option>
+                          <option value="education">📚 소외계층 교육 및 장학금 지원</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🌟 비영리/사회공헌 특화 서식 */}
+                  {currentTenant.religionType === 'general' && (
+                    <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl space-y-3 mt-1">
+                      <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                        🌟 기부 가치 및 목적 선택 (선택)
+                      </span>
+                      <div>
+                        <select 
+                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150"
+                          defaultValue="social"
+                        >
+                          <option value="social">🤝 취약계층 자립 및 사회공헌</option>
+                          <option value="eco">🌱 친환경 숲 조성 및 탄소중립</option>
+                          <option value="culture">🎨 지역사회 문화 예술 발전</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
                   {/* ✝️ 천주교 성당 특화 서식 */}
                   {currentTenant.religionType === 'catholic' && (

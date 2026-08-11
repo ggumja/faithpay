@@ -230,6 +230,8 @@ const RELIGIONS: { id: ReligionId; label: string; sub: string }[] = [
   { id: 'protestant', label: '기독교', sub: '교회 · 헌금/십일조 관리' },
   { id: 'buddhist',   label: '불교',   sub: '사찰 · 인등보시/불사 관리' },
   { id: 'catholic',   label: '천주교', sub: '성당 · 교무금/미사예물 관리' },
+  { id: 'charity',    label: '구호/기부재단', sub: 'NPO · 결식아동/긴급구호 후원' },
+  { id: 'general',    label: '비영리법인', sub: '사회공헌 · 친환경/장학 기부' },
 ];
 
 export default function Root() {
@@ -340,21 +342,21 @@ export default function Root() {
           {/* Left Hero Text */}
           <div className="rp-up rp-d1">
             <div className="rp-chip" style={{ marginBottom: 24 }}>
-              <Heart size={13} fill="var(--hm-warm-amber)" color="var(--hm-warm-amber)" /> 정성을 담는 스마트 종교 봉헌 서비스
+              <Heart size={13} fill="var(--hm-warm-amber)" color="var(--hm-warm-amber)" /> 종교 · 구호재단 · 비영리법인을 위한 스마트 기부·봉헌 솔루션
             </div>
 
             <h1 className="rp-hero-title">
-              마음으로 드리는<br />
-              <span style={{ color: 'var(--hm-warm-amber)' }}>진정성 있는 온라인 봉헌</span>
+              마음과 정성을 잇는<br />
+              <span style={{ color: 'var(--hm-warm-amber)' }}>진정성 있는 온라인 기부·봉헌</span>
             </h1>
 
             <p style={{
               fontSize: 'clamp(15px, 2vw, 17.5px)',
               color: 'var(--hm-warm-ink-2)', lineHeight: 1.75,
-              margin: '20px 0 36px', maxWidth: 480,
+              margin: '20px 0 36px', maxWidth: 500,
             }}>
-              기독교 · 불교 · 천주교 교인을 위한 따뜻하고 정갈한 봉헌 플랫폼.<br />
-              복잡한 절차 없이 5분 만에 우리 단체 전용 공간을 개설하세요.
+              종교 단체부터 구호재단 · 비영리법인(NPO)까지 단체 성격에 꼭 맞춘 맞춤형 솔루션.<br />
+              복잡한 절차 없이 5분 만에 우리 단체 전용 모금 공간을 개설하세요.
             </p>
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -410,7 +412,7 @@ export default function Root() {
           <div className="rp-chip" style={{ marginBottom: 14 }}>서비스 핵심 가치</div>
           <h2 className="rp-section-h2">왜 FaithPay인가요?</h2>
           <p style={{ fontSize: 15, color: 'var(--hm-warm-ink-3)', marginTop: 10, lineHeight: 1.65 }}>
-            종교 단체의 고유한 봉헌 문화와 정산 체계에 맞춰 세밀하게 설계되었습니다.
+            종교 단체 및 구호/비영리 재단의 고유한 모금·봉헌 문화와 기부금 영수증 체계에 맞춰 세밀하게 설계되었습니다.
           </p>
         </div>
 
@@ -427,14 +429,13 @@ export default function Root() {
               fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em',
               color: 'var(--hm-warm-ink)', marginBottom: 12,
             }}>
-              종교별 전통과 용어를 반영한 전용 봉헌 페이지
+              종교 · 구호 · 비영리 단체별 맞춤 용어와 전용 모금 페이지
             </h3>
             <p style={{ fontSize: 14, color: 'var(--hm-warm-ink-2)', lineHeight: 1.75, maxWidth: 520, marginBottom: 20 }}>
-              기독교(십일조·감사헌금·건축헌금), 불교(인등보시·불사공양·기도보시), 천주교(교무금·미사예물) 등
-              각 종교 단체의 명칭과 성격을 그대로 녹여낸 전용 페이지가 제공됩니다.
+              기독교(십일조·감사헌금), 불교(인등보시·불사공양), 천주교(교무금·미사예물)부터 구호/비영리 단체의 정기후원·기부금까지 각 단체의 성격을 그대로 담아냅니다.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {['⛪ 개신교 헌금', '🪷 불교 보시', '✝️ 천주교 봉헌'].map(item => (
+              {['⛪ 개신교 헌금', '🪷 불교 보시', '✝️ 천주교 봉헌', '💖 구호재단 후원', '🌟 비영리 기부'].map(item => (
                 <span key={item} style={{
                   padding: '6px 14px', background: 'white', border: '1px solid var(--hm-warm-amber-border)',
                   borderRadius: 8, fontSize: 13, fontWeight: 700, color: 'var(--hm-warm-ink-2)',
@@ -574,12 +575,12 @@ export default function Root() {
         padding: '0 clamp(16px, 4vw, 40px) clamp(64px, 8vw, 96px)',
         textAlign: 'center',
       }}>
-        <div className="rp-chip" style={{ marginBottom: 14 }}>맞춤형 종교 플랫폼</div>
+        <div className="rp-chip" style={{ marginBottom: 14 }}>맞춤형 모금 및 기부 플랫폼</div>
         <h2 className="rp-section-h2" style={{ marginBottom: 10 }}>
-          모든 종교 공동체를 위한 전용 솔루션
+          모든 종교 공동체와 비영리 · 구호 단체를 위한 솔루션
         </h2>
-        <p style={{ fontSize: 14.5, color: 'var(--hm-warm-ink-3)', lineHeight: 1.7, maxWidth: 500, margin: '12px auto 44px' }}>
-          FaithPay는 기독교, 불교, 천주교 각 공동체의 언어와 예배 문화를 존중하고 성심껏 지원합니다.
+        <p style={{ fontSize: 14.5, color: 'var(--hm-warm-ink-3)', lineHeight: 1.7, maxWidth: 540, margin: '12px auto 44px' }}>
+          FaithPay는 기독교, 불교, 천주교, 구호재단, 비영리법인 각 단체의 언어와 기부 문화를 존중하고 성심껏 지원합니다.
         </p>
 
         <div className="rp-religion">
@@ -654,7 +655,7 @@ export default function Root() {
             letterSpacing: '-0.04em', lineHeight: 1.15, color: 'white',
             marginBottom: 18, overflowWrap: 'anywhere', minWidth: 0,
           }}>
-            우리 단체의 온라인 봉헌,<br />
+            우리 단체의 온라인 기부 · 봉헌,<br />
             <span style={{ color: 'var(--hm-warm-amber)' }}>지금 바로 도입해 보세요</span>
           </h2>
 
@@ -662,8 +663,8 @@ export default function Root() {
             fontSize: 16, color: 'oklch(0.80 0.010 70)',
             lineHeight: 1.75, marginBottom: 40,
           }}>
-            가입비 없이 무료로 시작하고, 성도 및 부모님도 사용하기 편한<br />
-            FaithPay의 스마트 봉헌 솔루션을 경험하세요.
+            가입비 없이 무료로 시작하고, 신도 및 기부자도 사용하기 편한<br />
+            FaithPay의 스마트 기부 · 봉헌 솔루션을 경험하세요.
           </p>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>

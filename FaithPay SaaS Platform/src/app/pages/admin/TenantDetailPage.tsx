@@ -35,6 +35,7 @@ import {
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { convertKoreanToQwerty } from '../../utils/koreanConverter';
 
 interface PaymentConfig {
   tenantId: string;
@@ -66,6 +67,11 @@ export default function TenantDetailPage() {
   const [name, setName] = useState('');
   const [religionType, setReligionType] = useState('');
   const [slug, setSlug] = useState('');
+  const [slugStatus, setSlugStatus] = useState<{ checked: boolean; isAvailable: boolean; message: string }>({
+    checked: false,
+    isAvailable: false,
+    message: '',
+  });
 
   // Main Page Tab State ('basic' | 'payment')
   const [activeTab, setActiveTab] = useState<'basic' | 'payment'>('basic');
@@ -359,6 +365,10 @@ export default function TenantDetailPage() {
         return '천주교';
       case 'buddhist':
         return '불교';
+      case 'charity':
+        return '구호/기부재단 (NPO)';
+      case 'general':
+        return '비영리/사회공헌';
       default:
         return type;
     }
@@ -471,22 +481,66 @@ export default function TenantDetailPage() {
                     <SelectItem value="protestant">기독교</SelectItem>
                     <SelectItem value="catholic">천주교</SelectItem>
                     <SelectItem value="buddhist">불교</SelectItem>
+                    <SelectItem value="charity">구호/기부재단 (NPO)</SelectItem>
+                    <SelectItem value="general">비영리/사회공헌</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="slug">
-                  URL Slug <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="예: seoul-central-church"
-                />
-                <p className="text-xs text-muted-foreground">
-                  신도용 봉헌 페이지 URL: /{slug}
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="slug">
+                    단축 접속 URL Slug <span className="text-red-500">*</span>
+                  </Label>
+                  <span className="text-[11px] text-zinc-400 font-semibold">영문 소문자, 숫자, 하이픈(-)만 가능</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    id="slug"
+                    value={slug}
+                    onChange={(e) => {
+                      const { converted, hasKorean } = convertKoreanToQwerty(e.target.value);
+                      setSlug(converted);
+                      setSlugStatus({ checked: false, isAvailable: false, message: '' });
+
+                      if (hasKorean) {
+                        toast.info(`💡 한글 키보드 입력을 영문 주소('${converted}')로 자동 변환하였습니다.`, {
+                          id: 'hangul-convert-toast',
+                          duration: 2500,
+                        });
+                      }
+                    }}
+                    placeholder="예: gakwonsa"
+                    className="flex-1 font-semibold font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-3.5 font-bold cursor-pointer whitespace-nowrap"
+                    onClick={() => {
+                      const clean = slug.trim().toLowerCase();
+                      if (!clean) { toast.error('URL Slug를 입력해주세요.'); return; }
+                      const isDup = tenants.some(t => t.id !== tenant?.id && t.slug.toLowerCase() === clean);
+                      if (isDup) {
+                        toast.error(`'${clean}' 주소는 이미 사용 중입니다.`);
+                        setSlugStatus({ checked: true, isAvailable: false, message: `🔴 '${clean}' 주소는 이미 다른 단체에서 사용 중입니다.` });
+                      } else {
+                        toast.success(`'${clean}' 주소는 즉시 사용 가능합니다!`);
+                        setSlugStatus({ checked: true, isAvailable: true, message: `🟢 '${clean}' 주소는 즉시 사용 가능합니다!` });
+                      }
+                    }}
+                  >
+                    중복 확인
+                  </Button>
+                </div>
+                {slugStatus.checked && (
+                  <p className={`text-xs font-bold ${slugStatus.isAvailable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                    {slugStatus.message}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground font-mono">
+                  신도/기부자용 접속 URL: faithpay.info/{slug}
                 </p>
               </div>
 

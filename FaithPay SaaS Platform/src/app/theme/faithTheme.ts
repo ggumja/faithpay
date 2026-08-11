@@ -1,5 +1,5 @@
-export type MotifKind = 'cross' | 'lotus' | 'rosary';
-export type ReligionId = 'protestant' | 'buddhist' | 'catholic';
+export type MotifKind = 'cross' | 'lotus' | 'rosary' | 'heart' | 'sparkles';
+export type ReligionId = 'protestant' | 'buddhist' | 'catholic' | 'charity' | 'general';
 
 export interface FaithTheme {
   primary: string;
@@ -70,6 +70,40 @@ export const FAITH_THEMES: Record<ReligionId, FaithTheme> = {
     tagline: '주님께 봉헌하는 마음',
     placeNoun: '성당',
     leaderTitle: '주임신부',
+  },
+  charity: {
+    name: '구호/기부재단',
+    primary: '#E53E3E',
+    primaryDark: '#C53030',
+    primaryHover: '#9B2C2C',
+    primaryBg: '#FFF5F5',
+    primaryBgStrong: '#FED7D7',
+    accent: '#DD6B20',
+    accentBg: '#FEEBC8',
+    heroGradient: 'linear-gradient(135deg, #E53E3E 0%, #C53030 60%, #742A2A 100%)',
+    heroGradientSoft: 'linear-gradient(135deg, #FFF5F5 0%, #FED7D7 100%)',
+    motif: 'heart',
+    greeting: '함께하는 따뜻한 나눔',
+    tagline: '세상을 바꾸는 따뜻한 후원',
+    placeNoun: '재단/단체',
+    leaderTitle: '이사장',
+  },
+  general: {
+    name: '비영리/사회공헌',
+    primary: '#2F855A',
+    primaryDark: '#22543D',
+    primaryHover: '#276749',
+    primaryBg: '#F0FFF4',
+    primaryBgStrong: '#C6F6D5',
+    accent: '#D69E2E',
+    accentBg: '#FEFCBF',
+    heroGradient: 'linear-gradient(135deg, #2F855A 0%, #22543D 60%, #1A365D 100%)',
+    heroGradientSoft: 'linear-gradient(135deg, #F0FFF4 0%, #C6F6D5 100%)',
+    motif: 'sparkles',
+    greeting: '소중한 가치 나눔',
+    tagline: '더 나은 내일을 만드는 기부',
+    placeNoun: '단체',
+    leaderTitle: '대표',
   },
 };
 
