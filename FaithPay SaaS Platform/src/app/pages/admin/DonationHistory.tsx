@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
+import { formatPhoneNumber } from '../../utils/phoneUtils';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -710,7 +711,7 @@ export default function DonationHistory() {
                                 <div>
                                   <div className="font-medium">{donation.donorName}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    {donation.donorPhone}
+                                    {formatPhoneNumber(donation.donorPhone)}
                                   </div>
                                 </div>
                               </TableCell>
@@ -813,7 +814,7 @@ export default function DonationHistory() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">연락처</p>
-                        <p className="font-semibold">{selectedDonation.donorPhone}</p>
+                        <p className="font-semibold">{formatPhoneNumber(selectedDonation.donorPhone)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">봉헌 항목</p>

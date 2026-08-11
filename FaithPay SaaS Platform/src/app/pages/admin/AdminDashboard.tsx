@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import { useApp } from '../../context/AppContext';
+import { normalizePhoneNumber } from '../../utils/phoneUtils';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -77,7 +78,9 @@ export default function AdminDashboard() {
           const prayers = list.filter(d => d.prayerText && d.prayerText.trim().length > 0);
           setPendingPrayerCount(prayers.length);
 
-          const uniqueDonors = new Set(list.filter(d => d.donorPhone).map(d => d.donorPhone));
+          const uniqueDonors = new Set(
+            list.filter(d => d.donorPhone).map(d => normalizePhoneNumber(d.donorPhone))
+          );
           setMemberCount(uniqueDonors.size);
 
           // 3. 현재 시계 동적 최근 3개월 DB 수납액 그룹화 계산

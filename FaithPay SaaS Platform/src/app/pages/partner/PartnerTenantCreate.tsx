@@ -38,6 +38,8 @@ export default function PartnerTenantCreate() {
   const [slug, setSlug] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [uniqueNumber, setUniqueNumber] = useState('240-82-12345');
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('');
   const [adminName, setAdminName] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [initialTempPassword] = useState(() => `fp${Math.floor(100000 + Math.random() * 900000)}`);
@@ -219,6 +221,19 @@ export default function PartnerTenantCreate() {
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-slate-700">대표 연락처</Label>
                   <Input placeholder="02-1234-5678" value={phone} onChange={e => setPhone(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">종교/비영리 단체 고유번호증 번호 *</Label>
+                  <Input placeholder="예: 240-82-12345" value={uniqueNumber} onChange={e => setUniqueNumber(e.target.value)} className="font-mono text-xs font-bold" />
+                  <p className="text-[10px] text-slate-500">순수 비영리 헌금/보시 수납용 국세청 고유번호 (10자리)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">수익사업용 사업자등록번호 (선택)</Label>
+                  <Input placeholder="예: 240-81-67890 (바자회/물품 판매 겸업 시)" value={businessRegistrationNumber} onChange={e => setBusinessRegistrationNumber(e.target.value)} className="font-mono text-xs" />
+                  <p className="text-[10px] text-slate-500">바자회/물품 판매 겸업 시 세무서 발급 사업자번호</p>
                 </div>
               </div>
 

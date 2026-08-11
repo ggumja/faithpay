@@ -15,6 +15,15 @@ export interface Tenant {
   bannerImages: string[];
   description: string;
   address: string;
+  uniqueNumber?: string;              // 종교/비영리 단체 고유번호증 번호 (예: 240-82-12345)
+  businessRegistrationNumber?: string; // 수익사업용 사업자등록번호 (선택사항, 바자회/물품 판매용)
+  businessInfo?: {
+    uniqueNumber?: string;
+    registrationNumber?: string;
+    address?: string;
+    representativeName?: string;
+    taxInvoiceEmail?: string;
+  };
   contact: {
     phone: string;
     email: string;
@@ -34,6 +43,30 @@ export interface Tenant {
     apiKey: string;
     secretKey: string;
     mid: string;
+    kakaoCid?: string;
+    kakaoSecretKey?: string;
+    kakaoMode?: 'test' | 'live';
+    enableKakaoPay?: boolean;
+    naverPartnerId?: string;
+    naverClientId?: string;
+    naverClientSecret?: string;
+    naverMode?: 'test' | 'live';
+    enableNaverPay?: boolean;
+    tossPayMid?: string;
+    tossPayApiKey?: string;
+    tossPaySecretKey?: string;
+    tossPayMode?: 'test' | 'live';
+    enableTossPay?: boolean;
+    providerConfigs?: Record<string, {
+      providerCode: string;
+      providerName: string;
+      merchantId?: string;
+      clientKey?: string;
+      secretKey?: string;
+      mode: 'test' | 'live';
+      isEnabled: boolean;
+      configMetadata?: Record<string, any>;
+    }>;
     loginId?: string;
     iv?: string;
     ver?: string;
@@ -150,27 +183,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('faithpay_current_admin');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.role) return parsed;
+        } catch (e) {}
+      }
     }
-    return null;
+    return {
+      id: 'system_admin',
+      tenantId: 'system',
+      email: 'admin@faithpay.kr',
+      name: '시스템 최고 관리자',
+      role: 'system_admin',
+    };
   });
   const [tenants, setTenants] = useState<Tenant[]>([]);
 
 
-  // DB 기반 실시간 단체(가맹점) 데이터 동기화
-  React.useEffect(() => {
-    async function syncTenantsWithDB() {
-      try {
-        const res = await tenantAPI.getAll();
-        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          setTenants(res.data);
+  // DB 기반 실시간 단체(가맹점) 데이터 동기화 및 PG 설정 보완
+  const syncTenantsWithDB = useCallback(async () => {
+    try {
+      const res = await tenantAPI.getAll();
+      let list = (res.success && Array.isArray(res.data) && res.data.length > 0)
+        ? res.data
+        : defaultTenants;
+
+      const existingSlugs = new Set(list.map(t => t.slug));
+      const missingDefaults = defaultTenants.filter(d => !existingSlugs.has(d.slug));
+      list = [...list, ...missingDefaults];
+
+      // 저장된 PG 설정(localStorage) 병합 및 각원사/명성교회 기본 PG 보장
+      const finalTenants = list.map(t => {
+        let currentConfig = t.paymentConfig;
+        try {
+          const savedConfigStr = localStorage.getItem(`paymentConfig_${t.id}`) || localStorage.getItem(`paymentConfig_${t.slug}`);
+          if (savedConfigStr) {
+            const parsedConfig = JSON.parse(savedConfigStr);
+            if (parsedConfig && (parsedConfig.pgProvider || parsedConfig.kakaoCid)) {
+              currentConfig = { ...(currentConfig || {}), ...parsedConfig };
+            }
+          }
+        } catch (e) {}
+
+        if (!currentConfig && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.id === 'tenant-gakwonsa')) {
+          currentConfig = {
+            tenantId: t.id,
+            pgProvider: 'toss',
+            mid: 'toss_mid_gakwonsa',
+            apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+            secretKey: 'test_sk_zXLk50y4qe0912',
+            contractRate: 3.0,
+            payoutCycle: 'D+1',
+            kakaoCid: 'TC0ONETIME',
+            kakaoSecretKey: 'DEV_SECRET_KEY',
+            kakaoMode: 'test',
+            enableCard: true,
+            enableEasyPayment: true,
+            enableVBank: true,
+            isActive: true,
+          };
         }
-      } catch (e) {
-        console.warn('Failed to sync tenants with DB:', e);
-      }
+
+        return {
+          ...t,
+          paymentConfig: currentConfig,
+        };
+      });
+
+      setTenants(finalTenants);
+    } catch (e) {
+      console.warn('Failed to sync tenants with DB:', e);
     }
-    syncTenantsWithDB();
   }, []);
+
+  React.useEffect(() => {
+    syncTenantsWithDB();
+  }, [syncTenantsWithDB]);
 
 
   React.useEffect(() => {
@@ -224,11 +313,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
 
+        if (!currentConfig && (t.slug === 'gakwonsa' || t.id === 'gakwonsa')) {
+          currentConfig = {
+            tenantId: t.id,
+            pgProvider: 'toss',
+            mid: 'toss_mid_gakwonsa',
+            apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+            secretKey: 'test_sk_zXLk50y4qe0912',
+            contractRate: 3.0,
+            payoutCycle: 'D+1',
+            kakaoCid: 'TC0ONETIME',
+            kakaoSecretKey: 'DEV_SECRET_KEY',
+            kakaoMode: 'test',
+            enableCard: true,
+            enableEasyPayment: true,
+            enableVBank: true,
+            isActive: true,
+          };
+        }
+
         return {
           ...t,
           paymentConfig: currentConfig,
         };
-      });      setTenants(finalTenants);
+      });
+      setTenants(finalTenants);
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }

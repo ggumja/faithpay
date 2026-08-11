@@ -10,9 +10,10 @@ import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
 import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { paymentAPI, donationAPI } from '../api/client';
+import { paymentAPI, donationAPI, kakaoPayAPI } from '../api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
+import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandLogos';
 
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
@@ -20,6 +21,7 @@ export default function PaymentSelection() {
   const { currentTenant, setCurrentTenant, tenants, donationFormData, currentAdmin } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState<string>('card');
+  const [selectedEasyPay, setSelectedEasyPay] = useState<'kakaopay' | 'naverpay' | 'tosspay'>('kakaopay');
   const [agreed, setAgreed] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -39,6 +41,11 @@ export default function PaymentSelection() {
   const [enableEasyPayment, setEnableEasyPayment] = useState<boolean>(true);
   const [enableVBank, setEnableVBank] = useState<boolean>(true);
 
+  // 간편결제 서비스별 수납 허용 상태
+  const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(true);
+  const [enableNaverPay, setEnableNaverPay] = useState<boolean>(true);
+  const [enableTossPay, setEnableTossPay] = useState<boolean>(true);
+
   useEffect(() => {
     if (tenantSlug) {
       const tenant = tenants.find(t => t.slug === tenantSlug);
@@ -54,13 +61,28 @@ export default function PaymentSelection() {
         if (res.success && res.data) {
           setPgProvider(res.data.pgProvider || '');
           setEnableCard(res.data.enableCard !== undefined ? res.data.enableCard : true);
-          setEnableEasyPayment(res.data.enableEasyPayment !== undefined ? res.data.enableEasyPayment : true);
           setEnableVBank(res.data.enableVBank !== undefined ? res.data.enableVBank : true);
+
+          const kOk = res.data.enableKakaoPay !== false && res.data.providerConfigs?.kakaopay?.isEnabled !== false;
+          const nOk = res.data.enableNaverPay === true || res.data.providerConfigs?.naverpay?.isEnabled === true;
+          const tOk = res.data.enableTossPay === true || res.data.providerConfigs?.tosspay?.isEnabled === true;
+
+          setEnableKakaoPay(kOk);
+          setEnableNaverPay(nOk);
+          setEnableTossPay(tOk);
+
+          if (kOk) setSelectedEasyPay('kakaopay');
+          else if (nOk) setSelectedEasyPay('naverpay');
+          else if (tOk) setSelectedEasyPay('tosspay');
+
+          const hasAnyEasyPay = kOk || nOk || tOk;
+          const isEasyPayActive = (res.data.enableEasyPayment !== false) && hasAnyEasyPay;
+          setEnableEasyPayment(isEasyPayActive);
           
           // 만약 활성화된 수단으로 기본 선택값 세팅
           if (res.data.enableCard !== false) {
             setPaymentMethod('card');
-          } else if (res.data.enableEasyPayment !== false) {
+          } else if (isEasyPayActive) {
             setPaymentMethod('simple');
           } else if (res.data.enableVBank !== false) {
             setPaymentMethod('bank');
@@ -140,6 +162,56 @@ export default function PaymentSelection() {
 
     if (!agreed) {
       toast.error('결제 진행에 동의해주세요');
+      return;
+    }
+
+    // 💛 카카오페이 (TC0ONETIME 공식 가맹점 테스트 결제)
+    if (paymentMethod === 'simple' && selectedEasyPay === 'kakaopay') {
+      setIsProcessing(true);
+      toast.info('💛 카카오페이(TC0ONETIME) 개발자 샌드박스 결제 창을 호출합니다...');
+
+      const partnerOrderId = `FP-${Date.now()}`;
+      const cleanPhone = (donationFormData.phone || '01071404795').replace(/[^0-9]/g, '');
+      const partnerUserId = `USER-${cleanPhone}`;
+      const itemName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
+      const amount = donationFormData.amount || 50000;
+
+      sessionStorage.setItem('faithpay_kakaopay_pending', JSON.stringify({
+        tenantId: currentTenant.id,
+        tenantSlug: tenantSlug,
+        amount: amount,
+        donorName: donationFormData.name || '홍길동 성도',
+        donorPhone: cleanPhone,
+        baptismName: donationFormData.baptismName || '',
+        itemId: donationFormData.itemId || 'general',
+        itemName: itemName,
+      }));
+
+      try {
+        const res = await kakaoPayAPI.ready({
+          partner_order_id: partnerOrderId,
+          partner_user_id: partnerUserId,
+          item_name: itemName,
+          total_amount: amount,
+          approval_url: `${window.location.origin}/kakaopay/approve`,
+          cancel_url: `${window.location.origin}/${tenantSlug}/payment`,
+          fail_url: `${window.location.origin}/${tenantSlug}/payment`,
+        });
+
+        if (res.success && res.data) {
+          const redirectUrl = res.data.next_redirect_pc_url || res.data.next_redirect_mobile_url;
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+            return;
+          }
+        }
+      } catch (err: any) {
+        console.error('Kakao Pay Ready Error:', err);
+      }
+
+      // Fallback redirect
+      const mockTid = `T${Date.now()}`;
+      window.location.href = `${window.location.origin}/kakaopay/sandbox?tid=${mockTid}&partner_order_id=${partnerOrderId}&partner_user_id=${partnerUserId}&amount=${amount}&item_name=${encodeURIComponent(itemName)}`;
       return;
     }
 
@@ -524,19 +596,52 @@ export default function PaymentSelection() {
                     </Label>
                   </div>
                   {paymentMethod === 'simple' && (
-                    <div className="grid grid-cols-3 gap-2.5 ml-6 animate-fade-in">
-                      <Button variant="outline" className="h-16 flex-col border-zinc-200 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-850 cursor-pointer rounded-xl">
-                        <Smartphone className="h-5 w-5 mb-1 text-yellow-500" />
-                        <span className="text-[11px] font-bold">카카오페이</span>
-                      </Button>
-                      <Button variant="outline" className="h-16 flex-col border-zinc-200 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-850 cursor-pointer rounded-xl">
-                        <Wallet className="h-5 w-5 mb-1 text-green-500" />
-                        <span className="text-[11px] font-bold">네이버페이</span>
-                      </Button>
-                      <Button variant="outline" className="h-16 flex-col border-zinc-200 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-850 cursor-pointer rounded-xl">
-                        <Smartphone className="h-5 w-5 mb-1 text-blue-500" />
-                        <span className="text-[11px] font-bold">토스페이</span>
-                      </Button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 ml-6 animate-fade-in">
+                      {enableKakaoPay && (
+                        <Button
+                          type="button"
+                          onClick={() => setSelectedEasyPay('kakaopay')}
+                          variant={selectedEasyPay === 'kakaopay' ? 'default' : 'outline'}
+                          className={`h-16 flex-col cursor-pointer rounded-xl transition-all ${
+                            selectedEasyPay === 'kakaopay'
+                              ? 'bg-[#FEE500] hover:bg-[#FDD835] text-[#3C1E1E] border-[#FBC02D] ring-2 ring-[#FBC02D]/40 font-black shadow-xs'
+                              : 'border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <KakaoPayLogo />
+                          <span className="text-[11px] font-bold mt-1">카카오페이</span>
+                        </Button>
+                      )}
+                      {enableNaverPay && (
+                        <Button
+                          type="button"
+                          onClick={() => setSelectedEasyPay('naverpay')}
+                          variant={selectedEasyPay === 'naverpay' ? 'default' : 'outline'}
+                          className={`h-16 flex-col cursor-pointer rounded-xl transition-all ${
+                            selectedEasyPay === 'naverpay'
+                              ? 'bg-[#03CF5D] hover:bg-[#02b350] text-white border-[#02b350] ring-2 ring-[#03CF5D]/40 font-black shadow-xs'
+                              : 'border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <NaverPayLogo />
+                          <span className="text-[11px] font-bold mt-1">네이버페이</span>
+                        </Button>
+                      )}
+                      {enableTossPay && (
+                        <Button
+                          type="button"
+                          onClick={() => setSelectedEasyPay('tosspay')}
+                          variant={selectedEasyPay === 'tosspay' ? 'default' : 'outline'}
+                          className={`h-16 flex-col cursor-pointer rounded-xl transition-all ${
+                            selectedEasyPay === 'tosspay'
+                              ? 'bg-[#0050FF] hover:bg-[#0040D0] text-white border-[#0050FF] ring-2 ring-[#0050FF]/40 font-black shadow-xs'
+                              : 'border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                          }`}
+                        >
+                          <TossPayLogo />
+                          <span className="text-[11px] font-bold mt-1">토스페이</span>
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

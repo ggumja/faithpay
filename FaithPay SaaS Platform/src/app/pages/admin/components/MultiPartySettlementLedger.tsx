@@ -10,6 +10,8 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
+import { Card, CardContent } from '../../../components/ui/card';
+import { formatPhoneNumber } from '../../../utils/phoneUtils';
 import { toast } from 'sonner';
 import { partnerAPI } from '../../../api/client';
 
@@ -486,7 +488,7 @@ export default function MultiPartySettlementLedger() {
                 </div>
                 <div>
                   <span className="text-slate-400 text-[10.5px] block">연락처 (마스킹)</span>
-                  <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">{selectedDetail.donorPhone || '미지정'}</span>
+                  <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">{selectedDetail.donorPhone ? formatPhoneNumber(selectedDetail.donorPhone) : '미지정'}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 text-[10.5px] block">결제 수단 및 방식</span>

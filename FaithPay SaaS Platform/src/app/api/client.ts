@@ -81,10 +81,16 @@ async function fetchAPI<T>(
       },
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text || `HTTP ${response.status}` };
+    }
 
     if (!response.ok) {
-      console.error(`API Error (${endpoint}):`, data);
+      console.warn(`API Warning (${endpoint}): HTTP ${response.status}`);
       return {
         success: false,
         error: data.error || `HTTP ${response.status}`,
@@ -93,7 +99,8 @@ async function fetchAPI<T>(
 
     return data;
   } catch (error) {
-    console.error(`Network Error (${endpoint}):`, error);
+    // 네트워크 연결 단락 또는 로컬 폴백 시 경고 처리
+    console.warn(`Network status note (${endpoint}):`, error instanceof Error ? error.message : error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Network error',
@@ -355,7 +362,72 @@ export const donationAPI = {
   },
 
   async lookupByPhone(tenantId: string, phone: string): Promise<APIResponse<{ found: boolean; donorName?: string; baptismName?: string; count?: number }>> {
-    return fetchAPI<any>(`/donations/lookup-by-phone/${tenantId}/${phone}`);
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    try {
+      const res = await fetchAPI<any>(`/donations/lookup-by-phone/${tenantId}/${cleanPhone}`);
+      if (res.success && res.data && res.data.found) {
+        return res;
+      }
+    } catch {
+      // fallback below
+    }
+
+    // Local Fallback: query donations for tenant and filter by normalized phone
+    try {
+      const listRes = await this.getByTenant(tenantId);
+      if (listRes.success && Array.isArray(listRes.data)) {
+        const matched = listRes.data.filter(
+          (d: Donation) => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone
+        );
+        if (matched.length > 0) {
+          const last = matched[0];
+          return {
+            success: true,
+            data: {
+              found: true,
+              donorName: last.donorName,
+              baptismName: last.baptismName,
+              count: matched.length,
+            },
+          };
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    return { success: true, data: { found: false } };
+  },
+};
+
+// ==================== KAKAO PAY API (TC0ONETIME TEST) ====================
+
+export const kakaoPayAPI = {
+  async ready(payload: {
+    partner_order_id?: string;
+    partner_user_id?: string;
+    item_name: string;
+    total_amount: number;
+    approval_url?: string;
+    cancel_url?: string;
+    fail_url?: string;
+  }): Promise<APIResponse<{ tid: string; next_redirect_pc_url: string; next_redirect_mobile_url: string }>> {
+    return fetchAPI<any>('/kakaopay/ready', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async approve(payload: {
+    tid: string;
+    partner_order_id: string;
+    partner_user_id: string;
+    pg_token: string;
+  }): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/kakaopay/approve', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 };
 

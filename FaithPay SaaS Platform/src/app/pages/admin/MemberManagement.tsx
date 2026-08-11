@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
 import { donationAPI } from '../../api/client';
+import { normalizePhoneNumber, formatPhoneNumber } from '../../utils/phoneUtils';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
@@ -45,15 +46,19 @@ export default function MemberManagement() {
       try {
         const res = await donationAPI.getByTenant(currentTenant.id);
         if (res.success && res.data) {
-          // 전화번호 기준 신도 목록 동적 집계
+          // 전화번호 기준 신도 목록 동적 집계 (숫자만 추출하여 동일 인물 통합 & 하이픈 포맷팅)
           const map = new Map<string, any>();
           res.data.forEach((d: any) => {
-            const phone = d.donorPhone || '미등록';
-            if (!map.has(phone)) {
-              map.set(phone, {
+            const rawPhone = d.donorPhone || '';
+            const digitsKey = normalizePhoneNumber(rawPhone) || '미등록';
+            const displayPhone = rawPhone ? formatPhoneNumber(rawPhone) : '미등록';
+
+            if (!map.has(digitsKey)) {
+              map.set(digitsKey, {
                 id: d.id,
                 name: d.donorName || '익명 신도',
-                phone: phone,
+                phone: displayPhone,
+                normalizedPhone: digitsKey,
                 email: d.donorEmail || '-',
                 registeredDate: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
                 totalDonation: d.amount || 0,
@@ -61,9 +66,11 @@ export default function MemberManagement() {
                 recurring: d.isRecurring || false,
               });
             } else {
-              const existing = map.get(phone);
+              const existing = map.get(digitsKey);
               existing.totalDonation += d.amount || 0;
               if (d.isRecurring) existing.recurring = true;
+              if (existing.name === '익명 신도' && d.donorName) existing.name = d.donorName;
+              if (existing.email === '-' && d.donorEmail) existing.email = d.donorEmail;
             }
           });
           setMembers(Array.from(map.values()));
@@ -111,11 +118,15 @@ export default function MemberManagement() {
 
   const currentPath = `/${tenantSlug}/admin/members`;
 
+  const cleanQuery = searchQuery.trim().toLowerCase();
+  const cleanQueryDigits = searchQuery.replace(/[^0-9]/g, '');
+
   const filteredMembers = members.filter(
     (member) =>
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.phone.includes(searchQuery) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase())
+      member.name.toLowerCase().includes(cleanQuery) ||
+      member.phone.includes(cleanQuery) ||
+      (cleanQueryDigits.length > 0 && member.normalizedPhone.includes(cleanQueryDigits)) ||
+      member.email.toLowerCase().includes(cleanQuery)
   );
 
   const totalMembers = members.length;

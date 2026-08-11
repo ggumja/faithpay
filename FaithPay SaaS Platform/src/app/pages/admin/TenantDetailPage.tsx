@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp, Tenant } from '../../context/AppContext';
+import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../../components/PayBrandLogos';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -31,6 +32,7 @@ import {
   Phone,
   Mail,
   Clock,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
@@ -73,11 +75,14 @@ export default function TenantDetailPage() {
     message: '',
   });
 
-  // Main Page Tab State ('basic' | 'payment')
-  const [activeTab, setActiveTab] = useState<'basic' | 'payment'>('basic');
+  // Main Page Tab State ('basic' | 'payment' | 'easypay')
+  const [activeTab, setActiveTab] = useState<'basic' | 'payment' | 'easypay'>('basic');
 
   // Payment Config State
   const [paymentTab, setPaymentTab] = useState<'general' | 'billing'>('general');
+  // Easy Pay Sub-Tabs State ('kakaopay' | 'naverpay' | 'tosspay')
+  const [easyPayTab, setEasyPayTab] = useState<'kakaopay' | 'naverpay' | 'tosspay'>('kakaopay');
+
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [pgProvider, setPgProvider] = useState('');
   const [mid, setMid] = useState('');
@@ -88,6 +93,29 @@ export default function TenantDetailPage() {
   const [loginId, setLoginId] = useState('');
   const [iv, setIv] = useState('');
   const [ver, setVer] = useState('');
+
+  // Kakao Pay Merchant Config State
+  const [kakaoCid, setKakaoCid] = useState('TC0ONETIME');
+  const [kakaoSecretKey, setKakaoSecretKey] = useState('DEV_SECRET_KEY');
+  const [kakaoMode, setKakaoMode] = useState<'test' | 'live'>('test');
+  const [showKakaoSecretKey, setShowKakaoSecretKey] = useState(false);
+  const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(true);
+
+  // Naver Pay Direct Config State
+  const [naverPartnerId, setNaverPartnerId] = useState('NAV_PARTNER_999');
+  const [naverClientId, setNaverClientId] = useState('CLIENT_ID_123');
+  const [naverClientSecret, setNaverClientSecret] = useState('CLIENT_SECRET_456');
+  const [naverMode, setNaverMode] = useState<'test' | 'live'>('test');
+  const [showNaverSecret, setShowNaverSecret] = useState(false);
+  const [enableNaverPay, setEnableNaverPay] = useState<boolean>(true);
+
+  // Toss Pay Direct Config State
+  const [tossPayMid, setTossPayMid] = useState('tosspay_mid_1234');
+  const [tossPayApiKey, setTossPayApiKey] = useState('test_ck_tosspay_123');
+  const [tossPaySecretKey, setTossPaySecretKey] = useState('test_sk_tosspay_456');
+  const [tossPayMode, setTossPayMode] = useState<'test' | 'live'>('test');
+  const [showTossPaySecret, setShowTossPaySecret] = useState(false);
+  const [enableTossPay, setEnableTossPay] = useState<boolean>(true);
   
   // Billing Key (Recurring Payment) State
   const [billMid, setBillMid] = useState('');
@@ -122,11 +150,44 @@ export default function TenantDetailPage() {
         setReligionType(foundTenant.religionType);
         setSlug(foundTenant.slug);
 
-        // 해당 단체의 실제 paymentConfig를 최우선 바인딩 (미지정 시 공란 유지)
-        const cfg = foundTenant.paymentConfig;
-        if (cfg && cfg.pgProvider) {
+        // 해당 단체의 실제 paymentConfig를 최우선 바인딩 (DB 정보 및 localStorage 저장 보존 데이터)
+        let cfg = foundTenant.paymentConfig;
+        try {
+          const savedCfgStr =
+            localStorage.getItem(`paymentConfig_${foundTenant.id}`) ||
+            localStorage.getItem(`paymentConfig_${foundTenant.slug}`);
+          if (savedCfgStr) {
+            const parsed = JSON.parse(savedCfgStr);
+            if (parsed && (parsed.pgProvider || parsed.kakaoCid)) {
+              cfg = { ...(cfg || {}), ...parsed };
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse localStorage paymentConfig:', e);
+        }
+        // 각원사 기본값 보장
+        if (!cfg && (foundTenant.slug === 'gakwonsa' || foundTenant.id === 'gakwonsa' || foundTenant.id === 'tenant-gakwonsa')) {
+          cfg = {
+            tenantId: foundTenant.id,
+            pgProvider: 'toss',
+            mid: 'toss_mid_gakwonsa',
+            apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+            secretKey: 'test_sk_zXLk50y4qe0912',
+            contractRate: 3.0,
+            payoutCycle: 'D+1',
+            kakaoCid: 'TC0ONETIME',
+            kakaoSecretKey: 'DEV_SECRET_KEY',
+            kakaoMode: 'test',
+            enableCard: true,
+            enableEasyPayment: true,
+            enableVBank: true,
+            isActive: true,
+          };
+        }
+
+        if (cfg && (cfg.pgProvider || cfg.kakaoCid)) {
           setPaymentConfig(cfg);
-          setPgProvider(cfg.pgProvider);
+          setPgProvider(cfg.pgProvider || 'toss');
           setMid(cfg.mid || '');
           setApiKey(cfg.apiKey || '');
           setSecretKey(cfg.secretKey || '');
@@ -135,10 +196,27 @@ export default function TenantDetailPage() {
           setLoginId(cfg.loginId || '');
           setIv(cfg.iv || '');
           setVer(cfg.ver || '');
+          setKakaoCid(cfg.kakaoCid || 'TC0ONETIME');
+          setKakaoSecretKey(cfg.kakaoSecretKey || 'DEV_SECRET_KEY');
+          setKakaoMode(cfg.kakaoMode || 'test');
+          setEnableKakaoPay(cfg.enableKakaoPay !== undefined ? cfg.enableKakaoPay : (cfg.providerConfigs?.kakaopay?.isEnabled !== undefined ? cfg.providerConfigs.kakaopay.isEnabled : true));
+          
+          setNaverPartnerId(cfg.naverPartnerId || cfg.providerConfigs?.naverpay?.merchantId || 'NAV_PARTNER_999');
+          setNaverClientId(cfg.naverClientId || cfg.providerConfigs?.naverpay?.clientKey || 'CLIENT_ID_123');
+          setNaverClientSecret(cfg.naverClientSecret || cfg.providerConfigs?.naverpay?.secretKey || 'CLIENT_SECRET_456');
+          setNaverMode(cfg.naverMode || cfg.providerConfigs?.naverpay?.mode || 'test');
+          setEnableNaverPay(cfg.enableNaverPay !== undefined ? cfg.enableNaverPay : (cfg.providerConfigs?.naverpay?.isEnabled !== undefined ? cfg.providerConfigs.naverpay.isEnabled : true));
+
+          setTossPayMid(cfg.tossPayMid || cfg.providerConfigs?.tosspay?.merchantId || 'tosspay_mid_1234');
+          setTossPayApiKey(cfg.tossPayApiKey || cfg.providerConfigs?.tosspay?.clientKey || 'test_ck_tosspay_123');
+          setTossPaySecretKey(cfg.tossPaySecretKey || cfg.providerConfigs?.tosspay?.secretKey || 'test_sk_tosspay_456');
+          setTossPayMode(cfg.tossPayMode || cfg.providerConfigs?.tosspay?.mode || 'test');
+          setEnableTossPay(cfg.enableTossPay !== undefined ? cfg.enableTossPay : (cfg.providerConfigs?.tosspay?.isEnabled !== undefined ? cfg.providerConfigs.tosspay.isEnabled : true));
+
           setEnableCard(cfg.enableCard !== undefined ? cfg.enableCard : true);
           setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? cfg.enableEasyPayment : true);
           setEnableVBank(cfg.enableVBank !== undefined ? cfg.enableVBank : true);
-          setIsActive(cfg.isActive || false);
+          setIsActive(cfg.isActive !== undefined ? cfg.isActive : true);
         } else {
           // 결제 미설정/미지정 단체인 경우 깨끗하게 공란으로 유지
           setPaymentConfig(null);
@@ -330,14 +408,61 @@ export default function TenantDetailPage() {
         loginId,
         iv,
         ver,
+        kakaoCid,
+        kakaoSecretKey,
+        kakaoMode,
+        enableKakaoPay,
+        naverPartnerId,
+        naverClientId,
+        naverClientSecret,
+        naverMode,
+        enableNaverPay,
+        tossPayMid,
+        tossPayApiKey,
+        tossPaySecretKey,
+        tossPayMode,
+        enableTossPay,
+        providerConfigs: {
+          tosspay: {
+            providerCode: 'tosspay',
+            providerName: '토스페이',
+            providerType: 'easypay',
+            merchantId: tossPayMid,
+            clientKey: tossPayApiKey,
+            secretKey: tossPaySecretKey,
+            mode: tossPayMode,
+            isEnabled: enableTossPay,
+          },
+          naverpay: {
+            providerCode: 'naverpay',
+            providerName: '네이버페이',
+            providerType: 'easypay',
+            merchantId: naverPartnerId,
+            clientKey: naverClientId,
+            secretKey: naverClientSecret,
+            mode: naverMode,
+            isEnabled: enableNaverPay,
+          },
+          kakaopay: {
+            providerCode: 'kakaopay',
+            providerName: '카카오페이',
+            providerType: 'easypay',
+            merchantId: kakaoCid,
+            secretKey: kakaoSecretKey,
+            mode: kakaoMode,
+            isEnabled: enableKakaoPay,
+          }
+        },
         enableCard,
         enableEasyPayment,
         enableVBank,
         isActive: true,
+        updatedAt: new Date().toISOString(),
       };
 
       if (targetTenant) {
         targetTenant.paymentConfig = newConfig;
+        updateTenantInfo(targetTenant.id, { ...targetTenant, paymentConfig: newConfig });
       }
       setPaymentConfig(newConfig);
       try {
@@ -418,7 +543,7 @@ export default function TenantDetailPage() {
         </div>
 
         {/* 탭 전환 스위치 버튼 그룹 */}
-        <div className="flex gap-2 p-1 bg-slate-200/70 dark:bg-zinc-800 rounded-xl max-w-md">
+        <div className="flex gap-2 p-1 bg-slate-200/70 dark:bg-zinc-800 rounded-xl max-w-xl">
           <button
             type="button"
             className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -429,7 +554,7 @@ export default function TenantDetailPage() {
             onClick={() => setActiveTab('basic')}
           >
             <Building2 className="h-4 w-4" />
-            🏢 기본 정보 & 계정
+            기본 정보 & 계정
           </button>
           <button
             type="button"
@@ -441,7 +566,19 @@ export default function TenantDetailPage() {
             onClick={() => setActiveTab('payment')}
           >
             <CreditCard className="h-4 w-4" />
-            💳 결제 / PG 설정
+            결제 / PG 설정
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'easypay'
+                ? 'bg-amber-400 text-amber-950 font-black shadow-sm'
+                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+            }`}
+            onClick={() => setActiveTab('easypay')}
+          >
+            <Zap className="h-4 w-4 text-amber-600 fill-amber-400" />
+            간편결제 설정
           </button>
         </div>
 
@@ -567,7 +704,7 @@ export default function TenantDetailPage() {
                     <Mail className="h-3.5 w-3.5 text-emerald-600" />
                     관리자 로그인 아이디 (이메일)
                   </Label>
-                  <Input value={tenant.contact?.email || `${tenant.slug}@faithpay.or.kr`} disabled className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-emerald-700 dark:text-emerald-400" />
+                  <Input value={(tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `info@${tenant.slug}.or.kr`} disabled className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-emerald-700 dark:text-emerald-400" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
@@ -594,74 +731,73 @@ export default function TenantDetailPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">고유(사업자) 등록번호</Label>
-                  <Input value={tenant.businessInfo?.registrationNumber || '240-82-12345'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold font-mono" />
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                    종교/비영리 단체 고유번호증 번호 (비영리 헌금/보시 수납용)
+                  </Label>
+                  <Input 
+                    value={tenant.uniqueNumber || tenant.businessInfo?.uniqueNumber || '240-82-12345'} 
+                    disabled 
+                    className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-purple-700 dark:text-purple-300" 
+                  />
                 </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    수익사업용 사업자등록번호 (바자회/물품 판매 겸업 시)
+                  </Label>
+                  <Input 
+                    value={tenant.businessRegistrationNumber || tenant.businessInfo?.registrationNumber || '미등록 (순수 비영리)'} 
+                    disabled 
+                    className="bg-white dark:bg-zinc-900 text-sm font-semibold font-mono text-slate-600 dark:text-zinc-400" 
+                  />
+                </div>
+
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">사찰/교회 소재지 주소</Label>
                   <Input value={tenant.businessInfo?.address || '충청남도 천안시 동남구 각원사길 245'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
                 </div>
               </div>
+            </div>
 
-              {/* 해당 단체 소속 관리자 계정 리스트 섹션 */}
-              <div className="md:col-span-2 border-t pt-5 mt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
-                      <User className="h-4 w-4 text-purple-600" />
-                      소속 관리자 계정 목록 (총 1명)
-                    </h4>
-                    <p className="text-xs text-muted-foreground">이 사찰/교회 시스템에 접근할 수 있는 관리 권한자 계정입니다.</p>
+            <Separator className="my-4" />
+
+            {/* 관리자 계정 정보 */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <User className="h-4 w-4 text-purple-600" />
+                가맹 단체 관리자 접속 계정 목록
+              </h3>
+
+              <div className="space-y-2">
+                {[
+                  { id: `admin-${tenant.id}`, name: tenant.contact?.name || '주지스님 / 담임목사', email: (tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `info@${tenant.slug}.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' },
+                  { id: `finance-${tenant.id}`, name: '재무/보시 실무 담당자', email: `finance@${tenant.slug}.or.kr`, role: 'finance_manager', createdAt: '2026-02-01' }
+                ].map((adminUser) => (
+                  <div
+                    key={adminUser.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                        {adminUser.name[0]}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-900 flex items-center gap-2">
+                          {adminUser.name}
+                          <Badge className={adminUser.role === 'tenant_admin' ? 'bg-purple-100 text-purple-800 font-bold' : 'bg-blue-100 text-blue-800'}>
+                            {adminUser.role === 'tenant_admin' ? '최고 관리자' : '재무/보시 실무자'}
+                          </Badge>
+                        </div>
+                        <div className="text-slate-500 font-mono mt-0.5 flex items-center gap-3">
+                          <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {adminUser.email}</span>
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> 생성일: {adminUser.createdAt}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <Button size="sm" variant="outline" className="text-xs border-purple-300 text-purple-700 hover:bg-purple-50 font-bold">
-                    + 관리자 계정 추가
-                  </Button>
-                </div>
-
-                <div className="border rounded-xl overflow-hidden bg-white dark:bg-zinc-900">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold border-b">
-                      <tr>
-                        <th className="px-4 py-2.5">성명 / 담당자</th>
-                        <th className="px-4 py-2.5">로그인 아이디 (이메일)</th>
-                        <th className="px-4 py-2.5">관리 권한</th>
-                        <th className="px-4 py-2.5">등록일</th>
-                        <th className="px-4 py-2.5 text-center">계정 상태</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {(() => {
-                        const displayAdmins = [
-                          { id: `admin-${tenant.id}`, name: tenant.contact?.name || '주지스님 / 담임목사', email: tenant.contact?.email || `${tenant.slug}@faithpay.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' }
-                        ];
-                        return displayAdmins.map((adminUser: any) => (
-                        <tr key={adminUser.id} className="hover:bg-slate-50 dark:hover:bg-zinc-850">
-                          <td className="px-4 py-3 font-bold text-slate-900 dark:text-zinc-100">
-                            {adminUser.name}
-                          </td>
-                          <td className="px-4 py-3 font-mono font-semibold text-purple-700 dark:text-purple-400">
-                            {adminUser.email}
-                          </td>
-
-                          <td className="px-4 py-3">
-                            <Badge className={adminUser.role === 'tenant_admin' ? 'bg-purple-100 text-purple-800 font-bold' : 'bg-blue-100 text-blue-800'}>
-                              {adminUser.role === 'tenant_admin' ? '최고 관리자' : '재무/보시 실무자'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-slate-500 font-mono">
-                            {adminUser.createdAt || '2026-01-15'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Badge className="bg-emerald-100 text-emerald-800 font-bold">
-                              🟢 정상 작동
-                            </Badge>
-                          </td>
-                        </tr>
-                      ));
-                    })()}
-                    </tbody>
-                  </table>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -677,8 +813,8 @@ export default function TenantDetailPage() {
               </Button>
               <Button
                 onClick={handleSaveBasicInfo}
-                disabled={isSaving || !name.trim() || !slug.trim()}
-                className="bg-purple-600 hover:bg-purple-700"
+                disabled={isSaving}
+                className="bg-purple-600 hover:bg-purple-700 font-bold"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? '저장 중...' : '기본 정보 저장'}
@@ -696,8 +832,11 @@ export default function TenantDetailPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-green-600" />
-                  결제 정보 설정
+                  결제 / PG 정보 설정
                 </CardTitle>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  가맹 단체의 대표 PG사(토스페이먼츠, 나노PG 등) 및 정기결제(빌링키) 설정을 관리합니다.
+                </CardDescription>
               </div>
               {paymentConfig && (
                 <Badge
@@ -720,8 +859,8 @@ export default function TenantDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Payment Method Category Tabs */}
-            <div className="flex gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-4">
+            {/* PG Sub Tabs */}
+            <div className="flex flex-col sm:flex-row gap-2 p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-4">
               <button
                 type="button"
                 className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
@@ -732,7 +871,7 @@ export default function TenantDetailPage() {
                 onClick={() => setPaymentTab('general')}
               >
                 <CreditCard className="h-4 w-4" />
-                <span>💳 일반 결제 설정 (일시불/가상계좌)</span>
+                <span>일반 결제 설정 (일시불/가상계좌)</span>
               </button>
               <button
                 type="button"
@@ -744,17 +883,17 @@ export default function TenantDetailPage() {
                 onClick={() => setPaymentTab('billing')}
               >
                 <Key className="h-4 w-4 text-amber-500" />
-                <span>⚡ 빌링키(정기) 결제 설정 (매월 자동 청구)</span>
+                <span>빌링키(정기) 결제 설정 (매월 자동 청구)</span>
               </button>
             </div>
 
-            {paymentTab === 'general' ? (
+            {paymentTab === 'general' && (
               /* ==================== GENERAL PAYMENT TAB ==================== */
               <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="pgProvider" className="flex items-center gap-2">
-                      <Key className="h-4 w-4 text-blue-600" />
+                      <Building2 className="h-4 w-4" />
                       PG 제공자 <span className="text-red-500">*</span>
                     </Label>
                     <Select value={pgProvider || 'none'} onValueChange={(val) => setPgProvider(val === 'none' ? '' : val)}>
@@ -774,9 +913,6 @@ export default function TenantDetailPage() {
                       <span className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-purple-600" />
                         단체 최종 계약 수수료율 (%) <span className="text-red-500">*</span>
-                      </span>
-                      <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-bold border border-purple-200">
-                        Guardrail 하한: 2.0%
                       </span>
                     </Label>
                     <div className="flex items-center gap-2">
@@ -802,9 +938,6 @@ export default function TenantDetailPage() {
                       <AlertCircle className="h-5 w-5" />
                     </div>
                     <h4 className="font-bold text-slate-800 dark:text-zinc-200 text-xs">PG 제공자가 선택되지 않았습니다</h4>
-                    <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-                      상단의 [PG 제공자] 드롭다운에서 계약된 PG사(토스페이먼츠 또는 나노PG)를 선택하시면 가맹점 식별코드(MID), API Key 및 결제 수단 상세 설정 폼이 활성화됩니다.
-                    </p>
                   </div>
                 ) : (
                   <>
@@ -879,186 +1012,119 @@ export default function TenantDetailPage() {
                     <div className="space-y-2">
                       <Label htmlFor="payoutCycle" className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-emerald-600" />
-                        PG 정산 주기 <span className="text-red-500">*</span>
+                        정산 주기 <span className="text-red-500">*</span>
                       </Label>
-                      <Select value={payoutCycle || 'D+1'} onValueChange={(val) => setPayoutCycle(val)}>
-                        <SelectTrigger id="payoutCycle" className="bg-white dark:bg-zinc-900 font-semibold">
+                      <Select value={payoutCycle} onValueChange={(val) => setPayoutCycle(val)}>
+                        <SelectTrigger id="payoutCycle" className="bg-white font-semibold">
                           <SelectValue placeholder="정산 주기 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="D+1">D+1 영업일 자동 입금 (PG 표준 기본값)</SelectItem>
-                          <SelectItem value="D+2">D+2 영업일 입금</SelectItem>
-                          <SelectItem value="D+3">D+3 영업일 입금</SelectItem>
-                          <SelectItem value="D+7">D+7 영업일 입금 (리스크 관리 가맹점)</SelectItem>
-                          <SelectItem value="REALTIME">실시간 즉시 정산 (토스 Payouts API 전용)</SelectItem>
-                          <SelectItem value="WEEKLY">주간 정산 (매주 지정 요일 입금)</SelectItem>
-                          <SelectItem value="MONTHLY">월간 정산 (매월 지정일 입금)</SelectItem>
+                          <SelectItem value="D+1">D+1 (익일 정산)</SelectItem>
+                          <SelectItem value="D+2">D+2 (2일후 정산)</SelectItem>
+                          <SelectItem value="D+3">D+3 (3일후 정산)</SelectItem>
+                          <SelectItem value="D+7">D+7 (주간 정산)</SelectItem>
+                          <SelectItem value="M+1">M+1 (월간 정산)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {pgProvider === 'toss' && (
-                      <div className="flex justify-end pt-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="bg-white border-blue-200 text-blue-700 hover:bg-blue-100 font-bold text-xs"
-                          onClick={() => {
-                            setMid(`SELLER_${tenant?.slug?.toUpperCase() || 'FAITH'}`);
-                            setApiKey('test_ck_D5Ge233da91z4961zP0g3N7kE1a3');
-                            setSecretKey('test_sk_zXL1G2MndWB257W3b983wnqwB86e');
-                            toast.info('토스페이먼츠 일반결제 테스트 계정 정보가 채워졌습니다.');
-                          }}
-                        >
-                          토스페이먼츠 일반결제 테스트 계정 정보 채우기
-                        </Button>
-                      </div>
-                    )}
-
                     {pgProvider === 'nanopay' && (
-                      <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900">
+                      <>
                         <div className="space-y-2">
                           <Label htmlFor="loginId" className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" />
-                            로그인 ID (loginId) <span className="text-red-500">*</span>
+                            <User className="h-4 w-4" />
+                            상점 로그인 ID (loginId)
                           </Label>
                           <Input
                             id="loginId"
                             value={loginId}
                             onChange={(e) => setLoginId(e.target.value)}
                             placeholder="예: smbtestshop"
-                            className="bg-white dark:bg-zinc-900"
                             autoComplete="off"
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="iv" className="flex items-center gap-2">
-                            <Lock className="h-4 w-4" />
-                            초기화 벡터 (IV) <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="relative">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="iv" className="flex items-center gap-2">
+                              <Lock className="h-4 w-4" />
+                              암호화 벡터 (IV)
+                            </Label>
+                            <div className="relative">
+                              <Input
+                                id="iv"
+                                type={showIv ? 'text' : 'password'}
+                                value={iv}
+                                onChange={(e) => setIv(e.target.value)}
+                                placeholder="IV 값 입력"
+                                className="pr-10"
+                                autoComplete="new-password"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full"
+                                onClick={() => setShowIv(!showIv)}
+                              >
+                                {showIv ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="ver" className="flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4" />
+                              버전 (ver)
+                            </Label>
                             <Input
-                              id="iv"
-                              type={showIv ? 'text' : 'password'}
-                              value={iv}
-                              onChange={(e) => setIv(e.target.value)}
-                              placeholder="IV 값 입력"
-                              className="pr-10 bg-white dark:bg-zinc-900"
-                              autoComplete="new-password"
+                              id="ver"
+                              value={ver}
+                              onChange={(e) => setVer(e.target.value)}
+                              placeholder="예: smbtest"
+                              autoComplete="off"
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0 h-full"
-                              onClick={() => setShowIv(!showIv)}
-                            >
-                              {showIv ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
                           </div>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="ver" className="flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4" />
-                            버전 (ver) <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            id="ver"
-                            value={ver}
-                            onChange={(e) => setVer(e.target.value)}
-                            placeholder="예: smbtest 또는 1.0"
-                            className="bg-white dark:bg-zinc-900"
-                            autoComplete="off"
-                          />
-                        </div>
-
-                        <div className="flex justify-end mt-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="bg-white border-purple-200 text-purple-700 hover:bg-purple-100"
-                            onClick={() => {
-                              setMid('240000006');
-                              setLoginId('smbtestshop');
-                              setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
-                              setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
-                              setIv('vgqTyX5tBqnMXB68');
-                              setVer('smbtest');
-                              toast.info('나노PG 일반결제 테스트 계정 정보가 채워졌습니다.');
-                            }}
-                          >
-                            나노PG 일반결제 테스트 계정 정보 채우기
-                          </Button>
-                        </div>
-                      </div>
+                      </>
                     )}
 
-                    {/* 결제 수단 사용 여부 체크박스 섹션 */}
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                      <div className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                        <span>💳</span>
-                        <span>신도 제공 결제 수단 선택</span>
-                      </div>
-                      <p className="text-xs text-slate-500 mb-2">
-                        체크 해제된 결제 수단은 신도 결제 페이지에서 즉시 숨김 처리됩니다.
-                      </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100/60 transition-colors">
+                    <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">허용할 수납 결제 수단 선택</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <label className="flex items-center gap-2 p-3 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors shadow-2xs">
                           <input
                             type="checkbox"
                             checked={enableCard}
                             onChange={(e) => setEnableCard(e.target.checked)}
-                            className="h-4 w-4 rounded text-blue-600 border-gray-300"
+                            className="h-4 w-4 rounded text-purple-600 border-gray-300 focus:ring-purple-500"
                           />
-                          <span className="text-xs font-semibold text-slate-700">💳 신용/체크카드</span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                            <CreditCard className="h-4 w-4 text-purple-600" />
+                            신용 / 체크카드
+                          </span>
                         </label>
 
-                        <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100/60 transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={enableEasyPayment}
-                            onChange={(e) => setEnableEasyPayment(e.target.checked)}
-                            className="h-4 w-4 rounded text-amber-500 border-gray-300"
-                          />
-                          <span className="text-xs font-semibold text-slate-700">⚡ 간편결제 (카카오/네이버/토스)</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100/60 transition-colors">
+                        <label className="flex items-center gap-2 p-3 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors shadow-2xs">
                           <input
                             type="checkbox"
                             checked={enableVBank}
                             onChange={(e) => setEnableVBank(e.target.checked)}
-                            className="h-4 w-4 rounded text-emerald-600 border-gray-300"
+                            className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
                           />
-                          <span className="text-xs font-semibold text-slate-700">🏦 가상계좌 (무통장 입금)</span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                            <Building2 className="h-4 w-4 text-indigo-600" />
+                            가상계좌 (무통장 입금)
+                          </span>
                         </label>
                       </div>
                     </div>
-
-                    {pgProvider === 'nanopay' && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex gap-2">
-                          <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                          <div className="text-sm text-blue-900">
-                            <p className="font-medium mb-1">나노PG API 키 및 설정 안내</p>
-                            <ul className="text-xs space-y-1 text-blue-800">
-                              <li>• 테스트계정 정보 입력시 정상적으로 결제 기능을 테스트해보실 수 있습니다.</li>
-                              <li>• 가맹점 코드(shopcode) 및 API Key/Secret Key는 나노PG 계약 시 발급받은 정보를 입력하세요.</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
-            ) : (
-              /* ==================== BILLING KEY PAYMENT TAB ==================== */
+            )}
+
+            {paymentTab === 'billing' && (
               !pgProvider || pgProvider === 'none' ? (
                 <div className="py-12 px-6 text-center bg-slate-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 space-y-3.5 animate-fade-in">
                   <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200 dark:border-amber-900/50 shadow-2xs">
@@ -1070,126 +1136,29 @@ export default function TenantDetailPage() {
                       정기결제(빌링키) 설정을 등록하려면 [일반 결제 설정] 탭에서 먼저 PG사(토스페이먼츠 또는 나노PG)를 선택해 주세요.
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs font-bold border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
-                    onClick={() => setPaymentTab('general')}
-                  >
-                    일반 결제 설정 탭으로 이동
-                  </Button>
-                </div>
-              ) : pgProvider === 'toss' ? (
-                <div className="space-y-4 animate-fade-in p-4 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-200/80 dark:border-blue-900/50">
-                  <div className="p-3.5 bg-blue-100/80 dark:bg-blue-900/50 rounded-xl text-xs text-blue-900 dark:text-blue-200 font-medium leading-relaxed">
-                    ⚡ <strong>토스페이먼츠(TossPayments) 정기결제(빌링키) & 파트너 정산 연동 안내</strong><br />
-                    매월/매주 신도 자동 청구 결제(십일조, 교무금 등)를 처리하기 위한 토스페이먼츠 정기결제 빌링 API Client Key, Secret Key 및 JWE 보안 암호화 키를 설정합니다.
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tossBillClientKey" className="flex items-center gap-2 font-bold text-blue-950 dark:text-blue-200">
-                      <Key className="h-4 w-4 text-blue-600" />
-                      정기결제 빌링 Client Key (API Key)
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="tossBillClientKey"
-                        type={showBillApiKey ? 'text' : 'password'}
-                        value={billApiKey}
-                        onChange={(e) => setBillApiKey(e.target.value)}
-                        placeholder="토스페이먼츠 빌링 Client Key 입력 (test_ck_...)"
-                        className="pr-10 bg-white dark:bg-zinc-900 font-semibold font-mono text-sm"
-                        autoComplete="new-password"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full"
-                        onClick={() => setShowBillApiKey(!showBillApiKey)}
-                      >
-                        {showBillApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tossBillSecretKey" className="flex items-center gap-2 font-bold text-blue-950 dark:text-blue-200">
-                      <Lock className="h-4 w-4 text-blue-600" />
-                      정기결제 빌링 Secret Key
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="tossBillSecretKey"
-                        type={showBillSecretKey ? 'text' : 'password'}
-                        value={billSecretKey}
-                        onChange={(e) => setBillSecretKey(e.target.value)}
-                        placeholder="토스페이먼츠 빌링 Secret Key 입력 (test_sk_...)"
-                        className="pr-10 bg-white dark:bg-zinc-900 font-semibold font-mono text-sm"
-                        autoComplete="new-password"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full"
-                        onClick={() => setShowBillSecretKey(!showBillSecretKey)}
-                      >
-                        {showBillSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tossSubmallId" className="flex items-center gap-2 font-bold text-blue-950 dark:text-blue-200">
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                      토스 v2 파트너 서브몰(셀러) ID
-                    </Label>
-                    <Input
-                      id="tossSubmallId"
-                      value={billMid}
-                      onChange={(e) => setBillMid(e.target.value)}
-                      placeholder="SELLER_FAITH_..."
-                      className="bg-white dark:bg-zinc-900 font-semibold font-mono text-sm"
-                      autoComplete="off"
-                    />
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="bg-white border-blue-300 text-blue-800 hover:bg-blue-100 font-bold"
-                      onClick={() => {
-                        setBillMid(`SELLER_${tenant?.slug?.toUpperCase() || 'FAITH'}`);
-                        setBillApiKey('test_ck_D5Ge233da91z4961zP0g3N7kE1a3');
-                        setBillSecretKey('test_sk_zXL1G2MndWB257W3b983wnqwB86e');
-                        toast.info('토스페이먼츠 정기결제(빌링키) 테스트 계정 정보가 채워졌습니다.');
-                      }}
-                    >
-                      토스페이먼츠 빌링 테스트 계정 정보 채우기
-                    </Button>
-                  </div>
                 </div>
               ) : (
-                <div className="space-y-4 animate-fade-in p-4 bg-amber-50/50 dark:bg-amber-950/20 rounded-2xl border border-amber-200/80 dark:border-amber-900/50">
-                  <div className="p-3.5 bg-amber-100/70 dark:bg-amber-900/40 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-medium leading-relaxed">
-                    ⚡ <strong>나노페이 정기결제(빌링키) 연동 v2.2.1 안내</strong><br />
-                    매월 신도 자동 청구 결제를 처리하기 위한 정기결제 전용 가맹점 코드(Bill MID) 및 빌링 API Key를 설정합니다. 미입력 시 일반 결제 가맹점 정보가 기본 호환 적용됩니다.
+                <div className="space-y-4 animate-fade-in p-5 bg-amber-50/40 dark:bg-zinc-900/60 rounded-2xl border border-amber-200/80 dark:border-amber-900/50">
+                  <div className="bg-amber-100/70 border border-amber-300/80 p-3.5 rounded-xl flex items-start gap-3 text-amber-900">
+                    <Zap className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                      <p className="font-bold text-amber-950">정기결제 (빌링키 자동청구) 연동 안내</p>
+                      <p className="text-amber-800">
+                        선택된 PG사({pgProvider === 'nanopay' ? '나노PG' : '토스페이먼츠'})의 빌링키 발급용 전용 상점 식별자 및 암호화 키를 등록하세요.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="billMid" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
                       <CreditCard className="h-4 w-4 text-amber-600" />
-                      정기결제 전용 가맹점 코드 (Bill MID / shopcode)
+                      정기결제 전용 가맹점 식별자 (MID / ShopCode)
                     </Label>
                     <Input
                       id="billMid"
                       value={billMid}
                       onChange={(e) => setBillMid(e.target.value)}
-                      placeholder="미입력 시 일반 가맹점 코드(240000006) 사용"
+                      placeholder="예: 240000005"
                       className="bg-white dark:bg-zinc-900 font-semibold"
                       autoComplete="off"
                     />
@@ -1198,7 +1167,7 @@ export default function TenantDetailPage() {
                   <div className="space-y-2">
                     <Label htmlFor="billApiKey" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
                       <Key className="h-4 w-4 text-amber-600" />
-                      정기결제 빌링 API Key
+                      정기결제 전용 API Key (Client Key)
                     </Label>
                     <div className="relative">
                       <Input
@@ -1206,7 +1175,7 @@ export default function TenantDetailPage() {
                         type={showBillApiKey ? 'text' : 'password'}
                         value={billApiKey}
                         onChange={(e) => setBillApiKey(e.target.value)}
-                        placeholder="나노페이 발급 빌링 전용 API Key 입력"
+                        placeholder="나노페이 발급 빌링 API Key 입력"
                         className="pr-10 bg-white dark:bg-zinc-900 font-semibold"
                         autoComplete="new-password"
                       />
@@ -1306,6 +1275,441 @@ export default function TenantDetailPage() {
             </div>
           </CardContent>
         </Card>
+        )}
+
+        {/* ── 탭 3: 간편결제 설정 (카카오페이 / 네이버페이 / 토스페이) ── */}
+        {activeTab === 'easypay' && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                    <Zap className="h-5 w-5 text-amber-500 fill-amber-400" />
+                    간편결제 계정 설정 (카카오페이 / 네이버페이 / 토스페이)
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 mt-1">
+                    가맹 단체별 간편결제 서비스(카카오페이, 네이버페이, 토스페이) 직통 가맹점 계정을 독립적으로 관리합니다.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Easy Pay Sub-Tabs */}
+              <div className="flex flex-col sm:flex-row gap-2 p-1.5 bg-slate-100 dark:bg-zinc-800 rounded-xl mb-5">
+                <button
+                  type="button"
+                  className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    easyPayTab === 'kakaopay'
+                      ? 'bg-[#FEE500] text-[#3C1E1E] shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400'
+                  }`}
+                  onClick={() => setEasyPayTab('kakaopay')}
+                >
+                  <KakaoPayLogo />
+                  <span>계정 설정 (CID)</span>
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    easyPayTab === 'naverpay'
+                      ? 'bg-[#03CF5D] text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400'
+                  }`}
+                  onClick={() => setEasyPayTab('naverpay')}
+                >
+                  <NaverPayLogo />
+                  <span>계정 설정 (파트너 ID)</span>
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    easyPayTab === 'tosspay'
+                      ? 'bg-[#0050FF] text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400'
+                  }`}
+                  onClick={() => setEasyPayTab('tosspay')}
+                >
+                  <TossPayLogo />
+                  <span>계정 설정 (가맹점 ID)</span>
+                </button>
+              </div>
+
+              {/* ==================== 1. KAKAO PAY TAB ==================== */}
+              {easyPayTab === 'kakaopay' && (
+                <div className="space-y-5 animate-fade-in p-5 bg-[#FFFDE7]/80 dark:bg-zinc-900/60 rounded-2xl border border-[#FBC02D]/60 dark:border-amber-900/50">
+                  {/* 상단 서비스 사용/미사용 설정 바 */}
+                  <div className="bg-white dark:bg-zinc-950 border border-[#FBC02D]/80 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <KakaoPayLogo />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                          <span>카카오페이 수납 활성화 여부</span> <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-500 font-medium">
+                          사용으로 선택된 경우에만 신도 봉헌/기부 결제 페이지의 간편결제 옵션에 노출됩니다.
+                        </p>
+                      </div>
+                    </div>
+                    <Select value={enableKakaoPay ? 'true' : 'false'} onValueChange={(val) => setEnableKakaoPay(val === 'true')}>
+                      <SelectTrigger className={`w-36 h-10 text-xs font-bold ${enableKakaoPay ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-600 border-slate-300'}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">🟢 사용함 (활성화)</SelectItem>
+                        <SelectItem value="false">🔴 미사용 (숨김)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="bg-[#FFFDE7] border border-[#FBC02D] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="space-y-1">
+                      <div className="text-xs font-black text-[#E65100] flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-[#E65100]" /> 카카오페이 공식 테스트 계정 (TC0ONETIME) 1클릭 설정
+                      </div>
+                      <p className="text-xs text-[#3E2723] font-medium leading-relaxed">
+                        카카오페이 개발자 센터 공식 테스트 가맹점 CID(`TC0ONETIME`) 및 Secret Key(`DEV_SECRET_KEY`)로 자동 채웁니다.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setKakaoCid('TC0ONETIME');
+                        setKakaoSecretKey('DEV_SECRET_KEY');
+                        setKakaoMode('test');
+                        setEnableKakaoPay(true);
+                        setEnableEasyPayment(true);
+                        toast.success('⚡ 카카오페이 공식 테스트 계정 (TC0ONETIME)으로 입력되었습니다.');
+                      }}
+                      className="bg-[#FEE500] hover:bg-[#FDD835] text-[#3C1E1E] font-black text-xs h-9 px-4 rounded-xl cursor-pointer border border-[#FBC02D] shrink-0 shadow-xs"
+                    >
+                      ⚡ 테스트 계정 자동 입력
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="kakaoCid" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        카카오페이 가맹점 CID (Client ID) *
+                      </Label>
+                      <Input
+                        id="kakaoCid"
+                        value={kakaoCid}
+                        onChange={(e) => setKakaoCid(e.target.value)}
+                        placeholder="예: TC0ONETIME 또는 발급받은 CID 10자리"
+                        className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950"
+                      />
+                      <p className="text-[11px] text-zinc-500 font-medium">
+                        카카오페이 파트너센터에서 발급받은 단일결제 가맹점 CID (기본: TC0ONETIME)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="kakaoSecretKey" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        카카오페이 Secret Key (API 키) *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="kakaoSecretKey"
+                          type={showKakaoSecretKey ? 'text' : 'password'}
+                          value={kakaoSecretKey}
+                          onChange={(e) => setKakaoSecretKey(e.target.value)}
+                          placeholder="예: DEV_SECRET_KEY 또는 발급받은 Secret Key"
+                          className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowKakaoSecretKey(!showKakaoSecretKey)}
+                        >
+                          {showKakaoSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 font-medium">
+                        카카오페이 Open API 통신 인증용 Secret Key (기본: DEV_SECRET_KEY)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">카카오페이 결제 연동 환경</Label>
+                    <Select value={kakaoMode} onValueChange={(val: 'test' | 'live') => setKakaoMode(val)}>
+                      <SelectTrigger className="h-11 text-xs font-bold bg-white dark:bg-zinc-950">
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="test">🟡 개발자 테스트 샌드박스 (Sandbox TC0ONETIME)</SelectItem>
+                        <SelectItem value="live">🔴 실결제 운용 가맹점 (Live Production)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* ==================== 2. NAVER PAY TAB ==================== */}
+              {easyPayTab === 'naverpay' && (
+                <div className="space-y-5 animate-fade-in p-5 bg-[#E8F5E9]/80 dark:bg-zinc-900/60 rounded-2xl border border-[#03CF5D]/60 dark:border-emerald-900/50">
+                  {/* 상단 서비스 사용/미사용 설정 바 */}
+                  <div className="bg-white dark:bg-zinc-950 border border-[#03CF5D]/80 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <NaverPayLogo />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                          <span>네이버페이 수납 활성화 여부</span> <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-500 font-medium">
+                          사용으로 선택된 경우에만 신도 봉헌/기부 결제 페이지의 간편결제 옵션에 노출됩니다.
+                        </p>
+                      </div>
+                    </div>
+                    <Select value={enableNaverPay ? 'true' : 'false'} onValueChange={(val) => setEnableNaverPay(val === 'true')}>
+                      <SelectTrigger className={`w-36 h-10 text-xs font-bold ${enableNaverPay ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-600 border-slate-300'}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">🟢 사용함 (활성화)</SelectItem>
+                        <SelectItem value="false">🔴 미사용 (숨김)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="bg-[#E8F5E9] border border-[#03CF5D] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="space-y-1">
+                      <div className="text-xs font-black text-[#1b5e20] flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-[#03CF5D]" /> 네이버페이 개발자 테스트 계정 1클릭 설정
+                      </div>
+                      <p className="text-xs text-[#1b5e20] font-medium leading-relaxed">
+                        네이버페이 센터 테스트 파트너 ID(`NAV_PARTNER_999`) 및 Client Secret으로 자동 채웁니다.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setNaverPartnerId('NAV_PARTNER_999');
+                        setNaverClientId('CLIENT_ID_123');
+                        setNaverClientSecret('CLIENT_SECRET_456');
+                        setNaverMode('test');
+                        setEnableNaverPay(true);
+                        setEnableEasyPayment(true);
+                        toast.success('⚡ 네이버페이 테스트 계정 정보가 입력되었습니다.');
+                      }}
+                      className="bg-[#03CF5D] hover:bg-[#02b350] text-white font-black text-xs h-9 px-4 rounded-xl cursor-pointer border border-[#03CF5D] shrink-0 shadow-xs"
+                    >
+                      ⚡ 테스트 계정 자동 입력
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="naverPartnerId" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        네이버페이 파트너 ID (Partner ID) *
+                      </Label>
+                      <Input
+                        id="naverPartnerId"
+                        value={naverPartnerId}
+                        onChange={(e) => setNaverPartnerId(e.target.value)}
+                        placeholder="예: NAV_PARTNER_999 또는 발급받은 파트너 ID"
+                        className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="naverClientId" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        네이버페이 Client ID (클라이언트 ID) *
+                      </Label>
+                      <Input
+                        id="naverClientId"
+                        value={naverClientId}
+                        onChange={(e) => setNaverClientId(e.target.value)}
+                        placeholder="예: CLIENT_ID_123"
+                        className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="naverClientSecret" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        네이버페이 Client Secret (보안 인증 키) *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="naverClientSecret"
+                          type={showNaverSecret ? 'text' : 'password'}
+                          value={naverClientSecret}
+                          onChange={(e) => setNaverClientSecret(e.target.value)}
+                          placeholder="예: CLIENT_SECRET_456"
+                          className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowNaverSecret(!showNaverSecret)}
+                        >
+                          {showNaverSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">네이버페이 연동 환경</Label>
+                    <Select value={naverMode} onValueChange={(val: 'test' | 'live') => setNaverMode(val)}>
+                      <SelectTrigger className="h-11 text-xs font-bold bg-white dark:bg-zinc-950">
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="test">🟡 개발자 테스트 샌드박스 (Sandbox)</SelectItem>
+                        <SelectItem value="live">🔴 실결제 운용 가맹점 (Live Production)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* ==================== 3. TOSS PAY TAB ==================== */}
+              {easyPayTab === 'tosspay' && (
+                <div className="space-y-5 animate-fade-in p-5 bg-[#E3F2FD]/80 dark:bg-zinc-900/60 rounded-2xl border border-[#0050FF]/60 dark:border-blue-900/50">
+                  {/* 상단 서비스 사용/미사용 설정 바 */}
+                  <div className="bg-white dark:bg-zinc-950 border border-[#0050FF]/80 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <TossPayLogo />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                          <span>토스페이 수납 활성화 여부</span> <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-[11.5px] text-slate-500 font-medium">
+                          사용으로 선택된 경우에만 신도 봉헌/기부 결제 페이지의 간편결제 옵션에 노출됩니다.
+                        </p>
+                      </div>
+                    </div>
+                    <Select value={enableTossPay ? 'true' : 'false'} onValueChange={(val) => setEnableTossPay(val === 'true')}>
+                      <SelectTrigger className={`w-36 h-10 text-xs font-bold ${enableTossPay ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-600 border-slate-300'}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">🟢 사용함 (활성화)</SelectItem>
+                        <SelectItem value="false">🔴 미사용 (숨김)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="bg-[#E3F2FD] border border-[#0050FF] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="space-y-1">
+                      <div className="text-xs font-black text-[#0D47A1] flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-[#0050FF]" /> 토스페이 개발자 테스트 계정 1클릭 설정
+                      </div>
+                      <p className="text-xs text-[#0D47A1] font-medium leading-relaxed">
+                        토스페이 가맹점 MID(`tosspay_mid_1234`) 및 API Client Key로 자동 채웁니다.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setTossPayMid('tosspay_mid_1234');
+                        setTossPayApiKey('test_ck_tosspay_123');
+                        setTossPaySecretKey('test_sk_tosspay_456');
+                        setTossPayMode('test');
+                        setEnableTossPay(true);
+                        setEnableEasyPayment(true);
+                        toast.success('⚡ 토스페이 테스트 계정 정보가 입력되었습니다.');
+                      }}
+                      className="bg-[#0050FF] hover:bg-[#0040D0] text-white font-black text-xs h-9 px-4 rounded-xl cursor-pointer border border-[#0050FF] shrink-0 shadow-xs"
+                    >
+                      ⚡ 테스트 계정 자동 입력
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="tossPayMid" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        토스페이 가맹점 MID (Merchant ID) *
+                      </Label>
+                      <Input
+                        id="tossPayMid"
+                        value={tossPayMid}
+                        onChange={(e) => setTossPayMid(e.target.value)}
+                        placeholder="예: tosspay_mid_1234"
+                        className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="tossPayApiKey" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        토스페이 API Client Key *
+                      </Label>
+                      <Input
+                        id="tossPayApiKey"
+                        value={tossPayApiKey}
+                        onChange={(e) => setTossPayApiKey(e.target.value)}
+                        placeholder="예: test_ck_tosspay_123"
+                        className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="tossPaySecretKey" className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                        토스페이 Secret Key (시크릿 키) *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="tossPaySecretKey"
+                          type={showTossPaySecret ? 'text' : 'password'}
+                          value={tossPaySecretKey}
+                          onChange={(e) => setTossPaySecretKey(e.target.value)}
+                          placeholder="예: test_sk_tosspay_456"
+                          className="font-mono text-xs font-bold h-11 bg-white dark:bg-zinc-950 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowTossPaySecret(!showTossPaySecret)}
+                        >
+                          {showTossPaySecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">토스페이 연동 환경</Label>
+                    <Select value={tossPayMode} onValueChange={(val: 'test' | 'live') => setTossPayMode(val)}>
+                      <SelectTrigger className="h-11 text-xs font-bold bg-white dark:bg-zinc-950">
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="test">🟡 개발자 테스트 샌드박스 (Sandbox)</SelectItem>
+                        <SelectItem value="live">🔴 실결제 운용 가맹점 (Live Production)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin')}
+                  disabled={isSaving}
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={handleSavePaymentConfig}
+                  disabled={isSaving}
+                  className="bg-green-600 hover:bg-green-700 font-bold"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? '저장 중...' : '결제 설정 저장'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

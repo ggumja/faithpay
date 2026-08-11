@@ -6,7 +6,6 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
-import { Badge } from '../../components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import {
@@ -23,12 +22,11 @@ import {
   Info,
   Upload,
   Search,
+  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { openDaumPostcode } from '../../utils/daumPostcode';
 import { Separator } from '../../components/ui/separator';
-import { Switch } from '../../components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 interface ScheduleItem {
   label: string;
@@ -66,7 +64,7 @@ export default function OrganizationSettings() {
       setLogoUrl(tenant.logoUrl || '');
       setSchedules([...tenant.schedule]);
     }
-  }, [tenantSlug, setCurrentTenant]);
+  }, [tenantSlug, setCurrentTenant, tenants]);
 
   if (!currentTenant) {
     return (
@@ -169,7 +167,7 @@ export default function OrganizationSettings() {
 
     setTimeout(() => {
       setIsSaving(false);
-      toast.success('단체 정보가 저장되었습니다');
+      toast.success('단체 기본정보가 저장되었습니다');
     }, 500);
   };
 
@@ -232,7 +230,7 @@ export default function OrganizationSettings() {
                 <h1 className="text-3xl font-bold">단체 기본정보</h1>
               </div>
               <p className="text-muted-foreground">
-                단체의 기본 정보를 관리하세요
+                단체의 기본 정보 및 주소, 연락처, 안내 일정을 관리하세요
               </p>
             </div>
 
@@ -495,6 +493,30 @@ export default function OrganizationSettings() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* 🛡️ 본사 PG 전용 관리 안내 카드 */}
+            <Card className="mb-6 bg-slate-900 text-white border-slate-800 shadow-md">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="h-6 w-6 text-[#FEE500] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-sm text-[#FEE500] flex items-center gap-1">
+                      🔒 전자결제대행사(PG) 및 카카오페이 가맹점 관리 정책 안내
+                    </p>
+                    <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                      보안 및 금융 수수료율 무단 변경 방지를 위해, <strong>PG 가맹점 MID, API 키, 카카오페이 CID 정보는 FaithPay 본사 시스템 관리자(/system/admin) 전용 관리 항목</strong>으로 보호됩니다.
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-normal pt-1">
+                      • 현재 연동 PG: <span className="text-white font-bold">{currentTenant.paymentConfig?.pgProvider === 'nanopay' ? '나노페이' : '토스페이먼츠'}</span>
+                      <span className="mx-2">|</span>
+                      • 카카오페이 CID: <span className="text-[#FEE500] font-bold font-mono">{currentTenant.paymentConfig?.kakaoCid || 'TC0ONETIME'}</span>
+                      <span className="mx-2">|</span>
+                      • 계약 정보 변경은 본사 파트너 담당자에게 요청해주세요.
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

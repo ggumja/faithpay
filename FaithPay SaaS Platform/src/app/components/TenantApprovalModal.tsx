@@ -79,7 +79,8 @@ export default function TenantApprovalModal({ tenant, onApprove, onReject, onClo
 
             <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-zinc-300 pt-2 border-t border-slate-200 dark:border-zinc-700">
               <div><strong>도메인 주소:</strong> /{tenant.slug}</div>
-              <div><strong>고유(사업자)번호:</strong> {tenant.id || '240-02-12345'}</div>
+              <div><strong>고유번호증 번호:</strong> {tenant.uniqueNumber || tenant.businessInfo?.uniqueNumber || '240-82-12345'}</div>
+              <div><strong>사업자등록번호:</strong> {tenant.businessRegistrationNumber || tenant.businessInfo?.registrationNumber || '미등록 (비영리)'}</div>
               <div><strong>대표 관리자:</strong> {tenant.contact?.name || '주지스님 / 담임목사'}</div>
               <div><strong>연락처:</strong> {tenant.contact?.phone || '010-1234-5678'}</div>
             </div>

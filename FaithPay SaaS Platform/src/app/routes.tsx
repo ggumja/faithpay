@@ -9,6 +9,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SystemAdminShell from "./pages/admin/SystemAdminShell";
 import SystemAdminDashboard from "./pages/admin/SystemAdminDashboard";
+import SystemAdminLogin from "./pages/admin/SystemAdminLogin";
 import TenantDetailPage from "./pages/admin/TenantDetailPage";
 import PendingTenantDetailPage from "./pages/admin/PendingTenantDetailPage";
 import DonationHistory from "./pages/admin/DonationHistory";
@@ -34,10 +35,13 @@ import PartnerManagement from "./pages/admin/PartnerManagement";
 import CommissionStatsPage from "./pages/admin/CommissionStatsPage";
 import MultiPartySettlementLedger from "./pages/admin/components/MultiPartySettlementLedger";
 import TenantStatsPage from "./pages/admin/TenantStatsPage";
+import AdminRedirectGuard from "./pages/admin/AdminRedirectGuard";
 
 
 
 import TenantKiosk from "./pages/TenantKiosk";
+import KakaoPaySandbox from "./pages/KakaoPaySandbox";
+import KakaoPayApprovePage from "./pages/KakaoPayApprovePage";
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +50,14 @@ export const router = createBrowserRouter([
       {
         path: "/",
         Component: Root,
+      },
+      {
+        path: "/kakaopay/sandbox",
+        Component: KakaoPaySandbox,
+      },
+      {
+        path: "/kakaopay/approve",
+        Component: KakaoPayApprovePage,
       },
       {
         path: "/partner/login",
@@ -68,12 +80,20 @@ export const router = createBrowserRouter([
         Component: PartnerTenantCreate,
       },
       {
+        path: "/admin",
+        Component: AdminRedirectGuard,
+      },
+      {
         path: "/admin/login",
         Component: AdminLogin,
       },
       {
         path: "/:tenantSlug/admin/login",
         Component: AdminLogin,
+      },
+      {
+        path: "/system/login",
+        Component: SystemAdminLogin,
       },
       // ── System Admin (공통 사이드바 셸) ──
       {

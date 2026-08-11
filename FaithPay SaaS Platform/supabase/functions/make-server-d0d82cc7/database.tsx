@@ -22,6 +22,15 @@ export interface Tenant {
   bannerImages: string[];
   description: string;
   address: string;
+  uniqueNumber?: string;              // 종교/비영리 단체 고유번호증 번호 (예: 240-82-12345)
+  businessRegistrationNumber?: string; // 수익사업용 사업자등록번호 (선택사항, 바자회/물품 판매용)
+  businessInfo?: {
+    uniqueNumber?: string;
+    registrationNumber?: string;
+    address?: string;
+    representativeName?: string;
+    taxInvoiceEmail?: string;
+  };
   contact: {
     phone: string;
     email: string;
@@ -44,6 +53,21 @@ export interface Tenant {
   updatedAt: string;
 }
 
+export interface PaymentProviderConfig {
+  id?: string;
+  tenantId: string;
+  providerCode: string; // 'tosspayments' | 'nanopay' | 'kakaopay' | 'naverpay'
+  providerName: string; // '토스페이먼츠' | '나노페이' | '카카오페이' | '네이버페이'
+  providerType: 'pg' | 'easypay' | 'vbank';
+  merchantId?: string;
+  clientKey?: string;
+  secretKey?: string;
+  mode: 'test' | 'live';
+  isEnabled: boolean;
+  configMetadata?: Record<string, any>;
+  updatedAt?: string;
+}
+
 export interface PaymentConfig {
   tenantId: string;
   pgProvider: string;
@@ -53,6 +77,21 @@ export interface PaymentConfig {
   loginId?: string;
   iv?: string;
   ver?: string;
+  kakaoCid?: string;
+  kakaoSecretKey?: string;
+  kakaoMode?: 'test' | 'live';
+  enableKakaoPay?: boolean;
+  naverPartnerId?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
+  naverMode?: 'test' | 'live';
+  enableNaverPay?: boolean;
+  tossPayMid?: string;
+  tossPayApiKey?: string;
+  tossPaySecretKey?: string;
+  tossPayMode?: 'test' | 'live';
+  enableTossPay?: boolean;
+  providerConfigs?: Record<string, PaymentProviderConfig>;
   enableCard?: boolean;
   enableEasyPayment?: boolean;
   enableVBank?: boolean;
@@ -485,8 +524,22 @@ export async function getDonationById(tenantId: string, id: string): Promise<Don
 }
 
 export async function getDonationsByTenant(tenantId: string): Promise<Donation[]> {
-  const donations = await kv.getByPrefix(`donation:${tenantId}:`);
-  return donations.sort((a: Donation, b: Donation) => 
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const searchIds = new Set<string>([tenantId]);
+  if (tenant) {
+    if (tenant.id) searchIds.add(tenant.id);
+    if (tenant.slug) searchIds.add(tenant.slug);
+  }
+
+  const allDonationsMap = new Map<string, Donation>();
+  for (const tid of Array.from(searchIds)) {
+    const list = await kv.getByPrefix(`donation:${tid}:`);
+    list.forEach((d: Donation) => {
+      if (d && d.id) allDonationsMap.set(d.id, d);
+    });
+  }
+
+  return Array.from(allDonationsMap.values()).sort((a: Donation, b: Donation) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
@@ -1647,11 +1700,11 @@ export async function seed800kLedger(): Promise<boolean> {
   const supabase = pgClient();
   await resetTestDonationsAndLedger();
 
-  // 각원사 10만원 3건 + 50만원 1건 생성 (총 80만원, 4건)
-  await createTestDonationWithSplit('gakwonsa', 100000, '홍길동 성도', '신용카드');
-  await createTestDonationWithSplit('gakwonsa', 100000, '김미선 집사', '카카오페이');
+  // 각원사 10만원 3건 + 50만원 1건 생성 (하동현 01071404795 기록 포함)
+  await createTestDonationWithSplit('gakwonsa', 100000, '하동현 성도', '신용카드', '01071404795', '청련');
+  await createTestDonationWithSplit('gakwonsa', 100000, '김미선 집사', '카카오페이', '01022223333');
   await createTestDonationWithSplit('gakwonsa', 100000, '무명 성도', '토스페이');
-  await createTestDonationWithSplit('gakwonsa', 500000, '특별 보시 성도', '신용카드');
+  await createTestDonationWithSplit('gakwonsa', 500000, '특별 보시 성도', '신용카드', '01034567890');
 
   return true;
 }

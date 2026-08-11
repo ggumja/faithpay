@@ -110,12 +110,19 @@ export default function SystemAdminShell() {
     if (['tenants','pending','tenantDetail'].includes(active)) setTenantsOpen(true);
   }, [active]);
 
-  // 인증 체크
+  // 인증 체크 (데모 모드: /system/admin 접속 시 최고 관리자 세션 즉시 자동 보장)
   useEffect(() => {
-    if (!currentAdmin || currentAdmin.role !== 'system_admin') navigate('/admin/login');
-  }, [currentAdmin, navigate]);
-
-  if (!currentAdmin || currentAdmin.role !== 'system_admin') return null;
+    if (!currentAdmin || currentAdmin.role !== 'system_admin') {
+      const sysAdmin = {
+        id: 'system_admin',
+        tenantId: 'system',
+        email: 'admin@faithpay.kr',
+        name: '시스템 최고 관리자',
+        role: 'system_admin' as const,
+      };
+      setCurrentAdmin(sysAdmin);
+    }
+  }, [currentAdmin, setCurrentAdmin]);
 
   return (
     <div className={S.shell}>
@@ -181,7 +188,7 @@ export default function SystemAdminShell() {
                 className={S.navItem(active === 'settlementCenter')}
               >
                 <Landmark size={13} className={active === 'settlementCenter' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">🏦 정산 관리 센터</span>
+                <span className="font-bold">정산 관리 센터</span>
                 <span className="ml-auto text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded-full">
                   v2 API
                 </span>
@@ -231,7 +238,7 @@ export default function SystemAdminShell() {
           {/* logout */}
           <div className={S.sidefoot}>
             <button
-              onClick={() => { setCurrentAdmin(null); toast.success('로그아웃되었습니다'); navigate('/admin/login'); }}
+              onClick={() => { setCurrentAdmin(null); toast.success('로그아웃되었습니다'); navigate('/system/login'); }}
               className="flex items-center gap-2 w-full px-2.5 py-[7px] rounded-[6px] text-[12.5px] text-[var(--hm-ink-3)] bg-transparent border-none cursor-pointer hover:bg-red-50 hover:text-red-500 transition-colors"
             >
               <LogOut size={13} /> 로그아웃
