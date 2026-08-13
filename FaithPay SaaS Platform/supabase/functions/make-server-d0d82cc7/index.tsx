@@ -318,12 +318,8 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       return c.json({ success: false, error: 'Donation not found' }, 404);
     }
     
-    if (donation.paymentStatus !== 'completed') {
-      return c.json({ success: false, error: 'Invalid donation status for cancellation' }, 400);
-    }
-
-    if (!donation.transactionId) {
-      donation.transactionId = donation.approveNo || `TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    if (donation.paymentStatus !== 'completed' || !donation.transactionId) {
+      return c.json({ success: false, error: 'PG 승인 거래 키(transactionId)가 존재하지 않는 거래건입니다.' }, 400);
     }
 
     // DB에서 테넌트 결제 설정 조회
