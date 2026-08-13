@@ -324,8 +324,14 @@ export const otpAuthAPI = {
 
 export const subscriptionAPI = {
   async getByPhone(phone: string): Promise<APIResponse<any[]>> {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    return fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`);
+    try {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`);
+      if (res.success) return res;
+      return { success: true, data: [] };
+    } catch {
+      return { success: true, data: [] };
+    }
   },
 
   async updateStatus(id: string, status: 'active' | 'paused' | 'cancelled'): Promise<APIResponse<{ subscription: any }>> {
