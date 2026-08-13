@@ -36,6 +36,7 @@ import CommissionStatsPage from "./pages/admin/CommissionStatsPage";
 import MultiPartySettlementLedger from "./pages/admin/components/MultiPartySettlementLedger";
 import TenantStatsPage from "./pages/admin/TenantStatsPage";
 import TenantStatisticsPage from "./pages/admin/TenantStatisticsPage";
+import RecurringPendingPage from "./pages/admin/RecurringPendingPage";
 import AdminRedirectGuard from "./pages/admin/AdminRedirectGuard";
 
 
@@ -180,6 +181,10 @@ export const router = createBrowserRouter([
       {
         path: "/:tenantSlug/admin/donations",
         Component: DonationHistory,
+      },
+      {
+        path: "/:tenantSlug/admin/recurring-pending",
+        Component: RecurringPendingPage,
       },
       {
         path: "/:tenantSlug/admin/statistics",

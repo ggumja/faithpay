@@ -6,6 +6,7 @@ import { Separator } from './ui/separator';
 import {
   LayoutDashboard,
   Heart,
+  Calendar,
   Users,
   MessageSquare,
   FileText,
@@ -30,6 +31,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: '대시보드', path: `/admin` },
     { id: 'donations', icon: Heart, label: '봉헌 내역', path: `/admin/donations` },
+    { id: 'recurring_pending', icon: Calendar, label: '정기결제 결제대기', path: `/admin/recurring-pending` },
     { id: 'statistics', icon: BarChart3, label: '마감 통계', path: `/admin/statistics` },
     { id: 'prayers', icon: MessageSquare, label: '기도문 관리', path: `/admin/prayers` },
     { id: 'menu', icon: FileText, label: '봉헌 메뉴', path: `/admin/menu` },
