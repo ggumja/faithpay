@@ -83,13 +83,14 @@ export default function BannerManagement() {
     );
   }
 
-  if (!currentAdmin || currentAdmin.role !== 'tenant_admin') {
+  const isAuthorized = currentAdmin && (currentAdmin.role === 'tenant_admin' || currentAdmin.role === 'system_admin');
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card>
           <CardHeader>
             <CardTitle>접근 권한 없음</CardTitle>
-            <CardDescription>이 페이지는 단체 관리자만 접근할 수 있습니다.</CardDescription>
+            <CardDescription>단체 관리자 또는 최고 관리자만 접근할 수 있습니다.</CardDescription>
           </CardHeader>
         </Card>
       </div>
