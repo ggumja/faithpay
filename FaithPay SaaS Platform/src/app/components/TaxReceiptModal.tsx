@@ -105,7 +105,7 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
               </tr>
               <tr>
                 <td className="border border-black p-2 bg-gray-50 font-semibold">대 표 자</td>
-                <td className="border border-black p-2">성불 주지스님 / 담임목사</td>
+                <td className="border border-black p-2">{tenant.contact?.name || tenant.representativeName || (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자'))}</td>
                 <td className="border border-black p-2 bg-gray-50 font-semibold">소 재 지</td>
                 <td className="border border-black p-2">{tenant.address || '서울특별시 종로구 인사동길 45'}</td>
               </tr>

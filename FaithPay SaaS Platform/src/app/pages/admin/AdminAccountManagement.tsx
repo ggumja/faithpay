@@ -152,7 +152,9 @@ export default function AdminAccountManagement() {
         return [
           {
             id: `admin-${tenant.id}-1`,
-            name: tenant.contact?.name || '담임목사 / 주지스님',
+            name: (tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사')
+              ? tenant.contact.name
+              : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자')),
             email: tenant.contact?.email || `admin@${tenant.slug}.or.kr`,
             phone: tenant.contact?.phone || '010-1234-5678',
             groupId: 'tenant_admin',

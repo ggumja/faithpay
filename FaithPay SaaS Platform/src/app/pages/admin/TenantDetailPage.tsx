@@ -683,13 +683,28 @@ export default function TenantDetailPage() {
 
               {/* 담당자 및 계정/사업자 정보 카드 섹션 */}
               <div className="md:col-span-2 border-t pt-4 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-zinc-800/40 p-4 rounded-xl">
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
-                    <User className="h-3.5 w-3.5 text-purple-600" />
-                    대표 관리자 (주지스님 / 담임목사)
-                  </Label>
-                  <Input value={tenant.contact?.name || '주지스님 / 담임목사'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
-                </div>
+                {(() => {
+                  const defaultLeaderTitle = tenant.terminology?.leaderTitle || (
+                    tenant.religionType === 'buddhist' ? '주지스님' :
+                    tenant.religionType === 'catholic' ? '주임신부' :
+                    tenant.religionType === 'protestant' ? '담임목사' : '대표자'
+                  );
+                  const adminDisplayName = (tenant.contact?.name && tenant.contact.name !== '주지스님 / 담임목사' && tenant.contact.name !== '담임목사 / 주지스님')
+                    ? tenant.contact.name
+                    : defaultLeaderTitle;
+
+                  return (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                          <User className="h-3.5 w-3.5 text-purple-600" />
+                          대표 관리자 ({defaultLeaderTitle})
+                        </Label>
+                        <Input value={adminDisplayName} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
+                      </div>
+                    </>
+                  );
+                })()}
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5 text-blue-600" />
@@ -771,10 +786,21 @@ export default function TenantDetailPage() {
               </h3>
 
               <div className="space-y-2">
-                {[
-                  { id: `admin-${tenant.id}`, name: tenant.contact?.name || '주지스님 / 담임목사', email: (tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `info@${tenant.slug}.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' },
-                  { id: `finance-${tenant.id}`, name: '재무/보시 실무 담당자', email: `finance@${tenant.slug}.or.kr`, role: 'finance_manager', createdAt: '2026-02-01' }
-                ].map((adminUser) => (
+                {(() => {
+                  const defaultLeaderTitle = tenant.terminology?.leaderTitle || (
+                    tenant.religionType === 'buddhist' ? '주지스님' :
+                    tenant.religionType === 'catholic' ? '주임신부' :
+                    tenant.religionType === 'protestant' ? '담임목사' : '대표자'
+                  );
+                  const adminDisplayName = (tenant.contact?.name && tenant.contact.name !== '주지스님 / 담임목사' && tenant.contact.name !== '담임목사 / 주지스님')
+                    ? tenant.contact.name
+                    : defaultLeaderTitle;
+
+                  return [
+                    { id: `admin-${tenant.id}`, name: adminDisplayName, email: (tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `info@${tenant.slug}.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' },
+                    { id: `finance-${tenant.id}`, name: '재무/보시 실무 담당자', email: `finance@${tenant.slug}.or.kr`, role: 'finance_manager', createdAt: '2026-02-01' }
+                  ];
+                })().map((adminUser) => (
                   <div
                     key={adminUser.id}
                     className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"

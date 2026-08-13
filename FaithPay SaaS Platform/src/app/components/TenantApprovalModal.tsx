@@ -81,7 +81,7 @@ export default function TenantApprovalModal({ tenant, onApprove, onReject, onClo
               <div><strong>도메인 주소:</strong> /{tenant.slug}</div>
               <div><strong>고유번호증 번호:</strong> {tenant.uniqueNumber || tenant.businessInfo?.uniqueNumber || '240-82-12345'}</div>
               <div><strong>사업자등록번호:</strong> {tenant.businessRegistrationNumber || tenant.businessInfo?.registrationNumber || '미등록 (비영리)'}</div>
-              <div><strong>대표 관리자:</strong> {tenant.contact?.name || '주지스님 / 담임목사'}</div>
+              <div><strong>대표 관리자:</strong> {(tenant.contact?.name && tenant.contact.name !== '주지스님 / 담임목사' && tenant.contact.name !== '담임목사 / 주지스님') ? tenant.contact.name : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자'))}</div>
               <div><strong>연락처:</strong> {tenant.contact?.phone || '010-1234-5678'}</div>
             </div>
           </div>
