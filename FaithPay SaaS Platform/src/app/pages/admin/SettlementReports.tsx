@@ -298,7 +298,6 @@ export default function SettlementReports() {
           <Tabs defaultValue="monthly" className="space-y-6">
             <TabsList>
               <TabsTrigger value="monthly">월별 정산</TabsTrigger>
-              <TabsTrigger value="reconciliation">가상계좌 입금대조 (Reconciliation)</TabsTrigger>
               <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
               <TabsTrigger value="category">항목별 분석</TabsTrigger>
               <TabsTrigger value="payment">결제 수단별</TabsTrigger>
@@ -392,83 +391,6 @@ export default function SettlementReports() {
                       <Bar dataKey="실정산액" fill={currentTenant.primaryColor} />
                     </BarChart>
                   </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Virtual Account Reconciliation Queue */}
-            <TabsContent value="reconciliation" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>가상계좌 입금 대조 & 미인식 매칭 큐 (Reconciliation)</CardTitle>
-                      <CardDescription>
-                        네트워크 장애로 인한 PG 웹훅 누락건 자동 복구 및 입금자명 불일치("홍길동십일조" 등) 수동 매칭 큐입니다.
-                      </CardDescription>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => toast.success('토스 PG 가상계좌 입금 대조 배치를 수행했습니다')}>
-                      입금 정합성 대조 실행
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>발급 가상계좌</TableHead>
-                        <TableHead>예정 입금자 / 입금액</TableHead>
-                        <TableHead>실제 입금자 / 금액</TableHead>
-                        <TableHead>입금 일시</TableHead>
-                        <TableHead>매칭 상태</TableHead>
-                        <TableHead className="text-right">매칭 조치</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-mono text-xs">토스 7088-12-998811</TableCell>
-                        <TableCell>
-                          <div className="font-semibold">홍길동</div>
-                          <div className="text-xs text-muted-foreground">1,000,000원 (십일조)</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-orange-700">홍길동 감사헌금</div>
-                          <div className="text-xs text-muted-foreground">1,000,000원</div>
-                        </TableCell>
-                        <TableCell className="text-xs">2026-04-05 11:20:15</TableCell>
-                        <TableCell>
-                          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-                            불일치 (유사도 85%)
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => toast.success('홍길동 성도님의 봉헌으로 수동 매칭이 완료되었습니다')}>
-                            수동 매칭 승인
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-mono text-xs">토스 7088-15-442100</TableCell>
-                        <TableCell>
-                          <div className="font-semibold">김미영</div>
-                          <div className="text-xs text-muted-foreground">500,000원 (건축헌금)</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-green-700">김미영</div>
-                          <div className="text-xs text-muted-foreground">500,000원</div>
-                        </TableCell>
-                        <TableCell className="text-xs">2026-04-04 15:40:00</TableCell>
-                        <TableCell>
-                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                            웹훅 복구 완료 (Polling)
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="text-xs text-muted-foreground">자동 처리됨</span>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
