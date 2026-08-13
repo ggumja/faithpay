@@ -276,6 +276,8 @@ export function assignSequentialDonationIds(list: any[]): any[] {
 
     return normalizeDonation({
       ...item,
+      originalId: item.originalId || item.id,
+      formattedId: formattedId,
       id: formattedId,
     });
   });
@@ -616,22 +618,26 @@ export default function DonationHistory() {
   };
 
   const handleCancelPayment = (donation: any) => {
-    const targetDonation = typeof donation === 'string' ? donations.find(d => d.id === donation) : donation;
+    const targetDonation = typeof donation === 'string' ? donations.find(d => d.id === donation || d.originalId === donation) : donation;
     if (!targetDonation) return;
 
     if (checkIsRecurring(targetDonation)) {
       setRecurringCancelModalDonation(targetDonation);
     } else {
       if (window.confirm(`[${targetDonation.donorName || '무기명'}] 님의 결제(${(targetDonation.amount || 0).toLocaleString()}원)를 취소하시겠습니까?`)) {
-        executeCancelPayment(targetDonation.id, false);
+        executeCancelPayment(targetDonation, false);
       }
     }
   };
 
-  const executeCancelPayment = async (donationId: string, cancelSubscriptionAlso: boolean = false) => {
+  const executeCancelPayment = async (donationOrId: any, cancelSubscriptionAlso: boolean = false) => {
+    const targetDonation = typeof donationOrId === 'string' ? donations.find(d => d.id === donationOrId || d.originalId === donationOrId) : donationOrId;
+    const donationId = targetDonation?.id || donationOrId;
+    const backendId = targetDonation?.originalId || targetDonation?.id || donationOrId;
+
     setIsCancelling(true);
     try {
-      const res = await paymentAPI.cancelPayment(currentTenant.id, donationId);
+      const res = await paymentAPI.cancelPayment(currentTenant.id, backendId);
       if (res.success) {
         if (cancelSubscriptionAlso && recurringCancelModalDonation) {
           let subId = recurringCancelModalDonation.subscriptionId || recurringCancelModalDonation.subscription_id || recurringCancelModalDonation.subId;
@@ -669,7 +675,7 @@ export default function DonationHistory() {
 
         // Update local state to cancelled immediately
         setDonations((prev) =>
-          prev.map((d) => (d.id === donationId ? { ...d, paymentStatus: 'cancelled', cancelFailureReason: undefined } : d))
+          prev.map((d) => (d.id === donationId || d.originalId === backendId ? { ...d, paymentStatus: 'cancelled', cancelFailureReason: undefined } : d))
         );
 
         toast.success(
@@ -684,19 +690,19 @@ export default function DonationHistory() {
         const refreshRes = await donationAPI.getByTenant(currentTenant.id);
         if (refreshRes.success && refreshRes.data) {
           const serverList = assignSequentialDonationIds(refreshRes.data);
-          setDonations(serverList.map(item => item.id === donationId ? { ...item, paymentStatus: 'cancelled' } : item));
+          setDonations(serverList.map(item => (item.id === donationId || item.originalId === backendId) ? { ...item, paymentStatus: 'cancelled' } : item));
         }
       } else {
         const errorReason = res.error || 'PG 승인취소 거부 / 카드사 처리 오류';
         setDonations((prev) =>
           prev.map((d) =>
-            d.id === donationId
+            (d.id === donationId || d.originalId === backendId)
               ? { ...d, paymentStatus: 'cancel_failed', cancelFailureReason: errorReason }
               : d
           )
         );
         setSelectedDonation((prev) =>
-          prev && prev.id === donationId
+          prev && (prev.id === donationId || prev.originalId === backendId)
             ? { ...prev, paymentStatus: 'cancel_failed', cancelFailureReason: errorReason }
             : prev
         );

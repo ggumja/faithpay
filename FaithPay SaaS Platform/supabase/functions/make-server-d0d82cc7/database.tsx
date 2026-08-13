@@ -545,8 +545,28 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
 }
 
 export async function getDonationById(tenantId: string, id: string): Promise<Donation | null> {
-  const donations = await getDonationsByTenant(tenantId);
-  return donations.find((d) => d.id === id) || null;
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const searchIds = new Set<string>([tenantId]);
+  if (tenant) {
+    if (tenant.id) searchIds.add(tenant.id);
+    if (tenant.slug) searchIds.add(tenant.slug);
+  }
+
+  for (const tid of Array.from(searchIds)) {
+    const list = await kv.getByPrefixWithKeys(`donation:${tid}:`);
+    const found = list.find((item) => {
+      const d = item.value;
+      return d && (d.id === id || d.originalId === id || (d as any).formattedId === id);
+    });
+    if (found) return found.value;
+  }
+
+  const allList = await kv.getByPrefixWithKeys('donation:');
+  const found = allList.find((item) => {
+    const d = item.value;
+    return d && (d.id === id || d.originalId === id || (d as any).formattedId === id);
+  });
+  return found ? found.value : null;
 }
 
 export async function getDonationsByTenant(tenantId: string): Promise<Donation[]> {
@@ -578,29 +598,53 @@ export async function getAllDonations(): Promise<Donation[]> {
 }
 
 export async function updateDonation(tenantId: string, id: string, updates: Partial<Donation>): Promise<Donation | null> {
-  const donations = await kv.getByPrefix(`donation:${tenantId}:`);
-  const donation = donations.find((d: Donation) => d.id === id);
-  
-  if (!donation) return null;
-  
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const searchIds = new Set<string>([tenantId]);
+  if (tenant) {
+    if (tenant.id) searchIds.add(tenant.id);
+    if (tenant.slug) searchIds.add(tenant.slug);
+  }
+
+  let targetKey: string | null = null;
+  let targetDonation: Donation | null = null;
+
+  for (const tid of Array.from(searchIds)) {
+    const entries = await kv.getByPrefixWithKeys(`donation:${tid}:`);
+    const found = entries.find((item) => {
+      const d = item.value;
+      return d && (d.id === id || d.originalId === id || (d as any).formattedId === id);
+    });
+    if (found) {
+      targetKey = found.key;
+      targetDonation = found.value;
+      break;
+    }
+  }
+
+  if (!targetKey || !targetDonation) {
+    const allEntries = await kv.getByPrefixWithKeys('donation:');
+    const found = allEntries.find((item) => {
+      const d = item.value;
+      return d && (d.id === id || d.originalId === id || (d as any).formattedId === id);
+    });
+    if (found) {
+      targetKey = found.key;
+      targetDonation = found.value;
+    }
+  }
+
+  if (!targetKey || !targetDonation) {
+    console.error(`updateDonation: Failed to locate KV store record for id=${id}, tenantId=${tenantId}`);
+    return null;
+  }
+
   const updated: Donation = {
-    ...donation,
+    ...targetDonation,
     ...updates,
-    id: donation.id, // ID는 변경 불가
     updatedAt: new Date().toISOString(),
   };
-  
-  // 기존 키 찾기
-  const allKeys = await kv.getByPrefix(`donation:${tenantId}:`);
-  const existingKey = Object.keys(allKeys).find((key) => {
-    const d = allKeys[key];
-    return d && d.id === id;
-  });
-  
-  if (existingKey) {
-    await kv.set(existingKey, updated);
-  }
-  
+
+  await kv.set(targetKey, updated);
   return updated;
 }
 
