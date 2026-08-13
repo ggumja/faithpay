@@ -41,6 +41,8 @@ import {
   Monitor,
   Smartphone,
   RotateCcw,
+  RefreshCw,
+  CalendarX,
 } from 'lucide-react';
 import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
 import { toast } from 'sonner';
@@ -298,6 +300,7 @@ export default function DonationHistory() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [recurringCancelModalDonation, setRecurringCancelModalDonation] = useState<any | null>(null);
 
   // 1초 SMS OTP 모달 & 세션 State
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -712,25 +715,58 @@ export default function DonationHistory() {
     setReceiptDonation(donation);
   };
 
-  const handleCancelPayment = async (donationId: string) => {
-    if (!window.confirm('정말 결제를 취소하시겠습니까?')) return;
-    
+  const checkIsRecurring = (donation: any) => {
+    if (!donation) return false;
+    if (donation.isSubscription || donation.subscriptionId || donation.subscription_id || donation.is_subscription) return true;
+    const method = String(donation.paymentMethod || donation.method || '');
+    const type = String(donation.paymentType || donation.payment_type || '');
+    const item = String(donation.itemName || donation.item || '');
+    return method.includes('정기') || method.includes('빌링') || type.includes('recurring') || item.includes('정기');
+  };
+
+  const handleCancelPayment = (donation: any) => {
+    const targetDonation = typeof donation === 'string' ? donations.find(d => d.id === donation) : donation;
+    if (!targetDonation) return;
+
+    if (checkIsRecurring(targetDonation)) {
+      setRecurringCancelModalDonation(targetDonation);
+    } else {
+      if (window.confirm(`[${targetDonation.donorName || '무기명'}] 성도님의 결제(${(targetDonation.amount || 0).toLocaleString()}원)를 취소하시겠습니까?`)) {
+        executeCancelPayment(targetDonation.id, false);
+      }
+    }
+  };
+
+  const executeCancelPayment = async (donationId: string, cancelSubscriptionAlso: boolean = false) => {
     setIsCancelling(true);
     try {
       const res = await paymentAPI.cancelPayment(currentTenant.id, donationId);
       if (res.success) {
-        alert('결제가 취소되었습니다.');
+        if (cancelSubscriptionAlso && recurringCancelModalDonation) {
+          const subId = recurringCancelModalDonation.subscriptionId || recurringCancelModalDonation.subscription_id;
+          if (subId) {
+            await subscriptionAPI.updateStatus(subId, 'cancelled');
+          }
+        }
+
+        toast.success(
+          cancelSubscriptionAlso
+            ? '해당 결제건이 취소되었으며, 향후 정기결제 스케줄도 해지되었습니다.'
+            : '해당 결제건만 정상적으로 취소되었습니다.'
+        );
         setSelectedDonation(null);
+        setRecurringCancelModalDonation(null);
+
         // refresh data
         const refreshRes = await donationAPI.getByTenant(currentTenant.id);
         if (refreshRes.success && refreshRes.data) {
           setDonations(assignSequentialDonationIds(refreshRes.data));
         }
       } else {
-        alert(`취소 실패: ${res.error}`);
+        toast.error(`취소 실패: ${res.error}`);
       }
     } catch (e) {
-      alert('취소 중 오류가 발생했습니다.');
+      toast.error('취소 처리 중 오류가 발생했습니다.');
     } finally {
       setIsCancelling(false);
     }
@@ -1400,6 +1436,108 @@ export default function DonationHistory() {
                         영수증 출력
                       </Button>
                       <Button variant="outline" onClick={() => setSelectedDonation(null)}>
+                        닫기
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Recurring Payment Cancel Options Modal */}
+            {recurringCancelModalDonation && (
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+                onClick={() => setRecurringCancelModalDonation(null)}
+              >
+                <Card
+                  className="max-w-md w-full rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-950/60 text-amber-600 rounded-xl">
+                          <RotateCcw className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-bold">정기결제 취소 범위 선택</CardTitle>
+                          <CardDescription className="text-xs">
+                            {recurringCancelModalDonation.id} ({recurringCancelModalDonation.donorName || '무기명'})
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => setRecurringCancelModalDonation(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-4 space-y-4">
+                    <p className="text-xs text-slate-600 dark:text-zinc-400 font-medium">
+                      선택하신 수납건은 <span className="font-bold text-indigo-600 dark:text-indigo-400">정기 자동 결제</span> 내역입니다. 처리할 취소 방식을 선택해 주세요.
+                    </p>
+
+                    <div className="space-y-3">
+                      {/* Option 1: Only current transaction */}
+                      <button
+                        type="button"
+                        disabled={isCancelling}
+                        onClick={() => executeCancelPayment(recurringCancelModalDonation.id, false)}
+                        className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                            <RefreshCw className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-bold text-sm text-slate-900 dark:text-zinc-100 flex items-center justify-between">
+                              <span>이번 1건만 결제 취소</span>
+                              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">스케줄 유지</span>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                              이번 달 발생한 결제건({(recurringCancelModalDonation.amount || 0).toLocaleString()}원)만 취소하고, 다음 달 정기결제 스케줄은 그대로 유지합니다.
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Option 2: Current + Future Schedule Cancel */}
+                      <button
+                        type="button"
+                        disabled={isCancelling}
+                        onClick={() => executeCancelPayment(recurringCancelModalDonation.id, true)}
+                        className="w-full text-left p-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/20 hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-red-100 dark:bg-red-950/60 text-red-600 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+                            <CalendarX className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-bold text-sm text-red-900 dark:text-red-300 flex items-center justify-between">
+                              <span>이번 건 취소 + 정기결제 해지</span>
+                              <span className="text-xs text-red-600 font-semibold">스케줄 완전 해지</span>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                              이번 결제건을 취소함과 동시에 앞으로 예정된 정기결제(구독) 스케줄도 함께 해지(취소) 처리합니다.
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRecurringCancelModalDonation(null)}
+                        className="text-xs text-slate-500"
+                      >
                         닫기
                       </Button>
                     </div>
