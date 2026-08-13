@@ -43,6 +43,7 @@ export default function SettlementReports() {
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
+  const [dailySettlement, setDailySettlement] = useState<any[]>([]);
   const [cancelledDonations, setCancelledDonations] = useState<any[]>([]);
   const [dbDonations, setDbDonations] = useState<any[]>([]);
 
@@ -168,14 +169,47 @@ export default function SettlementReports() {
             monthlyMap[curMonthKey] = { total: 0, cancelled: 0 };
           }
 
+          // 3. 🔵 일별/건별 D+3 정산 명세 데이터 생성
+          const settlementCycle = currentTenant?.paymentConfig?.settlementCycle || 'D+3';
+          const daysToAdd = settlementCycle === 'D+1' ? 1 : settlementCycle === 'D+2' ? 2 : 3;
+
+          const dailyList = filtered
+            .filter((d: any) => d.paymentStatus === 'completed')
+            .map((d: any) => {
+              const rawDate = d.createdAt || d.created_at || d.date;
+              const txDate = rawDate ? new Date(rawDate) : now;
+              const validTxDate = isNaN(txDate.getTime()) ? now : txDate;
+              
+              const payoutDate = new Date(validTxDate);
+              payoutDate.setDate(payoutDate.getDate() + daysToAdd);
+              const isPaidOut = payoutDate.getTime() <= now.getTime();
+              
+              const amt = Number(d.amount || 0);
+              const fee = Math.round(amt * (contractRate / 100));
+              const net = amt - fee;
+              
+              return {
+                id: d.id,
+                formattedId: d.formattedId || d.id,
+                donorName: d.donorName || d.donor_name || '익명',
+                category: d.category || '일반봉헌',
+                approvedAt: validTxDate.toISOString().slice(0, 10),
+                amount: amt,
+                pgFee: fee,
+                netAmount: net,
+                payoutDate: payoutDate.toISOString().slice(0, 10),
+                status: isPaidOut ? '입금 완료' : `${settlementCycle} 입금 예정`
+              };
+            });
+
+          setDailySettlement(dailyList);
+
           const sortedMonths = Object.keys(monthlyMap).sort((a, b) => b.localeCompare(a));
 
           const processedMonthly = sortedMonths.map((mKey) => {
             const data = monthlyMap[mKey];
             const totalDonations = data.total;
             const pgFees = Math.round(totalDonations * (contractRate / 100));
-            
-            // 💡 취소건(cancelled)은 completed 합산에 포함되어 있지 않으므로 중복 차감하지 않고 순수 실정산액 산출
             const netAmount = Math.max(0, totalDonations - pgFees);
             
             const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
@@ -183,30 +217,19 @@ export default function SettlementReports() {
             const monthNum = parseInt(mStr, 10);
             const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
 
-            // 정산 예정일 구하기 (D+3 영업일 입금 기준 반영)
-            const settlementCycle = currentTenant?.paymentConfig?.settlementCycle || 'D+3';
             let settlementDate = '';
+            let statusStr = '';
             
             if (settlementCycle === 'MONTHLY') {
               let nextY = yearNum;
               let nextM = monthNum + 1;
               if (nextM > 12) { nextY += 1; nextM = 1; }
-              settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (${isPast ? '월정산 완료' : '월정산 예정'})`;
+              settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
+              statusStr = isPast ? '완료' : '정산 예정';
             } else {
-              const daysToAdd = settlementCycle === 'D+1' ? 1 : settlementCycle === 'D+2' ? 2 : 3;
-              if (isPast) {
-                // 과거 월의 경우 해당 월 말일 + D+3 완료 표기
-                const lastDayOfMonth = new Date(yearNum, monthNum, 0);
-                lastDayOfMonth.setDate(lastDayOfMonth.getDate() + daysToAdd);
-                settlementDate = `${lastDayOfMonth.toISOString().slice(0, 10)} (${settlementCycle} 완료)`;
-              } else {
-                const latestTxDate = filtered.length > 0 && (filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
-                  ? new Date(filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
-                  : now;
-                const payoutDate = new Date(isNaN(latestTxDate.getTime()) ? now : latestTxDate);
-                payoutDate.setDate(payoutDate.getDate() + daysToAdd);
-                settlementDate = `${payoutDate.toISOString().slice(0, 10)} (${settlementCycle} 예정)`;
-              }
+              // D+3 등 일별 입금 방식인 경우 월별 통합표에는 'D+3 순차 입금' 개념으로 정확히 표기
+              settlementDate = isPast ? `${settlementCycle} 입금 완료` : `매일 ${settlementCycle} 순차 입금`;
+              statusStr = isPast ? '지급 완료' : '순차 입금 진행 중';
             }
 
             return {
@@ -216,13 +239,13 @@ export default function SettlementReports() {
               cancelledAmount: data.cancelled,
               netAmount,
               settlementDate,
-              status: isPast ? '완료' : '정산 예정',
+              status: statusStr,
             };
           });
 
           setMonthlySettlement(processedMonthly);
 
-          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: 'D+3 입금' };
+          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: 'D+3 순차 입금' };
           setSummaryStats({
             monthlyTotal: latestMonthData.totalDonations,
             pgFee: latestMonthData.pgFees,
@@ -517,7 +540,8 @@ export default function SettlementReports() {
 
           <Tabs defaultValue="monthly" className="space-y-6">
             <TabsList>
-              <TabsTrigger value="monthly">월별 정산</TabsTrigger>
+              <TabsTrigger value="monthly">월별 정산 (D+3 요약)</TabsTrigger>
+              <TabsTrigger value="daily">일별/건별 D+3 정산 명세</TabsTrigger>
               <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
             </TabsList>
 
@@ -609,6 +633,63 @@ export default function SettlementReports() {
                       <Bar dataKey="실정산액" fill={currentTenant.primaryColor} />
                     </BarChart>
                   </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Daily D+3 Settlement Breakdown */}
+            <TabsContent value="daily" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>일별/건별 D+3 정산 명세</CardTitle>
+                  <CardDescription>
+                    승인완료된 각 결제건별 PG 수수료({contractRate}%) 차감 후 D+3 영업일 정산 입금 예정/완료 명세입니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>결제 승인일</TableHead>
+                        <TableHead>거래 번호</TableHead>
+                        <TableHead>신도명 / 항목</TableHead>
+                        <TableHead className="text-right">승인 금액</TableHead>
+                        <TableHead className="text-right">PG 수수료 ({contractRate}%)</TableHead>
+                        <TableHead className="text-right">실 입금액</TableHead>
+                        <TableHead>D+3 입금 예정일</TableHead>
+                        <TableHead>정산 상태</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailySettlement.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-slate-500 font-medium">
+                            선택한 기간 내 승인 완료된 결제건이 없습니다.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        dailySettlement.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.approvedAt}</TableCell>
+                            <TableCell className="font-mono text-xs text-slate-600">{item.formattedId}</TableCell>
+                            <TableCell>
+                              <span className="font-semibold text-slate-800">{item.donorName}</span>
+                              <Badge variant="outline" className="ml-2 text-[10px]">{item.category}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">{item.amount.toLocaleString()}원</TableCell>
+                            <TableCell className="text-right text-orange-600">-{item.pgFee.toLocaleString()}원</TableCell>
+                            <TableCell className="text-right font-bold text-green-600">{item.netAmount.toLocaleString()}원</TableCell>
+                            <TableCell className="font-medium text-indigo-600">{item.payoutDate}</TableCell>
+                            <TableCell>
+                              <Badge className={item.status.includes('완료') ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'}>
+                                {item.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
