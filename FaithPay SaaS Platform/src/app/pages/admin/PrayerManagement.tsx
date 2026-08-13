@@ -125,7 +125,7 @@ export default function PrayerManagement() {
   };
 
   // 🖨️ 1. 실제 브라우저 인쇄 실행 엔진 (Print Engine)
-  const handlePrint = (targetIds: string[]) => {
+  const handlePrint = (targetIds: string[], mode: 'label' | 'a4' = 'label') => {
     if (targetIds.length === 0) {
       toast.error('인쇄할 항목을 선택해주세요');
       return;
@@ -147,56 +147,119 @@ export default function PrayerManagement() {
     const orgName = currentTenant.name || '단체명';
     const prayerTerm = terms.prayer || '메시지/지향';
 
-    // 서식 HTML 인쇄용 문서 생성
-    const printHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${orgName} - ${prayerTerm} 출력 서식</title>
-          <meta charset="utf-8" />
-          <style>
-            @media print {
-              @page { size: A4 portrait; margin: 15mm; }
-              body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #111; }
-              .no-print { display: none !important; }
-            }
-            body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 20px; background: #fff; }
-            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 22px; color: #111; }
-            .header p { margin: 4px 0 0 0; font-size: 13px; color: #666; }
-            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-            .card { border: 1.5px solid #333; border-radius: 8px; padding: 14px; background: #fafafa; page-break-inside: avoid; }
-            .card-header { display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 6px; margin-bottom: 8px; font-size: 13px; }
-            .card-title { font-weight: bold; font-size: 15px; color: #000; }
-            .card-item { color: #2563eb; font-weight: bold; }
-            .card-body { font-size: 14px; line-height: 1.5; color: #222; min-height: 50px; white-space: pre-wrap; word-break: break-all; }
-            .card-footer { text-align: right; font-size: 11px; color: #888; margin-top: 10px; border-top: 1px solid #eee; pt: 4px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>${orgName} ${prayerTerm} 출력물</h1>
-            <p>인쇄 일시: ${new Date().toLocaleString()} | 총 ${itemsToPrint.length}건</p>
-          </div>
-          <div class="grid">
+    // 🏷️ 라벨지 전용 인쇄 vs 📄 A4 서식 인쇄 분기
+    let printHtml = '';
+
+    if (mode === 'label') {
+      // 🏷️ 50mm × 30mm 롤/스티커 라벨지 규격 (제목 완전히 제거!)
+      printHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${orgName} - 라벨 인쇄</title>
+            <meta charset="utf-8" />
+            <style>
+              @media print {
+                @page { size: 50mm 30mm; margin: 0; }
+                body { margin: 0; padding: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+                .label-page { page-break-after: always; page-break-inside: avoid; }
+              }
+              body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; margin: 0; padding: 0; background: #fff; }
+              .label-card {
+                width: 50mm;
+                height: 30mm;
+                box-sizing: border-box;
+                padding: 4mm;
+                border: 1px dashed #bbb;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                background: #fff;
+              }
+              @media print {
+                .label-card { border: none; }
+              }
+              .label-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #000; padding-bottom: 2px; }
+              .label-name { font-weight: 900; font-size: 11px; color: #000; }
+              .label-item { font-weight: bold; font-size: 10px; color: #1d4ed8; }
+              .label-body { font-size: 10px; font-weight: 600; line-height: 1.3; color: #111; margin: 3px 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-all; }
+              .label-footer { display: flex; justify-content: space-between; font-size: 8px; color: #555; border-top: 0.5px solid #ddd; pt: 2px; }
+            </style>
+          </head>
+          <body>
             ${itemsToPrint
               .map(
                 (item) => `
-              <div class="card">
-                <div class="card-header">
-                  <span class="card-title">신청자: ${item.name}</span>
-                  <span class="card-item">[${item.item}]</span>
+              <div class="label-page">
+                <div class="label-card">
+                  <div class="label-header">
+                    <span class="label-name">${item.name}</span>
+                    <span class="label-item">[${item.item}]</span>
+                  </div>
+                  <div class="label-body">${item.prayer}</div>
+                  <div class="label-footer">
+                    <span>${orgName}</span>
+                    <span>${item.date}</span>
+                  </div>
                 </div>
-                <div class="card-body">${item.prayer}</div>
-                <div class="card-footer">접수일자: ${item.date} | FaithPay 정품 발급</div>
               </div>
             `
               )
               .join('')}
-          </div>
-        </body>
-      </html>
-    `;
+          </body>
+        </html>
+      `;
+    } else {
+      // 📄 A4 서식 일반 대장 인쇄
+      printHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${orgName} - ${prayerTerm} A4 대장 서식</title>
+            <meta charset="utf-8" />
+            <style>
+              @media print {
+                @page { size: A4 portrait; margin: 15mm; }
+                body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #111; }
+              }
+              body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 20px; background: #fff; }
+              .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
+              .header h1 { margin: 0; font-size: 22px; color: #111; }
+              .header p { margin: 4px 0 0 0; font-size: 13px; color: #666; }
+              .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+              .card { border: 1.5px solid #333; border-radius: 8px; padding: 14px; background: #fafafa; page-break-inside: avoid; }
+              .card-header { display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 6px; margin-bottom: 8px; font-size: 13px; }
+              .card-title { font-weight: bold; font-size: 15px; color: #000; }
+              .card-item { color: #2563eb; font-weight: bold; }
+              .card-body { font-size: 14px; line-height: 1.5; color: #222; min-height: 50px; white-space: pre-wrap; word-break: break-all; }
+              .card-footer { text-align: right; font-size: 11px; color: #888; margin-top: 10px; border-top: 1px solid #eee; pt: 4px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>${orgName} ${prayerTerm} A4 명세 출력물</h1>
+              <p>인쇄 일시: ${new Date().toLocaleString()} | 총 ${itemsToPrint.length}건</p>
+            </div>
+            <div class="grid">
+              ${itemsToPrint
+                .map(
+                  (item) => `
+                <div class="card">
+                  <div class="card-header">
+                    <span class="card-title">신청자: ${item.name}</span>
+                    <span class="card-item">[${item.item}]</span>
+                  </div>
+                  <div class="card-body">${item.prayer}</div>
+                  <div class="card-footer">접수일자: ${item.date} | FaithPay 정품 발급</div>
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+          </body>
+        </html>
+      `;
+    }
 
     printWindow.document.write(printHtml);
     printWindow.document.close();
@@ -212,7 +275,7 @@ export default function PrayerManagement() {
       prev.map((p) => (targetIds.includes(p.id) ? { ...p, printed: true } : p))
     );
     setSelectedPrayers([]);
-    toast.success(`${itemsToPrint.length}건의 ${prayerTerm} 서식을 출력창으로 전송했습니다.`);
+    toast.success(`${itemsToPrint.length}건의 ${prayerTerm} ${mode === 'label' ? '라벨지' : 'A4'} 서식을 출력창으로 전송했습니다.`);
   };
 
   // 📊 2. 실제 CSV 엑셀 다운로드 엔진 (Export Engine)
@@ -346,14 +409,24 @@ export default function PrayerManagement() {
                   </Select>
                 </div>
 
-                <Button
-                  onClick={() => handlePrint(selectedPrayers)}
-                  disabled={selectedPrayers.length === 0}
-                  className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer"
-                >
-                  <Printer className="h-4 w-4" />
-                  선택 항목 인쇄 서식 출력 ({selectedPrayers.length}건)
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => handlePrint(selectedPrayers, 'label')}
+                    disabled={selectedPrayers.length === 0}
+                    className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer"
+                  >
+                    <Printer className="h-4 w-4" />
+                    🏷️ 라벨지 정밀 출력 ({selectedPrayers.length}건)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePrint(selectedPrayers, 'a4')}
+                    disabled={selectedPrayers.length === 0}
+                    className="gap-2 font-bold cursor-pointer"
+                  >
+                    📄 A4 대장 출력 ({selectedPrayers.length}건)
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
