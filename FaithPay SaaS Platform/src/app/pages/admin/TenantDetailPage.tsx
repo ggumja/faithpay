@@ -588,7 +588,7 @@ export default function TenantDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-purple-600" />
-                사찰 / 교회 기본 정보 및 로그인 계정
+                단체 기본 정보 및 계정 관리
               </CardTitle>
             <CardDescription>단체의 기본 정보를 수정합니다</CardDescription>
           </CardHeader>
@@ -770,7 +770,7 @@ export default function TenantDetailPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">사찰/교회 소재지 주소</Label>
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">단체 소재지 주소</Label>
                   <Input value={tenant.businessInfo?.address || '충청남도 천안시 동남구 각원사길 245'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
                 </div>
               </div>
