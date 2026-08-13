@@ -101,7 +101,9 @@ export default function SystemAdminDashboard() {
   }, [active]);
 
   const tenants = dbTenants;
-  const estimatedDailyTransactions = Math.max(12000, tenants.length * 1800);
+  // 실제 등록된 정기결제 약정 실측 집계 (현재 미발생 시 0건 표출)
+  const activeSubCount = tenants.reduce((sum, t) => sum + ((t as any).activeSubscriptionCount || 0), 0);
+  const estimatedDailyTransactions = activeSubCount;
   const usagePercentage = Math.min(100, Math.round((estimatedDailyTransactions / 100000) * 100));
 
 
@@ -214,7 +216,7 @@ export default function SystemAdminDashboard() {
             )}
           </div>
           <div className="text-xs text-slate-500 font-mono">
-            오늘 예정 결제: <span className="font-bold text-indigo-600 dark:text-indigo-400">{Math.max(12000, tenants.length * 1800).toLocaleString()}건</span> / 100,000건 ({Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100)}% 점유)
+            오늘 예정 결제: <span className="font-bold text-indigo-600 dark:text-indigo-400">{estimatedDailyTransactions.toLocaleString()}건</span> / 100,000건 ({usagePercentage}% 점유)
           </div>
         </div>
 
@@ -223,13 +225,13 @@ export default function SystemAdminDashboard() {
           <div className="w-full bg-slate-100 dark:bg-zinc-800 h-3 rounded-full overflow-hidden flex">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) >= 90
+                usagePercentage >= 90
                   ? 'bg-rose-500'
-                  : Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) >= 70
+                  : usagePercentage >= 70
                   ? 'bg-amber-500'
                   : 'bg-gradient-to-r from-emerald-500 to-indigo-500'
               }`}
-              style={{ width: `${Math.min(100, Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100))}%` }}
+              style={{ width: `${Math.min(100, usagePercentage)}%` }}
             />
           </div>
           <div className="flex justify-between text-[10px] text-slate-400 font-semibold px-0.5">
@@ -242,12 +244,12 @@ export default function SystemAdminDashboard() {
 
         {/* Dynamic Alert Banner based on Usage */}
         <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
-          {Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) < 70 ? (
+          {usagePercentage < 70 ? (
             <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-300">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               <span>현재 시스템 처리 캐파가 안정 구역입니다. PG사 초당 10건(10 TPS) 분산으로 무병목 결제가 진행 중입니다.</span>
             </div>
-          ) : Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) < 90 ? (
+          ) : usagePercentage < 90 ? (
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
               <span>[사전 경고 알림] 일일 결제량이 안전 한도의 70%에 도달했습니다. 워커 인스턴스 2호기 생성을 준비해 주세요.</span>
