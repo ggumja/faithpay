@@ -35,6 +35,7 @@ import PartnerManagement from "./pages/admin/PartnerManagement";
 import CommissionStatsPage from "./pages/admin/CommissionStatsPage";
 import MultiPartySettlementLedger from "./pages/admin/components/MultiPartySettlementLedger";
 import TenantStatsPage from "./pages/admin/TenantStatsPage";
+import TenantStatisticsPage from "./pages/admin/TenantStatisticsPage";
 import AdminRedirectGuard from "./pages/admin/AdminRedirectGuard";
 
 
@@ -179,6 +180,10 @@ export const router = createBrowserRouter([
       {
         path: "/:tenantSlug/admin/donations",
         Component: DonationHistory,
+      },
+      {
+        path: "/:tenantSlug/admin/statistics",
+        Component: TenantStatisticsPage,
       },
       {
         path: "*",

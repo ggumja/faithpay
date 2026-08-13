@@ -317,7 +317,7 @@ export default function TenantKiosk() {
   // Select Fast Anonymous Mode
   const startAnonymousTrack = () => {
     setIsAnonymous(true);
-    setDonorName(ft.placeNoun === '사찰' ? '무명 보시 성도' : ft.placeNoun === '성당' ? '무명 교우' : '무명 성도');
+    setDonorName('무기명');
     setPhoneDigits('');
     setIsMatchedMember(false);
     setStep('ITEM_SELECT');
@@ -388,16 +388,16 @@ export default function TenantKiosk() {
     setApprovalNo(generatedApproval);
 
     const paymentMethodLabel = paymentType === 'CARD' 
-      ? 'OffPG 신용카드 (삼성/애플페이)' 
+      ? '신용카드' 
       : paymentType === 'KAKAO_PAY' 
-      ? '카카오페이 (TC0ONETIME)' 
-      : '네이버페이 (QR/바코드)';
+      ? '카카오페이' 
+      : '네이버페이';
 
-    const finalName = isAnonymous
-      ? (ft.placeNoun === '사찰' ? '무명 보시 성도' : '무명 성도')
-      : (donorName || '성도');
+    const finalName = isAnonymous ? '무기명' : (donorName || '무기명');
 
-    const receiptId = `FP-KIOSK-${Date.now().toString().slice(-8)}`;
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const seqPart = Date.now().toString().slice(-8);
+    const receiptId = `FP-${datePart}-${seqPart}`;
 
     // DB Record creation in background
     donationAPI.create({
@@ -847,12 +847,12 @@ export default function TenantKiosk() {
             <button
               onClick={() => {
                 setIsAnonymous(true);
-                setDonorName(ft.placeNoun === '사찰' ? '무명 보시 성도' : ft.placeNoun === '성당' ? '무명 교우' : '무명 성도');
+                setDonorName('무기명');
                 setStep('CARD_PAYMENT');
               }}
               className="w-full py-3.5 bg-[#FFF6E6] hover:bg-[#FFE8C2] text-[#CC6D00] font-black text-sm sm:text-base rounded-xl cursor-pointer border border-[#FFE8C2]"
             >
-              ⚡ 무명 성도로 즉시 카드 결제 진행
+              ⚡ 무기명으로 즉시 카드 결제 진행
             </button>
 
             {/* ⌨️ 터치 가상 키보드 패널 */}
@@ -1165,7 +1165,7 @@ export default function TenantKiosk() {
             {/* 결제 정보 요약 */}
             <div className="bg-[#F9FAFB] p-4 rounded-2xl text-sm space-y-1 text-[#4E5968] font-mono border border-[#E5E8EB]">
               <div>결제 금액: <strong className="text-[#3182F6] font-black text-lg">{amount.toLocaleString()}원</strong></div>
-              <div>기부자: <strong className="text-[#191F28] font-bold">{donorName || '무명 성도'}</strong> ({phone ? phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3') : '익명'})</div>
+              <div>기부자: <strong className="text-[#191F28] font-bold">{donorName || '무기명'}</strong> ({phone ? phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3') : '무기명'})</div>
               <div>결제 수단: <strong className="text-[#1B64DA] font-bold">
                 {paymentType === 'CARD' ? '신용·체크카드 / 삼성·애플페이' : paymentType === 'KAKAO_PAY' ? '카카오페이 (QR/바코드)' : '네이버페이 (QR/바코드)'}
               </strong></div>

@@ -29,6 +29,65 @@ import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
 import { donationAPI } from '../../api/client';
+import { assignSequentialDonationIds } from './DonationHistory';
+
+const normalizeDonation = (d: any) => {
+  const rawDate = d.createdAt ?? d.created_at ?? d.date;
+  let validCreatedAt = new Date().toISOString();
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) {
+      validCreatedAt = parsed.toISOString();
+    }
+  }
+
+  const rawName = d.donorName ?? d.donor_name ?? d.name;
+  const nameStr = rawName ? String(rawName).trim() : '';
+  const isAnon = !nameStr || nameStr === '무기명' || nameStr.includes('무명') || nameStr.includes('익명');
+  const donorName = isAnon ? '무기명' : nameStr;
+
+  const rawMethod = d.paymentMethod ?? d.payment_method ?? d.method;
+  const paymentMethod = rawMethod ? (String(rawMethod).includes('카드') ? '신용카드' : String(rawMethod)) : '신용카드';
+
+  const rawStatus = d.paymentStatus ?? d.payment_status ?? d.status;
+  let paymentStatus = (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'completed';
+
+  if (paymentStatus === 'pending') {
+    const isInstantPayment = paymentMethod === '신용카드' || paymentMethod === '카카오페이' || paymentMethod === '네이버페이' || paymentMethod.includes('카드');
+    if (isInstantPayment) {
+      const createdTime = new Date(validCreatedAt).getTime();
+      const nowTime = Date.now();
+      const elapsedMinutes = (nowTime - createdTime) / (1000 * 60);
+      if (elapsedMinutes > 30) {
+        paymentStatus = 'failed';
+      }
+    }
+  }
+
+  return {
+    ...d,
+    createdAt: validCreatedAt,
+    donorName,
+    paymentMethod,
+    paymentStatus,
+    amount: Number(d.amount) || 0,
+  };
+};
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 font-semibold">결제완료</Badge>;
+    case 'pending':
+      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 font-semibold">결제대기</Badge>;
+    case 'failed':
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 font-semibold">결제실패</Badge>;
+    case 'cancelled':
+      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 font-semibold">결제취소</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+};
 
 export default function AdminDashboard() {
   const { tenantSlug } = useParams();
@@ -41,20 +100,29 @@ export default function AdminDashboard() {
   const [memberCount, setMemberCount] = useState<number>(0);
   const [pendingPrayerCount, setPendingPrayerCount] = useState<number>(0);
 
-  // 현재 시스템 시계 기준 최근 3개월 동적 라벨 생성
+  // 현재 시스템 시계 기준 최근 3개월 동적 라벨 및 YYYY-MM 키 생성
   const now = new Date();
-  const currentMonthNum = now.getMonth() + 1; // e.g. 7월
-  const prevMonthNum = currentMonthNum === 1 ? 12 : currentMonthNum - 1;
-  const prevPrevMonthNum = prevMonthNum === 1 ? 12 : prevMonthNum - 1;
+  const d3 = new Date(now.getFullYear(), now.getMonth(), 1);
+  const d2 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const d1 = new Date(now.getFullYear(), now.getMonth() - 2, 1);
 
-  const mLabel3 = `${currentMonthNum}월(당월)`;
-  const mLabel2 = `${prevMonthNum}월`;
-  const mLabel1 = `${prevPrevMonthNum}월`;
+  const ymKey3 = `${d3.getFullYear()}-${String(d3.getMonth() + 1).padStart(2, '0')}`;
+  const ymKey2 = `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, '0')}`;
+  const ymKey1 = `${d1.getFullYear()}-${String(d1.getMonth() + 1).padStart(2, '0')}`;
+
+  const mLabel3 = `${d3.getMonth() + 1}월(당월)`;
+  const mLabel2 = `${d2.getMonth() + 1}월`;
+  const mLabel1 = `${d1.getMonth() + 1}월`;
 
   const [chartData, setChartData] = useState<{ month: string; amount: number }[]>([
     { month: mLabel1, amount: 0 },
     { month: mLabel2, amount: 0 },
     { month: mLabel3, amount: 0 },
+  ]);
+  const [cumulativeChartData, setCumulativeChartData] = useState<{ month: string; cumulativeAmount: number }[]>([
+    { month: mLabel1, cumulativeAmount: 0 },
+    { month: mLabel2, cumulativeAmount: 0 },
+    { month: mLabel3, cumulativeAmount: 0 },
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -66,13 +134,14 @@ export default function AdminDashboard() {
       // Supabase DB 비동기 수납 실데이터 조율
       donationAPI.getByTenant(tenant.id).then((res) => {
         if (res.success && res.data) {
-          const list = res.data;
+          const list = assignSequentialDonationIds(res.data);
           setDbDonations(list);
 
-          // 1. 전체 수납 총액 & 건수 계산
-          const totalSum = list.reduce((acc, d) => acc + (d.amount || 0), 0);
+          // 1. 정상 결제완료(completed) 건만 수납 총액 및 건수 집계에 포함
+          const completedDonations = list.filter((d) => d.paymentStatus === 'completed');
+          const totalSum = completedDonations.reduce((acc, d) => acc + (d.amount || 0), 0);
           setTotalMonthlyAmount(totalSum);
-          setTotalCount(list.length);
+          setTotalCount(completedDonations.length);
 
           // 2. 신도 수 & 기도문 미인쇄 건수 실제 DB 계산
           const prayers = list.filter(d => d.prayerText && d.prayerText.trim().length > 0);
@@ -83,29 +152,44 @@ export default function AdminDashboard() {
           );
           setMemberCount(uniqueDonors.size);
 
-          // 3. 현재 시계 동적 최근 3개월 DB 수납액 그룹화 계산
-          const monthlySums: Record<string, number> = {};
-          monthlySums[mLabel1] = 0;
-          monthlySums[mLabel2] = 0;
-          monthlySums[mLabel3] = 0;
+          // 3. 최근 3개월 YYYY-MM 키 기반 정밀 수납액 집계 (completed 기준)
+          const monthlySums: Record<string, number> = {
+            [ymKey1]: 0,
+            [ymKey2]: 0,
+            [ymKey3]: 0,
+          };
 
-          list.forEach(item => {
+          completedDonations.forEach(item => {
             if (item.createdAt) {
               const itemDate = new Date(item.createdAt);
-              const m = itemDate.getMonth() + 1;
-              if (m === currentMonthNum) monthlySums[mLabel3] += item.amount || 0;
-              else if (m === prevMonthNum) monthlySums[mLabel2] += item.amount || 0;
-              else if (m === prevPrevMonthNum) monthlySums[mLabel1] += item.amount || 0;
-              else monthlySums[mLabel3] += item.amount || 0;
-            } else {
-              monthlySums[mLabel3] += item.amount || 0;
+              if (!isNaN(itemDate.getTime())) {
+                const itemYm = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+                if (monthlySums[itemYm] !== undefined) {
+                  monthlySums[itemYm] += item.amount || 0;
+                }
+              }
             }
           });
 
+          const amt1 = monthlySums[ymKey1];
+          const amt2 = monthlySums[ymKey2];
+          const amt3 = monthlySums[ymKey3];
+
           setChartData([
-            { month: mLabel1, amount: monthlySums[mLabel1] },
-            { month: mLabel2, amount: monthlySums[mLabel2] },
-            { month: mLabel3, amount: monthlySums[mLabel3] },
+            { month: mLabel1, amount: amt1 },
+            { month: mLabel2, amount: amt2 },
+            { month: mLabel3, amount: amt3 },
+          ]);
+
+          // 4. 누적 수납액 계산 (Cumulative Summation)
+          const cum1 = amt1;
+          const cum2 = cum1 + amt2;
+          const cum3 = cum2 + amt3;
+
+          setCumulativeChartData([
+            { month: mLabel1, cumulativeAmount: cum1 },
+            { month: mLabel2, cumulativeAmount: cum2 },
+            { month: mLabel3, cumulativeAmount: cum3 },
           ]);
         }
       }).catch((err) => {
@@ -114,7 +198,7 @@ export default function AdminDashboard() {
         setIsLoading(false);
       });
     }
-  }, [tenantSlug, tenants, setCurrentTenant, currentMonthNum, prevMonthNum, prevPrevMonthNum]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   if (!currentTenant) {
     return (
@@ -264,8 +348,8 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>누적 봉헌액</CardTitle>
-                <CardDescription>DB 수납 데이터 실시간 반영</CardDescription>
+                <CardTitle>월별 봉헌액 추이 (꺾은선)</CardTitle>
+                <CardDescription>월별 수납 금액 변동 추이 (결제완료 기준)</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -278,7 +362,8 @@ export default function AdminDashboard() {
                       type="monotone"
                       dataKey="amount"
                       stroke={currentTenant.primaryColor}
-                      strokeWidth={2}
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -301,7 +386,7 @@ export default function AdminDashboard() {
                     <TableHead>항목</TableHead>
                     <TableHead className="text-right">금액</TableHead>
                     <TableHead>시간</TableHead>
-                    <TableHead>상태</TableHead>
+                    <TableHead>결제상태</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -324,9 +409,7 @@ export default function AdminDashboard() {
                           {donation.createdAt ? new Date(donation.createdAt).toLocaleString('ko-KR') : '방금 전'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="default">
-                            {donation.paymentStatus === 'completed' ? '완료' : donation.paymentStatus}
-                          </Badge>
+                          {getStatusBadge(donation.paymentStatus)}
                         </TableCell>
                       </TableRow>
                     ))

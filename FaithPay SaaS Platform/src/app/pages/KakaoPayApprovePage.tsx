@@ -38,7 +38,9 @@ export default function KakaoPayApprovePage() {
 
       try {
         // Create completed donation record
-        const receiptId = `FP-KAKAO-${Date.now().toString().slice(-8)}`;
+        const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const seqPart = Date.now().toString().slice(-8);
+        const receiptId = `FP-${datePart}-${seqPart}`;
 
         await donationAPI.create({
           id: receiptId,
@@ -51,7 +53,7 @@ export default function KakaoPayApprovePage() {
           baptismName: baptismName,
           isRecurring: false,
           paymentStatus: 'completed',
-          paymentMethod: '카카오페이 (TC0ONETIME)',
+          paymentMethod: '카카오페이',
           transactionId: tid,
           deviceType: 'WEB',
         });

@@ -284,8 +284,8 @@ export default function BannerManagement() {
           </div>
 
           {/* Content */}
-          <div className="p-6 lg:p-8">
-            <div className="max-w-5xl mx-auto">
+          <div className="p-6 lg:p-8 overflow-x-hidden">
+            <div className="w-full space-y-6">
               {/* Header */}
               <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
@@ -500,7 +500,9 @@ function DraggableBannerItem({
       />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium mb-1">배너 #{index + 1}</p>
-        <p className="text-xs text-muted-foreground truncate">{banner.url}</p>
+        <p className="text-xs text-muted-foreground truncate font-mono">
+          {banner.url.startsWith('data:') ? '🖼️ 직접 업로드한 이미지 배너 파일' : banner.url}
+        </p>
       </div>
       <div className="flex gap-2 flex-shrink-0">
         <Button

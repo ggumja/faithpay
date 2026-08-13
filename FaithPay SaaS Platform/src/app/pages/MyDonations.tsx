@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 
 import TaxReceiptModal from '../components/TaxReceiptModal';
+import { cleanPaymentMethod } from './admin/DonationHistory';
 
 export interface HistoryItem {
   id: string;
@@ -130,7 +131,7 @@ export default function MyDonations() {
             status: '결제완료',
             isRecurring: d.isRecurring,
             deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-            paymentMethod: d.paymentMethod,
+            paymentMethod: cleanPaymentMethod(d.paymentMethod),
           }));
           setHistory(matched);
         } else {
@@ -156,7 +157,7 @@ export default function MyDonations() {
               status: '결제완료',
               isRecurring: d.isRecurring,
               deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-              paymentMethod: d.paymentMethod,
+              paymentMethod: cleanPaymentMethod(d.paymentMethod),
             }));
           setHistory(matched);
         } else {

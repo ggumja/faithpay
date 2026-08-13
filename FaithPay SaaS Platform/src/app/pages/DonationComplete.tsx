@@ -16,8 +16,11 @@ function fmt(n: number) {
 export default function DonationComplete() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, donationFormData } = useApp();
-  const [receiptId] = useState(() => `FP${Date.now().toString().slice(-8)}`);
+  const [receiptId] = useState(() => {
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const seqPart = Date.now().toString().slice(-8);
+    return `FP-${datePart}-${seqPart}`;
+  });
 
   useEffect(() => {
     confetti({
@@ -41,7 +44,7 @@ export default function DonationComplete() {
         isRecurring: donationFormData.isRecurring,
         recurringDay: donationFormData.recurringDay,
         paymentStatus: 'completed',
-        paymentMethod: donationFormData.paymentMethod || (donationFormData.isRecurring ? '빌링키 정기결제' : '카드 인증결제'),
+        paymentMethod: donationFormData.paymentMethod || (donationFormData.isRecurring ? '정기결제' : '신용카드'),
         transactionId: receiptId,
       }).then((res) => {
         if (res.success) {

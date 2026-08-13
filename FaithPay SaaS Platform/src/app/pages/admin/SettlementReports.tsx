@@ -151,7 +151,7 @@ export default function SettlementReports() {
 
       {/* Main Content */}
       <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산 & 기부금 리포트</h1>

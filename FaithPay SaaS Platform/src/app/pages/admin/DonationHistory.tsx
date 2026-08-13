@@ -36,9 +36,253 @@ import {
   Eye,
   Receipt,
   Loader2,
+  Printer,
+  X,
+  Monitor,
+  Smartphone,
 } from 'lucide-react';
 import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
 import { toast } from 'sonner';
+
+function numberToKorean(amount: number): string {
+  if (!amount || isNaN(amount)) return '영';
+  const units = ['', '만', '억', '조'];
+  const digits = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  const subUnits = ['', '십', '백', '천'];
+
+  let num = Math.floor(amount);
+  let result = '';
+  let unitIndex = 0;
+
+  while (num > 0) {
+    const chunk = num % 10000;
+    if (chunk > 0) {
+      let chunkStr = '';
+      let chunkNum = chunk;
+      for (let i = 0; i < 4; i++) {
+        const digit = chunkNum % 10;
+        if (digit > 0) {
+          const digitStr = (digit === 1 && i > 0) ? '' : digits[digit];
+          chunkStr = digitStr + subUnits[i] + chunkStr;
+        }
+        chunkNum = Math.floor(chunkNum / 10);
+      }
+      result = chunkStr + units[unitIndex] + (result ? ' ' + result : '');
+    }
+    num = Math.floor(num / 10000);
+    unitIndex++;
+  }
+
+  return result || '영';
+}
+
+export function cleanPaymentMethod(method?: string): string {
+  if (!method || typeof method !== 'string') return '신용카드';
+  const m = method.trim();
+  if (!m) return '신용카드';
+
+  // Card variations ("OffPG 현장 신용카드", "OffPG", "카드 인증결제", "카드결제", "card", "카드")
+  if (
+    m.includes('OffPG') ||
+    m.includes('카드') ||
+    m.toLowerCase().includes('card') ||
+    m.includes('삼성') ||
+    m.includes('애플')
+  ) {
+    return '신용카드';
+  }
+
+  // KakaoPay variations ("카카오페이 (QR/바코드)", "카카오페이 (TC0ONETIME)", "kakaopay")
+  if (m.includes('카카오') || m.toLowerCase().includes('kakao')) {
+    return '카카오페이';
+  }
+
+  // NaverPay variations
+  if (m.includes('네이버') || m.toLowerCase().includes('naver')) {
+    return '네이버페이';
+  }
+
+  // Account Transfer
+  if (m.includes('계좌') || m.includes('이체')) {
+    return '계좌이체';
+  }
+
+  // Virtual Account
+  if (m.includes('가상')) {
+    return '가상계좌';
+  }
+
+  // Recurring payment
+  if (m.includes('정기') || m.includes('빌링')) {
+    return '정기결제';
+  }
+
+  return m;
+}
+
+export function formatDonationId(rawId?: string, createdAtStr?: string): string {
+  if (!rawId || typeof rawId !== 'string') {
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return `FP-${datePart}-00000001`;
+  }
+
+  const str = rawId.trim();
+  
+  // Already matches FP-YYYYMMDD-XXXXXXXX (8 digit sequence)
+  if (/^FP-\d{8}-\d{8}$/.test(str)) {
+    return str;
+  }
+
+  // Determine date string YYYYMMDD
+  let datePart = '';
+  if (createdAtStr) {
+    const parsed = new Date(createdAtStr);
+    if (!isNaN(parsed.getTime())) {
+      datePart = parsed.toISOString().slice(0, 10).replace(/-/g, '');
+    }
+  }
+  if (!datePart) {
+    datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  }
+
+  // Extract numeric digits from rawId or pad to 8 digits
+  const digits = str.replace(/[^0-9]/g, '');
+  let seqPart = '';
+  if (digits.length >= 8) {
+    seqPart = digits.slice(-8);
+  } else if (digits.length > 0) {
+    seqPart = digits.padStart(8, '0');
+  } else {
+    seqPart = '00000001';
+  }
+
+  return `FP-${datePart}-${seqPart}`;
+}
+
+function normalizeDonation(d: any) {
+  // 1. Created At Date handling
+  const rawDate = d.createdAt || d.created_at || d.date;
+  let validCreatedAt = new Date().toISOString();
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) {
+      validCreatedAt = parsed.toISOString();
+    }
+  }
+
+  // 2. Name handling (무기명 if blank, empty, or includes 무명/익명)
+  const rawName = d.donorName ?? d.donor_name ?? d.name;
+  const nameStr = rawName ? String(rawName).trim() : '';
+  const isAnon = !nameStr || nameStr === '무기명' || nameStr.includes('무명') || nameStr.includes('익명');
+  const donorName = isAnon ? '무기명' : nameStr;
+
+  // 3. Phone handling
+  const rawPhone = d.donorPhone ?? d.donor_phone ?? d.phone ?? '';
+  const donorPhone = String(rawPhone || '').trim();
+
+  // 4. Item Name handling
+  const rawItem = d.itemName ?? d.item_name ?? d.item;
+  const itemName = (rawItem && String(rawItem).trim().length > 0) ? String(rawItem).trim() : '일반헌금/보시';
+
+  // 5. Payment Method handling (통일된 cleanPaymentMethod 사용)
+  const rawMethod = d.paymentMethod ?? d.payment_method ?? d.method;
+  const paymentMethod = cleanPaymentMethod(rawMethod);
+
+  // 6. Payment Status handling
+  const rawStatus = d.paymentStatus ?? d.payment_status ?? d.status;
+  let paymentStatus = (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'completed';
+
+  // 신용카드/간편결제 등 즉시 결제 수단에서 30분 이상 경과한 'pending'(대기중) 건은 결제 미완료/이탈(failed)로 정리
+  if (paymentStatus === 'pending') {
+    const isInstantPayment = paymentMethod === '신용카드' || paymentMethod === '카카오페이' || paymentMethod === '네이버페이' || paymentMethod.includes('카드');
+    if (isInstantPayment) {
+      const createdTime = new Date(validCreatedAt).getTime();
+      const nowTime = Date.now();
+      const elapsedMinutes = (nowTime - createdTime) / (1000 * 60);
+      if (elapsedMinutes > 30) {
+        paymentStatus = 'failed';
+      }
+    }
+  }
+
+  // 7. Prayer Text handling
+  const rawPrayer = d.prayerText ?? d.prayer_text ?? d.prayer ?? '';
+  const prayerText = String(rawPrayer || '').trim();
+
+  // 8. Amount
+  const amount = Number(d.amount) || 0;
+
+  // 9. ID normalization (FP-YYYYMMDD-XXXXXXXX 규격으로 일관화)
+  const rawIdStr = String(d.id || '');
+  const id = formatDonationId(rawIdStr, validCreatedAt);
+
+  // 10. Device Type handling (KIOSK vs WEB_MOBILE)
+  const rawDevice = d.deviceType ?? d.device_type ?? d.device;
+  let deviceType: 'KIOSK' | 'WEB_MOBILE' = 'WEB_MOBILE';
+  if (rawDevice === 'KIOSK' || rawIdStr.toUpperCase().includes('KIOSK')) {
+    deviceType = 'KIOSK';
+  } else if (rawDevice) {
+    deviceType = String(rawDevice) as any;
+  }
+
+  return {
+    ...d,
+    id,
+    createdAt: validCreatedAt,
+    donorName,
+    donorPhone,
+    itemName,
+    amount,
+    paymentMethod,
+    paymentStatus,
+    prayerText,
+    deviceType,
+  };
+}
+
+export function assignSequentialDonationIds(list: any[]): any[] {
+  if (!Array.isArray(list) || list.length === 0) return [];
+
+  // 1. Sort donations chronologically by creation date (earliest to latest)
+  const chronological = [...list].sort((a, b) => {
+    const rawA = a.createdAt || a.created_at || a.date;
+    const rawB = b.createdAt || b.created_at || b.date;
+    const timeA = rawA ? new Date(rawA).getTime() : 0;
+    const timeB = rawB ? new Date(rawB).getTime() : 0;
+    return timeA - timeB;
+  });
+
+  // 2. Track sequential counter per YYYYMMDD date starting from 1 (00000001)
+  const dateCounters: Record<string, number> = {};
+
+  const processed = chronological.map((item) => {
+    const rawDate = item.createdAt || item.created_at || item.date;
+    let validDate = new Date();
+    if (rawDate) {
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime())) {
+        validDate = parsed;
+      }
+    }
+    const yyyymmdd = validDate.toISOString().slice(0, 10).replace(/-/g, '');
+
+    dateCounters[yyyymmdd] = (dateCounters[yyyymmdd] || 0) + 1;
+    const seqNumStr = String(dateCounters[yyyymmdd]).padStart(8, '0');
+    const formattedId = `FP-${yyyymmdd}-${seqNumStr}`;
+
+    return normalizeDonation({
+      ...item,
+      id: formattedId,
+    });
+  });
+
+  // 3. Return sorted by creation date descending (newest first for UI table display)
+  return processed.sort((a, b) => {
+    const timeA = new Date(a.createdAt).getTime();
+    const timeB = new Date(b.createdAt).getTime();
+    return timeB - timeA;
+  });
+}
 
 export default function DonationHistory() {
   const { tenantSlug } = useParams();
@@ -59,14 +303,18 @@ export default function DonationHistory() {
   const [isOtpLoading, setIsOtpLoading] = useState(false);
   const [isOtpVerified, setIsOtpVerified] = useState(false);
 
-  // Filter states
+  // Filter states & Tab State
+  const [activeTab, setActiveTab] = useState<'history' | 'recurring_pending'>('history');
+  const [showFailed, setShowFailed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
+  const [deviceFilter, setDeviceFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
+  const [receiptDonation, setReceiptDonation] = useState<any>(null);
   const itemsPerPage = 10;
 
   const handleSendOtp = async () => {
@@ -102,7 +350,7 @@ export default function DonationHistory() {
         setIsOtpVerified(true);
         setShowOtpModal(false);
         setSubscriptions(res.data.subscriptions || []);
-        setDonations(res.data.donations || []);
+        setDonations(assignSequentialDonationIds(res.data.donations || []));
         toast.success('본인 인증이 완료되었습니다. 내역 및 정기결제를 확인하세요.');
       } else {
         toast.error(res.error || '인증번호가 올바르지 않습니다.');
@@ -146,19 +394,7 @@ export default function DonationHistory() {
         try {
           const res = await donationAPI.getByTenant(currentTenant.id);
           if (res.success && res.data) {
-            const mapped = res.data.map(d => ({
-              id: d.id,
-              date: d.createdAt ? d.createdAt.split('T')[0] : '2026-03-28',
-              time: d.createdAt ? d.createdAt.split('T')[1]?.slice(0, 5) : '14:30',
-              name: d.donorName,
-              phone: d.donorPhone,
-              item: d.itemName,
-              amount: d.amount,
-              method: d.paymentMethod || '카드',
-              status: d.paymentStatus || 'completed',
-              prayer: d.prayerText || '',
-            }));
-            setDonations(mapped);
+            setDonations(assignSequentialDonationIds(res.data));
           } else {
             setDonations([]);
           }
@@ -254,8 +490,23 @@ export default function DonationHistory() {
 
   const currentPath = location.pathname;
 
-  // Filter donations
+  // 미래 정기결제 결제대기 목록 (미래 자동 결제 예정건)
+  const recurringPendingDonations = donations.filter((donation) => {
+    return donation.isRecurring && (donation.paymentStatus === 'pending' || donation.paymentStatus === 'scheduled');
+  });
+
+  // Filter donations (실제 승인/입금/취소 결제 내역만 포함)
   const filteredDonations = donations.filter((donation) => {
+    // 미래 정기결제 대기건은 실제 결제 내역 테이블에서 분리 제외
+    if (donation.isRecurring && (donation.paymentStatus === 'pending' || donation.paymentStatus === 'scheduled')) {
+      return false;
+    }
+
+    // 결제실패(이탈) 건은 showFailed 체크박스가 켜져있거나 상태필터가 'failed'일 때만 목록에 포함
+    if (!showFailed && statusFilter !== 'failed' && donation.paymentStatus === 'failed') {
+      return false;
+    }
+
     const nameStr = donation.donorName || '';
     const phoneStr = donation.donorPhone || '';
     
@@ -266,6 +517,7 @@ export default function DonationHistory() {
       
     const matchesStatus = statusFilter === 'all' || donation.paymentStatus === statusFilter;
     const matchesMethod = methodFilter === 'all' || donation.paymentMethod === methodFilter;
+    const matchesDevice = deviceFilter === 'all' || donation.deviceType === deviceFilter;
     
     let matchesDate = true;
     if (startDate || endDate) {
@@ -279,7 +531,7 @@ export default function DonationHistory() {
       }
     }
 
-    return matchesSearch && matchesStatus && matchesMethod && matchesDate;
+    return matchesSearch && matchesStatus && matchesMethod && matchesDevice && matchesDate;
   });
 
   // Pagination
@@ -296,21 +548,66 @@ export default function DonationHistory() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">완료</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 font-semibold">결제완료</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">대기중</Badge>;
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 font-semibold">결제대기</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">실패</Badge>;
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 font-semibold">결제실패</Badge>;
       case 'cancelled':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">취소됨</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 font-semibold">결제취소</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const handleExport = () => {
-    // CSV export logic would go here
-    alert('CSV 다운로드 기능은 데모입니다');
+    if (filteredDonations.length === 0) {
+      toast.error('다운로드할 봉헌 내역이 없습니다.');
+      return;
+    }
+
+    const headers = ['봉헌번호', '일시', '접수기기', '봉헌자', '연락처', '봉헌항목', '금액', '결제방법', '결제상태', '기도제목/메모'];
+    
+    const rows = filteredDonations.map(d => {
+      const createdDate = d.createdAt ? new Date(d.createdAt).toLocaleString() : `${d.date || ''} ${d.time || ''}`;
+      const statusKorean = d.paymentStatus === 'completed' ? '결제완료' 
+        : d.paymentStatus === 'pending' ? '결제대기' 
+        : d.paymentStatus === 'cancelled' ? '결제취소' 
+        : d.paymentStatus === 'failed' ? '결제실패' : (d.paymentStatus || d.status);
+      
+      const cleanPrayer = (d.prayerText || d.prayer || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""');
+      const donorPhoneFormatted = d.donorPhone ? formatPhoneNumber(d.donorPhone) : (d.phone ? formatPhoneNumber(d.phone) : '');
+      const deviceStr = d.deviceType === 'KIOSK' ? '키오스크' : '모바일/웹';
+
+      return [
+        `"${d.id || ''}"`,
+        `"${createdDate}"`,
+        `"${deviceStr}"`,
+        `"${d.donorName || d.name || ''}"`,
+        `"${donorPhoneFormatted}"`,
+        `"${d.itemName || d.item || ''}"`,
+        d.amount || 0,
+        `"${d.paymentMethod || d.method || '신용카드'}"`,
+        `"${statusKorean}"`,
+        `"${cleanPrayer}"`
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const tenantName = currentTenant?.name || 'FaithPay';
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${tenantName}_봉헌내역_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`${filteredDonations.length}건의 봉헌 내역이 엑셀(CSV)로 다운로드되었습니다.`);
   };
 
   const handleViewDetail = (donation: any) => {
@@ -318,7 +615,7 @@ export default function DonationHistory() {
   };
 
   const handlePrintReceipt = (donation: any) => {
-    alert(`${donation.id} 영수증 출력 (데모)`);
+    setReceiptDonation(donation);
   };
 
   const handleCancelPayment = async (donationId: string) => {
@@ -333,7 +630,7 @@ export default function DonationHistory() {
         // refresh data
         const refreshRes = await donationAPI.getByTenant(currentTenant.id);
         if (refreshRes.success && refreshRes.data) {
-          setDonations(refreshRes.data);
+          setDonations(assignSequentialDonationIds(refreshRes.data));
         }
       } else {
         alert(`취소 실패: ${res.error}`);
@@ -371,7 +668,7 @@ export default function DonationHistory() {
 
         {/* Content */}
         <div className="p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full">
             {/* Header */}
             <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
@@ -523,274 +820,448 @@ export default function DonationHistory() {
               </div>
             )}
 
-            {/* Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    총 봉헌액
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" style={{ color: currentTenant.primaryColor }}>
-                    {totalAmount.toLocaleString()}원
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {filteredDonations.length}건
-                  </p>
-                </CardContent>
-              </Card>
+            {/* Tab Navigation: 실제 결제 내역 vs 정기결제 결제대기 목록 */}
+            <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-6 gap-2">
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+                  activeTab === 'history'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
+                <span>📜 실제 승인/입금 내역</span>
+                <Badge variant="secondary" className="text-xs font-semibold">
+                  {filteredDonations.length}건
+                </Badge>
+              </button>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    완료
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{completedCount}건</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    정상 처리된 봉헌
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    대기중
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">{pendingCount}건</div>
-                  <p className="text-xs text-muted-foreground mt-1">입금 대기</p>
-                </CardContent>
-              </Card>
+              <button
+                onClick={() => setActiveTab('recurring_pending')}
+                className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+                  activeTab === 'recurring_pending'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
+                <span>🗓️ 정기결제 결제대기 (미래 결제예정) 목록</span>
+                <Badge className={recurringPendingDonations.length > 0 ? "bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs font-bold" : "bg-zinc-100 text-zinc-600 text-xs font-normal"}>
+                  {recurringPendingDonations.length}건
+                </Badge>
+              </button>
             </div>
 
-            {/* Filters */}
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  <CardTitle>검색 및 필터</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div className="lg:col-span-2">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="이름, 전화번호, 봉헌번호 검색"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
-                      />
+            {activeTab === 'recurring_pending' ? (
+              <Card className="mb-8 border border-amber-200 bg-amber-50/30">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-amber-950">
+                        <span>🗓️ 정기결제 결제대기 (미래 자동 결제 예정)</span>
+                      </CardTitle>
+                      <CardDescription className="text-xs text-amber-800/80 mt-1">
+                        미래 특정 날짜에 자동 이체/청구될 정기결제 대기 건들입니다. 승인 완료된 실시간 결제 내역과 구분하여 별도 관리합니다.
+                      </CardDescription>
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  {recurringPendingDonations.length === 0 ? (
+                    <div className="text-center py-12 text-zinc-500 space-y-2">
+                      <Calendar className="h-8 w-8 mx-auto text-zinc-400" />
+                      <p className="font-semibold text-sm">현재 대기 중인 미래 정기결제 예약 건이 없습니다.</p>
+                      <p className="text-xs text-zinc-400">정기결제 신규 신청 시 다음 청구 예정일로 자동 예약됩니다.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>봉헌번호</TableHead>
+                            <TableHead>결제 예정일</TableHead>
+                            <TableHead>신청자</TableHead>
+                            <TableHead>봉헌항목</TableHead>
+                            <TableHead className="text-right">약정 금액</TableHead>
+                            <TableHead>결제방법</TableHead>
+                            <TableHead>상태</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {recurringPendingDonations.map((donation) => {
+                            const createdDate = new Date(donation.createdAt);
+                            const isValidDate = !isNaN(createdDate.getTime());
+                            const dateStr = isValidDate ? createdDate.toLocaleDateString('ko-KR') : '-';
+                            const isAnonymous = !donation.donorName || donation.donorName === '무기명';
 
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="상태" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">전체 상태</SelectItem>
-                      <SelectItem value="completed">완료</SelectItem>
-                      <SelectItem value="pending">대기중</SelectItem>
-                      <SelectItem value="failed">실패</SelectItem>
-                      <SelectItem value="cancelled">취소됨</SelectItem>
-                    </SelectContent>
-                  </Select>
+                            return (
+                              <TableRow key={donation.id}>
+                                <TableCell className="font-mono text-xs font-semibold text-slate-700">
+                                  {donation.id}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm font-semibold text-amber-900">
+                                    {dateStr} (예정)
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium text-slate-900">
+                                    {isAnonymous ? '무기명' : donation.donorName}
+                                  </div>
+                                  {donation.donorPhone && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {formatPhoneNumber(donation.donorPhone)}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium">{donation.itemName || '일반헌금/보시'}</TableCell>
+                                <TableCell className="text-right font-bold text-slate-900">
+                                  {(donation.amount || 0).toLocaleString()}원
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                                    정기결제 ({donation.paymentMethod || '신용카드'})
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
+                                    🗓️ 결제예정
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Statistics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        총 봉헌액
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold" style={{ color: currentTenant.primaryColor }}>
+                        {totalAmount.toLocaleString()}원
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {filteredDonations.length}건
+                      </p>
+                    </CardContent>
+                  </Card>
 
-                  <Select value={methodFilter} onValueChange={setMethodFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="결제방법" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">전체 방법</SelectItem>
-                      <SelectItem value="카드">카드</SelectItem>
-                      <SelectItem value="계좌이체">계좌이체</SelectItem>
-                      <SelectItem value="가상계좌">가상계좌</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        결제완료
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">{completedCount}건</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        정상 승인된 봉헌
+                      </p>
+                    </CardContent>
+                  </Card>
 
-                  <Button
-                    variant="outline"
-                    onClick={handleExport}
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    엑셀 다운로드
-                  </Button>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        결제대기
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-amber-600">{pendingCount}건</div>
+                      <p className="text-xs text-muted-foreground mt-1">입금 대기</p>
+                    </CardContent>
+                  </Card>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      시작일
-                    </label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      종료일
-                    </label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                {/* Filters */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-5 w-5" />
+                      <CardTitle>검색 및 필터</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                      <div className="lg:col-span-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="이름, 전화번호, 봉헌번호 검색"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+                      </div>
 
-            {/* Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>봉헌 목록</CardTitle>
-                <CardDescription>
-                  {filteredDonations.length}건의 봉헌 내역이 조회되었습니다
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>봉헌번호</TableHead>
-                        <TableHead>일시</TableHead>
-                        <TableHead>이름</TableHead>
-                        <TableHead>봉헌항목</TableHead>
-                        <TableHead className="text-right">금액</TableHead>
-                        <TableHead>결제방법</TableHead>
-                        <TableHead>상태</TableHead>
-                        <TableHead className="text-center">작업</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                          </TableCell>
-                        </TableRow>
-                      ) : currentDonations.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            조회된 봉헌 내역이 없습니다
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        currentDonations.map((donation) => {
-                          const createdDate = new Date(donation.createdAt);
-                          const dateStr = createdDate.toLocaleDateString();
-                          const timeStr = createdDate.toLocaleTimeString();
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="결제상태" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 상태</SelectItem>
+                          <SelectItem value="completed">결제완료</SelectItem>
+                          <SelectItem value="pending">결제대기</SelectItem>
+                          <SelectItem value="failed">결제실패</SelectItem>
+                          <SelectItem value="cancelled">결제취소</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                          return (
-                            <TableRow key={donation.id}>
-                              <TableCell className="font-mono text-sm">
-                                {donation.id}
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  <div>{dateStr}</div>
-                                  <div className="text-muted-foreground text-xs">
-                                    {timeStr}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <div className="font-medium">{donation.donorName}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {formatPhoneNumber(donation.donorPhone)}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>{donation.itemName}</TableCell>
-                              <TableCell className="text-right font-semibold">
-                                {donation.amount.toLocaleString()}원
-                              </TableCell>
-                              <TableCell>{donation.paymentMethod}</TableCell>
-                              <TableCell>{getStatusBadge(donation.paymentStatus)}</TableCell>
-                              <TableCell>
-                                <div className="flex gap-2 justify-center">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleViewDetail(donation)}
-                                    title="상세보기"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handlePrintReceipt(donation)}
-                                    title="영수증 출력"
-                                  >
-                                    <Receipt className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                      <Select value={methodFilter} onValueChange={setMethodFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="결제방법" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 결제방법</SelectItem>
+                          <SelectItem value="신용카드">신용카드</SelectItem>
+                          <SelectItem value="계좌이체">계좌이체</SelectItem>
+                          <SelectItem value="가상계좌">가상계좌</SelectItem>
+                          <SelectItem value="카카오페이">카카오페이</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={deviceFilter} onValueChange={setDeviceFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="접수 기기" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체 기기</SelectItem>
+                          <SelectItem value="WEB_MOBILE">📱 모바일/웹</SelectItem>
+                          <SelectItem value="KIOSK">🖥️ 키오스크</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        variant="outline"
+                        onClick={handleExport}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        엑셀 다운로드
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          시작일
+                        </label>
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          종료일
+                        </label>
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={showFailed}
+                          onChange={(e) => setShowFailed(e.target.checked)}
+                          className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                          ⚠️ 결제실패(중도이탈) 내역도 포함하여 함께 보기
+                        </span>
+                      </label>
+                      <span className="text-xs text-muted-foreground">
+                        {showFailed ? '· 결제 미완료 이탈 건이 목록에 함께 노출 중입니다.' : '· 기본 설정: 결제 성공/정상 대기 내역만 표시 중'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>봉헌 목록</CardTitle>
+                    <CardDescription>
+                      {filteredDonations.length}건의 봉헌 내역이 조회되었습니다
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>봉헌번호</TableHead>
+                            <TableHead>일시</TableHead>
+                            <TableHead>기기</TableHead>
+                            <TableHead>이름</TableHead>
+                            <TableHead>봉헌항목</TableHead>
+                            <TableHead className="text-right">금액</TableHead>
+                            <TableHead>결제방법</TableHead>
+                            <TableHead>결제상태</TableHead>
+                            <TableHead className="text-center">작업</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {isLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                               </TableCell>
                             </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                          ) : currentDonations.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                                조회된 봉헌 내역이 없습니다
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            currentDonations.map((donation) => {
+                              const createdDate = new Date(donation.createdAt);
+                              const isValidDate = !isNaN(createdDate.getTime());
+                              const dateStr = isValidDate ? createdDate.toLocaleDateString('ko-KR') : '-';
+                              const timeStr = isValidDate ? createdDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+                              const isAnonymous = !donation.donorName || donation.donorName === '무기명';
+                              const isKiosk = donation.deviceType === 'KIOSK';
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6">
-                    <p className="text-sm text-muted-foreground">
-                      {startIndex + 1}-{Math.min(endIndex, filteredDonations.length)} /{' '}
-                      {filteredDonations.length}건
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <Button
-                            key={page}
-                            variant={page === currentPage ? 'default' : 'outline'}
-                            size="icon"
-                            onClick={() => setCurrentPage(page)}
-                            className="w-10"
-                          >
-                            {page}
-                          </Button>
-                        ))}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                              return (
+                                <TableRow key={donation.id}>
+                                  <TableCell className="font-mono text-xs font-semibold text-slate-700">
+                                    {donation.id}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm">
+                                      <div className="font-medium text-slate-900">{dateStr}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        {timeStr}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    {isKiosk ? (
+                                      <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 font-semibold gap-1 text-[11px] py-0.5 px-2">
+                                        <Monitor className="h-3 w-3" /> 키오스크
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 font-semibold gap-1 text-[11px] py-0.5 px-2">
+                                        <Smartphone className="h-3 w-3" /> 모바일/웹
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div>
+                                      <div className="font-medium">
+                                        {isAnonymous ? (
+                                          <Badge variant="outline" className="text-zinc-500 bg-zinc-50 border-zinc-200 text-xs font-normal">
+                                            무기명
+                                          </Badge>
+                                        ) : (
+                                          donation.donorName
+                                        )}
+                                      </div>
+                                      {donation.donorPhone ? (
+                                        <div className="text-xs text-muted-foreground">
+                                          {formatPhoneNumber(donation.donorPhone)}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{donation.itemName || '일반헌금/보시'}</TableCell>
+                                  <TableCell className="text-right font-bold">
+                                    {(donation.amount || 0).toLocaleString()}원
+                                  </TableCell>
+                                  <TableCell>{donation.paymentMethod || '신용카드'}</TableCell>
+                                  <TableCell>{getStatusBadge(donation.paymentStatus)}</TableCell>
+                                  <TableCell className="text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleViewDetail(donation)}
+                                        title="상세보기"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handlePrintReceipt(donation)}
+                                        title="영수증 출력"
+                                      >
+                                        <Receipt className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6">
+                        <p className="text-sm text-muted-foreground">
+                          {startIndex + 1}-{Math.min(endIndex, filteredDonations.length)} /{' '}
+                          {filteredDonations.length}건
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                              <Button
+                                key={page}
+                                variant={page === currentPage ? 'default' : 'outline'}
+                                size="icon"
+                                onClick={() => setCurrentPage(page)}
+                                className="w-10"
+                              >
+                                {page}
+                              </Button>
+                            ))}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
             {/* Detail Modal */}
             {selectedDonation && (
@@ -810,34 +1281,56 @@ export default function DonationHistory() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">봉헌자</p>
-                        <p className="font-semibold">{selectedDonation.donorName}</p>
+                        <p className="font-semibold">
+                          {!selectedDonation.donorName || selectedDonation.donorName === '무기명' ? (
+                            <Badge variant="outline" className="text-zinc-500 bg-zinc-50 border-zinc-200 text-xs font-normal">
+                              무기명
+                            </Badge>
+                          ) : (
+                            selectedDonation.donorName
+                          )}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">연락처</p>
-                        <p className="font-semibold">{formatPhoneNumber(selectedDonation.donorPhone)}</p>
+                        <p className="font-semibold">{selectedDonation.donorPhone ? formatPhoneNumber(selectedDonation.donorPhone) : '-'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">봉헌 항목</p>
-                        <p className="font-semibold">{selectedDonation.itemName}</p>
+                        <p className="font-semibold">{selectedDonation.itemName || '일반헌금/보시'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">금액</p>
                         <p className="font-semibold text-lg">
-                          {selectedDonation.amount.toLocaleString()}원
+                          {(selectedDonation.amount || 0).toLocaleString()}원
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">결제 방법</p>
-                        <p className="font-semibold">{selectedDonation.paymentMethod}</p>
+                        <p className="font-semibold">{selectedDonation.paymentMethod || '신용카드'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">상태</p>
                         <div className="mt-1">{getStatusBadge(selectedDonation.paymentStatus)}</div>
                       </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">접수 기기</p>
+                        <div className="mt-1">
+                          {selectedDonation.deviceType === 'KIOSK' ? (
+                            <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 font-semibold gap-1 text-xs">
+                              <Monitor className="h-3.5 w-3.5" /> 키오스크 (KIOSK)
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 font-semibold gap-1 text-xs">
+                              <Smartphone className="h-3.5 w-3.5" /> 모바일/웹 (Mobile)
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                       <div className="col-span-2">
                         <p className="text-sm text-muted-foreground">봉헌 일시</p>
                         <p className="font-semibold">
-                          {new Date(selectedDonation.createdAt).toLocaleString()}
+                          {!isNaN(new Date(selectedDonation.createdAt).getTime()) ? new Date(selectedDonation.createdAt).toLocaleString('ko-KR') : '-'}
                         </p>
                       </div>
                     </div>
@@ -872,6 +1365,161 @@ export default function DonationHistory() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            )}
+
+            {/* Printable Receipt Modal */}
+            {receiptDonation && (
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto"
+                onClick={() => setReceiptDonation(null)}
+              >
+                <div
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <style>{`
+                    @media print {
+                      body * {
+                        visibility: hidden !important;
+                      }
+                      #printable-receipt, #printable-receipt * {
+                        visibility: visible !important;
+                      }
+                      #printable-receipt {
+                        position: fixed !important;
+                        left: 50% !important;
+                        top: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                        width: 100% !important;
+                        max-width: 600px !important;
+                        margin: 0 !important;
+                        padding: 30px !important;
+                        box-shadow: none !important;
+                        border: 2px solid #000 !important;
+                        background: #fff !important;
+                        color: #000 !important;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* Modal Action Header (no-print) */}
+                  <div className="flex justify-between items-center pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800 no-print">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Receipt className="h-5 w-5 text-indigo-600" />
+                      <span>봉헌/보시 영수증</span>
+                    </h3>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1 rounded-xl cursor-pointer"
+                        onClick={() => window.print()}
+                      >
+                        <Printer className="h-4 w-4" />
+                        프린트 / PDF 출력
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setReceiptDonation(null)}
+                        className="h-8 w-8 rounded-xl cursor-pointer"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Receipt Ticket Container (printable) */}
+                  <div id="printable-receipt" className="bg-white text-zinc-900 p-6 rounded-xl border border-zinc-200 space-y-6">
+                    {/* Organization & Receipt Header */}
+                    <div className="text-center pb-4 border-b-2 border-zinc-900">
+                      <p className="text-xs font-bold text-indigo-600 tracking-wider mb-1">{currentTenant?.name || 'FaithPay'}</p>
+                      <h2 className="text-2xl font-black text-zinc-900 tracking-tight">봉 헌 / 보 시  영 수 증</h2>
+                      <p className="text-[11px] text-zinc-500 mt-1">OFFICIAL DONATION RECEIPT</p>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="flex justify-between text-xs text-zinc-600 bg-zinc-50 p-3 rounded-lg border border-zinc-100">
+                      <div>
+                        <span className="font-semibold text-zinc-500">영수증 번호: </span>
+                        <span className="font-mono font-bold text-zinc-900">{receiptDonation.id}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-zinc-500">발행일시: </span>
+                        <span className="font-bold text-zinc-900">{new Date(receiptDonation.createdAt || Date.now()).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                    </div>
+
+                    {/* Receipt Details Table */}
+                    <div className="space-y-2 text-sm">
+                      <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500 font-medium">봉 헌 자</span>
+                        <span className="col-span-2 font-bold text-zinc-900">{receiptDonation.donorName || receiptDonation.name} 님</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500 font-medium">연 락 처</span>
+                        <span className="col-span-2 font-semibold text-zinc-800">{formatPhoneNumber(receiptDonation.donorPhone || receiptDonation.phone || '')}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500 font-medium">봉 헌 항 목</span>
+                        <span className="col-span-2 font-bold text-indigo-700">{receiptDonation.itemName || receiptDonation.item}</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500 font-medium">결 제 수 단</span>
+                        <span className="col-span-2 font-medium text-zinc-800">{receiptDonation.paymentMethod || receiptDonation.method || '신용카드'} (정상 처리)</span>
+                      </div>
+                      <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500 font-medium">접 수 채 널</span>
+                        <span className="col-span-2 font-medium text-zinc-800">
+                          {receiptDonation.deviceType === 'KIOSK' ? '현장 키오스크 (KIOSK)' : '온라인 모바일/웹 (Mobile)'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 py-3 bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 items-center">
+                        <span className="text-indigo-900 font-bold">봉 헌 금 액</span>
+                        <div className="col-span-2">
+                          <p className="text-xs text-indigo-700 font-semibold mb-0.5">
+                            일금 {numberToKorean(receiptDonation.amount || 0)}원정
+                          </p>
+                          <p className="text-xl font-black text-indigo-950">
+                            ₩ {(receiptDonation.amount || 0).toLocaleString()} 원
+                          </p>
+                        </div>
+                      </div>
+                      {(receiptDonation.prayerText || receiptDonation.prayer) && (
+                        <div className="py-3 border-b border-zinc-100">
+                          <span className="text-zinc-500 font-medium block mb-1">기도 / 축원 내용</span>
+                          <p className="text-xs text-zinc-700 bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 italic">
+                            "{receiptDonation.prayerText || receiptDonation.prayer}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Gratitude Statement & Stamp Seal */}
+                    <div className="pt-4 border-t-2 border-zinc-900 text-center relative">
+                      <p className="text-xs font-semibold text-zinc-700 leading-relaxed">
+                        위 금액을 정성 어린 봉헌/보시금으로 정히 수령하였습니다.<br />
+                        소중한 마음과 기도가 함께 하기를 기원합니다.
+                      </p>
+                      
+                      <div className="mt-6 flex items-center justify-center gap-6">
+                        <div className="text-right">
+                          <p className="text-xs text-zinc-500">{new Date(receiptDonation.createdAt || Date.now()).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                          <p className="text-sm font-bold text-zinc-900 mt-1">{currentTenant?.name || 'FaithPay (페이쓰페이)'}</p>
+                        </div>
+
+                        {/* Stamp SVG */}
+                        <div className="w-14 h-14 rounded-full border-2 border-red-600 text-red-600 flex flex-col items-center justify-center text-[10px] font-black leading-tight transform -rotate-12 select-none shadow-xs">
+                          <span>{currentTenant?.name?.slice(0, 4) || 'Faith'}</span>
+                          <span className="text-[8px]">인 영</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

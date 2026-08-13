@@ -244,7 +244,7 @@ export default function PaymentSelection() {
         const tempDonationId = `don_${Date.now()}`;
         const orderName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
         const amount = donationFormData.amount || 10000;
-        const customerName = donationFormData.name || '무명 기부자';
+        const customerName = donationFormData.name || '무기명';
         const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
         const customerKey = `customer_${currentTenant.id}_${cleanPhone || Date.now()}`;
 
