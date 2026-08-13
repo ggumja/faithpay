@@ -762,13 +762,19 @@ export default function AdminAccountManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
+          <form onSubmit={(e) => { e.preventDefault(); handleAddStaff(); }} autoComplete="off" className="space-y-4 py-3">
+            {/* Chrome Autofill Trap (Prevent Chrome Password Manager from hijacking input fields) */}
+            <input type="text" name="prevent_autofill_email" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+            <input type="password" name="prevent_autofill_pwd" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
             <div className="space-y-2">
               <Label className="text-xs font-bold">성명 (이름)</Label>
               <Input
                 placeholder="예: 홍길동 실무관"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
+                autoComplete="off"
+                name="staff_name_no_fill"
               />
             </div>
 
@@ -779,15 +785,22 @@ export default function AdminAccountManagement() {
                 placeholder="example@organization.or.kr"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
+                autoComplete="off"
+                aria-autocomplete="none"
+                name="staff_email_no_fill"
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold">휴대폰 번호</Label>
               <Input
+                type="tel"
                 placeholder="010-0000-0000"
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
+                autoComplete="off"
+                aria-autocomplete="none"
+                name="staff_phone_no_fill"
               />
             </div>
 
@@ -798,6 +811,9 @@ export default function AdminAccountManagement() {
                 placeholder="초기 비밀번호 입력"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                aria-autocomplete="none"
+                name="staff_pwd_no_fill"
               />
             </div>
 
@@ -816,7 +832,7 @@ export default function AdminAccountManagement() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </form>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddStaffModalOpen(false)}>
