@@ -526,9 +526,7 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
   const now = new Date().toISOString();
   const normalizedMethod = normalizePaymentMethod(donation.paymentMethod, donation.isRecurring);
   
-  // PG 결제인 경우 PG 승인 거래키(transactionId) 유지, PG 미거치는 현장/현금 수납건만 자체 관리키 할당
-  const isDirectCash = normalizedMethod === 'cash' || normalizedMethod === 'direct';
-  const finalTransactionId = donation.transactionId || donation.approveNo || (isDirectCash ? `CASH-${Date.now()}` : '');
+  const finalTransactionId = donation.transactionId || '';
   const finalApproveNo = donation.approveNo || finalTransactionId;
 
   const newDonation: Donation = {
