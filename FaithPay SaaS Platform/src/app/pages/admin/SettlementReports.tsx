@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
+import { donationAPI } from '../../api/client';
+import { assignSequentialDonationIds } from './DonationHistory';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -41,6 +43,8 @@ export default function SettlementReports() {
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [paymentMethodData, setPaymentMethodData] = useState<any[]>([]);
+  const [cancelledDonations, setCancelledDonations] = useState<any[]>([]);
+  const [dbDonations, setDbDonations] = useState<any[]>([]);
 
   // PG 계약 수수료율 (각원사의 경우 3.0%, 단체별 설정값 반영)
   const contractRate = currentTenant?.paymentConfig?.contractRate ?? (
@@ -58,7 +62,31 @@ export default function SettlementReports() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  // DB에서 실제 결제 및 승인 취소 내역 조회
   useEffect(() => {
+    if (!currentTenant?.id && !tenantSlug) return;
+    const targetTenantId = currentTenant?.id || tenantSlug;
+
+    const fetchRealSettlements = async () => {
+      try {
+        const res = await donationAPI.getByTenant(targetTenantId);
+        if (res.success && Array.isArray(res.data)) {
+          const formatted = assignSequentialDonationIds(res.data);
+          setDbDonations(formatted);
+
+          // 🔴 승인 취소 및 취소 실패 건 필터링 (DB 실데이터)
+          const cancelled = formatted.filter(
+            (d: any) => d.paymentStatus === 'cancelled' || d.paymentStatus === 'cancel_failed'
+          );
+          setCancelledDonations(cancelled);
+        }
+      } catch (err) {
+        console.warn('DB 정산 내역 로딩 실패:', err);
+      }
+    };
+
+    fetchRealSettlements();
+
     const rawData = [
       { month: '2026년 03월', totalDonations: 84215000, settlementDate: '2026-04-05', status: '완료' },
       { month: '2026년 02월', totalDonations: 53200000, settlementDate: '2026-03-05', status: '완료' },
@@ -93,7 +121,7 @@ export default function SettlementReports() {
       { name: '토스페이', value: 12615000, color: '#3b82f6' },
       { name: '가상계좌', value: 5000000, color: '#10b981' },
     ]);
-  }, [contractRate, currentTenant]);
+  }, [contractRate, currentTenant, tenantSlug]);
 
 
   if (!currentTenant) {
@@ -417,19 +445,54 @@ export default function SettlementReports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="text-xs">2026-03-28</TableCell>
-                        <TableCell>
-                          <div className="font-semibold">박지성</div>
-                          <div className="text-xs text-muted-foreground">오입금 중복 결제 취소</div>
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-red-600">-10,000,000원</TableCell>
-                        <TableCell className="text-right text-slate-600">-9,800,000원</TableCell>
-                        <TableCell className="text-xs">2026-05-05 (차기 정산)</TableCell>
-                        <TableCell>
-                          <Badge className="bg-emerald-100 text-emerald-800">2단계 승인 완료</Badge>
-                        </TableCell>
-                      </TableRow>
+                      {cancelledDonations.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-slate-500 font-medium">
+                            현재 승인 취소 및 음수 이월 차감된 거래 내역이 없습니다.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        cancelledDonations.map((item) => {
+                          const dateStr = item.createdAt || item.date || new Date().toISOString();
+                          const formattedDate = new Date(dateStr).toLocaleDateString('ko-KR');
+                          const amount = Number(item.amount || 0);
+                          const netDeduction = Math.round(amount * (1 - contractRate / 100));
+
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="text-xs font-mono font-medium">{formattedDate}</TableCell>
+                              <TableCell>
+                                <div className="font-semibold text-slate-900">
+                                  {item.donorName || item.name || '무기명'} <span className="text-xs text-indigo-600 font-mono">({item.id})</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {item.itemName || item.item || '기반 봉헌금'} {item.cancelFailureReason ? `[실패: ${item.cancelFailureReason}]` : '[결제 승인 취소]'}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-bold text-red-600">
+                                - ₩ {amount.toLocaleString()}원
+                              </TableCell>
+                              <TableCell className="text-right font-semibold text-slate-700">
+                                - ₩ {netDeduction.toLocaleString()}원
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600 font-medium">
+                                차기 정산 반영 (익월 5일)
+                              </TableCell>
+                              <TableCell>
+                                {item.paymentStatus === 'cancelled' ? (
+                                  <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200">
+                                    승인 취소 완료
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">
+                                    취소 실패
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
