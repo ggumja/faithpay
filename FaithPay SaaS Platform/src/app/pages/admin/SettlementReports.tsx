@@ -176,16 +176,25 @@ export default function SettlementReports() {
             const pgFees = Math.round(totalDonations * (contractRate / 100));
             const netAmount = Math.max(0, totalDonations - pgFees - data.cancelled);
             
-            const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
-            const yearNum = parseInt(yStr, 10);
-            const monthNum = parseInt(mStr, 10);
-            let nextY = yearNum;
-            let nextM = monthNum + 1;
-            if (nextM > 12) {
-              nextY += 1;
-              nextM = 1;
+            // 정산 예정일 구하기 (D+3 영업일 입금 기준 반영)
+            const settlementCycle = currentTenant?.paymentConfig?.settlementCycle || 'D+3';
+            let settlementDate = '';
+            
+            if (settlementCycle === 'MONTHLY') {
+              let nextY = yearNum;
+              let nextM = monthNum + 1;
+              if (nextM > 12) { nextY += 1; nextM = 1; }
+              settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
+            } else {
+              const daysToAdd = settlementCycle === 'D+1' ? 1 : settlementCycle === 'D+2' ? 2 : 3;
+              const latestTxDate = filtered.length > 0 && (filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
+                ? new Date(filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
+                : now;
+              const payoutDate = new Date(isNaN(latestTxDate.getTime()) ? now : latestTxDate);
+              payoutDate.setDate(payoutDate.getDate() + daysToAdd);
+              settlementDate = `${payoutDate.toISOString().slice(0, 10)} (${settlementCycle} 입금)`;
             }
-            const settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05`;
+
             const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
 
             return {
@@ -201,13 +210,13 @@ export default function SettlementReports() {
 
           setMonthlySettlement(processedMonthly);
 
-          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: '익월 5일' };
+          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: 'D+3 입금' };
           setSummaryStats({
             monthlyTotal: latestMonthData.totalDonations,
             pgFee: latestMonthData.pgFees,
             finalDeposit: latestMonthData.netAmount,
             currentMonthName: latestMonthData.month,
-            settlementDateStr: `${latestMonthData.settlementDate} (토스 입금)`,
+            settlementDateStr: latestMonthData.settlementDate,
           });
         }
       } catch (err) {
