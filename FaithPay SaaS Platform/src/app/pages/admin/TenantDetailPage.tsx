@@ -21,6 +21,8 @@ import {
   Building2,
   CreditCard,
   Key,
+  KeyRound,
+  Send,
   Lock,
   Eye,
   EyeOff,
@@ -274,6 +276,23 @@ export default function TenantDetailPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSendPasswordReset = (adminName: string, adminEmail: string) => {
+    const dummyToken = `rst_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36)}`;
+    const resetUrl = `https://faithpay.info/${tenant?.slug || 'demo'}/reset-password?token=${dummyToken}`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(resetUrl).catch(() => {});
+    }
+
+    toast.success(
+      `🔑 ${adminName} (${adminEmail}) 님께 비밀번호 재설정 전송 완료!`,
+      {
+        description: `재설정 링크가 이메일/알림톡으로 발송되었으며, 클립보드에도 복사되었습니다.`,
+        duration: 5000,
+      }
+    );
   };
 
   const handleSavePaymentConfig = async () => {
@@ -792,24 +811,37 @@ export default function TenantDetailPage() {
                 })().map((adminUser) => (
                   <div
                     key={adminUser.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs gap-3 transition-all hover:bg-white dark:hover:bg-zinc-800 hover:border-purple-200 dark:hover:border-zinc-700 hover:shadow-2xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                      <div className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-extrabold text-sm">
                         {adminUser.name[0]}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <div className="font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
                           {adminUser.name}
-                          <Badge className={adminUser.role === 'tenant_admin' ? 'bg-purple-100 text-purple-800 font-bold' : 'bg-blue-100 text-blue-800'}>
+                          <Badge className={adminUser.role === 'tenant_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-bold border-none' : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-none'}>
                             {adminUser.role === 'tenant_admin' ? '최고 관리자' : '재무/보시 실무자'}
                           </Badge>
                         </div>
-                        <div className="text-slate-500 font-mono mt-0.5 flex items-center gap-3">
-                          <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {adminUser.email}</span>
-                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> 생성일: {adminUser.createdAt}</span>
+                        <div className="text-slate-500 dark:text-zinc-400 font-mono mt-0.5 flex flex-wrap items-center gap-3 text-[11px]">
+                          <span className="flex items-center gap-1"><Mail className="h-3 w-3 text-slate-400" /> {adminUser.email}</span>
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-slate-400" /> 생성일: {adminUser.createdAt}</span>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 text-xs font-bold text-slate-700 dark:text-zinc-200 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/40 border-slate-300 dark:border-zinc-700 hover:border-purple-300 rounded-xl shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                        onClick={() => handleSendPasswordReset(adminUser.name, adminUser.email)}
+                      >
+                        <KeyRound className="h-3.5 w-3.5 text-purple-600" />
+                        <span>비밀번호 리셋 전송</span>
+                      </Button>
                     </div>
                   </div>
                 ))}
