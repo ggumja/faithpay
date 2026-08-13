@@ -30,10 +30,16 @@ export default function PaymentSelection() {
   const [installment, setInstallment] = useState('00');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 정기결제 주기 옵션 State (매일 / 매주 / 매월)
-  const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
-  const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>('일');
-  const [recurringDay, setRecurringDay] = useState<number>(10);
+  // 정기결제 주기 옵션 State (매일 / 매주 / 매월) — 전단계(DonationFlow)에서 선택한 주기 값 유지
+  const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>(
+    donationFormData?.recurringInterval || 'monthly'
+  );
+  const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>(
+    donationFormData?.recurringDayOfWeek || '일'
+  );
+  const [recurringDay, setRecurringDay] = useState<number>(
+    donationFormData?.recurringDay || 10
+  );
 
   const [pgProvider, setPgProvider] = useState<string>('');
   const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
@@ -45,6 +51,20 @@ export default function PaymentSelection() {
   const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(true);
   const [enableNaverPay, setEnableNaverPay] = useState<boolean>(true);
   const [enableTossPay, setEnableTossPay] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (donationFormData) {
+      if (donationFormData.recurringInterval) {
+        setRecurringInterval(donationFormData.recurringInterval);
+      }
+      if (donationFormData.recurringDayOfWeek) {
+        setRecurringDayOfWeek(donationFormData.recurringDayOfWeek);
+      }
+      if (donationFormData.recurringDay) {
+        setRecurringDay(donationFormData.recurringDay);
+      }
+    }
+  }, [donationFormData]);
 
   useEffect(() => {
     if (tenantSlug) {
@@ -334,7 +354,9 @@ export default function PaymentSelection() {
           itemId: donationFormData.itemId || "recurring",
           itemName: donationFormData.itemName || "정기 봉헌금",
           amount: donationFormData.amount,
-          recurringDay: donationFormData.recurringDay || 10,
+          recurringInterval: recurringInterval,
+          recurringDayOfWeek: recurringDayOfWeek,
+          recurringDay: recurringDay,
         });
 
 
@@ -494,7 +516,12 @@ export default function PaymentSelection() {
     try {
       const response = await paymentAPI.processManual({
         tenantId: currentTenant.id,
-        donationData: donationFormData,
+        donationData: {
+          ...donationFormData,
+          recurringInterval: donationFormData.isRecurring ? recurringInterval : undefined,
+          recurringDayOfWeek: donationFormData.isRecurring && recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
+          recurringDay: donationFormData.isRecurring && recurringInterval === 'monthly' ? recurringDay : undefined,
+        },
         paymentData: {
           cardNo: cardNumber.replace(/[^0-9]/g, ''),
           cardExpYy: expYy,
@@ -558,7 +585,11 @@ export default function PaymentSelection() {
                 <div className="flex justify-between">
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium">결제 유형</span>
                   <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                    정기 결제 (매월 {donationFormData.recurringDay}일)
+                    {recurringInterval === 'daily'
+                      ? '정기 결제 (매일)'
+                      : recurringInterval === 'weekly'
+                      ? `정기 결제 (매주 ${recurringDayOfWeek || '일'}요일)`
+                      : `정기 결제 (매월 ${recurringDay || 10}일)`}
                   </span>
                 </div>
               )}
