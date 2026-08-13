@@ -743,9 +743,36 @@ export default function DonationHistory() {
       const res = await paymentAPI.cancelPayment(currentTenant.id, donationId);
       if (res.success) {
         if (cancelSubscriptionAlso && recurringCancelModalDonation) {
-          const subId = recurringCancelModalDonation.subscriptionId || recurringCancelModalDonation.subscription_id;
+          let subId = recurringCancelModalDonation.subscriptionId || recurringCancelModalDonation.subscription_id || recurringCancelModalDonation.subId;
+
+          // 1. Check local subscriptions state if subId not on donation object directly
+          if (!subId && recurringCancelModalDonation.donorPhone) {
+            const cleanPhone = String(recurringCancelModalDonation.donorPhone).replace(/[^0-9]/g, '');
+            const foundSub = subscriptions.find((s) => s.status !== 'cancelled' && String(s.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone);
+            if (foundSub) {
+              subId = foundSub.id;
+            }
+          }
+
+          // 2. Fallback: Query backend for active subscriptions by phone
+          if (!subId && recurringCancelModalDonation.donorPhone) {
+            try {
+              const subRes = await subscriptionAPI.getByPhone(recurringCancelModalDonation.donorPhone);
+              if (subRes.success && subRes.data && subRes.data.length > 0) {
+                const activeSub = subRes.data.find((s) => s.status === 'active' || s.status !== 'cancelled');
+                if (activeSub) {
+                  subId = activeSub.id;
+                }
+              }
+            } catch (err) {
+              console.warn('Subscription lookup by phone failed:', err);
+            }
+          }
+
+          // 3. Execute backend schedule cancellation & update frontend state
           if (subId) {
             await subscriptionAPI.updateStatus(subId, 'cancelled');
+            setSubscriptions((prev) => prev.map((s) => (s.id === subId ? { ...s, status: 'cancelled' } : s)));
           }
         }
 
