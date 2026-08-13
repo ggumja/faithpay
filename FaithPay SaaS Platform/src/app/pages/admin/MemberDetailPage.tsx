@@ -136,7 +136,44 @@ export default function MemberDetailPage() {
             // Filter all donations for this donor phone
             const donorDonations = res.data.filter((d: any) => stripPhoneDigits(d.donorPhone) === digitsKey);
             const totalSum = donorDonations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
-            const recCount = donorDonations.filter((d: any) => d.isRecurring).length;
+            
+            // 1. 정기 약정 현황 (Subscriptions) - DB의 isRecurring 결제 건을 기반으로 약정 정보 수집
+            const recurringDonations = donorDonations.filter((d: any) => d.isRecurring);
+            const recurringMap = new Map<string, any>();
+
+            recurringDonations.forEach((d: any) => {
+              const itemKey = d.itemName || d.title || `${currentTenant.terminology?.donation || '보시/후원'} (정기)`;
+              if (!recurringMap.has(itemKey)) {
+                const dateObj = d.createdAt ? new Date(d.createdAt) : new Date();
+                const billingDay = dateObj.getDate() || 15;
+                
+                const nextDate = new Date();
+                nextDate.setMonth(nextDate.getMonth() + 1);
+                nextDate.setDate(billingDay);
+
+                recurringMap.set(itemKey, {
+                  id: `sub_${d.id}`,
+                  itemName: itemKey,
+                  monthlyAmount: d.amount || 0,
+                  billingDay: billingDay,
+                  status: 'active' as const,
+                  nextPaymentDate: nextDate.toISOString().slice(0, 10),
+                });
+              }
+            });
+
+            const subscriptionsList = Array.from(recurringMap.values());
+
+            // 2. 발원문 / 지향문 이력 (Prayers) - DB의 prayerText 기반 수집
+            const prayersList = donorDonations
+              .filter((d: any) => d.prayerText && String(d.prayerText).trim() !== '')
+              .map((d: any, idx: number) => ({
+                id: `pr_${d.id || idx}`,
+                date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
+                title: String(d.prayerText),
+                category: d.itemName || currentTenant.terminology?.prayer || '지향/축원',
+                beneficiaryName: d.donorName || rawMatch.donorName || '신도',
+              }));
 
             const loadedMem: MemberDetailData = {
               id: memberId,
@@ -149,19 +186,19 @@ export default function MemberDetailPage() {
               registeredDate: rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
               totalDonation: totalSum,
               lastDonation: donorDonations[0]?.createdAt ? donorDonations[0].createdAt.split('T')[0] : (rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : ''),
-              recurringCount: recCount,
+              recurringCount: subscriptionsList.length,
               note: rawMatch.note || '',
               donationsHistory: donorDonations.map((d: any) => ({
                 id: d.id,
                 date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
-                itemName: d.isRecurring ? `${currentTenant.terminology?.donation || '봉헌'} (정기)` : `특별 ${currentTenant.terminology?.donation || '봉헌'}`,
+                itemName: d.itemName || (d.isRecurring ? `${currentTenant.terminology?.donation || '보시/후원'} (정기)` : `특별 ${currentTenant.terminology?.donation || '보시/후원'}`),
                 amount: d.amount || 0,
                 paymentMethod: d.paymentMethod || '신용카드',
                 type: d.isRecurring ? 'recurring' : 'once',
                 status: 'completed',
               })),
-              subscriptions: [],
-              prayersHistory: [],
+              subscriptions: subscriptionsList,
+              prayersHistory: prayersList,
             };
 
             setMember(loadedMem);
