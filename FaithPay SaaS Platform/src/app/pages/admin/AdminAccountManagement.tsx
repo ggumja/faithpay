@@ -6,6 +6,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import {
   Table,
@@ -24,9 +26,10 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
-import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, RefreshCw } from 'lucide-react';
+import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, Save, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 export interface StaffAdminUser {
   id: string;
@@ -39,11 +42,24 @@ export interface StaffAdminUser {
   lastLoginAt?: string;
 }
 
+export type PermissionLevel = 'full' | 'read' | 'none';
+
+export interface MenuPermissionItem {
+  id: string;
+  menuName: string;
+  path: string;
+  tenant_admin: PermissionLevel;
+  finance_manager: PermissionLevel;
+  staff: PermissionLevel;
+}
+
 export default function AdminAccountManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const terms = useTenantTerms(currentTenant?.orgType);
 
+  const [activeTab, setActiveTab] = useState<'accounts' | 'permissions'>('accounts');
   const [staffList, setStaffList] = useState<StaffAdminUser[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -54,12 +70,15 @@ export default function AdminAccountManagement() {
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'tenant_admin' | 'finance_manager' | 'staff'>('finance_manager');
 
+  // RBAC Menu Permission Matrix State
+  const [permissionMatrix, setPermissionMatrix] = useState<MenuPermissionItem[]>([]);
+
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
 
-      // 실제 DB / Context 연동 모의 데이터 초기화
+      // 모의 스태프 관리자 초기 데이터
       const initialStaff: StaffAdminUser[] = [
         {
           id: `admin-${tenant.id}-1`,
@@ -83,8 +102,24 @@ export default function AdminAccountManagement() {
         },
       ];
       setStaffList(initialStaff);
+
+      // 메뉴별 권한 매트릭스 초기 데이터 설정
+      const initialPermissions: MenuPermissionItem[] = [
+        { id: 'dashboard', menuName: '대시보드', path: '/admin', tenant_admin: 'full', finance_manager: 'full', staff: 'read' },
+        { id: 'donations', menuName: terms.donationHistory, path: '/admin/donations', tenant_admin: 'full', finance_manager: 'full', staff: 'read' },
+        { id: 'recurring_pending', menuName: terms.recurringPending, path: '/admin/recurring-pending', tenant_admin: 'full', finance_manager: 'full', staff: 'none' },
+        { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', tenant_admin: 'full', finance_manager: 'full', staff: 'none' },
+        { id: 'prayers', menuName: terms.prayer, path: '/admin/prayers', tenant_admin: 'full', finance_manager: 'read', staff: 'full' },
+        { id: 'menu', menuName: terms.donationItems, path: '/admin/menu', tenant_admin: 'full', finance_manager: 'read', staff: 'none' },
+        { id: 'members', menuName: '회원 관리', path: '/admin/members', tenant_admin: 'full', finance_manager: 'read', staff: 'read' },
+        { id: 'settlement', menuName: '정산', path: '/admin/settlement', tenant_admin: 'full', finance_manager: 'full', staff: 'none' },
+        { id: 'banners', menuName: '배너 관리', path: '/admin/banners', tenant_admin: 'full', finance_manager: 'none', staff: 'none' },
+        { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', tenant_admin: 'full', finance_manager: 'none', staff: 'none' },
+        { id: 'settings', menuName: '설정', path: '/admin/settings', tenant_admin: 'full', finance_manager: 'none', staff: 'none' },
+      ];
+      setPermissionMatrix(initialPermissions);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant, terms]);
 
   if (!currentTenant) {
     return (
@@ -182,6 +217,18 @@ export default function AdminAccountManagement() {
     }
   };
 
+  // RBAC 권한 토글 핸들러
+  const handlePermissionChange = (menuId: string, roleKey: 'finance_manager' | 'staff', level: PermissionLevel) => {
+    setPermissionMatrix((prev) =>
+      prev.map((item) => (item.id === menuId ? { ...item, [roleKey]: level } : item))
+    );
+  };
+
+  // 권한 저장 핸들러
+  const handleSavePermissions = () => {
+    toast.success('역할별 메뉴 접근 권한이 성공적으로 저장되었습니다!');
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-zinc-950">
       {/* Desktop Sidebar */}
@@ -210,163 +257,282 @@ export default function AdminAccountManagement() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                <UserCheck className="h-7 w-7 text-indigo-600" />
-                관리자 계정 관리 센터
+                <ShieldCheck className="h-7 w-7 text-indigo-600" />
+                관리자 계정 및 메뉴 접근 권한 센터
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                {currentTenant.name}의 주지스님/담임목사(최고관리자), 재정/보시 담당자, 실무 서기 계정을 관리합니다.
+                {currentTenant.name}의 실무자 계정을 관리하고, 각 관리자 구분에 따른 메뉴별 접근 권한(읽기/수정/금지)을 세부 설정합니다.
               </p>
             </div>
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer self-start md:self-auto"
-            >
-              <UserPlus className="h-4 w-4" />
-              신규 관리자 추가
-            </Button>
+            {activeTab === 'accounts' && (
+              <Button
+                onClick={() => setIsAddModalOpen(true)}
+                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer self-start md:self-auto"
+              >
+                <UserPlus className="h-4 w-4" />
+                신규 관리자 추가
+              </Button>
+            )}
+            {activeTab === 'permissions' && (
+              <Button
+                onClick={handleSavePermissions}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer self-start md:self-auto"
+              >
+                <Save className="h-4 w-4" />
+                권한 설정 저장
+              </Button>
+            )}
           </div>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-purple-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  전체 관리자 계정
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
-                  {staffList.length}명
-                </div>
-              </CardContent>
-            </Card>
+          {/* Sub Navigation Tabs */}
+          <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full max-w-md bg-slate-200 dark:bg-zinc-800 p-1">
+              <TabsTrigger value="accounts" className="gap-2 font-bold cursor-pointer">
+                <UserCheck className="h-4 w-4" />
+                1. 관리자 계정 목록 ({staffList.length}명)
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="gap-2 font-bold cursor-pointer">
+                <Shield className="h-4 w-4" />
+                2. 역할별 메뉴 접근 권한 설정 (RBAC)
+              </TabsTrigger>
+            </TabsList>
 
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  정상 활성 계정
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  {staffList.filter((s) => s.status === 'active').length}명
-                </div>
-              </CardContent>
-            </Card>
+            {/* TAB 1: 관리자 계정 목록 */}
+            <TabsContent value="accounts" className="space-y-6 mt-6">
+              {/* Stats Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      전체 관리자 계정
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
+                      {staffList.length}명
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  재정/실무 담당자
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                  {staffList.filter((s) => s.role !== 'tenant_admin').length}명
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      정상 활성 계정
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                      {staffList.filter((s) => s.status === 'active').length}명
+                    </div>
+                  </CardContent>
+                </Card>
 
-          {/* Staff List Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                등록된 관리자 계정 목록 ({staffList.length}명)
-              </CardTitle>
-              <CardDescription>
-                각 권한별로 수납 조회, 정산, 항목 등록 등 접근 가능한 기능이 구분됩니다.
-              </CardDescription>
-            </CardHeader>
+                <Card className="border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      재정/실무 담당자
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                      {staffList.filter((s) => s.role !== 'tenant_admin').length}명
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>관리자 성명</TableHead>
-                    <TableHead>이메일 ID</TableHead>
-                    <TableHead>연락처</TableHead>
-                    <TableHead>부여된 권한</TableHead>
-                    <TableHead>계정 상태</TableHead>
-                    <TableHead>최근 접속일시</TableHead>
-                    <TableHead className="text-right">계정 관리 작업</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffList.map((staff) => (
-                    <TableRow key={staff.id}>
-                      <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
-                        {staff.name}
-                      </TableCell>
-                      <TableCell className="font-medium text-slate-700 dark:text-zinc-300">
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          {staff.email}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-xs font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {staff.phone}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getRoleBadge(staff.role)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            staff.status === 'active'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[11px]'
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold text-[11px]'
-                          }
-                        >
-                          {staff.status === 'active' ? '🟢 정상' : '🔴 잠금'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500 font-mono">
-                        {staff.lastLoginAt || '기록 없음'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            title="비밀번호 재설정"
-                            onClick={() => handleResetPassword(staff.name)}
-                            className="h-7 px-2 text-xs gap-1 cursor-pointer"
-                          >
-                            <KeyRound className="h-3.5 w-3.5" />
-                            비번재설정
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title={staff.status === 'active' ? '계정 잠금' : '잠금 해제'}
-                            onClick={() => handleToggleStatus(staff.id)}
-                            className="h-7 w-7 p-0 cursor-pointer"
-                          >
-                            {staff.status === 'active' ? (
-                              <Lock className="h-3.5 w-3.5 text-amber-600" />
-                            ) : (
-                              <Unlock className="h-3.5 w-3.5 text-emerald-600" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title="계정 삭제"
-                            onClick={() => handleDeleteStaff(staff.id, staff.name)}
-                            className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+              {/* Staff List Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold">
+                    등록된 관리자 계정 목록 ({staffList.length}명)
+                  </CardTitle>
+                  <CardDescription>
+                    각 권한별로 수납 조회, 정산, 항목 등록 등 접근 가능한 기능이 구분됩니다.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>관리자 성명</TableHead>
+                        <TableHead>이메일 ID</TableHead>
+                        <TableHead>연락처</TableHead>
+                        <TableHead>부여된 권한</TableHead>
+                        <TableHead>계정 상태</TableHead>
+                        <TableHead>최근 접속일시</TableHead>
+                        <TableHead className="text-right">계정 관리 작업</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {staffList.map((staff) => (
+                        <TableRow key={staff.id}>
+                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
+                            {staff.name}
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-700 dark:text-zinc-300">
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5 text-slate-400" />
+                              {staff.email}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-slate-600 text-xs font-mono">
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-slate-400" />
+                              {staff.phone}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getRoleBadge(staff.role)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                staff.status === 'active'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[11px]'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold text-[11px]'
+                              }
+                            >
+                              {staff.status === 'active' ? '🟢 정상' : '🔴 잠금'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-500 font-mono">
+                            {staff.lastLoginAt || '기록 없음'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="비밀번호 재설정"
+                                onClick={() => handleResetPassword(staff.name)}
+                                className="h-7 px-2 text-xs gap-1 cursor-pointer"
+                              >
+                                <KeyRound className="h-3.5 w-3.5" />
+                                비번재설정
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title={staff.status === 'active' ? '계정 잠금' : '잠금 해제'}
+                                onClick={() => handleToggleStatus(staff.id)}
+                                className="h-7 w-7 p-0 cursor-pointer"
+                              >
+                                {staff.status === 'active' ? (
+                                  <Lock className="h-3.5 w-3.5 text-amber-600" />
+                                ) : (
+                                  <Unlock className="h-3.5 w-3.5 text-emerald-600" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="계정 삭제"
+                                onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                                className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* TAB 2: 역할별 메뉴 접근 권한 설정 (RBAC Permission Matrix) */}
+            <TabsContent value="permissions" className="space-y-6 mt-6">
+              <Card className="border-indigo-100 dark:border-indigo-950">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-indigo-600" />
+                      관리자 구분별 메뉴 접근 권한 매트릭스 (RBAC Matrix)
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      각 역할별로 특정 메뉴의 접근 권한 (전체 권한 / 읽기 전용 / 접근 불가)을 설정합니다.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={handleSavePermissions}
+                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer self-start sm:self-auto"
+                  >
+                    <Save className="h-4 w-4" />
+                    권한 설정 저장
+                  </Button>
+                </CardHeader>
+
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-100 dark:bg-zinc-900">
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">메뉴명 (기능)</TableHead>
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">경로 (URL)</TableHead>
+                        <TableHead className="text-center font-bold text-purple-700 dark:text-purple-300">
+                          👑 최고 관리자<br />(tenant_admin)
+                        </TableHead>
+                        <TableHead className="text-center font-bold text-blue-700 dark:text-blue-300">
+                          💳 재정/보시 담당자<br />(finance_manager)
+                        </TableHead>
+                        <TableHead className="text-center font-bold text-slate-700 dark:text-zinc-300">
+                          📝 일반 실무자<br />(staff)
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {permissionMatrix.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
+                            {item.menuName}
+                          </TableCell>
+                          <TableCell className="text-xs font-mono text-slate-500">
+                            {item.path}
+                          </TableCell>
+                          <TableCell className="text-center bg-purple-50/50 dark:bg-purple-950/20">
+                            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-300 font-bold">
+                              FULL (전체 권한)
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center bg-blue-50/30 dark:bg-blue-950/10">
+                            <Select
+                              value={item.finance_manager}
+                              onValueChange={(val) => handlePermissionChange(item.id, 'finance_manager', val as PermissionLevel)}
+                            >
+                              <SelectTrigger className="w-[140px] mx-auto bg-white text-xs font-bold">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full">🟢 전체 (읽기/수정)</SelectItem>
+                                <SelectItem value="read">🟡 읽기 전용 (조회만)</SelectItem>
+                                <SelectItem value="none">🔴 접근 불가 (차단)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Select
+                              value={item.staff}
+                              onValueChange={(val) => handlePermissionChange(item.id, 'staff', val as PermissionLevel)}
+                            >
+                              <SelectTrigger className="w-[140px] mx-auto bg-white text-xs font-bold">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full">🟢 전체 (읽기/수정)</SelectItem>
+                                <SelectItem value="read">🟡 읽기 전용 (조회만)</SelectItem>
+                                <SelectItem value="none">🔴 접근 불가 (차단)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
