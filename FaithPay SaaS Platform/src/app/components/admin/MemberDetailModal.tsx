@@ -116,20 +116,9 @@ export function MemberDetailModal({
     return '호칭/직함';
   };
 
-  // Default mock history for presentation if empty
-  const donations = member.donationsHistory || [
-    { id: 'don-1', date: member.lastDonation || '2026-08-11', itemName: `${donationTerm} (정기)`, amount: 30000, paymentMethod: '신용카드', type: 'recurring' as const, status: 'completed' as const },
-    { id: 'don-2', date: '2026-07-15', itemName: `특별 ${donationTerm}`, amount: 100000, paymentMethod: '카카오페이', type: 'once' as const, status: 'completed' as const },
-    { id: 'don-3', date: '2026-07-11', itemName: `${donationTerm} (정기)`, amount: 30000, paymentMethod: '신용카드', type: 'recurring' as const, status: 'completed' as const },
-  ];
-
-  const subscriptions = member.subscriptions || [
-    { id: 'sub-1', itemName: `월정 ${donationTerm}`, monthlyAmount: 30000, billingDay: 15, status: 'active' as const, nextPaymentDate: '2026-09-15' },
-  ];
-
-  const prayers = member.prayersHistory || [
-    { id: 'pr-1', date: member.lastDonation || '2026-08-11', title: '가족 건강 및 사업 번창 축원', category: '특별기도', beneficiaryName: member.name },
-  ];
+  const donations = member.donationsHistory || [];
+  const subscriptions = member.subscriptions || [];
+  const prayers = member.prayersHistory || [];
 
   const handleCopyPhone = () => {
     navigator.clipboard.writeText(member.phone);

@@ -114,41 +114,8 @@ export default function MemberManagement() {
             }
           });
 
-          // Add default sample members if list is empty for rich display
           const aggregated = Array.from(map.values());
-          if (aggregated.length === 0) {
-            const defaultMembers: MemberDetailData[] = [
-              {
-                id: 'mem-1',
-                name: '하동현',
-                baptismName: currentTenant.religionType === 'catholic' ? '미카엘' : currentTenant.religionType === 'buddhist' ? '청안' : '안수집사',
-                phone: '01071404795',
-                email: 'hdh@example.com',
-                address: '서울특별시 강남구 테헤란로 123',
-                registeredDate: '2026-08-11',
-                totalDonation: 228000,
-                lastDonation: '2026-08-11',
-                recurringCount: 1,
-                note: '매월 15일 정기 봉헌. 기부금영수증 신청자.',
-              },
-              {
-                id: 'mem-2',
-                name: '박불자',
-                baptismName: currentTenant.religionType === 'catholic' ? '마리아' : currentTenant.religionType === 'buddhist' ? '관음심' : '권사',
-                phone: '01034567890',
-                email: 'park@example.com',
-                address: '경기도 성남시 분당구 정자일로 45',
-                registeredDate: '2026-03-28',
-                totalDonation: 90000,
-                lastDonation: '2026-03-28',
-                recurringCount: 0,
-                note: '',
-              },
-            ];
-            setMembers(defaultMembers);
-          } else {
-            setMembers(aggregated);
-          }
+          setMembers(aggregated);
         } else {
           setMembers([]);
         }

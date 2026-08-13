@@ -145,54 +145,29 @@ export default function MemberDetailPage() {
               phone: digitsKey,
               email: rawMatch.donorEmail || '',
               address: rawMatch.address || '',
-              rrn: rawMatch.rrn || '850101-1******',
-              registeredDate: rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : '2026-08-11',
-              totalDonation: totalSum || 228000,
-              lastDonation: rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : '2026-08-11',
-              recurringCount: recCount > 0 ? recCount : 1,
-              note: '정기 결제 및 소득공제 기부금영수증 신청자',
+              rrn: rawMatch.rrn || '',
+              registeredDate: rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
+              totalDonation: totalSum,
+              lastDonation: donorDonations[0]?.createdAt ? donorDonations[0].createdAt.split('T')[0] : (rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : ''),
+              recurringCount: recCount,
+              note: rawMatch.note || '',
               donationsHistory: donorDonations.map((d: any) => ({
                 id: d.id,
-                date: d.createdAt ? d.createdAt.split('T')[0] : '2026-08-11',
+                date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
                 itemName: d.isRecurring ? `${currentTenant.terminology?.donation || '봉헌'} (정기)` : `특별 ${currentTenant.terminology?.donation || '봉헌'}`,
-                amount: d.amount || 30000,
-                paymentMethod: '신용카드',
+                amount: d.amount || 0,
+                paymentMethod: d.paymentMethod || '신용카드',
                 type: d.isRecurring ? 'recurring' : 'once',
                 status: 'completed',
               })),
+              subscriptions: [],
+              prayersHistory: [],
             };
 
             setMember(loadedMem);
             setNoteText(loadedMem.note || '');
           } else {
-            // Default sample member if not found in mock
-            const sampleMem: MemberDetailData = {
-              id: memberId,
-              name: '하동현',
-              baptismName: currentTenant.religionType === 'catholic' ? '미카엘' : currentTenant.religionType === 'buddhist' ? '청안' : '안수집사',
-              phone: '01071404795',
-              email: 'hdh@example.com',
-              address: '서울특별시 강남구 테헤란로 123',
-              rrn: '850101-1******',
-              registeredDate: '2026-08-11',
-              totalDonation: 228000,
-              lastDonation: '2026-08-11',
-              recurringCount: 1,
-              note: '매월 15일 정기 봉헌. 소득공제용 기부금영수증 발급 요청자.',
-              donationsHistory: [
-                { id: 'don-1', date: '2026-08-11', itemName: `${currentTenant.terminology?.donation || '봉헌'} (정기)`, amount: 30000, paymentMethod: '신용카드', type: 'recurring', status: 'completed' },
-                { id: 'don-2', date: '2026-07-15', itemName: `특별 ${currentTenant.terminology?.donation || '봉헌'}`, amount: 100000, paymentMethod: '카카오페이', type: 'once', status: 'completed' },
-                { id: 'don-3', date: '2026-07-11', itemName: `${currentTenant.terminology?.donation || '봉헌'} (정기)`, amount: 30000, paymentMethod: '신용카드', type: 'recurring', status: 'completed' },
-              ],
-              subscriptions: [
-                { id: 'sub-1', itemName: `월정 ${currentTenant.terminology?.donation || '봉헌'}`, monthlyAmount: 30000, billingDay: 15, status: 'active', nextPaymentDate: '2026-09-15' },
-              ],
-              prayersHistory: [
-                { id: 'pr-1', date: '2026-08-11', title: '가족 건강 및 사업 번창 축원', category: '특별기도', beneficiaryName: '하동현' },
-              ],
-            };
-            setMember(sampleMem);
-            setNoteText(sampleMem.note || '');
+            setMember(null);
           }
         }
       } catch (err) {
