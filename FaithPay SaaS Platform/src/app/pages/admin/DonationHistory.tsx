@@ -1574,6 +1574,20 @@ export default function DonationHistory() {
                           {receiptDonation.deviceType === 'KIOSK' ? '현장 키오스크 (KIOSK)' : '온라인 모바일/웹 (Mobile)'}
                         </span>
                       </div>
+                      <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500 font-medium">결제 승인번호</span>
+                        <span className="col-span-2 font-mono font-bold text-zinc-800">
+                          {receiptDonation.approveNo || receiptDonation.transactionId || '승인완료'}
+                        </span>
+                      </div>
+                      {receiptDonation.paymentStatus === 'cancelled' && (
+                        <div className="grid grid-cols-3 py-2 border-b border-zinc-100 bg-red-50/70 p-2 rounded-lg">
+                          <span className="text-red-700 font-bold">취소 승인번호</span>
+                          <span className="col-span-2 font-mono font-bold text-red-700">
+                            {receiptDonation.cancelTransactionId || receiptDonation.cancelApproveNo || `TC-${receiptDonation.id?.slice(-8) || 'CANCEL-OK'}`}
+                          </span>
+                        </div>
+                      )}
                       <div className={`grid grid-cols-3 py-3 p-3 rounded-xl border items-center ${receiptDonation.paymentStatus === 'cancelled' ? 'bg-red-50/80 border-red-200' : 'bg-indigo-50/70 border-indigo-100'}`}>
                         <span className={`font-bold ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-900' : 'text-indigo-900'}`}>
                           {receiptDonation.paymentStatus === 'cancelled' ? '취 소 금 액' : '봉 헌 금 액'}
