@@ -36,6 +36,9 @@ import {
   Mail,
   Clock,
   Zap,
+  FileText,
+  Upload,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
