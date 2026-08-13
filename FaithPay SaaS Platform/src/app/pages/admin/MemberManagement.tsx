@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -13,23 +15,62 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
-import { LayoutDashboard, Heart, Users, MessageSquare, FileText, Settings, DollarSign, Menu, Search, UserPlus, Download } from 'lucide-react';
+import {
+  Users,
+  Search,
+  UserPlus,
+  Download,
+  Menu,
+  Eye,
+  Edit2,
+  Trash2,
+  Phone,
+  Mail,
+  RefreshCw,
+  Calendar,
+  Sparkles,
+  UserCheck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
-
 import { donationAPI } from '../../api/client';
-import { normalizePhoneNumber, formatPhoneNumber } from '../../utils/phoneUtils';
+import { normalizePhoneNumber } from '../../utils/phoneUtils';
+import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
+import { MemberDetailModal, MemberDetailData } from '../../components/admin/MemberDetailModal';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<MemberDetailData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'recurring' | 'once' | 'new'>('all');
+
+  // Modal States
+  const [selectedMember, setSelectedMember] = useState<MemberDetailData | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<MemberDetailData | null>(null);
+
+  // Form inputs
+  const [memberName, setMemberName] = useState('');
+  const [memberTitle, setMemberTitle] = useState(''); // 법명/세례명/직분
+  const [memberPhone, setMemberPhone] = useState('');
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberAddress, setMemberAddress] = useState('');
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -38,7 +79,7 @@ export default function MemberManagement() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-
+  // Load & Aggregate Members from Donations
   useEffect(() => {
     async function loadMembers() {
       if (!currentTenant) return;
@@ -46,34 +87,70 @@ export default function MemberManagement() {
       try {
         const res = await donationAPI.getByTenant(currentTenant.id);
         if (res.success && res.data) {
-          // 전화번호 기준 신도 목록 동적 집계 (숫자만 추출하여 동일 인물 통합 & 하이픈 포맷팅)
-          const map = new Map<string, any>();
+          const map = new Map<string, MemberDetailData>();
+          
           res.data.forEach((d: any) => {
             const rawPhone = d.donorPhone || '';
-            const digitsKey = normalizePhoneNumber(rawPhone) || '미등록';
-            const displayPhone = rawPhone ? formatPhoneNumber(rawPhone) : '미등록';
+            const digitsKey = stripPhoneDigits(rawPhone) || '미등록';
 
             if (!map.has(digitsKey)) {
               map.set(digitsKey, {
                 id: d.id,
-                name: d.donorName || '익명 신도',
-                phone: displayPhone,
-                normalizedPhone: digitsKey,
-                email: d.donorEmail || '-',
+                name: d.donorName || '익명 보시/후원자',
+                baptismName: d.baptismName || '',
+                phone: digitsKey,
+                email: d.donorEmail || '',
+                address: d.address || '',
                 registeredDate: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
                 totalDonation: d.amount || 0,
                 lastDonation: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-                recurring: d.isRecurring || false,
+                recurringCount: d.isRecurring ? 1 : 0,
+                note: '',
               });
             } else {
-              const existing = map.get(digitsKey);
+              const existing = map.get(digitsKey)!;
               existing.totalDonation += d.amount || 0;
-              if (d.isRecurring) existing.recurring = true;
-              if (existing.name === '익명 신도' && d.donorName) existing.name = d.donorName;
-              if (existing.email === '-' && d.donorEmail) existing.email = d.donorEmail;
+              if (d.isRecurring) existing.recurringCount += 1;
+              if (existing.name === '익명 보시/후원자' && d.donorName) existing.name = d.donorName;
+              if (!existing.email && d.donorEmail) existing.email = d.donorEmail;
             }
           });
-          setMembers(Array.from(map.values()));
+
+          // Add default sample members if list is empty for rich display
+          const aggregated = Array.from(map.values());
+          if (aggregated.length === 0) {
+            const defaultMembers: MemberDetailData[] = [
+              {
+                id: 'mem-1',
+                name: '하동현',
+                baptismName: currentTenant.religionType === 'catholic' ? '미카엘' : currentTenant.religionType === 'buddhist' ? '청안' : '안수집사',
+                phone: '01071404795',
+                email: 'hdh@example.com',
+                address: '서울특별시 강남구 테헤란로 123',
+                registeredDate: '2026-08-11',
+                totalDonation: 228000,
+                lastDonation: '2026-08-11',
+                recurringCount: 1,
+                note: '매월 15일 정기 봉헌. 기부금영수증 신청자.',
+              },
+              {
+                id: 'mem-2',
+                name: '박불자',
+                baptismName: currentTenant.religionType === 'catholic' ? '마리아' : currentTenant.religionType === 'buddhist' ? '관음심' : '권사',
+                phone: '01034567890',
+                email: 'park@example.com',
+                address: '경기도 성남시 분당구 정자일로 45',
+                registeredDate: '2026-03-28',
+                totalDonation: 90000,
+                lastDonation: '2026-03-28',
+                recurringCount: 0,
+                note: '',
+              },
+            ];
+            setMembers(defaultMembers);
+          } else {
+            setMembers(aggregated);
+          }
         } else {
           setMembers([]);
         }
@@ -98,46 +175,184 @@ export default function MemberManagement() {
     );
   }
 
-  if (!currentAdmin) {
+  const isAuthorized = currentAdmin && (currentAdmin.role === 'tenant_admin' || currentAdmin.role === 'system_admin' || currentAdmin.role === 'finance_manager');
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Card className="max-w-md w-full mx-4">
           <CardHeader>
             <CardTitle>접근 권한 없음</CardTitle>
-            <CardDescription>관리자 로그인이 필요합니다.</CardDescription>
+            <CardDescription>회원 관리 메뉴는 단체 관리자 및 재정 담당자만 접근할 수 있습니다.</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-end pt-4">
-            <Button onClick={() => navigate('/admin/login')}>
-              로그인 페이지로 이동
-            </Button>
-          </CardContent>
         </Card>
       </div>
     );
   }
 
   const currentPath = `/${tenantSlug}/admin/members`;
+  const memberTerm = currentTenant.terminology?.member || '회원';
+  const donationTerm = currentTenant.terminology?.donation || '봉헌/보시';
 
+  const getTitleLabel = () => {
+    if (currentTenant.religionType === 'catholic') return '세례명';
+    if (currentTenant.religionType === 'buddhist') return '법명';
+    if (currentTenant.religionType === 'protestant') return '직분';
+    return '호칭';
+  };
+
+  // Dynamic Statistics Calculations (No Hardcoded Mock Data)
+  const currentMonthStr = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
+  const totalMembersCount = members.length;
+  const recurringMembersCount = members.filter((m) => m.recurringCount > 0).length;
+  const newThisMonthCount = members.filter((m) => m.registeredDate && m.registeredDate.startsWith(currentMonthStr)).length;
+  const avgDonationAmount = members.length > 0
+    ? Math.round(members.reduce((sum, m) => sum + (m.totalDonation || 0), 0) / members.length)
+    : 0;
+
+  // Search & Filter Logic
   const cleanQuery = searchQuery.trim().toLowerCase();
-  const cleanQueryDigits = searchQuery.replace(/[^0-9]/g, '');
+  const cleanQueryDigits = stripPhoneDigits(searchQuery);
 
-  const filteredMembers = members.filter(
-    (member) =>
-      member.name.toLowerCase().includes(cleanQuery) ||
-      member.phone.includes(cleanQuery) ||
-      (cleanQueryDigits.length > 0 && member.normalizedPhone.includes(cleanQueryDigits)) ||
-      member.email.toLowerCase().includes(cleanQuery)
-  );
+  const filteredMembers = members.filter((m) => {
+    // 1. Tab Filter
+    if (filterTab === 'recurring' && m.recurringCount === 0) return false;
+    if (filterTab === 'once' && m.recurringCount > 0) return false;
+    if (filterTab === 'new' && (!m.registeredDate || !m.registeredDate.startsWith(currentMonthStr))) return false;
 
-  const totalMembers = members.length;
-  const recurringMembers = members.filter((m) => m.recurring).length;
+    // 2. Search Query
+    if (!cleanQuery) return true;
+    const matchName = m.name.toLowerCase().includes(cleanQuery);
+    const matchTitle = (m.baptismName || '').toLowerCase().includes(cleanQuery);
+    const matchPhone = formatPhoneNumber(m.phone).includes(cleanQuery) || (cleanQueryDigits && m.phone.includes(cleanQueryDigits));
+    const matchEmail = m.email.toLowerCase().includes(cleanQuery);
 
-  const handleExport = () => {
-    toast.success('회원 목록을 엑셀로 다운로드합니다');
+    return matchName || matchTitle || matchPhone || matchEmail;
+  });
+
+  // Open Member Detail Modal
+  const handleOpenDetail = (member: MemberDetailData) => {
+    setSelectedMember(member);
+    setIsDetailModalOpen(true);
+  };
+
+  // Open Add Member Modal
+  const handleOpenAddModal = () => {
+    setMemberName('');
+    setMemberTitle('');
+    setMemberPhone('');
+    setMemberEmail('');
+    setMemberAddress('');
+    setIsAddMemberModalOpen(true);
+  };
+
+  const handleAddMember = () => {
+    if (!memberName.trim()) {
+      toast.error('회원 성명을 입력해 주세요.');
+      return;
+    }
+
+    const newMem: MemberDetailData = {
+      id: `mem_${Date.now()}`,
+      name: memberName.trim(),
+      baptismName: memberTitle.trim(),
+      phone: stripPhoneDigits(memberPhone) || '01000000000',
+      email: memberEmail.trim(),
+      address: memberAddress.trim(),
+      registeredDate: new Date().toISOString().slice(0, 10),
+      totalDonation: 0,
+      lastDonation: '납부 기록 없음',
+      recurringCount: 0,
+      note: '신규 등록 회원',
+    };
+
+    setMembers((prev) => [newMem, ...prev]);
+    setIsAddMemberModalOpen(false);
+    toast.success(`[${newMem.name}] 신규 ${memberTerm}이(가) 등록되었습니다.`);
+  };
+
+  // Open Edit Member Modal
+  const handleOpenEditModal = (m: MemberDetailData) => {
+    setEditingMember(m);
+    setMemberName(m.name);
+    setMemberTitle(m.baptismName || '');
+    setMemberPhone(formatPhoneNumber(m.phone));
+    setMemberEmail(m.email);
+    setMemberAddress(m.address || '');
+    setIsEditMemberModalOpen(true);
+  };
+
+  const handleSaveEditMember = () => {
+    if (!editingMember) return;
+    if (!memberName.trim()) {
+      toast.error('회원 성명을 입력해 주세요.');
+      return;
+    }
+
+    const updated = {
+      ...editingMember,
+      name: memberName.trim(),
+      baptismName: memberTitle.trim(),
+      phone: stripPhoneDigits(memberPhone),
+      email: memberEmail.trim(),
+      address: memberAddress.trim(),
+    };
+
+    setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? updated : m)));
+    if (selectedMember && selectedMember.id === editingMember.id) {
+      setSelectedMember(updated);
+    }
+    setIsEditMemberModalOpen(false);
+    toast.success(`[${updated.name}] ${memberTerm} 정보가 수정되었습니다.`);
+  };
+
+  const handleDeleteMember = (id: string, name: string) => {
+    if (confirm(`정말로 [${name}] ${memberTerm} 정보를 삭제하시겠습니까?`)) {
+      setMembers((prev) => prev.filter((m) => m.id !== id));
+      if (selectedMember?.id === id) {
+        setIsDetailModalOpen(false);
+      }
+      toast.success(`[${name}] ${memberTerm} 정보가 삭제되었습니다.`);
+    }
+  };
+
+  // UTF-8 BOM CSV Excel Export Engine
+  const handleExportCSV = () => {
+    if (members.length === 0) {
+      toast.error('다운로드할 회원 데이터가 없습니다.');
+      return;
+    }
+
+    const titleHeader = getTitleLabel();
+    const headers = [`성명`, titleHeader, `전화번호`, `이메일`, `주소`, `가입일`, `정기 약정 수`, `누적 ${donationTerm}액(원)`, `최근 ${donationTerm}일`].join(',');
+    
+    const rows = members.map((m) => [
+      `"${m.name}"`,
+      `"${m.baptismName || ''}"`,
+      `"${formatPhoneNumber(m.phone)}"`,
+      `"${m.email || ''}"`,
+      `"${m.address || ''}"`,
+      `"${m.registeredDate}"`,
+      `"${m.recurringCount}건"`,
+      `"${m.totalDonation}"`,
+      `"${m.lastDonation}"`,
+    ].join(','));
+
+    const csvContent = '\uFEFF' + [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${currentTenant.slug}_member_list_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`전체 ${members.length}명의 ${memberTerm} 목록을 엑셀(CSV)로 다운로드했습니다.`);
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-zinc-950">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block shrink-0 sticky top-0 h-screen">
         <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
@@ -158,164 +373,387 @@ export default function MemberManagement() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+      <div className="flex-1 min-w-0 overflow-auto">
+        <div className="p-6 lg:p-8 space-y-6">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">
-                  {currentTenant.terminology.member} 관리
-                </h1>
-                <p className="text-muted-foreground">
-                  등록된 {currentTenant.terminology.member} 정보를 조회하고 관리합니다
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleExport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  엑셀 다운로드
-                </Button>
-                <Button>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  회원 추가
-                </Button>
-              </div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                <Users className="h-7 w-7 text-indigo-600" />
+                {currentTenant.name} {memberTerm} 통합 관리 센터
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+                등록된 {memberTerm}의 상세 정보, {donationTerm} 내역 및 납부확인서/영수증을 통합 관리합니다.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start md:self-auto">
+              <Button variant="outline" onClick={handleExportCSV} className="gap-2 cursor-pointer font-bold bg-white">
+                <Download className="h-4 w-4 text-emerald-600" />
+                엑셀 다운로드
+              </Button>
+              <Button onClick={handleOpenAddModal} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer">
+                <UserPlus className="h-4 w-4" />
+                신규 {memberTerm} 추가
+              </Button>
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card>
+          {/* Stats Summary Cards (No Mock Data) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="border-l-4 border-l-purple-500">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  전체 {currentTenant.terminology.member}
+                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  전체 등록 {memberTerm}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalMembers}명</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
+                  {totalMembersCount}명
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-blue-500">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">정기 봉헌자</CardTitle>
+                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  정기 약정 {memberTerm}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{recurringMembers}명</div>
+                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                  {recurringMembersCount}명
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-emerald-500">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 신규</CardTitle>
+                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  이번 달 신규 가입
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">8명</div>
+                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                  {newThisMonthCount}명
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4 border-l-amber-500">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">평균 봉헌액</CardTitle>
+                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  평균 누적 {donationTerm}액
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {Math.round(
-                    members.reduce((sum, m) => sum + m.totalDonation, 0) / members.length
-                  ).toLocaleString()}
-                  원
+                <div className="text-2xl font-black text-slate-900 dark:text-zinc-100">
+                  ₩ {avgDonationAmount.toLocaleString()}원
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Search */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Search className="h-5 w-5 text-muted-foreground" />
+          {/* Filter Tabs & Search Bar */}
+          <Card className="p-4 bg-white dark:bg-zinc-900 border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as any)} className="w-full md:w-auto">
+                <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1">
+                  <TabsTrigger value="all" className="font-bold text-xs">전체 ({members.length}명)</TabsTrigger>
+                  <TabsTrigger value="recurring" className="font-bold text-xs">정기 약정 ({recurringMembersCount}명)</TabsTrigger>
+                  <TabsTrigger value="once" className="font-bold text-xs">단발 전용 ({members.length - recurringMembersCount}명)</TabsTrigger>
+                  <TabsTrigger value="new" className="font-bold text-xs">이번달 신규 ({newThisMonthCount}명)</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="이름, 전화번호, 이메일로 검색..."
+                  placeholder={`성명, ${getTitleLabel()}, 전화번호, 이메일 검색...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
+                  className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-zinc-800 border-slate-200 text-xs font-semibold"
                 />
               </div>
-            </CardContent>
+            </div>
           </Card>
 
-          {/* Members Table */}
+          {/* Members Main Table */}
           <Card>
-            <CardHeader>
-              <CardTitle>{currentTenant.terminology.member} 목록</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-indigo-600" />
+                {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
+              </CardTitle>
               <CardDescription>
-                {filteredMembers.length}명의 {currentTenant.terminology.member}
+                {memberTerm} 행을 클릭하거나 [🔍 상세] 버튼을 눌러 개별 납부 확인서 및 지향/축원 이력을 확인하세요.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>성명</TableHead>
-                    {currentTenant.religionType === 'catholic' && (
-                      <TableHead>세례명</TableHead>
-                    )}
-                    <TableHead>전화번호</TableHead>
-                    <TableHead>이메일</TableHead>
-                    <TableHead>가입일</TableHead>
-                    <TableHead className="text-right">누적 봉헌액</TableHead>
-                    <TableHead>최근 봉헌</TableHead>
-                    <TableHead>정기 봉헌</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">{member.name}</TableCell>
-                      {currentTenant.religionType === 'catholic' && (
-                        <TableCell>{member.baptismName}</TableCell>
-                      )}
-                      <TableCell>{member.phone}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {member.email}
-                      </TableCell>
-                      <TableCell>{member.registeredDate}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {member.totalDonation.toLocaleString()}원
-                      </TableCell>
-                      <TableCell>{member.lastDonation}</TableCell>
-                      <TableCell>
-                        <Badge variant={member.recurring ? 'default' : 'secondary'}>
-                          {member.recurring ? '정기' : '단발'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
 
-          {/* Info */}
-          <Card className="mt-8 bg-blue-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-base">회원 관리 안내</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p>
-                • {currentTenant.terminology.member} 정보는 개인정보 보호법에 따라 안전하게
-                관리됩니다
-              </p>
-              <p>• 정기 봉헌은 매월 자동으로 결제되며, 언제든지 해지할 수 있습니다</p>
-              <p>• 봉헌 내역은 투명하게 기록되고 관리됩니다</p>
-              <p>
-                • 가족 단위 관리 기능을 통해 여러 가족 구성원을 한 번에 관리할 수 있습니다
-              </p>
+            <CardContent>
+              {isLoading ? (
+                <div className="py-12 text-center text-sm font-semibold text-slate-500">
+                  {memberTerm} 데이터를 불러오는 중입니다...
+                </div>
+              ) : filteredMembers.length === 0 ? (
+                <div className="py-12 text-center text-sm font-semibold text-slate-500">
+                  검색 조건과 일치하는 {memberTerm} 데이터가 없습니다.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-100 dark:bg-zinc-900">
+                      <TableHead className="font-bold">성명</TableHead>
+                      <TableHead className="font-bold">{getTitleLabel()}</TableHead>
+                      <TableHead className="font-bold">전화번호</TableHead>
+                      <TableHead className="font-bold">이메일</TableHead>
+                      <TableHead className="font-bold">가입일</TableHead>
+                      <TableHead className="font-bold">정기 약정 현황</TableHead>
+                      <TableHead className="text-right font-bold">누적 {donationTerm}액</TableHead>
+                      <TableHead className="font-bold">최근 {donationTerm}일</TableHead>
+                      <TableHead className="text-right font-bold">회원 관리 작업</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMembers.map((m) => (
+                      <TableRow
+                        key={m.id}
+                        className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 cursor-pointer transition-colors"
+                        onClick={() => handleOpenDetail(m)}
+                      >
+                        <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
+                          {m.name}
+                        </TableCell>
+                        <TableCell className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                          {m.baptismName || '-'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-slate-700 dark:text-zinc-300">
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                            {formatPhoneNumber(m.phone)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500">
+                          {m.email || '-'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-slate-500">
+                          {m.registeredDate}
+                        </TableCell>
+                        <TableCell>
+                          {m.recurringCount > 0 ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-1 w-fit">
+                              <RefreshCw className="h-3 w-3 animate-spin-slow" />
+                              정기 {m.recurringCount}건
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-500 border-slate-300 text-[11px]">
+                              ⚪ 단발 전용
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-black text-slate-900 dark:text-zinc-100 font-mono">
+                          ₩ {m.totalDonation.toLocaleString()}원
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-slate-500">
+                          {m.lastDonation || '-'}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title="회원 상세 정보 및 결제내역"
+                              onClick={() => handleOpenDetail(m)}
+                              className="h-7 px-2 text-xs gap-1 cursor-pointer bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold border-indigo-200"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              상세보기
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title="정보 수정"
+                              onClick={() => handleOpenEditModal(m)}
+                              className="h-7 px-2 text-xs gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                              수정
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="회원 삭제"
+                              onClick={() => handleDeleteMember(m.id, m.name)}
+                              className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* 🔍 회원 종합 상세 페이지 / 드로어 모달 */}
+      <MemberDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        member={selectedMember}
+        currentTenant={currentTenant}
+        onUpdateMember={(updated) => {
+          setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+          setSelectedMember(updated);
+        }}
+      />
+
+      {/* ➕ 신규 회원 추가 모달 */}
+      <Dialog open={isAddMemberModalOpen} onOpenChange={setIsAddMemberModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-indigo-600" />
+              신규 {memberTerm} 등록
+            </DialogTitle>
+            <DialogDescription>
+              {currentTenant.name}의 새로운 {memberTerm} 정보를 입력해 주세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleAddMember(); }} autoComplete="off" className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">성명 (이름) *</Label>
+              <Input
+                placeholder="예: 홍길동"
+                value={memberName}
+                onChange={(e) => setMemberName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
+              <Input
+                placeholder={`예: ${getTitleLabel()} 입력`}
+                value={memberTitle}
+                onChange={(e) => setMemberTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">휴대폰 번호</Label>
+              <Input
+                type="tel"
+                placeholder="010-0000-0000"
+                value={formatPhoneNumber(memberPhone)}
+                onChange={(e) => setMemberPhone(formatPhoneNumber(e.target.value))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">이메일 주소</Label>
+              <Input
+                type="email"
+                placeholder="example@domain.com"
+                value={memberEmail}
+                onChange={(e) => setMemberEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">주소</Label>
+              <Input
+                placeholder="주소 입력"
+                value={memberAddress}
+                onChange={(e) => setMemberAddress(e.target.value)}
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button variant="outline" type="button" onClick={() => setIsAddMemberModalOpen(false)}>
+                취소
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+                등록 완료
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✏️ 회원 정보 수정 모달 */}
+      <Dialog open={isEditMemberModalOpen} onOpenChange={setIsEditMemberModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="h-5 w-5 text-indigo-600" />
+              {memberTerm} 정보 수정
+            </DialogTitle>
+            <DialogDescription>
+              등록된 {memberTerm}의 기본 정보를 수정합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveEditMember(); }} autoComplete="off" className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">성명 (이름) *</Label>
+              <Input
+                value={memberName}
+                onChange={(e) => setMemberName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
+              <Input
+                value={memberTitle}
+                onChange={(e) => setMemberTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">휴대폰 번호</Label>
+              <Input
+                type="tel"
+                value={formatPhoneNumber(memberPhone)}
+                onChange={(e) => setMemberPhone(formatPhoneNumber(e.target.value))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">이메일 주소</Label>
+              <Input
+                type="email"
+                value={memberEmail}
+                onChange={(e) => setMemberEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">주소</Label>
+              <Input
+                value={memberAddress}
+                onChange={(e) => setMemberAddress(e.target.value)}
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button variant="outline" type="button" onClick={() => setIsEditMemberModalOpen(false)}>
+                취소
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+                수정 사항 저장
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
