@@ -279,10 +279,29 @@ export default function AdminAccountManagement() {
       return;
     }
 
+    const cleanEmail = newEmail.trim().toLowerCase();
+    
+    // 1. 현재 단체 내 이메일 중복 체크
+    if (staffList.some((s) => s.email.toLowerCase() === cleanEmail)) {
+      toast.error(`'${cleanEmail}' 이메일은 이미 등록된 관리자 계정입니다.`);
+      return;
+    }
+
+    // 2. 다른 단체(Cross-Tenant) 이메일 중복 체크
+    const otherTenantWithSameEmail = tenants.find(
+      (t) => t.id !== currentTenant.id && t.contact?.email?.toLowerCase() === cleanEmail
+    );
+    if (otherTenantWithSameEmail) {
+      toast.error(
+        `'${cleanEmail}' 이메일은 이미 타 단체([${otherTenantWithSameEmail.name}])의 대표 계정으로 등록되어 있습니다. 다른 이메일을 입력해 주세요.`
+      );
+      return;
+    }
+
     const newStaff: StaffAdminUser = {
       id: `staff_${Date.now()}`,
       name: newName.trim(),
-      email: newEmail.trim(),
+      email: cleanEmail,
       phone: newPhone.trim() || '미입력',
       groupId: selectedGroupId,
       status: 'active',
@@ -319,13 +338,32 @@ export default function AdminAccountManagement() {
       return;
     }
 
+    const cleanEmail = editEmail.trim().toLowerCase();
+
+    // 1. 현재 단체 내 다른 관리자 이메일 중복 체크
+    if (staffList.some((s) => s.id !== editingStaff.id && s.email.toLowerCase() === cleanEmail)) {
+      toast.error(`'${cleanEmail}' 이메일은 이미 등록된 다른 관리자의 이메일입니다.`);
+      return;
+    }
+
+    // 2. 다른 단체(Cross-Tenant) 이메일 중복 체크
+    const otherTenantWithSameEmail = tenants.find(
+      (t) => t.id !== currentTenant.id && t.contact?.email?.toLowerCase() === cleanEmail
+    );
+    if (otherTenantWithSameEmail) {
+      toast.error(
+        `'${cleanEmail}' 이메일은 이미 타 단체([${otherTenantWithSameEmail.name}])의 대표 계정으로 등록되어 있습니다. 다른 이메일을 입력해 주세요.`
+      );
+      return;
+    }
+
     setStaffList((prev) =>
       prev.map((s) =>
         s.id === editingStaff.id
           ? {
               ...s,
               name: editName.trim(),
-              email: editEmail.trim(),
+              email: cleanEmail,
               phone: editPhone.trim() || '미입력',
               groupId: editGroupId,
             }
