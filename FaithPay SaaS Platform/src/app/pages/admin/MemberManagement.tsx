@@ -139,7 +139,7 @@ export default function MemberManagement() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block shrink-0 sticky top-0 h-screen">
         <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
       </div>
 

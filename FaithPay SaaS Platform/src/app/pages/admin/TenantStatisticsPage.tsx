@@ -463,8 +463,8 @@ export default function TenantStatisticsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-zinc-950 flex flex-col md:flex-row">
-      {/* Sidebar Desktop */}
-      <div className="hidden md:block">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block shrink-0 sticky top-0 h-screen">
         <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
       </div>
 

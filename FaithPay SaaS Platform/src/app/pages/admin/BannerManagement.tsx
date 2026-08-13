@@ -263,9 +263,9 @@ export default function BannerManagement() {
     <DndProvider backend={HTML5Backend}>
       <div className="flex min-h-screen bg-slate-50">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block">
-          <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
-        </div>
+      <div className="hidden lg:block shrink-0 sticky top-0 h-screen">
+        <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
+      </div>
 
         {/* Main Content */}
         <div className="flex-1">

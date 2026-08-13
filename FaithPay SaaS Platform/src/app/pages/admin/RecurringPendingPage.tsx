@@ -228,7 +228,7 @@ export default function RecurringPendingPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block w-64 flex-shrink-0">
+      <div className="hidden lg:block shrink-0 sticky top-0 h-screen">
         <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
       </div>
 
