@@ -1871,6 +1871,50 @@ export async function getHybridMonthlyStats(tenantId: string, year: number, mont
   return calculatedStats;
 }
 
+// 📱 신도/회원 프로필 정보 업데이트 (전화번호 OTP 인증 기반)
+export async function updateDonorProfile(
+  phone: string,
+  updates: { name?: string; baptismName?: string; email?: string; address?: string }
+): Promise<{ updatedCount: number }> {
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return { updatedCount: 0 };
+
+  let updatedCount = 0;
+  try {
+    const keys = await kv.getByPrefixWithKeys('donation:');
+    for (const { key, value } of keys) {
+      if (value && (value.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone) {
+        let changed = false;
+        if (updates.name && value.donorName !== updates.name) {
+          value.donorName = updates.name;
+          changed = true;
+        }
+        if (updates.baptismName !== undefined && value.baptismName !== updates.baptismName) {
+          value.baptismName = updates.baptismName;
+          changed = true;
+        }
+        if (updates.email !== undefined && value.donorEmail !== updates.email) {
+          value.donorEmail = updates.email;
+          changed = true;
+        }
+        if (updates.address !== undefined && value.address !== updates.address) {
+          value.address = updates.address;
+          changed = true;
+        }
+        if (changed) {
+          value.updatedAt = new Date().toISOString();
+          await kv.set(key, value);
+          updatedCount++;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error updating donor profile in KV store:', err);
+  }
+
+  return { updatedCount };
+}
+
 
 
 

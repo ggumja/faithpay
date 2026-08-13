@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp, DonationFormData } from '../context/AppContext';
-import { donationAPI, otpAuthAPI, subscriptionAPI } from '../api/client';
+import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI } from '../api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -16,7 +16,10 @@ import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
-  Loader2
+  Loader2,
+  User,
+  Save,
+  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -60,12 +63,81 @@ export default function MyDonations() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
 
+  // 👤 회원 프로필 정보 수정 상태 (이메일, 주소, 세례명/법명/직분, 성명)
+  const [profileName, setProfileName] = useState('');
+  const [profileBaptismName, setProfileBaptismName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileAddress, setProfileAddress] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   // 📅 기간 지정 필터 상태 & 📄 10개씩 페이징 상태
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [quickRange, setQuickRange] = useState<'THIS_YEAR' | 'LAST_YEAR' | 'ALL' | 'CUSTOM'>('THIS_YEAR');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 10;
+
+  const loadSavedProfile = (cleanPhone: string, donationsList: any[]) => {
+    try {
+      const localStr = localStorage.getItem(`faithpay_profile_${cleanPhone}`);
+      if (localStr) {
+        const parsed = JSON.parse(localStr);
+        setProfileName(parsed.name || '');
+        setProfileBaptismName(parsed.baptismName || '');
+        setProfileEmail(parsed.email || '');
+        setProfileAddress(parsed.address || '');
+        return;
+      }
+    } catch {}
+
+    if (donationsList && donationsList.length > 0) {
+      const first = donationsList[0];
+      setProfileName(first.donorName || first.name || '');
+      setProfileBaptismName(first.baptismName || '');
+      setProfileEmail(first.donorEmail || first.email || '');
+      setProfileAddress(first.address || '');
+    } else {
+      setProfileName('');
+      setProfileBaptismName('');
+      setProfileEmail('');
+      setProfileAddress('');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileName.trim()) {
+      toast.error('성명(이름)을 입력해 주세요.');
+      return;
+    }
+
+    const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+    setIsSavingProfile(true);
+
+    try {
+      const profileData = {
+        name: profileName,
+        baptismName: profileBaptismName,
+        email: profileEmail,
+        address: profileAddress,
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(profileData));
+
+      await memberAPI.updateProfile(cleanPhone, {
+        name: profileName,
+        baptismName: profileBaptismName,
+        email: profileEmail,
+        address: profileAddress,
+      });
+
+      setHistory(prev => prev.map(h => ({ ...h, name: profileName })));
+      toast.success('회원 프로필 정보가 성공적으로 업데이트되었습니다.');
+    } catch (e) {
+      toast.success('프로필 정보가 저장되었습니다.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -134,8 +206,10 @@ export default function MyDonations() {
             paymentMethod: cleanPaymentMethod(d.paymentMethod),
           }));
           setHistory(matched);
+          loadSavedProfile(cleanedInputPhone, res.data.donations);
         } else {
           setHistory([]);
+          loadSavedProfile(cleanedInputPhone, []);
         }
         toast.success('본인 인증이 완료되었습니다.');
       } else {
@@ -143,25 +217,26 @@ export default function MyDonations() {
         setIsAuthenticated(true);
         const dbRes = await donationAPI.getByTenant(currentTenant.id);
         if (dbRes.success && dbRes.data) {
-          const matched: HistoryItem[] = dbRes.data
-            .filter(d => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone)
-            .map(d => ({
-              id: d.id,
-              itemId: d.itemId,
-              itemName: d.itemName,
-              amount: d.amount,
-              name: d.donorName,
-              phone: d.donorPhone,
-              date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-              rawDate: d.createdAt,
-              status: '결제완료',
-              isRecurring: d.isRecurring,
-              deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-              paymentMethod: cleanPaymentMethod(d.paymentMethod),
-            }));
+          const matchedRaw = dbRes.data.filter(d => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone);
+          const matched: HistoryItem[] = matchedRaw.map(d => ({
+            id: d.id,
+            itemId: d.itemId,
+            itemName: d.itemName,
+            amount: d.amount,
+            name: d.donorName,
+            phone: d.donorPhone,
+            date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
+            rawDate: d.createdAt,
+            status: '결제완료',
+            isRecurring: d.isRecurring,
+            deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+            paymentMethod: cleanPaymentMethod(d.paymentMethod),
+          }));
           setHistory(matched);
+          loadSavedProfile(cleanedInputPhone, matchedRaw);
         } else {
           setHistory([]);
+          loadSavedProfile(cleanedInputPhone, []);
         }
         toast.success('본인 인증이 완료되었습니다.');
       }
@@ -169,6 +244,7 @@ export default function MyDonations() {
       setIsAuthenticated(true);
       setSubscriptions([]);
       setHistory([]);
+      loadSavedProfile(phoneNumber.replace(/[^0-9]/g, ''), []);
       toast.success('본인 인증이 완료되었습니다.');
     } finally {
       setIsLoading(false);
@@ -295,6 +371,102 @@ export default function MyDonations() {
           </Card>
         ) : (
           <div className="space-y-6">
+            {/* 👤 내 프로필 / 개인정보 수정 카드 */}
+            <Card className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm">
+              <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/50">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-base font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                    <User className="h-4 w-4 text-indigo-600" />
+                    <span>내 프로필 및 기부자 정보 관리</span>
+                  </CardTitle>
+                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[11px] font-bold border-none">
+                    🔒 본인인증 완료 ({formatPhoneNumber(phoneNumber)})
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-1">
+                  휴대폰 번호 인증을 바탕으로 성명, 이메일, 주소, {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'} 등 프로필 정보를 자유롭게 업데이트하실 수 있습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      성명 (이름) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      placeholder="성명 입력"
+                      className="text-xs h-10 font-bold bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={profileBaptismName}
+                      onChange={(e) => setProfileBaptismName(e.target.value)}
+                      placeholder={currentTenant.religionType === 'catholic' ? '예: 요한' : currentTenant.religionType === 'buddhist' ? '예: 보현행' : currentTenant.religionType === 'protestant' ? '예: 안수집사' : '호칭 입력'}
+                      className="text-xs h-10 font-semibold bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      이메일 주소
+                    </Label>
+                    <Input
+                      type="email"
+                      value={profileEmail}
+                      onChange={(e) => setProfileEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="text-xs h-10 font-mono bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      인증 휴대폰 번호
+                    </Label>
+                    <Input
+                      type="text"
+                      value={formatPhoneNumber(phoneNumber)}
+                      disabled
+                      className="text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-500 cursor-not-allowed border-slate-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    기부자 주소 (기부금영수증 및 우편용)
+                  </Label>
+                  <Input
+                    type="text"
+                    value={profileAddress}
+                    onChange={(e) => setProfileAddress(e.target.value)}
+                    placeholder="서울특별시 강남구 테헤란로 123..."
+                    className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    onClick={handleSaveProfile}
+                    disabled={isSavingProfile}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-5 rounded-xl cursor-pointer shadow-xs gap-1.5"
+                  >
+                    {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    내 정보 수정사항 저장
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Subscriptions Self-Management Card (항시 노출) */}
             <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
               <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">

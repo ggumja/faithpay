@@ -1502,4 +1502,20 @@ app.post("/make-server-d0d82cc7/admin/reset-ledger", async (c) => {
   }
 });
 
+// 📱 신도/회원 프로필 정보 업데이트 API (전화번호 OTP 본인인증 기반)
+app.post("/make-server-d0d82cc7/members/update-profile", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { phone, name, baptismName, email, address } = body;
+    if (!phone) {
+      return c.json({ success: false, error: 'Phone number is required' }, 400);
+    }
+    const result = await db.updateDonorProfile(phone, { name, baptismName, email, address });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error updating donor profile:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

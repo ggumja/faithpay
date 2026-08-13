@@ -453,6 +453,20 @@ export const donationAPI = {
   },
 };
 
+// ==================== MEMBER / DONOR API ====================
+
+export const memberAPI = {
+  async updateProfile(
+    phone: string,
+    profile: { name?: string; baptismName?: string; email?: string; address?: string }
+  ): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/members/update-profile', {
+      method: 'POST',
+      body: JSON.stringify({ phone, ...profile }),
+    });
+  },
+};
+
 // ==================== KAKAO PAY API (TC0ONETIME TEST) ====================
 
 export const kakaoPayAPI = {
