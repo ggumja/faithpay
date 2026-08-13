@@ -42,12 +42,41 @@ export default function SettlementReports() {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [paymentMethodData, setPaymentMethodData] = useState<any[]>([]);
 
+  // PG 계약 수수료율 (각원사의 경우 3.0%, 단체별 설정값 반영)
+  const contractRate = currentTenant?.paymentConfig?.contractRate ?? (
+    currentTenant?.slug === 'gakwonsa' || currentTenant?.name?.includes('각원사') ? 3.0 : 3.0
+  );
+
+  const monthlyTotal = 84215000;
+  const pgFee = Math.round(monthlyTotal * (contractRate / 100));
+  const finalDeposit = monthlyTotal - pgFee;
+
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
+
+  useEffect(() => {
+    const rawData = [
+      { month: '2026년 03월', totalDonations: 84215000, settlementDate: '2026-04-05', status: '완료' },
+      { month: '2026년 02월', totalDonations: 53200000, settlementDate: '2026-03-05', status: '완료' },
+      { month: '2026년 01월', totalDonations: 48900000, settlementDate: '2026-02-05', status: '완료' },
+    ];
+
+    const processed = rawData.map(item => {
+      const pgFees = Math.round(item.totalDonations * (contractRate / 100));
+      const netAmount = item.totalDonations - pgFees;
+      return {
+        ...item,
+        pgFees,
+        netAmount,
+      };
+    });
+
+    setMonthlySettlement(processed);
+  }, [contractRate]);
 
 
   if (!currentTenant) {
@@ -197,13 +226,13 @@ export default function SettlementReports() {
                   </div>
                   <div className="h-8 w-px bg-slate-200" />
                   <div>
-                    <span className="text-slate-500 text-xs block">지급대행 수수료율</span>
-                    <span className="font-bold text-purple-700">0.5% (SaaS 수수료)</span>
+                    <span className="text-slate-500 text-xs block">PG 계약 수수료율</span>
+                    <span className="font-bold text-blue-700">{contractRate}% (토스 PG)</span>
                   </div>
                   <div className="h-8 w-px bg-slate-200" />
                   <div>
                     <span className="text-slate-500 text-xs block">정산 주기</span>
-                    <span className="font-bold text-blue-700">D+3일 실시간 분할입금</span>
+                    <span className="font-bold text-slate-700">D+3일 실시간 분할입금</span>
                   </div>
                 </div>
               </div>
@@ -211,13 +240,13 @@ export default function SettlementReports() {
           </Card>
 
           {/* Current Month Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">이번 달 총 봉헌액</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">84,215,000원</div>
+                <div className="text-2xl font-bold">{monthlyTotal.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <TrendingUp className="h-3 w-3 inline text-green-600 mr-1" />
                   <span className="text-green-600">+58.3%</span> vs 전월
@@ -227,21 +256,11 @@ export default function SettlementReports() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">PG 수수료</CardTitle>
+                <CardTitle className="text-sm font-medium">PG 수수료 ({contractRate}%)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">1,263,225원</div>
-                <p className="text-xs text-muted-foreground mt-1">1.5% (토스 PG)</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">SaaS 플랫폼 수수료</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">421,075원</div>
-                <p className="text-xs text-muted-foreground mt-1">0.5% (자동 스플릿 차감)</p>
+                <div className="text-2xl font-bold text-orange-600">{pgFee.toLocaleString()}원</div>
+                <p className="text-xs text-muted-foreground mt-1">{contractRate}% (토스 PG)</p>
               </CardContent>
             </Card>
 
@@ -250,7 +269,7 @@ export default function SettlementReports() {
                 <CardTitle className="text-sm font-medium">단체 계좌 최종 입금액</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">82,530,700원</div>
+                <div className="text-2xl font-bold text-green-600">{finalDeposit.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <Calendar className="h-3 w-3 inline mr-1" />
                   정산일: 2026-04-05 (토스 입금)
@@ -281,8 +300,7 @@ export default function SettlementReports() {
                       <TableRow>
                         <TableHead>월</TableHead>
                         <TableHead className="text-right">총 봉헌액</TableHead>
-                        <TableHead className="text-right">PG 수수료</TableHead>
-                        <TableHead className="text-right">플랫폼 수수료</TableHead>
+                        <TableHead className="text-right">PG 수수료 ({contractRate}%)</TableHead>
                         <TableHead className="text-right">실 정산액</TableHead>
                         <TableHead>정산일</TableHead>
                         <TableHead>상태</TableHead>
@@ -298,9 +316,6 @@ export default function SettlementReports() {
                           </TableCell>
                           <TableCell className="text-right text-orange-600">
                             -{record.pgFees.toLocaleString()}원
-                          </TableCell>
-                          <TableCell className="text-right text-purple-600">
-                            -{record.platformFees.toLocaleString()}원
                           </TableCell>
                           <TableCell className="text-right font-bold text-green-600">
                             {record.netAmount.toLocaleString()}원
@@ -627,8 +642,7 @@ export default function SettlementReports() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>• 정산은 매월 5일에 자동으로 진행됩니다</p>
-              <p>• PG 수수료: 1.5% (신용카드, 간편결제), 가상계좌는 건당 500원</p>
-              <p>• 플랫폼 수수료: 0.5% (FaithPay 서비스 이용료)</p>
+              <p>• PG 수수료: {contractRate}% (신용카드, 간편결제), 가상계좌는 건당 500원</p>
               <p>• 세금계산서는 정산일에 자동으로 발행됩니다</p>
               <p>• 정산 내역은 투명하게 공개되며, 언제든지 다운로드할 수 있습니다</p>
             </CardContent>
