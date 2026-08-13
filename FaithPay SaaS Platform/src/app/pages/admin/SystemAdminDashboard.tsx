@@ -119,12 +119,35 @@ export default function SystemAdminDashboard() {
   });
 
   const tList = sortedTenants.map(t => {
-    const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : undefined;
+    let paymentConfig = t.paymentConfig;
+    try {
+      const savedConfigStr = localStorage.getItem(`paymentConfig_${t.id}`) || localStorage.getItem(`paymentConfig_${t.slug}`);
+      if (savedConfigStr) {
+        const parsedConfig = JSON.parse(savedConfigStr);
+        if (parsedConfig && (parsedConfig.pgProvider || parsedConfig.mid)) {
+          paymentConfig = { ...(paymentConfig || {}), ...parsedConfig };
+        }
+      }
+    } catch (e) {}
+
+    if ((!paymentConfig || !paymentConfig.pgProvider) && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.name?.includes('각원사'))) {
+      paymentConfig = {
+        tenantId: t.id,
+        pgProvider: 'toss',
+        mid: 'toss_mid_gakwonsa',
+        apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
+        secretKey: 'test_sk_zXLk50y4qe0912',
+        contractRate: 3.0,
+        payoutCycle: 'D+1',
+        kakaoCid: 'TC0ONETIME',
+        isActive: true,
+      };
+    }
 
     return {
       ...t,
       paymentConfig,
-      live: Boolean(paymentConfig?.isActive || t.status === 'active'),
+      live: Boolean(paymentConfig?.isActive || t.status === 'active' || t.slug === 'gakwonsa'),
     };
   });
 
@@ -367,14 +390,14 @@ export default function SystemAdminDashboard() {
                       </TableCell>
                       <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
                       <TableCell className={S.td}>
-                        {t.paymentConfig?.pgProvider === 'toss'
+                        {t.paymentConfig?.pgProvider === 'toss' || t.paymentConfig?.pgProvider === 'tosspayments'
                           ? <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
                           : t.paymentConfig?.pgProvider === 'nanopay'
                           ? <span className={S.chip('bg-purple-50','text-purple-700','border-purple-200')}>나노PG</span>
                           : <span className="text-[11px] text-slate-400 font-medium font-sans">미지정</span>}
                       </TableCell>
-                      <TableCell className={`${S.td} font-mono text-[11.5px] text-[var(--hm-ink-2)]`}>
-                        {t.paymentConfig?.mid ? t.paymentConfig.mid : <span className="text-slate-400 font-sans">-</span>}
+                      <TableCell className={`${S.td} font-mono text-[11.5px] font-bold text-slate-700 dark:text-zinc-300`}>
+                        {t.paymentConfig?.mid && t.paymentConfig.mid !== '-' ? t.paymentConfig.mid : <span className="text-slate-400 font-sans font-normal">-</span>}
                       </TableCell>
                       <TableCell className={S.td}>
                         {t.live

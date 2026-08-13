@@ -263,7 +263,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         } catch (e) {}
 
-        if (!currentConfig && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.id === 'tenant-gakwonsa')) {
+        if ((!currentConfig || !currentConfig.pgProvider) && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.name?.includes('각원사'))) {
           currentConfig = {
             tenantId: t.id,
             pgProvider: 'toss',
@@ -365,7 +365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
 
-        if (!currentConfig && (t.slug === 'gakwonsa' || t.id === 'gakwonsa')) {
+        if ((!currentConfig || !currentConfig.pgProvider) && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.name?.includes('각원사'))) {
           currentConfig = {
             tenantId: t.id,
             pgProvider: 'toss',
