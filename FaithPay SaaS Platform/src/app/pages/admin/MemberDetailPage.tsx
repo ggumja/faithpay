@@ -622,10 +622,6 @@ export default function MemberDetailPage() {
                         {member.email || '이메일 미등록'}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
-                        주민번호: {member.rrn || '850101-1******'}
-                      </span>
-                      <span className="flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5 text-indigo-600" />
                         가입일: {member.registeredDate}
                       </span>
