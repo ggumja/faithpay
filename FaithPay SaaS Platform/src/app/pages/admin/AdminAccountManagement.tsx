@@ -312,13 +312,7 @@ export default function AdminAccountManagement() {
     setNewPassword('');
     setSelectedGroupId('finance_manager');
 
-    if (otherTenantWithSameEmail) {
-      toast.success(
-        `[${newStaff.name}] 계정이 추가되었습니다. '${cleanEmail}' 이메일은 [${otherTenantWithSameEmail.name}]에도 등록되어 있어 1개 이메일로 다중 회계 단체를 통합 관리할 수 있습니다.`
-      );
-    } else {
-      toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
-    }
+    toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
   };
 
   // ✏️ 스태프 계정 정보 수정
@@ -346,11 +340,6 @@ export default function AdminAccountManagement() {
       return;
     }
 
-    // 2. 다른 단체(Cross-Tenant) 등록 여부 체크 (허용)
-    const otherTenantWithSameEmail = tenants.find(
-      (t) => t.id !== currentTenant.id && t.contact?.email?.toLowerCase() === cleanEmail
-    );
-
     setStaffList((prev) =>
       prev.map((s) =>
         s.id === editingStaff.id
@@ -366,13 +355,7 @@ export default function AdminAccountManagement() {
     );
 
     setIsEditStaffModalOpen(false);
-    if (otherTenantWithSameEmail) {
-      toast.success(
-        `[${editName.trim()}] 관리자 정보가 수정되었습니다. '${cleanEmail}' 이메일은 [${otherTenantWithSameEmail.name}]와(과) 공유되어 로그인 시 단체 선택 모달이 지원됩니다.`
-      );
-    } else {
-      toast.success(`[${editName.trim()}] 관리자 계정 정보가 성공적으로 수정되었습니다.`);
-    }
+    toast.success(`[${editName.trim()}] 관리자 계정 정보가 성공적으로 수정되었습니다.`);
   };
 
   const handleToggleStatus = (id: string) => {
