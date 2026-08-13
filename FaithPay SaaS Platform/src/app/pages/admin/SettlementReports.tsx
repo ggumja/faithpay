@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { donationAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
+import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -30,8 +31,9 @@ import {
   FileText as FileTextIcon,
   TrendingUp,
   Calendar,
+  Filter,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
@@ -43,6 +45,17 @@ export default function SettlementReports() {
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
   const [cancelledDonations, setCancelledDonations] = useState<any[]>([]);
   const [dbDonations, setDbDonations] = useState<any[]>([]);
+
+  // 🗓️ 기간 지정 필터 상태 (Period Filter State)
+  const [periodUnit, setPeriodUnit] = useState<PeriodUnit>('all');
+  const [periodSelection, setPeriodSelection] = useState<PeriodSelection>(() => {
+    return {
+      unit: 'all',
+      startDate: null,
+      endDate: null,
+      label: '전체 기간',
+    };
+  });
   const [summaryStats, setSummaryStats] = useState({
     monthlyTotal: 0,
     pgFee: 0,
@@ -55,6 +68,44 @@ export default function SettlementReports() {
   const contractRate = currentTenant?.paymentConfig?.contractRate ?? (
     currentTenant?.slug === 'gakwonsa' || currentTenant?.name?.includes('각원사') ? 3.0 : 3.0
   );
+
+  // Quick period presets
+  const setQuickPeriod = (type: 'today' | 'this_week' | 'this_month' | 'all') => {
+    const now = new Date();
+    let start: Date | null = new Date();
+    let end: Date | null = new Date();
+    let label = '';
+    let unit: PeriodUnit = 'daily';
+
+    if (type === 'today') {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      label = `🔥 오늘 (${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일)`;
+      unit = 'daily';
+    } else if (type === 'this_week') {
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0, 0);
+      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+      start = monday;
+      end = sunday;
+      label = `📅 이번 주 (${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()})`;
+      unit = 'weekly';
+    } else if (type === 'this_month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      label = `🗓️ 이번 달 (${now.getFullYear()}년 ${now.getMonth() + 1}월)`;
+      unit = 'monthly';
+    } else {
+      start = null;
+      end = null;
+      label = '📊 전체 기간';
+      unit = 'all';
+    }
+
+    setPeriodUnit(unit);
+    setPeriodSelection({ unit, startDate: start, endDate: end, label });
+  };
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -75,8 +126,17 @@ export default function SettlementReports() {
           const formatted = assignSequentialDonationIds(res.data);
           setDbDonations(formatted);
 
+          // 🗓️ Apply periodSelection date filter
+          const filtered = formatted.filter((d: any) => {
+            if (!periodSelection.startDate || !periodSelection.endDate) return true;
+            const rawDate = d.createdAt || d.created_at || d.date;
+            if (!rawDate) return true;
+            const dTime = new Date(rawDate).getTime();
+            return dTime >= periodSelection.startDate.getTime() && dTime <= periodSelection.endDate.getTime();
+          });
+
           // 1. 🔴 승인 취소 및 취소 실패 건 필터링 (DB 실데이터)
-          const cancelled = formatted.filter(
+          const cancelled = filtered.filter(
             (d: any) => d.paymentStatus === 'cancelled' || d.paymentStatus === 'cancel_failed'
           );
           setCancelledDonations(cancelled);
@@ -87,7 +147,7 @@ export default function SettlementReports() {
           const now = new Date();
           const curMonthKey = `${now.getFullYear()}년 ${String(now.getMonth() + 1).padStart(2, '0')}월`;
 
-          formatted.forEach((d: any) => {
+          filtered.forEach((d: any) => {
             const rawDate = d.createdAt || d.created_at || d.date;
             const parsedDate = rawDate ? new Date(rawDate) : new Date();
             const validDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
@@ -156,7 +216,7 @@ export default function SettlementReports() {
     };
 
     fetchRealSettlements();
-  }, [contractRate, currentTenant, tenantSlug]);
+  }, [contractRate, currentTenant, tenantSlug, periodSelection]);
 
 
   if (!currentTenant) {
@@ -314,6 +374,82 @@ export default function SettlementReports() {
                     <span className="text-slate-500 text-xs block">정산 주기</span>
                     <span className="font-bold text-slate-700">D+3일 실시간 분할입금</span>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 🗓️ 기간 지정 필터 블록 (Period Filter Block) */}
+          <Card className="border-indigo-100 shadow-sm bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-zinc-900 dark:to-zinc-900/50">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                {/* Left: Section Title & Quick Preset Buttons */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    <span className="font-bold text-sm text-slate-800 dark:text-zinc-200">
+                      정산 기간 지정 검색
+                    </span>
+                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-semibold">
+                      {periodSelection.label || '전체 기간'}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setQuickPeriod('today')}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
+                        periodUnit === 'daily' && periodSelection.startDate
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      🔥 오늘
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickPeriod('this_week')}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
+                        periodUnit === 'weekly'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      📅 이번 주
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickPeriod('this_month')}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
+                        periodUnit === 'monthly'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      🗓️ 이번 달
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickPeriod('all')}
+                      className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
+                        periodUnit === 'all'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      📊 전체 보기
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right: PeriodRangePicker Component */}
+                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 p-2.5 rounded-xl shadow-xs">
+                  <PeriodRangePicker
+                    unit={periodUnit}
+                    onUnitChange={setPeriodUnit}
+                    selection={periodSelection}
+                    onSelectionChange={setPeriodSelection}
+                  />
                 </div>
               </div>
             </CardContent>
