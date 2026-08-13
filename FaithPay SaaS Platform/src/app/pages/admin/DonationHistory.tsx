@@ -787,7 +787,7 @@ export default function DonationHistory() {
 
 
                 {/* Statistics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -815,18 +815,6 @@ export default function DonationHistory() {
                       <p className="text-xs text-muted-foreground mt-1">
                         정상 승인된 봉헌
                       </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        결제대기
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-amber-600">{pendingCount}건</div>
-                      <p className="text-xs text-muted-foreground mt-1">입금 대기</p>
                     </CardContent>
                   </Card>
                 </div>
