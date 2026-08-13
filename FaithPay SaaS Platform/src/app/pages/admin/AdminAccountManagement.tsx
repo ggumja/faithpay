@@ -6,7 +6,6 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Checkbox } from '../../components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import {
@@ -26,17 +25,25 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
-import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, Save, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, Save, ShieldCheck, Users, Plus, Edit2, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+
+export interface AdminGroup {
+  id: string;
+  name: string;
+  description: string;
+  isSystemGroup: boolean; // System groups like 'tenant_admin' cannot be deleted
+  badgeColor: string;
+}
 
 export interface StaffAdminUser {
   id: string;
   name: string;
   email: string;
   phone: string;
-  role: 'tenant_admin' | 'finance_manager' | 'staff';
+  groupId: string; // References AdminGroup.id
   status: 'active' | 'locked';
   createdAt: string;
   lastLoginAt?: string;
@@ -48,9 +55,7 @@ export interface MenuPermissionItem {
   id: string;
   menuName: string;
   path: string;
-  tenant_admin: PermissionLevel;
-  finance_manager: PermissionLevel;
-  staff: PermissionLevel;
+  groupPermissions: Record<string, PermissionLevel>; // groupId -> PermissionLevel
 }
 
 export default function AdminAccountManagement() {
@@ -59,19 +64,37 @@ export default function AdminAccountManagement() {
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
   const terms = useTenantTerms(currentTenant?.orgType);
 
-  const [activeTab, setActiveTab] = useState<'accounts' | 'permissions'>('accounts');
-  const [staffList, setStaffList] = useState<StaffAdminUser[]>([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'accounts' | 'groups' | 'permissions'>('accounts');
+  
+  // 👥 관리자 그룹 (Roles/Groups) State
+  const [adminGroups, setAdminGroups] = useState<AdminGroup[]>([
+    { id: 'tenant_admin', name: '👑 최고 관리자', description: '단체 모든 설정 및 결제/정산 최종 권한 보유', isSystemGroup: true, badgeColor: 'purple' },
+    { id: 'finance_manager', name: '💳 재정/보시 담당자', description: '수납 내역, 정기결제 및 마감 통계 전용 관리', isSystemGroup: true, badgeColor: 'blue' },
+    { id: 'staff', name: '📝 일반 실무자', description: '후원 내역 및 지향문/기도문 조회 전용', isSystemGroup: true, badgeColor: 'slate' },
+  ]);
 
-  // Form State
+  // 👤 스태프 사용자 목록 State
+  const [staffList, setStaffList] = useState<StaffAdminUser[]>([]);
+
+  // 🛡️ RBAC 권한 매트릭스 State
+  const [permissionMatrix, setPermissionMatrix] = useState<MenuPermissionItem[]>([]);
+
+  // Modal States
+  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<AdminGroup | null>(null);
+
+  // New Staff Form State
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState<'tenant_admin' | 'finance_manager' | 'staff'>('finance_manager');
+  const [selectedGroupId, setSelectedGroupId] = useState('finance_manager');
 
-  // RBAC Menu Permission Matrix State
-  const [permissionMatrix, setPermissionMatrix] = useState<MenuPermissionItem[]>([]);
+  // Group Form State
+  const [groupName, setGroupName] = useState('');
+  const [groupDesc, setGroupDesc] = useState('');
+  const [groupColor, setGroupColor] = useState('emerald');
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -85,7 +108,7 @@ export default function AdminAccountManagement() {
           name: tenant.contact?.name || '담임목사 / 주지스님',
           email: tenant.contact?.email || `admin@${tenant.slug}.or.kr`,
           phone: tenant.contact?.phone || '010-1234-5678',
-          role: 'tenant_admin',
+          groupId: 'tenant_admin',
           status: 'active',
           createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
           lastLoginAt: '2026-08-13 11:45',
@@ -95,7 +118,7 @@ export default function AdminAccountManagement() {
           name: '재무/보시 실무 담당자',
           email: `finance@${tenant.slug}.or.kr`,
           phone: '010-9876-5432',
-          role: 'finance_manager',
+          groupId: 'finance_manager',
           status: 'active',
           createdAt: '2026-02-01',
           lastLoginAt: '2026-08-12 16:20',
@@ -103,19 +126,19 @@ export default function AdminAccountManagement() {
       ];
       setStaffList(initialStaff);
 
-      // 메뉴별 권한 매트릭스 초기 데이터 설정
+      // 메뉴별 권한 매트릭스 초기화
       const initialPermissions: MenuPermissionItem[] = [
-        { id: 'dashboard', menuName: '대시보드', path: '/admin', tenant_admin: 'full', finance_manager: 'full', staff: 'read' },
-        { id: 'donations', menuName: terms.donationHistory, path: '/admin/donations', tenant_admin: 'full', finance_manager: 'full', staff: 'read' },
-        { id: 'recurring_pending', menuName: terms.recurringPending, path: '/admin/recurring-pending', tenant_admin: 'full', finance_manager: 'full', staff: 'none' },
-        { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', tenant_admin: 'full', finance_manager: 'full', staff: 'none' },
-        { id: 'prayers', menuName: terms.prayer, path: '/admin/prayers', tenant_admin: 'full', finance_manager: 'read', staff: 'full' },
-        { id: 'menu', menuName: terms.donationItems, path: '/admin/menu', tenant_admin: 'full', finance_manager: 'read', staff: 'none' },
-        { id: 'members', menuName: '회원 관리', path: '/admin/members', tenant_admin: 'full', finance_manager: 'read', staff: 'read' },
-        { id: 'settlement', menuName: '정산', path: '/admin/settlement', tenant_admin: 'full', finance_manager: 'full', staff: 'none' },
-        { id: 'banners', menuName: '배너 관리', path: '/admin/banners', tenant_admin: 'full', finance_manager: 'none', staff: 'none' },
-        { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', tenant_admin: 'full', finance_manager: 'none', staff: 'none' },
-        { id: 'settings', menuName: '설정', path: '/admin/settings', tenant_admin: 'full', finance_manager: 'none', staff: 'none' },
+        { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
+        { id: 'donations', menuName: terms.donationHistory, path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
+        { id: 'recurring_pending', menuName: terms.recurringPending, path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+        { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+        { id: 'prayers', menuName: terms.prayer, path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
+        { id: 'menu', menuName: terms.donationItems, path: '/admin/menu', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'none' } },
+        { id: 'members', menuName: '회원 관리', path: '/admin/members', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'read' } },
+        { id: 'settlement', menuName: '정산', path: '/admin/settlement', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+        { id: 'banners', menuName: '배너 관리', path: '/admin/banners', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+        { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+        { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
       ];
       setPermissionMatrix(initialPermissions);
     }
@@ -148,17 +171,102 @@ export default function AdminAccountManagement() {
 
   const currentPath = `/${tenantSlug}/admin/accounts`;
 
-  const getRoleBadge = (role: StaffAdminUser['role']) => {
-    switch (role) {
-      case 'tenant_admin':
-        return <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 font-bold">최고 관리자</Badge>;
-      case 'finance_manager':
-        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 font-bold">재정 담당자</Badge>;
-      case 'staff':
-        return <Badge className="bg-slate-100 text-slate-800 dark:bg-zinc-800 dark:text-zinc-300 border-slate-200">일반 실무자</Badge>;
+  const renderGroupBadge = (groupId: string) => {
+    const group = adminGroups.find((g) => g.id === groupId);
+    if (!group) return <Badge variant="outline">미지정</Badge>;
+
+    const colorClasses: Record<string, string> = {
+      purple: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 font-bold',
+      blue: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 font-bold',
+      slate: 'bg-slate-100 text-slate-800 dark:bg-zinc-800 dark:text-zinc-300 border-slate-200',
+      emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 font-bold',
+      amber: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 font-bold',
+      rose: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-200 font-bold',
+    };
+
+    return (
+      <Badge className={colorClasses[group.badgeColor] || colorClasses.slate}>
+        {group.name}
+      </Badge>
+    );
+  };
+
+  // 👥 그룹 추가/수정 처리 핸들러
+  const handleOpenGroupModal = (groupToEdit?: AdminGroup) => {
+    if (groupToEdit) {
+      setEditingGroup(groupToEdit);
+      setGroupName(groupToEdit.name);
+      setGroupDesc(groupToEdit.description);
+      setGroupColor(groupToEdit.badgeColor);
+    } else {
+      setEditingGroup(null);
+      setGroupName('');
+      setGroupDesc('');
+      setGroupColor('emerald');
+    }
+    setIsGroupModalOpen(true);
+  };
+
+  const handleSaveGroup = () => {
+    if (!groupName.trim()) {
+      toast.error('관리자 그룹명을 입력해 주세요.');
+      return;
+    }
+
+    if (editingGroup) {
+      // 그룹 수정
+      setAdminGroups((prev) =>
+        prev.map((g) =>
+          g.id === editingGroup.id
+            ? { ...g, name: groupName.trim(), description: groupDesc.trim(), badgeColor: groupColor }
+            : g
+        )
+      );
+      toast.success(`[${groupName.trim()}] 그룹 정보가 수정되었습니다.`);
+    } else {
+      // 신규 그룹 추가
+      const newGroupId = `group_${Date.now()}`;
+      const newGroup: AdminGroup = {
+        id: newGroupId,
+        name: groupName.trim(),
+        description: groupDesc.trim() || '커스텀 관리자 그룹',
+        isSystemGroup: false,
+        badgeColor: groupColor,
+      };
+
+      setAdminGroups((prev) => [...prev, newGroup]);
+
+      // 매트릭스에도 기본 권한(read) 추가
+      setPermissionMatrix((prev) =>
+        prev.map((item) => ({
+          ...item,
+          groupPermissions: {
+            ...item.groupPermissions,
+            [newGroupId]: 'read',
+          },
+        }))
+      );
+
+      toast.success(`[${newGroup.name}] 신규 관리자 그룹이 추가되었습니다.`);
+    }
+
+    setIsGroupModalOpen(false);
+  };
+
+  const handleDeleteGroup = (groupId: string, name: string) => {
+    const assignedCount = staffList.filter((s) => s.groupId === groupId).length;
+    if (assignedCount > 0) {
+      toast.error(`해당 그룹에 ${assignedCount}명의 계정이 등록되어 있어 삭제할 수 없습니다. 계정 그룹을 변경해 주세요.`);
+      return;
+    }
+
+    if (confirm(`정말로 [${name}] 관리자 그룹을 삭제하시겠습니까?`)) {
+      setAdminGroups((prev) => prev.filter((g) => g.id !== groupId));
+      toast.success(`[${name}] 그룹이 삭제되었습니다.`);
     }
   };
 
+  // 👤 스태프 계정 추가
   const handleAddStaff = () => {
     if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
       toast.error('성명, 이메일, 비밀번호를 모두 입력해 주세요');
@@ -170,21 +278,20 @@ export default function AdminAccountManagement() {
       name: newName.trim(),
       email: newEmail.trim(),
       phone: newPhone.trim() || '미입력',
-      role: newRole,
+      groupId: selectedGroupId,
       status: 'active',
       createdAt: new Date().toISOString().slice(0, 10),
       lastLoginAt: '방금 생성됨',
     };
 
     setStaffList((prev) => [...prev, newStaff]);
-    setIsAddModalOpen(false);
+    setIsAddStaffModalOpen(false);
 
-    // Form Reset
     setNewName('');
     setNewEmail('');
     setNewPhone('');
     setNewPassword('');
-    setNewRole('finance_manager');
+    setSelectedGroupId('finance_manager');
 
     toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
   };
@@ -218,15 +325,24 @@ export default function AdminAccountManagement() {
   };
 
   // RBAC 권한 토글 핸들러
-  const handlePermissionChange = (menuId: string, roleKey: 'finance_manager' | 'staff', level: PermissionLevel) => {
+  const handlePermissionChange = (menuId: string, groupId: string, level: PermissionLevel) => {
     setPermissionMatrix((prev) =>
-      prev.map((item) => (item.id === menuId ? { ...item, [roleKey]: level } : item))
+      prev.map((item) =>
+        item.id === menuId
+          ? {
+              ...item,
+              groupPermissions: {
+                ...item.groupPermissions,
+                [groupId]: level,
+              },
+            }
+          : item
+      )
     );
   };
 
-  // 권한 저장 핸들러
   const handleSavePermissions = () => {
-    toast.success('역할별 메뉴 접근 권한이 성공적으로 저장되었습니다!');
+    toast.success('모든 관리자 그룹의 메뉴 접근 권한 설정이 성공적으로 저장되었습니다!');
   };
 
   return (
@@ -258,21 +374,33 @@ export default function AdminAccountManagement() {
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
                 <ShieldCheck className="h-7 w-7 text-indigo-600" />
-                관리자 계정 및 메뉴 접근 권한 센터
+                관리자 계정 및 그룹 권한 센터
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                {currentTenant.name}의 실무자 계정을 관리하고, 각 관리자 구분에 따른 메뉴별 접근 권한(읽기/수정/금지)을 세부 설정합니다.
+                {currentTenant.name}의 관리자 계정을 관리하고, 신규 관리자 그룹을 생성/수정하며 메뉴별 접근 권한을 설정합니다.
               </p>
             </div>
+
             {activeTab === 'accounts' && (
               <Button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => setIsAddStaffModalOpen(true)}
                 className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer self-start md:self-auto"
               >
                 <UserPlus className="h-4 w-4" />
                 신규 관리자 추가
               </Button>
             )}
+
+            {activeTab === 'groups' && (
+              <Button
+                onClick={() => handleOpenGroupModal()}
+                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold cursor-pointer self-start md:self-auto"
+              >
+                <Plus className="h-4 w-4" />
+                신규 관리자 그룹 추가
+              </Button>
+            )}
+
             {activeTab === 'permissions' && (
               <Button
                 onClick={handleSavePermissions}
@@ -286,18 +414,22 @@ export default function AdminAccountManagement() {
 
           {/* Sub Navigation Tabs */}
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
-            <TabsList className="grid grid-cols-2 w-full max-w-md bg-slate-200 dark:bg-zinc-800 p-1">
-              <TabsTrigger value="accounts" className="gap-2 font-bold cursor-pointer">
+            <TabsList className="grid grid-cols-3 w-full max-w-2xl bg-slate-200 dark:bg-zinc-800 p-1">
+              <TabsTrigger value="accounts" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
                 <UserCheck className="h-4 w-4" />
                 1. 관리자 계정 목록 ({staffList.length}명)
               </TabsTrigger>
-              <TabsTrigger value="permissions" className="gap-2 font-bold cursor-pointer">
+              <TabsTrigger value="groups" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
+                <Layers className="h-4 w-4" />
+                2. 관리자 그룹 관리 ({adminGroups.length}개)
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
                 <Shield className="h-4 w-4" />
-                2. 역할별 메뉴 접근 권한 설정 (RBAC)
+                3. 메뉴 접근 권한 (RBAC)
               </TabsTrigger>
             </TabsList>
 
-            {/* TAB 1: 관리자 계정 목록 */}
+            {/* 📌 TAB 1: 관리자 계정 목록 */}
             <TabsContent value="accounts" className="space-y-6 mt-6">
               {/* Stats Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -314,7 +446,7 @@ export default function AdminAccountManagement() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-blue-500">
+                <Card className="border-l-4 border-l-emerald-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       정상 활성 계정
@@ -327,15 +459,15 @@ export default function AdminAccountManagement() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-amber-500">
+                <Card className="border-l-4 border-l-blue-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      재정/실무 담당자
+                      등록된 관리자 그룹
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                      {staffList.filter((s) => s.role !== 'tenant_admin').length}명
+                      {adminGroups.length}개 그룹
                     </div>
                   </CardContent>
                 </Card>
@@ -348,7 +480,7 @@ export default function AdminAccountManagement() {
                     등록된 관리자 계정 목록 ({staffList.length}명)
                   </CardTitle>
                   <CardDescription>
-                    각 권한별로 수납 조회, 정산, 항목 등록 등 접근 가능한 기능이 구분됩니다.
+                    소속된 관리자 그룹에 따라 수납 조회, 정산, 항목 등록 등 접근 가능한 기능이 자동 적용됩니다.
                   </CardDescription>
                 </CardHeader>
 
@@ -356,10 +488,10 @@ export default function AdminAccountManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>관리자 성명</TableHead>
+                        <TableHead>성명</TableHead>
                         <TableHead>이메일 ID</TableHead>
                         <TableHead>연락처</TableHead>
-                        <TableHead>부여된 권한</TableHead>
+                        <TableHead>소속 관리자 그룹</TableHead>
                         <TableHead>계정 상태</TableHead>
                         <TableHead>최근 접속일시</TableHead>
                         <TableHead className="text-right">계정 관리 작업</TableHead>
@@ -383,7 +515,7 @@ export default function AdminAccountManagement() {
                               {staff.phone}
                             </div>
                           </TableCell>
-                          <TableCell>{getRoleBadge(staff.role)}</TableCell>
+                          <TableCell>{renderGroupBadge(staff.groupId)}</TableCell>
                           <TableCell>
                             <Badge
                               className={
@@ -442,17 +574,105 @@ export default function AdminAccountManagement() {
               </Card>
             </TabsContent>
 
-            {/* TAB 2: 역할별 메뉴 접근 권한 설정 (RBAC Permission Matrix) */}
+            {/* 👥 TAB 2: 관리자 그룹 관리 (추가/수정/삭제) */}
+            <TabsContent value="groups" className="space-y-6 mt-6">
+              <Card className="border-purple-100 dark:border-purple-950">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-purple-600" />
+                      관리자 그룹 정의 및 커스텀 관리 ({adminGroups.length}개 그룹)
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      단체 실무 구조에 맞춰 새로운 관리자 그룹(예: 축원 전담팀, 감사팀 등)을 자유롭게 추가 및 수정할 수 있습니다.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => handleOpenGroupModal()}
+                    className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="h-4 w-4" />
+                    신규 관리자 그룹 추가
+                  </Button>
+                </CardHeader>
+
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-100 dark:bg-zinc-900">
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹 배지 표시</TableHead>
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹명</TableHead>
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹 설명 및 역할</TableHead>
+                        <TableHead className="text-center font-bold text-slate-900 dark:text-zinc-100">소속 인원</TableHead>
+                        <TableHead className="text-center font-bold text-slate-900 dark:text-zinc-100">구분</TableHead>
+                        <TableHead className="text-right font-bold text-slate-900 dark:text-zinc-100">그룹 작업</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminGroups.map((group) => {
+                        const assignedCount = staffList.filter((s) => s.groupId === group.id).length;
+                        return (
+                          <TableRow key={group.id}>
+                            <TableCell>{renderGroupBadge(group.id)}</TableCell>
+                            <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
+                              {group.name}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 dark:text-zinc-400">
+                              {group.description}
+                            </TableCell>
+                            <TableCell className="text-center font-mono font-bold text-slate-800 dark:text-zinc-200">
+                              {assignedCount}명
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {group.isSystemGroup ? (
+                                <Badge variant="secondary" className="text-[10px]">기본 그룹</Badge>
+                              ) : (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">커스텀 그룹</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenGroupModal(group)}
+                                  className="h-7 px-2 text-xs gap-1 cursor-pointer"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                  수정
+                                </Button>
+                                {!group.isSystemGroup && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteGroup(group.id, group.name)}
+                                    className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* 🛡️ TAB 3: 역할별 메뉴 접근 권한 설정 (RBAC Matrix) */}
             <TabsContent value="permissions" className="space-y-6 mt-6">
               <Card className="border-indigo-100 dark:border-indigo-950">
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                       <Shield className="h-5 w-5 text-indigo-600" />
-                      관리자 구분별 메뉴 접근 권한 매트릭스 (RBAC Matrix)
+                      관리자 그룹별 메뉴 접근 권한 매트릭스 (RBAC Matrix)
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      각 역할별로 특정 메뉴의 접근 권한 (전체 권한 / 읽기 전용 / 접근 불가)을 설정합니다.
+                      생성된 모든 관리자 그룹별로 11개 메뉴의 상세 접근 권한 (전체 / 읽기 전용 / 차단)을 설정합니다.
                     </CardDescription>
                   </div>
                   <Button
@@ -464,21 +684,17 @@ export default function AdminAccountManagement() {
                   </Button>
                 </CardHeader>
 
-                <CardContent>
-                  <Table>
+                <CardContent className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow className="bg-slate-100 dark:bg-zinc-900">
                         <TableHead className="font-bold text-slate-900 dark:text-zinc-100">메뉴명 (기능)</TableHead>
                         <TableHead className="font-bold text-slate-900 dark:text-zinc-100">경로 (URL)</TableHead>
-                        <TableHead className="text-center font-bold text-purple-700 dark:text-purple-300">
-                          👑 최고 관리자<br />(tenant_admin)
-                        </TableHead>
-                        <TableHead className="text-center font-bold text-blue-700 dark:text-blue-300">
-                          💳 재정/보시 담당자<br />(finance_manager)
-                        </TableHead>
-                        <TableHead className="text-center font-bold text-slate-700 dark:text-zinc-300">
-                          📝 일반 실무자<br />(staff)
-                        </TableHead>
+                        {adminGroups.map((group) => (
+                          <TableHead key={group.id} className="text-center font-bold text-slate-900 dark:text-zinc-100 min-w-[140px]">
+                            {group.name}
+                          </TableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -490,41 +706,38 @@ export default function AdminAccountManagement() {
                           <TableCell className="text-xs font-mono text-slate-500">
                             {item.path}
                           </TableCell>
-                          <TableCell className="text-center bg-purple-50/50 dark:bg-purple-950/20">
-                            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-300 font-bold">
-                              FULL (전체 권한)
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50/30 dark:bg-blue-950/10">
-                            <Select
-                              value={item.finance_manager}
-                              onValueChange={(val) => handlePermissionChange(item.id, 'finance_manager', val as PermissionLevel)}
-                            >
-                              <SelectTrigger className="w-[140px] mx-auto bg-white text-xs font-bold">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="full">🟢 전체 (읽기/수정)</SelectItem>
-                                <SelectItem value="read">🟡 읽기 전용 (조회만)</SelectItem>
-                                <SelectItem value="none">🔴 접근 불가 (차단)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Select
-                              value={item.staff}
-                              onValueChange={(val) => handlePermissionChange(item.id, 'staff', val as PermissionLevel)}
-                            >
-                              <SelectTrigger className="w-[140px] mx-auto bg-white text-xs font-bold">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="full">🟢 전체 (읽기/수정)</SelectItem>
-                                <SelectItem value="read">🟡 읽기 전용 (조회만)</SelectItem>
-                                <SelectItem value="none">🔴 접근 불가 (차단)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
+
+                          {adminGroups.map((group) => {
+                            if (group.id === 'tenant_admin') {
+                              return (
+                                <TableCell key={group.id} className="text-center bg-purple-50/50 dark:bg-purple-950/20">
+                                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-300 font-bold">
+                                    FULL (전체)
+                                  </Badge>
+                                </TableCell>
+                              );
+                            }
+
+                            const currentLevel = item.groupPermissions[group.id] || 'read';
+
+                            return (
+                              <TableCell key={group.id} className="text-center">
+                                <Select
+                                  value={currentLevel}
+                                  onValueChange={(val) => handlePermissionChange(item.id, group.id, val as PermissionLevel)}
+                                >
+                                  <SelectTrigger className="w-[130px] mx-auto bg-white text-xs font-bold">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="full">🟢 전체 (읽기/수정)</SelectItem>
+                                    <SelectItem value="read">🟡 읽기 전용 (조회)</SelectItem>
+                                    <SelectItem value="none">🔴 접근 불가 (차단)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -536,8 +749,8 @@ export default function AdminAccountManagement() {
         </div>
       </div>
 
-      {/* 신규 관리자 계정 추가 모달 */}
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+      {/* 1. 신규 관리자 계정 추가 모달 */}
+      <Dialog open={isAddStaffModalOpen} onOpenChange={setIsAddStaffModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -545,7 +758,7 @@ export default function AdminAccountManagement() {
               신규 관리자 계정 등록
             </DialogTitle>
             <DialogDescription>
-              단체 실무자에게 부여할 계정 정보를 입력하세요. 등록 즉시 지정된 이메일로 접속 권한이 발급됩니다.
+              단체 실무자에게 부여할 계정 정보와 소속 관리자 그룹을 선택하세요.
             </DialogDescription>
           </DialogHeader>
 
@@ -589,26 +802,89 @@ export default function AdminAccountManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold">부여 권한 (역할)</Label>
-              <Select value={newRole} onValueChange={(val) => setNewRole(val as any)}>
+              <Label className="text-xs font-bold">소속 관리자 그룹</Label>
+              <Select value={selectedGroupId} onValueChange={(val) => setSelectedGroupId(val)}>
                 <SelectTrigger className="bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tenant_admin">👑 최고 관리자 (모든 설정 및 정산 권한)</SelectItem>
-                  <SelectItem value="finance_manager">💳 재정/보시 담당자 (수납 및 마감 통계)</SelectItem>
-                  <SelectItem value="staff">📝 일반 실무자 (지향 및 후원 내역 조회)</SelectItem>
+                  {adminGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name} - {group.description}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+            <Button variant="outline" onClick={() => setIsAddStaffModalOpen(false)}>
               취소
             </Button>
             <Button onClick={handleAddStaff} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
               계정 생성 완료
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2. 관리자 그룹 추가/수정 모달 */}
+      <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-purple-600" />
+              {editingGroup ? '관리자 그룹 정보 수정' : '신규 관리자 그룹 생성'}
+            </DialogTitle>
+            <DialogDescription>
+              단체의 직책이나 실무 업무에 맞춘 관리자 그룹명과 배지 색상을 설정하세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">관리자 그룹명</Label>
+              <Input
+                placeholder="예: 축원 전담팀 / 부목사 그룹 / 감사팀"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">그룹 역할 설명</Label>
+              <Input
+                placeholder="예: 사찰 발원문 및 성당 지향문 전담 관리 그룹"
+                value={groupDesc}
+                onChange={(e) => setGroupDesc(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">그룹 대표 배지 색상</Label>
+              <Select value={groupColor} onValueChange={(val) => setGroupColor(val)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="emerald">🟢 에메랄드 그린</SelectItem>
+                  <SelectItem value="blue">🔵 블루</SelectItem>
+                  <SelectItem value="purple">🟣 퍼플</SelectItem>
+                  <SelectItem value="amber">🟠 앰버 주황</SelectItem>
+                  <SelectItem value="rose">🔴 로즈 핑크</SelectItem>
+                  <SelectItem value="slate">⚪ 슬레이트 그레이</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGroupModalOpen(false)}>
+              취소
+            </Button>
+            <Button onClick={handleSaveGroup} className="bg-purple-600 hover:bg-purple-700 text-white font-bold">
+              {editingGroup ? '수정 완료' : '그룹 생성 완료'}
             </Button>
           </DialogFooter>
         </DialogContent>
