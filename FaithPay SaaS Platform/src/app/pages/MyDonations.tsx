@@ -23,11 +23,13 @@ import {
   Smartphone,
   Mail,
   Lock,
+  MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import TaxReceiptModal from '../components/TaxReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
+import { openDaumPostcode } from '../utils/daumPostcode';
 
 export interface HistoryItem {
   id: string;
@@ -72,11 +74,13 @@ export default function MyDonations() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
 
-  // 👤 회원 프로필 정보 수정 상태 (이메일, 주소, 세례명/법명/직분, 성명, 비밀번호)
+  // 👤 회원 프로필 정보 수정 상태 (이메일, 주소, 세례명/법명/직분, 성명, 비밀번호, 우편번호, 상세주소)
   const [profileName, setProfileName] = useState('');
   const [profileBaptismName, setProfileBaptismName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
+  const [profileZonecode, setProfileZonecode] = useState('');
   const [profileAddress, setProfileAddress] = useState('');
+  const [profileAddressDetail, setProfileAddressDetail] = useState('');
   const [profilePassword, setProfilePassword] = useState('');
   const [profilePasswordConfirm, setProfilePasswordConfirm] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -88,6 +92,23 @@ export default function MyDonations() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 10;
 
+  const parseFullAddress = (rawAddr: string) => {
+    if (!rawAddr) return { zonecode: '', base: '', detail: '' };
+    const match = rawAddr.match(/^\[(\d{5})\]\s*(.*)$/);
+    if (match) {
+      return { zonecode: match[1], base: match[2], detail: '' };
+    }
+    return { zonecode: '', base: rawAddr, detail: '' };
+  };
+
+  const handleSearchAddress = () => {
+    openDaumPostcode((res) => {
+      setProfileZonecode(res.zonecode);
+      setProfileAddress(res.address);
+      toast.success('주소가 선택되었습니다. 상세주소를 입력해 주세요.');
+    });
+  };
+
   const loadSavedProfile = (cleanPhone: string, donationsList: any[]) => {
     try {
       const localStr = localStorage.getItem(`faithpay_profile_${cleanPhone}`);
@@ -96,7 +117,9 @@ export default function MyDonations() {
         setProfileName(parsed.name || '');
         setProfileBaptismName(parsed.baptismName || '');
         setProfileEmail(parsed.email || '');
+        setProfileZonecode(parsed.zonecode || '');
         setProfileAddress(parsed.address || '');
+        setProfileAddressDetail(parsed.addressDetail || '');
         if (parsed.password) {
           setProfilePassword(parsed.password);
           setProfilePasswordConfirm(parsed.password);
@@ -110,7 +133,12 @@ export default function MyDonations() {
       setProfileName(first.donorName || first.name || '');
       setProfileBaptismName(first.baptismName || '');
       setProfileEmail(first.donorEmail || first.email || '');
-      setProfileAddress(first.address || '');
+      
+      const parsedAddr = parseFullAddress(first.address || '');
+      setProfileZonecode(parsedAddr.zonecode);
+      setProfileAddress(parsedAddr.base);
+      setProfileAddressDetail(parsedAddr.detail);
+
       if (first.password) {
         setProfilePassword(first.password);
         setProfilePasswordConfirm(first.password);
@@ -119,7 +147,9 @@ export default function MyDonations() {
       setProfileName('');
       setProfileBaptismName('');
       setProfileEmail('');
+      setProfileZonecode('');
       setProfileAddress('');
+      setProfileAddressDetail('');
       setProfilePassword('');
       setProfilePasswordConfirm('');
     }
@@ -145,12 +175,19 @@ export default function MyDonations() {
     const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
     setIsSavingProfile(true);
 
+    const combinedAddress = profileZonecode
+      ? `[${profileZonecode}] ${profileAddress.trim()} ${profileAddressDetail.trim()}`.trim()
+      : `${profileAddress.trim()} ${profileAddressDetail.trim()}`.trim();
+
     try {
       const profileData = {
         name: profileName,
         baptismName: profileBaptismName,
         email: profileEmail,
+        zonecode: profileZonecode,
         address: profileAddress,
+        addressDetail: profileAddressDetail,
+        fullAddress: combinedAddress,
         password: profilePassword,
         updatedAt: new Date().toISOString(),
       };
@@ -163,12 +200,12 @@ export default function MyDonations() {
         name: profileName,
         baptismName: profileBaptismName,
         email: profileEmail,
-        address: profileAddress,
+        address: combinedAddress,
         password: profilePassword,
       });
 
       setHistory(prev => prev.map(h => ({ ...h, name: profileName })));
-      toast.success('회원 프로필 정보 및 비밀번호가 성공적으로 저장되었습니다.');
+      toast.success('회원 프로필 정보 및 주소/비밀번호가 성공적으로 저장되었습니다.');
     } catch (e) {
       toast.success('프로필 정보가 저장되었습니다.');
     } finally {
@@ -634,16 +671,52 @@ export default function MyDonations() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                    기부자 주소 (기부금영수증 및 우편용)
+                {/* 🏠 우편번호 검색 및 상세주소 분리 입력 섹션 */}
+                <div className="space-y-2 border-t border-slate-100 dark:border-zinc-800 pt-3">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-indigo-600" />
+                      기부자 주소 (기부금영수증 및 우편용)
+                    </span>
+                    <span className="text-[11px] text-indigo-600 font-semibold">· 다음/카카오 우편번호 검색 지원</span>
                   </Label>
+                  
+                  {/* 우편번호 & 우편번호 검색 버튼 */}
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={profileZonecode}
+                      readOnly
+                      placeholder="우편번호"
+                      className="w-32 text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 border-slate-200 text-slate-600"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSearchAddress}
+                      className="h-10 text-xs font-bold px-3.5 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                      우편번호 검색
+                    </Button>
+                  </div>
+
+                  {/* 기본 주소 */}
                   <Input
                     type="text"
                     value={profileAddress}
                     onChange={(e) => setProfileAddress(e.target.value)}
-                    placeholder="서울특별시 강남구 테헤란로 123..."
+                    placeholder="우편번호 검색을 이용하시거나 도로명/지번 기본주소를 입력해 주세요"
                     className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                  />
+
+                  {/* 상세 주소 */}
+                  <Input
+                    type="text"
+                    value={profileAddressDetail}
+                    onChange={(e) => setProfileAddressDetail(e.target.value)}
+                    placeholder="상세주소를 입력해 주세요 (예: 101동 1002호 / 2층)"
+                    className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200 font-medium text-slate-900 dark:text-zinc-100"
                   />
                 </div>
 
