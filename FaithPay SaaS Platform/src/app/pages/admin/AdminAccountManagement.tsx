@@ -110,48 +110,52 @@ export default function AdminAccountManagement() {
     if (tenant) {
       setCurrentTenant(tenant);
 
-      // 모의 스태프 관리자 초기 데이터
-      const initialStaff: StaffAdminUser[] = [
-        {
-          id: `admin-${tenant.id}-1`,
-          name: tenant.contact?.name || '담임목사 / 주지스님',
-          email: tenant.contact?.email || `admin@${tenant.slug}.or.kr`,
-          phone: tenant.contact?.phone || '010-1234-5678',
-          groupId: 'tenant_admin',
-          status: 'active',
-          createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
-          lastLoginAt: '2026-08-13 11:45',
-        },
-        {
-          id: `admin-${tenant.id}-2`,
-          name: '재무/보시 실무 담당자',
-          email: `finance@${tenant.slug}.or.kr`,
-          phone: '010-9876-5432',
-          groupId: 'finance_manager',
-          status: 'active',
-          createdAt: '2026-02-01',
-          lastLoginAt: '2026-08-12 16:20',
-        },
-      ];
-      setStaffList(initialStaff);
+      // 모의 스태프 관리자 초기 데이터 (기존 수정 데이터 유지)
+      setStaffList((prev) => {
+        if (prev.length > 0) return prev;
+        return [
+          {
+            id: `admin-${tenant.id}-1`,
+            name: tenant.contact?.name || '담임목사 / 주지스님',
+            email: tenant.contact?.email || `admin@${tenant.slug}.or.kr`,
+            phone: tenant.contact?.phone || '010-1234-5678',
+            groupId: 'tenant_admin',
+            status: 'active',
+            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
+            lastLoginAt: '2026-08-13 11:45',
+          },
+          {
+            id: `admin-${tenant.id}-2`,
+            name: '재무/보시 실무 담당자',
+            email: `finance@${tenant.slug}.or.kr`,
+            phone: '010-9876-5432',
+            groupId: 'finance_manager',
+            status: 'active',
+            createdAt: '2026-02-01',
+            lastLoginAt: '2026-08-12 16:20',
+          },
+        ];
+      });
 
-      // 메뉴별 권한 매트릭스 초기화
-      const initialPermissions: MenuPermissionItem[] = [
-        { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
-        { id: 'donations', menuName: terms.donationHistory, path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
-        { id: 'recurring_pending', menuName: terms.recurringPending, path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-        { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-        { id: 'prayers', menuName: terms.prayer, path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
-        { id: 'menu', menuName: terms.donationItems, path: '/admin/menu', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'none' } },
-        { id: 'members', menuName: '회원 관리', path: '/admin/members', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'read' } },
-        { id: 'settlement', menuName: '정산', path: '/admin/settlement', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-        { id: 'banners', menuName: '배너 관리', path: '/admin/banners', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-        { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-        { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-      ];
-      setPermissionMatrix(initialPermissions);
+      // 메뉴별 권한 매트릭스 초기화 (기존 수정 데이터 유지)
+      setPermissionMatrix((prev) => {
+        if (prev.length > 0) return prev;
+        return [
+          { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
+          { id: 'donations', menuName: '수납/보시 내역', path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
+          { id: 'recurring_pending', menuName: '정기결제 마감', path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+          { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+          { id: 'prayers', menuName: '지향문/축원', path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
+          { id: 'menu', menuName: '수납 항목 관리', path: '/admin/menu', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'none' } },
+          { id: 'members', menuName: '회원 관리', path: '/admin/members', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'read' } },
+          { id: 'settlement', menuName: '정산', path: '/admin/settlement', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+          { id: 'banners', menuName: '배너 관리', path: '/admin/banners', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+          { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+          { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+        ];
+      });
     }
-  }, [tenantSlug, tenants, setCurrentTenant, terms]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   if (!currentTenant) {
     return (
