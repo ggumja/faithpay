@@ -4,6 +4,22 @@
 -- Created: 2026-08-13
 -- ====================================================================
 
+-- 0. Ensure donations table exists
+CREATE TABLE IF NOT EXISTS donations (
+  id             TEXT PRIMARY KEY,
+  tenant_id      TEXT NOT NULL,
+  amount         NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  donor_name     TEXT,
+  donor_phone    TEXT,
+  item_name      TEXT DEFAULT '일반헌금/보시',
+  payment_method TEXT DEFAULT '신용카드',
+  payment_status TEXT DEFAULT 'completed', -- 'completed', 'pending', 'failed', 'cancelled'
+  device_type    TEXT DEFAULT 'WEB_MOBILE', -- 'KIOSK', 'WEB_MOBILE'
+  is_recurring   BOOLEAN DEFAULT false,
+  prayer_text    TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 1. Create daily_closing_summaries table
 CREATE TABLE IF NOT EXISTS daily_closing_summaries (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -172,6 +188,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Automatically Schedule Nightly Cron Job (Executes every midnight at 00:00:00 KST)
--- Note: Requires pg_cron extension enabled in Supabase / PostgreSQL
--- SELECT cron.schedule('daily-closing-batch-job', '0 0 * * *', 'SELECT fn_run_daily_closing_aggregation()');
+-- 4. Initial Aggregation Run (Execute once for existing data up to yesterday)
+SELECT fn_run_daily_closing_aggregation();
