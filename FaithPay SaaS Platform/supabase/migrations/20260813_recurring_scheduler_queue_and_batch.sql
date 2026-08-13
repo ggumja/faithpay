@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_queues_tenant_date
 CREATE INDEX IF NOT EXISTS idx_subscriptions_recurring_day
   ON subscriptions(recurring_day, status);
 
--- 3. Stored Procedure: Generate Daily Batch Execution Queue (Runs every midnight at 00:00 KST)
+-- 3. Stored Procedure: Generate Daily Batch Execution Queue (Runs every morning at 09:00 KST)
 CREATE OR REPLACE FUNCTION fn_process_recurring_daily_batch(
   p_target_date DATE DEFAULT CURRENT_DATE
 )

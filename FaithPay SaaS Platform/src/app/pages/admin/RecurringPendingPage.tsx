@@ -361,7 +361,7 @@ export default function RecurringPendingPage() {
                 <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
                   {scheduledExecutions.filter((s) => s.status === 'pending').length}건
                 </div>
-                <p className="text-xs text-slate-400 mt-1">자정 자동 배치 실행 대기 건수</p>
+                <p className="text-xs text-slate-400 mt-1">오전 9시 자동 배치 실행 대기 건수</p>
               </CardContent>
             </Card>
           </div>
@@ -548,7 +548,7 @@ export default function RecurringPendingPage() {
                     스케줄러 자동 결제 대기열 ({filteredSchedules.length}건)
                   </CardTitle>
                   <CardDescription>
-                    자정 배치 스케줄러가 결제 승인을 시도할 1회차 실 결제 대기 목록입니다
+                    오전 9시 배치 스케줄러가 결제 승인을 시도할 1회차 실 결제 대기 목록입니다
                   </CardDescription>
                 </div>
 
@@ -614,7 +614,7 @@ export default function RecurringPendingPage() {
                           <TableCell>
                             {sch.status === 'pending' && (
                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[11px]">
-                                ⏳ 자정 결제 대기중
+                                ⏳ 오전 9시 결제 대기중
                               </Badge>
                             )}
                             {sch.status === 'executed' && (
