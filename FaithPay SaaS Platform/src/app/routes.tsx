@@ -16,6 +16,7 @@ import DonationHistory from "./pages/admin/DonationHistory";
 import PrayerManagement from "./pages/admin/PrayerManagement";
 import DonationMenuManagement from "./pages/admin/DonationMenuManagement";
 import MemberManagement from "./pages/admin/MemberManagement";
+import MemberDetailPage from "./pages/admin/MemberDetailPage";
 import SettlementReports from "./pages/admin/SettlementReports";
 import BannerManagement from "./pages/admin/BannerManagement";
 import OrganizationSettings from "./pages/admin/OrganizationSettings";
@@ -166,6 +167,10 @@ export const router = createBrowserRouter([
       {
         path: "/:tenantSlug/admin/members",
         Component: MemberManagement,
+      },
+      {
+        path: "/:tenantSlug/admin/members/:memberId",
+        Component: MemberDetailPage,
       },
       {
         path: "/:tenantSlug/admin/settlement",

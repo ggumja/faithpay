@@ -45,7 +45,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI } from '../../api/client';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
-import { MemberDetailModal, MemberDetailData } from '../../components/admin/MemberDetailModal';
+import { MemberDetailData } from './MemberDetailPage';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
@@ -58,9 +58,6 @@ export default function MemberManagement() {
   const [filterTab, setFilterTab] = useState<'all' | 'recurring' | 'once' | 'new'>('all');
 
   // Modal States
-  const [selectedMember, setSelectedMember] = useState<MemberDetailData | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberDetailData | null>(null);
@@ -230,10 +227,9 @@ export default function MemberManagement() {
     return matchName || matchTitle || matchPhone || matchEmail;
   });
 
-  // Open Member Detail Modal
+  // Navigate to Full Member Detail Page
   const handleOpenDetail = (member: MemberDetailData) => {
-    setSelectedMember(member);
-    setIsDetailModalOpen(true);
+    navigate(`/${tenantSlug}/admin/members/${member.id}`);
   };
 
   // Open Add Member Modal
@@ -303,9 +299,6 @@ export default function MemberManagement() {
     };
 
     setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? updated : m)));
-    if (selectedMember && selectedMember.id === editingMember.id) {
-      setSelectedMember(updated);
-    }
     setIsEditMemberModalOpen(false);
     toast.success(`[${updated.name}] ${memberTerm} 정보가 수정되었습니다.`);
   };
@@ -313,9 +306,6 @@ export default function MemberManagement() {
   const handleDeleteMember = (id: string, name: string) => {
     if (confirm(`정말로 [${name}] ${memberTerm} 정보를 삭제하시겠습니까?`)) {
       setMembers((prev) => prev.filter((m) => m.id !== id));
-      if (selectedMember?.id === id) {
-        setIsDetailModalOpen(false);
-      }
       toast.success(`[${name}] ${memberTerm} 정보가 삭제되었습니다.`);
     }
   };
@@ -604,18 +594,6 @@ export default function MemberManagement() {
           </Card>
         </div>
       </div>
-
-      {/* 🔍 회원 종합 상세 페이지 / 드로어 모달 */}
-      <MemberDetailModal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        member={selectedMember}
-        currentTenant={currentTenant}
-        onUpdateMember={(updated) => {
-          setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
-          setSelectedMember(updated);
-        }}
-      />
 
       {/* ➕ 신규 회원 추가 모달 */}
       <Dialog open={isAddMemberModalOpen} onOpenChange={setIsAddMemberModalOpen}>
