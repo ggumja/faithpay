@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { 
   Search, 
   History, 
@@ -1072,67 +1073,78 @@ export default function MyDonations() {
                       </Card>
                     ) : (
                       <>
-                        {paginatedHistory.map((item) => (
-                          <Card key={item.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer group border-none shadow-xs">
-                            <div className="flex">
-                              <div 
-                                className="w-2 flex-shrink-0" 
-                                style={{ backgroundColor: currentTenant.primaryColor }}
-                              />
-                              <div className="flex-1 p-5">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                      <Badge variant="outline" className="text-xs font-bold">{item.itemName}</Badge>
-                                      {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
-                                        <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-800 border-amber-300 font-bold">
-                                          🖥️ 현장 키오스크 결제
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="outline" className="text-[11px] bg-slate-50 text-slate-700 border-slate-300 font-semibold">
-                                          📱 온라인 웹/모바일 결제
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <h4 className="text-xl font-bold">{item.amount.toLocaleString()}원</h4>
-                                  </div>
-                                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none px-2 py-0.5 flex items-center gap-1 font-extrabold">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    {item.status}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                                  <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                                    <div className="flex items-center gap-1.5 font-mono">
-                                      <Calendar className="h-4 w-4 text-[#3182F6]" />
+                        <Card className="border border-slate-200 dark:border-zinc-800 shadow-xs rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
+                          <div className="overflow-x-auto">
+                            <Table className="w-full text-xs">
+                              <TableHeader className="bg-slate-50 dark:bg-zinc-800/80">
+                                <TableRow className="border-b border-slate-200 dark:border-zinc-800">
+                                  <TableHead className="py-3 px-4 text-xs font-bold text-slate-700 dark:text-zinc-300">일시</TableHead>
+                                  <TableHead className="py-3 px-4 text-xs font-bold text-slate-700 dark:text-zinc-300">봉헌 항목</TableHead>
+                                  <TableHead className="py-3 px-4 text-xs font-bold text-slate-700 dark:text-zinc-300">결제 수단</TableHead>
+                                  <TableHead className="py-3 px-4 text-xs font-bold text-slate-700 dark:text-zinc-300 text-right">봉헌 금액</TableHead>
+                                  <TableHead className="py-3 px-4 text-xs font-bold text-slate-700 dark:text-zinc-300 text-center">확인서 / 출력</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                                {paginatedHistory.map((item) => (
+                                  <TableRow key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors">
+                                    <TableCell className="py-3.5 px-4 font-mono font-medium text-slate-600 dark:text-zinc-400 whitespace-nowrap">
                                       {item.date}
-                                    </div>
-                                  </div>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="h-8 px-2.5 font-semibold text-slate-700 hover:text-slate-900 border-slate-300"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedReceiptData({
-                                        receiptId: item.id,
-                                        donorName: item.name,
-                                        donorPhone: item.phone,
-                                        amount: item.amount,
-                                        itemName: item.itemName,
-                                        date: item.date,
-                                      });
-                                    }}
-                                  >
-                                    <Download className="h-3.5 w-3.5 mr-1" />
-                                    영수증 PDF
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
+                                    </TableCell>
+                                    <TableCell className="py-3.5 px-4 font-bold text-slate-900 dark:text-zinc-100 whitespace-nowrap">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{item.itemName}</span>
+                                        {item.isRecurring && (
+                                          <Badge className="bg-indigo-100 text-indigo-800 text-[10px] font-bold border-none px-1.5 py-0.2">
+                                            ⚡ 정기
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3.5 px-4 whitespace-nowrap">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-semibold text-slate-700 dark:text-zinc-300">{item.paymentMethod}</span>
+                                        {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
+                                          <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-800 border-amber-300 font-bold px-1.5 py-0.2">
+                                            🖥️ 키오스크
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200 font-medium px-1.5 py-0.2">
+                                            📱 온라인
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3.5 px-4 text-right font-black text-sm whitespace-nowrap" style={{ color: currentTenant.primaryColor }}>
+                                      {item.amount.toLocaleString()}원
+                                    </TableCell>
+                                    <TableCell className="py-3.5 px-4 text-center whitespace-nowrap">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:text-slate-900 border-slate-300 rounded-lg cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedReceiptData({
+                                            receiptId: item.id,
+                                            donorName: item.name,
+                                            donorPhone: item.phone,
+                                            amount: item.amount,
+                                            itemName: item.itemName,
+                                            date: item.date,
+                                          });
+                                        }}
+                                      >
+                                        <Download className="h-3 w-3 mr-1" />
+                                        영수증 PDF
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </Card>
 
                         {/* 📄 10개씩 페이징 컨트롤 바 */}
                         {totalPages > 1 && (
