@@ -306,7 +306,7 @@ export default function RecurringPendingPage() {
                 </Badge>
               </div>
               <p className="text-slate-500 dark:text-zinc-400 text-sm">
-                후원자별 정기 약정 계약(마스터)과 자동 이체 스케줄러 실행 대기열을 명확히 구분하여 관리합니다
+                후원자별 정기 약정 계약(마스터)과 자동 결제 스케줄러 실행 대기열을 명확히 구분하여 관리합니다
               </p>
             </div>
 
@@ -333,7 +333,7 @@ export default function RecurringPendingPage() {
                 <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
                   {activeMasterCount}건
                 </div>
-                <p className="text-xs text-slate-400 mt-1">전체 {subscriptionMasters.length}건 중 이체 진행 중</p>
+                <p className="text-xs text-slate-400 mt-1">전체 {subscriptionMasters.length}건 중 결제 진행 중</p>
               </CardContent>
             </Card>
 
@@ -347,7 +347,7 @@ export default function RecurringPendingPage() {
                 <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
                   {totalMonthlyCommitment.toLocaleString()}원
                 </div>
-                <p className="text-xs text-slate-400 mt-1">매월 자동 이체 수납되는 총약정액</p>
+                <p className="text-xs text-slate-400 mt-1">매월 자동 결제 수납되는 총약정액</p>
               </CardContent>
             </Card>
 
@@ -414,7 +414,7 @@ export default function RecurringPendingPage() {
                     정기 약정 마스터 계약 명세 ({filteredMasters.length}건)
                   </CardTitle>
                   <CardDescription>
-                    후원자별 지속 정기 결제 계약 정보입니다. 이체일 변경, 일시중지, 해지 관리를 수행합니다.
+                    후원자별 지속 정기 결제 계약 정보입니다. 결제일 변경, 일시중지, 해지 관리를 수행합니다.
                   </CardDescription>
                 </div>
 
@@ -441,7 +441,7 @@ export default function RecurringPendingPage() {
                       <TableHead>연락처</TableHead>
                       <TableHead>후원 항목</TableHead>
                       <TableHead className="text-right">약정 금액</TableHead>
-                      <TableHead>정기 이체일</TableHead>
+                      <TableHead>정기 결제일</TableHead>
                       <TableHead>결제 수단</TableHead>
                       <TableHead>약정 상태</TableHead>
                       <TableHead className="text-center">약정 관리</TableHead>
@@ -482,7 +482,7 @@ export default function RecurringPendingPage() {
                           <TableCell>
                             {sub.status === 'active' && (
                               <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-[11px]">
-                                🟢 이체 진행중
+                                🟢 결제 진행중
                               </Badge>
                             )}
                             {sub.status === 'paused' && (
@@ -516,7 +516,7 @@ export default function RecurringPendingPage() {
                                   className="h-7 px-2 text-[11px] font-bold gap-1 text-emerald-700 hover:bg-emerald-50 cursor-pointer"
                                 >
                                   <PlayCircle className="h-3.5 w-3.5" />
-                                  이체재개
+                                  결제재개
                                 </Button>
                               )}
                               <Button
@@ -545,10 +545,10 @@ export default function RecurringPendingPage() {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle className="text-lg font-bold text-amber-950 dark:text-amber-200">
-                    스케줄러 결제 자동 이체 대기열 ({filteredSchedules.length}건)
+                    스케줄러 자동 결제 대기열 ({filteredSchedules.length}건)
                   </CardTitle>
                   <CardDescription>
-                    자정 배치 스케줄러가 결제 승인을 시도할 1회차 실 이체 대기 목록입니다
+                    자정 배치 스케줄러가 결제 승인을 시도할 1회차 실 결제 대기 목록입니다
                   </CardDescription>
                 </div>
 
@@ -614,7 +614,7 @@ export default function RecurringPendingPage() {
                           <TableCell>
                             {sch.status === 'pending' && (
                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[11px]">
-                                ⏳ 자정 이체 대기중
+                                ⏳ 자정 결제 대기중
                               </Badge>
                             )}
                             {sch.status === 'executed' && (
