@@ -298,6 +298,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         finalTenants = [...dbTenants, ...missingDefaults];
       }
 
+      // 로컬 스토리지 수정사항 병합
+      try {
+        const localTenantsStr = localStorage.getItem('tenants');
+        if (localTenantsStr) {
+          const localList: Tenant[] = JSON.parse(localTenantsStr);
+          if (Array.isArray(localList) && localList.length > 0) {
+            const localMap = new Map(localList.map(t => [t.id || t.slug, t]));
+            finalTenants = finalTenants.map(t => {
+              const matched = localMap.get(t.id) || localMap.get(t.slug);
+              return matched ? { ...t, ...matched } : t;
+            });
+          }
+        }
+      } catch (e) {}
+
       // 저장된 PG 설정(localStorage) 반영 및 각원사/명성교회 기본 PG 보장
       finalTenants = finalTenants.map(t => {
         let currentConfig = t.paymentConfig;

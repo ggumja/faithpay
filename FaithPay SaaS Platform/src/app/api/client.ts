@@ -114,11 +114,11 @@ async function fetchAPI<T>(
 
 export const tenantAPI = {
   async getTenants(): Promise<APIResponse<Tenant[]>> {
-    return fetchAPI<Tenant[]>('/tenants');
+    return fetchAPI<Tenant[]>('/tenants', { silentFail: true } as any);
   },
 
   async getAll(): Promise<APIResponse<Tenant[]>> {
-    return fetchAPI<Tenant[]>('/tenants');
+    return fetchAPI<Tenant[]>('/tenants', { silentFail: true } as any);
   },
 
   async getById(id: string): Promise<APIResponse<Tenant>> {
@@ -201,7 +201,7 @@ export const tenantAPI = {
 
   // 승인 대기 단체 목록
   async getPending(): Promise<APIResponse<Tenant[]>> {
-    return fetchAPI<Tenant[]>('/tenants/pending');
+    return fetchAPI<Tenant[]>('/tenants/pending', { silentFail: true } as any);
   },
 
   // 단체 입점 승인 (새 엔드포인트)
