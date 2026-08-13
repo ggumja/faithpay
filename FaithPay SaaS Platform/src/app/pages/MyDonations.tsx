@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useApp, DonationFormData } from '../context/AppContext';
-import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI } from '../api/client';
+import { useApp, DonationFormData, DonationItem } from '../context/AppContext';
+import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI, donationItemsAPI } from '../api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -266,6 +266,8 @@ export default function MyDonations() {
     setCurrentPage(1);
   }, [quickRange, startDate, endDate]);
 
+  const [dbItems, setDbItems] = useState<DonationItem[]>([]);
+
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
@@ -273,8 +275,22 @@ export default function MyDonations() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  useEffect(() => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [currentTenant]);
 
   if (!currentTenant) return null;
+
+  const effectiveItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
+  const hasRecurringSupport = effectiveItems.length > 0
+    ? effectiveItems.some(item => item.enabled !== false && item.allowRecurring !== false)
+    : true;
 
   const handleSendOtp = async () => {
     if (phoneNumber.length < 10) {
@@ -734,7 +750,7 @@ export default function MyDonations() {
             </Card>
 
             {/* Subscriptions Self-Management Card (정기결제 지원 단체이거나 기존 정기 약정이 존재하는 경우에만 표출) */}
-            {((currentTenant ? getTenantDonationItems(currentTenant) : []).some(item => item.enabled !== false && item.allowRecurring) || subscriptions.length > 0) && (
+            {(hasRecurringSupport || subscriptions.length > 0) && (
               <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
                 <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
                   <div className="flex justify-between items-center">
@@ -754,13 +770,12 @@ export default function MyDonations() {
                         현재 매월 자동 청구 등록된 정기 {currentTenant.terminology.donation}이(가) 없습니다.
                       </p>
                       {/* 정기결제/정기보시를 지원하는 단체인 경우에만 신청하기 버튼 노출 */}
-                      {(currentTenant ? getTenantDonationItems(currentTenant) : []).some(item => item.enabled !== false && item.allowRecurring) && (
+                      {hasRecurringSupport && (
                         <Button
                           size="sm"
                           className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-xs"
                           onClick={() => {
-                            const items = currentTenant ? getTenantDonationItems(currentTenant) : [];
-                            const recurringItem = items.find(i => i.enabled !== false && i.allowRecurring) || (items.length > 0 ? items[0] : null);
+                            const recurringItem = effectiveItems.find(i => i.enabled !== false && i.allowRecurring !== false) || (effectiveItems.length > 0 ? effectiveItems[0] : null);
                             navigate(`/${tenantSlug}/donate`, { state: { selectedItem: recurringItem, isRecurring: true } });
                           }}
                         >
