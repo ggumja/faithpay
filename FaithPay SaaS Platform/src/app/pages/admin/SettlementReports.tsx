@@ -136,7 +136,7 @@ export default function SettlementReports() {
 
         const realConfig = loadedConfig || currentTenant?.paymentConfig;
         const currentContractRate = realConfig?.contractRate ?? 3.0;
-        const currentSettlementCycle = realConfig?.settlementCycle ?? 'D+1';
+        const currentSettlementCycle = realConfig?.payoutCycle || realConfig?.settlementCycle || 'D+1';
 
         const res = await donationAPI.getByTenant(targetTenantId);
         if (res.success && Array.isArray(res.data)) {
@@ -433,13 +433,15 @@ export default function SettlementReports() {
                   <div>
                     <span className="text-slate-500 text-xs block">정산 주기 (DB 설정)</span>
                     <span className="font-bold text-slate-700">
-                      {paymentConfig?.settlementCycle === 'D+1'
+                      {(paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+1'
                         ? 'D+1일 (익일 정산)'
-                        : paymentConfig?.settlementCycle === 'D+2'
-                        ? 'D+2일 정산'
-                        : paymentConfig?.settlementCycle === 'MONTHLY'
+                        : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+2'
+                        ? 'D+2일 (2일후 정산)'
+                        : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+3'
+                        ? 'D+3일 (3일후 정산)'
+                        : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'MONTHLY' || (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'M+1'
                         ? '월정산 (익월 5일)'
-                        : `${paymentConfig?.settlementCycle || 'D+1'}일 정산`}
+                        : `${paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'}일 정산`}
                     </span>
                   </div>
                 </div>
@@ -564,8 +566,8 @@ export default function SettlementReports() {
 
           <Tabs defaultValue="monthly" className="space-y-6">
             <TabsList>
-              <TabsTrigger value="monthly">월별 정산 ({paymentConfig?.settlementCycle || 'D+1'} 요약)</TabsTrigger>
-              <TabsTrigger value="daily">일별/건별 {paymentConfig?.settlementCycle || 'D+1'} 정산 명세</TabsTrigger>
+              <TabsTrigger value="monthly">월별 정산 ({paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 요약)</TabsTrigger>
+              <TabsTrigger value="daily">일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 정산 명세</TabsTrigger>
               <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
             </TabsList>
 
@@ -665,9 +667,9 @@ export default function SettlementReports() {
             <TabsContent value="daily" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>일별/건별 {paymentConfig?.settlementCycle || 'D+1'} 정산 명세</CardTitle>
+                  <CardTitle>일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 정산 명세</CardTitle>
                   <CardDescription>
-                    승인완료된 각 결제건별 PG 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.settlementCycle || 'D+1'} 영업일 정산 입금 예정/완료 명세입니다.
+                    승인완료된 각 결제건별 PG 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일 정산 입금 예정/완료 명세입니다.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -680,7 +682,7 @@ export default function SettlementReports() {
                         <TableHead className="text-right">승인 금액</TableHead>
                         <TableHead className="text-right">PG 수수료 ({paymentConfig?.contractRate ?? contractRate}%)</TableHead>
                         <TableHead className="text-right">실 입금액</TableHead>
-                        <TableHead>{paymentConfig?.settlementCycle || 'D+1'} 입금 예정일</TableHead>
+                        <TableHead>{paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 입금 예정일</TableHead>
                         <TableHead>정산 상태</TableHead>
                       </TableRow>
                     </TableHeader>
