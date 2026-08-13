@@ -21,18 +21,24 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
   // 영업자 필터 선택 ('all' 또는 specific partner/agent id)
   const [selectedAgentId, setSelectedAgentId] = useState<string>('all');
 
-  // 필터링된 단체 목록
-  const filteredTenants = myTenants.filter(t => {
-    if (selectedAgentId === 'all') return true;
-    if (selectedAgentId === 'direct') {
-      return (t as any).registeredByPartnerId === partner.id || (t as any).referralCode === partner.referralCode;
-    }
-    const matchedAgent = subAgents.find(a => a.id === selectedAgentId);
-    return (
-      (t as any).registeredByPartnerId === selectedAgentId ||
-      (matchedAgent && ((t as any).registeredByReferralCode === matchedAgent.referralCode || (t as any).referralCode === matchedAgent.referralCode))
-    );
-  });
+  // 필터링 및 정렬된 단체 목록 (마지막에 등록한 단체가 맨 위로)
+  const filteredTenants = myTenants
+    .filter(t => {
+      if (selectedAgentId === 'all') return true;
+      if (selectedAgentId === 'direct') {
+        return (t as any).registeredByPartnerId === partner.id || (t as any).referralCode === partner.referralCode;
+      }
+      const matchedAgent = subAgents.find(a => a.id === selectedAgentId);
+      return (
+        (t as any).registeredByPartnerId === selectedAgentId ||
+        (matchedAgent && ((t as any).registeredByReferralCode === matchedAgent.referralCode || (t as any).referralCode === matchedAgent.referralCode))
+      );
+    })
+    .sort((a, b) => {
+      const timeA = a.appliedAt ? new Date(a.appliedAt).getTime() : (parseInt(a.id.replace(/\D/g, '')) || 0);
+      const timeB = b.appliedAt ? new Date(b.appliedAt).getTime() : (parseInt(b.id.replace(/\D/g, '')) || 0);
+      return timeB - timeA;
+    });
 
   return (
     <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
@@ -112,7 +118,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                   <div key={t.id} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 font-bold font-mono flex items-center justify-center text-xs border border-purple-100 shrink-0">
-                        {idx + 1}
+                        {filteredTenants.length - idx}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">

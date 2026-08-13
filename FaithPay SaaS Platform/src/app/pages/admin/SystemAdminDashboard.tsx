@@ -111,9 +111,15 @@ export default function SystemAdminDashboard() {
   const religion = (t: string) =>
     ({ protestant: '기독교', catholic: '천주교', buddhist: '불교', charity: '구호/기부재단', general: '비영리/사회공헌' }[t] ?? t);
 
-  const tList = tenants.map(t => {
-    const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : undefined;
+  // 마지막에 등록한 단체가 맨 위로 오도록 정렬 (appliedAt / id 내림차순)
+  const sortedTenants = [...tenants].sort((a, b) => {
+    const timeA = a.appliedAt ? new Date(a.appliedAt).getTime() : (parseInt(a.id.replace(/\D/g, '')) || 0);
+    const timeB = b.appliedAt ? new Date(b.appliedAt).getTime() : (parseInt(b.id.replace(/\D/g, '')) || 0);
+    return timeB - timeA;
+  });
 
+  const tList = sortedTenants.map(t => {
+    const paymentConfig = t.paymentConfig?.pgProvider ? t.paymentConfig : undefined;
 
     return {
       ...t,
@@ -326,18 +332,21 @@ export default function SystemAdminDashboard() {
               <Table>
                 <TableHeader className={S.thead}>
                   <TableRow>
-                    {['단체명','종교','연락처','PG사','MID','상태','작업'].map((h,i) => (
-                      <TableHead key={h} className={`${S.th} ${i===6?'text-center':''}`}>{h}</TableHead>
+                    {['NO.','단체명','종교','연락처','PG사','MID','상태','작업'].map((h,i) => (
+                      <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===7?'text-center':''}`}>{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tList.map(t => (
+                  {tList.map((t, idx) => (
                     <TableRow
                       key={t.id}
                       className="cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors"
                       onClick={() => navigate(`/system/admin/tenant/${t.id}`)}
                     >
+                      <TableCell className={`${S.td} text-center font-bold text-slate-400 font-mono text-[11.5px]`}>
+                        {tList.length - idx}
+                      </TableCell>
                       <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
                         <span className="flex items-center gap-1.5">
                           {t.name}<ExternalLink size={10} className="text-[var(--hm-border)]"/>
@@ -517,30 +526,33 @@ export default function SystemAdminDashboard() {
             <Table>
               <TableHeader className={S.thead}>
                 <TableRow>
-                  {['신청 단체명','종교','담당자 / 연락처','신청 경로','신청일','처리'].map((h,i) => (
-                    <TableHead key={h} className={`${S.th} ${i===5?'text-center':''}`}>{h}</TableHead>
+                  {['NO.','신청 단체명','종교','담당자 / 연락처','신청 경로','신청일','처리'].map((h,i) => (
+                    <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===6?'text-center':''}`}>{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pendingLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-[var(--hm-ink-3)] text-[12px]">
+                    <TableCell colSpan={7} className="text-center py-10 text-[var(--hm-ink-3)] text-[12px]">
                       <RefreshCw size={14} className="animate-spin inline mr-2" />불러오는 중...
                     </TableCell>
                   </TableRow>
                 ) : pendingList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-[var(--hm-ink-3)] text-[12px]">
+                    <TableCell colSpan={7} className="text-center py-10 text-[var(--hm-ink-3)] text-[12px]">
                       심사 대기 중인 입점 신청이 없습니다.
                     </TableCell>
                   </TableRow>
-                ) : pendingList.map(pt => (
+                ) : pendingList.map((pt, idx) => (
                   <TableRow
                     key={pt.id}
                     className="cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors"
                     onClick={() => navigate(`/system/admin/tenants/pending/${pt.id}`)}
                   >
+                    <TableCell className={`${S.td} text-center font-bold text-amber-600 font-mono text-[11.5px]`}>
+                      {pendingList.length - idx}
+                    </TableCell>
                     <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
                       <span className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"/>
