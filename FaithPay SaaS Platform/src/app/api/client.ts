@@ -144,10 +144,25 @@ export const tenantAPI = {
   },
 
   async update(id: string, updates: Partial<Tenant>): Promise<APIResponse<Tenant>> {
-    return fetchAPI<Tenant>(`/tenants/${id}`, {
+    const res = await fetchAPI<Tenant>(`/tenants/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
+    if (!res.success) {
+      const local = localStorage.getItem('tenants');
+      if (local) {
+        try {
+          const list: Tenant[] = JSON.parse(local);
+          const idx = list.findIndex((t) => t.id === id || t.slug === id);
+          if (idx !== -1) {
+            list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+            localStorage.setItem('tenants', JSON.stringify(list));
+            return { success: true, data: list[idx] };
+          }
+        } catch {}
+      }
+    }
+    return res;
   },
 
   async updateTenantInfo(id: string, tenant: Tenant): Promise<APIResponse<Tenant>> {

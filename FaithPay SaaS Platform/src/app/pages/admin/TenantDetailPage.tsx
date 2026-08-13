@@ -252,32 +252,20 @@ export default function TenantDetailPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-d0d82cc7/tenants/${id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
-            name,
-            religionType,
-            slug,
-          }),
-        }
-      );
+      const targetTenant = tenant || tenants.find(t => t.id === id || t.slug === id);
+      const targetId = targetTenant?.id || id;
 
-      if (!response.ok) {
-        throw new Error('Failed to update tenant');
-      }
+      const result = await tenantAPI.update(targetId, {
+        name,
+        religionType,
+        slug,
+      });
 
-      const result = await response.json();
-      if (result.success) {
+      if (result.success || result.data) {
         toast.success('단체 정보가 수정되었습니다');
         await fetchTenants();
       } else {
-        toast.error('단체 정보 수정에 실패했습니다');
+        toast.error(result.error || '단체 정보 수정에 실패했습니다');
       }
     } catch (error) {
       console.error('Error updating tenant:', error);

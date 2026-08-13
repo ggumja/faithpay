@@ -240,22 +240,26 @@ export async function rejectTenant(id: string): Promise<Tenant | null> {
 }
 
 export async function updateTenant(id: string, updates: Partial<Tenant>): Promise<Tenant | null> {
-  const existing = await getTenantById(id);
+  let existing = await getTenantById(id);
+  if (!existing) {
+    existing = await getTenantBySlug(id);
+  }
   if (!existing) return null;
   
+  const targetId = existing.id;
   const updated: Tenant = {
     ...existing,
     ...updates,
-    id: existing.id, // ID는 변경 불가
+    id: targetId, // ID는 변경 불가
     updatedAt: new Date().toISOString(),
   };
   
-  await kv.set(`tenant:${id}`, updated);
+  await kv.set(`tenant:${targetId}`, updated);
   
   // slug가 변경된 경우
   if (updates.slug && updates.slug !== existing.slug) {
     await kv.del(`tenant:slug:${existing.slug}`);
-    await kv.set(`tenant:slug:${updates.slug}`, id);
+    await kv.set(`tenant:slug:${updates.slug}`, targetId);
   }
   
   return updated;
