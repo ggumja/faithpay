@@ -86,6 +86,9 @@ export default function MyDonations() {
   const [profilePasswordConfirm, setProfilePasswordConfirm] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  // 🗂️ 서브 탭 메뉴 상태 ('history' | 'recurring' | 'profile')
+  const [activeTab, setActiveTab] = useState<'history' | 'recurring' | 'profile'>('history');
+
   // 📅 기간 지정 필터 상태 & 📄 10개씩 페이징 상태
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -676,536 +679,604 @@ export default function MyDonations() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* 👤 내 프로필 / 개인정보 수정 카드 */}
-            <Card className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm">
-              <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/50">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-base font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                    <User className="h-4 w-4 text-indigo-600" />
-                    <span>내 프로필 및 기부자 정보 관리</span>
-                  </CardTitle>
-                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[11px] font-bold border-none">
-                    🔒 본인인증 완료 ({formatPhoneNumber(phoneNumber)})
+            {/* 🗂️ 마이페이지 서브 탭 서브메뉴 (봉헌 내역 / 정기결제 / 정보 관리) */}
+            <div className="flex bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl gap-1 border border-slate-200/80 dark:border-zinc-700 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeTab === 'history'
+                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+                }`}
+              >
+                <History className="w-4 h-4 text-[#3182F6]" />
+                <span>봉헌 내역</span>
+                {history.length > 0 && (
+                  <Badge variant="secondary" className="ml-0.5 text-[10px] bg-slate-200 dark:bg-zinc-700 px-1.5 py-0 font-bold">
+                    {history.length}
                   </Badge>
-                </div>
-                <CardDescription className="text-xs text-slate-500 mt-1">
-                  휴대폰 번호 인증을 바탕으로 성명, 이메일, 주소, {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'} 등 프로필 정보를 자유롭게 업데이트하실 수 있습니다.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-5 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      성명 (이름) <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="성명 입력"
-                      className="text-xs h-10 font-bold bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                    />
-                  </div>
+                )}
+              </button>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'}
-                    </Label>
-                    <Input
-                      type="text"
-                      value={profileBaptismName}
-                      onChange={(e) => setProfileBaptismName(e.target.value)}
-                      placeholder={currentTenant.religionType === 'catholic' ? '예: 요한' : currentTenant.religionType === 'buddhist' ? '예: 보현행' : currentTenant.religionType === 'protestant' ? '예: 안수집사' : '호칭 입력'}
-                      className="text-xs h-10 font-semibold bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                    />
-                  </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('recurring')}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeTab === 'recurring'
+                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+                }`}
+              >
+                <span className="text-amber-500 font-extrabold">⚡</span>
+                <span>정기결제</span>
+                {subscriptions.length > 0 && (
+                  <Badge className="ml-0.5 text-[10px] bg-indigo-600 text-white px-1.5 py-0 font-bold">
+                    {subscriptions.length}
+                  </Badge>
+                )}
+              </button>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      이메일 주소
-                    </Label>
-                    <Input
-                      type="email"
-                      value={profileEmail}
-                      onChange={(e) => setProfileEmail(e.target.value)}
-                      placeholder="name@example.com"
-                      className="text-xs h-10 font-mono bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                    />
-                  </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('profile')}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  activeTab === 'profile'
+                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
+                }`}
+              >
+                <User className="w-4 h-4 text-indigo-600" />
+                <span>정보 관리</span>
+              </button>
+            </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      인증 휴대폰 번호
-                    </Label>
-                    <Input
-                      type="text"
-                      value={formatPhoneNumber(phoneNumber)}
-                      disabled
-                      className="text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-500 cursor-not-allowed border-slate-200"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
-                      <Lock className="h-3.5 w-3.5 text-indigo-600" />
-                      마이페이지 로그인 비밀번호 설정
-                    </Label>
-                    <Input
-                      type="password"
-                      value={profilePassword}
-                      onChange={(e) => setProfilePassword(e.target.value)}
-                      placeholder="새 비밀번호 입력 (4자리 이상)"
-                      className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      비밀번호 확인
-                    </Label>
-                    <Input
-                      type="password"
-                      value={profilePasswordConfirm}
-                      onChange={(e) => setProfilePasswordConfirm(e.target.value)}
-                      placeholder="비밀번호 재입력 확인"
-                      className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                    />
-                  </div>
-                </div>
-
-                {/* 🏠 우편번호 검색 및 상세주소 분리 입력 섹션 */}
-                <div className="space-y-2 border-t border-slate-100 dark:border-zinc-800 pt-3">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-indigo-600" />
-                      기부자 주소 (기부금영수증 및 우편용)
-                    </span>
-                    <span className="text-[11px] text-indigo-600 font-semibold">· 다음/카카오 우편번호 검색 지원</span>
-                  </Label>
-                  
-                  {/* 우편번호 & 우편번호 검색 버튼 */}
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      value={profileZonecode}
-                      readOnly
-                      placeholder="우편번호"
-                      className="w-32 text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 border-slate-200 text-slate-600"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleSearchAddress}
-                      className="h-10 text-xs font-bold px-3.5 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                    >
-                      <Search className="h-3.5 w-3.5" />
-                      우편번호 검색
-                    </Button>
-                  </div>
-
-                  {/* 기본 주소 */}
-                  <Input
-                    type="text"
-                    value={profileAddress}
-                    onChange={(e) => setProfileAddress(e.target.value)}
-                    placeholder="우편번호 검색을 이용하시거나 도로명/지번 기본주소를 입력해 주세요"
-                    className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                  />
-
-                  {/* 상세 주소 */}
-                  <Input
-                    type="text"
-                    value={profileAddressDetail}
-                    onChange={(e) => setProfileAddressDetail(e.target.value)}
-                    placeholder="상세주소를 입력해 주세요 (예: 101동 1002호 / 2층)"
-                    className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200 font-medium text-slate-900 dark:text-zinc-100"
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end">
-                  <Button
-                    onClick={handleSaveProfile}
-                    disabled={isSavingProfile}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-5 rounded-xl cursor-pointer shadow-xs gap-1.5"
-                  >
-                    {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    내 정보 수정사항 저장
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Subscriptions Self-Management Card (정기결제 지원 단체이거나 기존 정기 약정이 존재하는 경우에만 표출) */}
-            {(hasRecurringSupport || subscriptions.length > 0) && (
-              <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
-                <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
+            {/* TAB 1: 👤 정보 관리 */}
+            {activeTab === 'profile' && (
+              <Card className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm">
+                <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/50">
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                      <span>⚡ 내 정기{currentTenant.terminology.donation} 셀프 관리</span>
+                    <CardTitle className="text-base font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                      <User className="h-4 w-4 text-indigo-600" />
+                      <span>내 프로필 및 기부자 정보 관리</span>
                     </CardTitle>
-                    <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[11px] font-bold border-none">
+                      🔒 본인인증 완료 ({formatPhoneNumber(phoneNumber)})
+                    </Badge>
                   </div>
-                  <CardDescription className="text-xs text-indigo-700 dark:text-indigo-400">
-                    매월 자동 청구되는 정기 {currentTenant.terminology.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.
+                  <CardDescription className="text-xs text-slate-500 mt-1">
+                    휴대폰 번호 인증을 바탕으로 성명, 이메일, 주소, {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'} 등 프로필 정보를 자유롭게 업데이트하실 수 있습니다.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-4 space-y-3">
-                  {subscriptions.length === 0 ? (
-                    <div className="text-center py-6 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900">
-                      <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-3">
-                        현재 매월 자동 청구 등록된 정기 {currentTenant.terminology.donation}이(가) 없습니다.
-                      </p>
-                      {/* 정기결제/정기보시를 지원하는 단체인 경우에만 신청하기 버튼 노출 */}
-                      {hasRecurringSupport && (
-                        <Button
-                          size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-xs"
-                          onClick={() => {
-                            const recurringItem = effectiveItems.find(i => i.enabled !== false && i.allowRecurring !== false) || (effectiveItems.length > 0 ? effectiveItems[0] : null);
-                            navigate(`/${tenantSlug}/donate`, { state: { selectedItem: recurringItem, isRecurring: true } });
-                          }}
-                        >
-                          ⚡ 정기 {currentTenant.terminology.donation} 신청하러 가기
-                        </Button>
-                      )}
+                <CardContent className="pt-5 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                        성명 (이름) <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="text"
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        placeholder="성명 입력"
+                        className="text-xs h-10 font-bold bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                      />
                     </div>
-                  ) : (
-                  subscriptions.map(sub => (
-                    <div key={sub.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
-                      <div>
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-bold text-sm">{sub.itemName}</h4>
-                          <Badge className={sub.status === 'active' ? 'bg-green-100 text-green-800' : sub.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}>
-                            {sub.status === 'active' ? '🟢 이용 중' : sub.status === 'paused' ? '🟡 일시정지' : '🔴 해지 완료'}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-zinc-500 space-y-0.5">
-                          <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> ({sub.recurringInterval === 'daily' ? '매일 자동결제' : sub.recurringInterval === 'weekly' ? `매주 (${sub.recurringDayOfWeek || '일'})요일` : `매월 ${sub.recurringDay || 10}일`})</p>
-                          <p>· 결제카드: {sub.cardName || '신용카드'} ({sub.cardNo || '****-****'})</p>
-                        </div>
-                      </div>
 
-                      {sub.status !== 'cancelled' && (
-                        <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                          {sub.status === 'active' ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer"
-                              onClick={() => handleUpdateSubStatus(sub.id, 'paused')}
-                            >
-                              🟡 다음 달 쉬기 (일시정지)
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 text-xs border-green-300 text-green-700 hover:bg-green-50 cursor-pointer font-bold"
-                              onClick={() => handleUpdateSubStatus(sub.id, 'active')}
-                            >
-                              🟢 정기 {currentTenant.terminology.donation} 재개
-                            </Button>
-                          )}
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="flex-1 text-xs cursor-pointer font-bold"
-                            onClick={() => handleUpdateSubStatus(sub.id, 'cancelled')}
-                          >
-                            🔴 정기 {currentTenant.terminology.donation} 중단 (해지)
-                          </Button>
-                        </div>
-                      )}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                        {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'}
+                      </Label>
+                      <Input
+                        type="text"
+                        value={profileBaptismName}
+                        onChange={(e) => setProfileBaptismName(e.target.value)}
+                        placeholder={currentTenant.religionType === 'catholic' ? '예: 요한' : currentTenant.religionType === 'buddhist' ? '예: 보현행' : currentTenant.religionType === 'protestant' ? '예: 안수집사' : '호칭 입력'}
+                        className="text-xs h-10 font-semibold bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                      />
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-            )}
-            {/* 📅 기간 지정 필터 바 */}
-            <Card className="bg-white border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl shadow-xs space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-[#3182F6]" />
-                  <span>📅 봉헌 내역 기간 지정</span>
-                </span>
 
-                {/* 퀵 렌지 선택 버튼 */}
-                <div className="flex flex-wrap gap-1">
-                  {[
-                    { key: 'THIS_YEAR', label: `올해 (${new Date().getFullYear()}년)` },
-                    { key: 'LAST_YEAR', label: `작년 (${new Date().getFullYear() - 1}년)` },
-                    { key: 'ALL', label: '전체' },
-                    { key: 'CUSTOM', label: '직접 입력' },
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setQuickRange(key as any)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer border transition-all ${
-                        quickRange === key
-                          ? 'bg-[#3182F6] text-white border-[#3182F6] shadow-xs'
-                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                        이메일 주소
+                      </Label>
+                      <Input
+                        type="email"
+                        value={profileEmail}
+                        onChange={(e) => setProfileEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        className="text-xs h-10 font-mono bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                      />
+                    </div>
 
-              {/* 직접 기간 입력 날짜 선택기 */}
-              {quickRange === 'CUSTOM' && (
-                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs animate-in fade-in duration-150">
-                  <span className="font-bold text-slate-600 dark:text-zinc-400">조회 시작일:</span>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
-                  />
-                  <span className="text-slate-400 font-bold">~</span>
-                  <span className="font-bold text-slate-600 dark:text-zinc-400">종료일:</span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
-                  />
-                  {(startDate || endDate) && (
-                    <button
-                      onClick={() => { setStartDate(''); setEndDate(''); }}
-                      className="text-[11px] font-bold text-red-500 underline ml-auto cursor-pointer"
-                    >
-                      날짜 초기화
-                    </button>
-                  )}
-                </div>
-              )}
-            </Card>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                        인증 휴대폰 번호
+                      </Label>
+                      <Input
+                        type="text"
+                        value={formatPhoneNumber(phoneNumber)}
+                        disabled
+                        className="text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-500 cursor-not-allowed border-slate-200"
+                      />
+                    </div>
 
-            {/* 📊 동적 기간 지정 필터링 로직 계산 */}
-            {(() => {
-              const currentYear = new Date().getFullYear();
-              const filteredHistory = history.filter((item) => {
-                if (!item.rawDate) return true;
-                const d = new Date(item.rawDate);
-                if (isNaN(d.getTime())) return true;
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                        <Lock className="h-3.5 w-3.5 text-indigo-600" />
+                        마이페이지 로그인 비밀번호 설정
+                      </Label>
+                      <Input
+                        type="password"
+                        value={profilePassword}
+                        onChange={(e) => setProfilePassword(e.target.value)}
+                        placeholder="새 비밀번호 입력 (4자리 이상)"
+                        className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                      />
+                    </div>
 
-                if (quickRange === 'THIS_YEAR') return d.getFullYear() === currentYear;
-                if (quickRange === 'LAST_YEAR') return d.getFullYear() === currentYear - 1;
-                if (quickRange === 'CUSTOM') {
-                  if (startDate && d < new Date(startDate)) return false;
-                  if (endDate && d > new Date(endDate + 'T23:59:59')) return false;
-                  return true;
-                }
-                return true; // 'ALL'
-              });
-
-              const filteredTotal = filteredHistory.reduce((sum, item) => sum + (item.amount || 0), 0);
-              const filteredCount = filteredHistory.length;
-
-              // 📄 10개씩 페이징 계산
-              const totalPages = Math.ceil(filteredCount / ITEMS_PER_PAGE) || 1;
-              const paginatedHistory = filteredHistory.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-              const rangeText = quickRange === 'THIS_YEAR'
-                ? `올해 (${currentYear}년)`
-                : quickRange === 'LAST_YEAR'
-                ? `작년 (${currentYear - 1}년)`
-                : quickRange === 'CUSTOM'
-                ? (startDate || endDate ? `${startDate || '최초'} ~ ${endDate || '현재'}` : '선택 기간')
-                : '전체 기간';
-
-              return (
-                <>
-                  {/* Stats Summary 카드 */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card className="bg-white border-none shadow-xs">
-                      <CardContent className="pt-6">
-                        <p className="text-xs text-muted-foreground mb-1 font-bold">
-                          {rangeText} 총 {currentTenant.terminology.donation}
-                        </p>
-                        <p className="text-2xl font-black" style={{ color: currentTenant.primaryColor }}>
-                          {filteredTotal.toLocaleString()}원
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-white border-none shadow-xs">
-                      <CardContent className="pt-6">
-                        <p className="text-xs text-muted-foreground mb-1 font-bold">
-                          {rangeText} 참여 횟수
-                        </p>
-                        <p className="text-2xl font-black">{filteredCount}회</p>
-                      </CardContent>
-                    </Card>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                        비밀번호 확인
+                      </Label>
+                      <Input
+                        type="password"
+                        value={profilePasswordConfirm}
+                        onChange={(e) => setProfilePasswordConfirm(e.target.value)}
+                        placeholder="비밀번호 재입력 확인"
+                        className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                      />
+                    </div>
                   </div>
 
-                  {/* History List */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-zinc-200">
-                        <History className="h-5 w-5 text-[#3182F6]" />
-                        <span>봉헌 상세 내역 ({filteredCount}건)</span>
-                      </h3>
-                      <span className="text-xs text-slate-500 font-semibold">{rangeText} 조회 기준 (페이지 {currentPage}/{totalPages})</span>
+                  {/* 🏠 우편번호 검색 및 상세주소 분리 입력 섹션 */}
+                  <div className="space-y-2 border-t border-slate-100 dark:border-zinc-800 pt-3">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-indigo-600" />
+                        기부자 주소 (기부금영수증 및 우편용)
+                      </span>
+                      <span className="text-[11px] text-indigo-600 font-semibold">· 다음/카카오 우편번호 검색 지원</span>
+                    </Label>
+                    
+                    {/* 우편번호 & 우편번호 검색 버튼 */}
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={profileZonecode}
+                        readOnly
+                        placeholder="우편번호"
+                        className="w-32 text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 border-slate-200 text-slate-600"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSearchAddress}
+                        className="h-10 text-xs font-bold px-3.5 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                        우편번호 검색
+                      </Button>
                     </div>
 
-                    {filteredHistory.length === 0 ? (
-                      <Card className="p-8 text-center bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                        <AlertCircle className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
-                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1">
-                          선택하신 기간({rangeText})에 등록된 보시/헌금 내역이 없습니다.
+                    {/* 기본 주소 */}
+                    <Input
+                      type="text"
+                      value={profileAddress}
+                      onChange={(e) => setProfileAddress(e.target.value)}
+                      placeholder="우편번호 검색을 이용하시거나 도로명/지번 기본주소를 입력해 주세요"
+                      className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                    />
+
+                    {/* 상세 주소 */}
+                    <Input
+                      type="text"
+                      value={profileAddressDetail}
+                      onChange={(e) => setProfileAddressDetail(e.target.value)}
+                      placeholder="상세주소를 입력해 주세요 (예: 101동 1002호 / 2층)"
+                      className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200 font-medium text-slate-900 dark:text-zinc-100"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      onClick={handleSaveProfile}
+                      disabled={isSavingProfile}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-5 rounded-xl cursor-pointer shadow-xs gap-1.5"
+                    >
+                      {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      내 정보 수정사항 저장
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* TAB 2: ⚡ 정기결제 */}
+            {activeTab === 'recurring' && (
+              (hasRecurringSupport || subscriptions.length > 0) ? (
+                <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
+                  <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+                        <span>⚡ 내 정기{currentTenant.terminology.donation} 셀프 관리</span>
+                      </CardTitle>
+                      <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+                    </div>
+                    <CardDescription className="text-xs text-indigo-700 dark:text-indigo-400">
+                      매월 자동 청구되는 정기 {currentTenant.terminology.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-3">
+                    {subscriptions.length === 0 ? (
+                      <div className="text-center py-6 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900">
+                        <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-3">
+                          현재 매월 자동 청구 등록된 정기 {currentTenant.terminology.donation}이(가) 없습니다.
                         </p>
-                        <p className="text-xs text-zinc-500">
-                          상단의 [전체] 또는 [직접 입력] 버튼을 눌러 다른 기간으로 조회해 보세요.
-                        </p>
-                      </Card>
+                        {/* 정기결제/정기보시를 지원하는 단체인 경우에만 신청하기 버튼 노출 */}
+                        {hasRecurringSupport && (
+                          <Button
+                            size="sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-xs"
+                            onClick={() => {
+                              const recurringItem = effectiveItems.find(i => i.enabled !== false && i.allowRecurring !== false) || (effectiveItems.length > 0 ? effectiveItems[0] : null);
+                              navigate(`/${tenantSlug}/donate`, { state: { selectedItem: recurringItem, isRecurring: true } });
+                            }}
+                          >
+                            ⚡ 정기 {currentTenant.terminology.donation} 신청하러 가기
+                          </Button>
+                        )}
+                      </div>
                     ) : (
-                      <>
-                        <div className="space-y-3">
-                          {paginatedHistory.map((item) => (
-                            <Card key={item.id} className="overflow-hidden hover:shadow-md transition-all border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-2xl">
-                              <div className="flex">
-                                {/* Left Primary Color Accent Bar */}
-                                <div 
-                                  className="w-2 flex-shrink-0" 
-                                  style={{ backgroundColor: currentTenant.primaryColor }}
-                                />
-                                <div className="flex-1 p-4 sm:p-5">
-                                  <div className="flex justify-between items-start mb-2 gap-2">
-                                    <div>
-                                      <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                                        <Badge variant="outline" className="text-xs font-bold border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
-                                          {item.itemName}
-                                        </Badge>
-                                        {item.isRecurring && (
-                                          <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 text-[11px] font-bold border-none px-2 py-0.5">
-                                            ⚡ 정기
-                                          </Badge>
-                                        )}
-                                        {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
-                                          <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-800 border-amber-300 font-bold px-2 py-0.5">
-                                            🖥️ 현장 키오스크 결제
-                                          </Badge>
-                                        ) : (
-                                          <Badge variant="outline" className="text-[11px] bg-slate-50 text-slate-700 border-slate-300 font-semibold px-2 py-0.5">
-                                            📱 온라인 웹/모바일 결제
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <h4 className="text-xl font-extrabold tracking-tight" style={{ color: currentTenant.primaryColor }}>
-                                        {item.amount.toLocaleString()}원
-                                      </h4>
-                                    </div>
-
-                                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border-none px-2.5 py-1 flex items-center gap-1 font-bold text-xs">
-                                      <CheckCircle2 className="h-3.5 w-3.5" />
-                                      {item.status}
-                                    </Badge>
-                                  </div>
-
-                                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono">
-                                      <Calendar className="h-3.5 w-3.5 text-[#3182F6]" />
-                                      <span>{item.date}</span>
-                                      <span className="text-slate-300 dark:text-zinc-700">|</span>
-                                      <span className="text-slate-600 dark:text-zinc-300 font-sans">{item.paymentMethod}</span>
-                                    </div>
-
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      className="h-8 px-3 text-xs font-bold text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-300 dark:border-zinc-700 rounded-xl cursor-pointer shadow-xs"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedReceiptData({
-                                          receiptId: item.id,
-                                          donorName: item.name,
-                                          donorPhone: item.phone,
-                                          amount: item.amount,
-                                          itemName: item.itemName,
-                                          date: item.date,
-                                        });
-                                      }}
-                                    >
-                                      <Download className="h-3.5 w-3.5 mr-1 text-slate-500" />
-                                      영수증 PDF
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
+                    subscriptions.map(sub => (
+                      <div key={sub.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
+                        <div>
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-bold text-sm">{sub.itemName}</h4>
+                            <Badge className={sub.status === 'active' ? 'bg-green-100 text-green-800' : sub.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}>
+                              {sub.status === 'active' ? '🟢 이용 중' : sub.status === 'paused' ? '🟡 일시정지' : '🔴 해지 완료'}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-zinc-500 space-y-0.5">
+                            <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> ({sub.recurringInterval === 'daily' ? '매일 자동결제' : sub.recurringInterval === 'weekly' ? `매주 (${sub.recurringDayOfWeek || '일'})요일` : `매월 ${sub.recurringDay || 10}일`})</p>
+                            <p>· 결제카드: {sub.cardName || '신용카드'} ({sub.cardNo || '****-****'})</p>
+                          </div>
                         </div>
 
-                        {/* 📄 10개씩 페이징 컨트롤 바 */}
-                        {totalPages > 1 && (
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-600 dark:text-zinc-400">
-                            <div>
-                              전체 <strong className="text-slate-900 dark:text-zinc-100">{filteredCount}</strong>건 중{' '}
-                              <strong className="text-[#3182F6]">{(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredCount)}</strong>건 표시
-                            </div>
-
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors"
+                        {sub.status !== 'cancelled' && (
+                          <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                            {sub.status === 'active' ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer"
+                                onClick={() => handleUpdateSubStatus(sub.id, 'paused')}
                               >
-                                ◀ 이전
-                              </button>
-
-                              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => setCurrentPage(pageNum)}
-                                  className={`w-8 h-8 rounded-lg text-xs font-black cursor-pointer border transition-all ${
-                                    currentPage === pageNum
-                                      ? 'bg-[#3182F6] text-white border-[#3182F6] shadow-xs'
-                                      : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 text-slate-700 dark:text-zinc-300'
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              ))}
-
-                              <button
-                                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors"
+                                🟡 다음 달 쉬기 (일시정지)
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 text-xs border-green-300 text-green-700 hover:bg-green-50 cursor-pointer font-bold"
+                                onClick={() => handleUpdateSubStatus(sub.id, 'active')}
                               >
-                                다음 ▶
-                              </button>
-                            </div>
+                                🟢 정기 {currentTenant.terminology.donation} 재개
+                              </Button>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="flex-1 text-xs cursor-pointer font-bold"
+                              onClick={() => handleUpdateSubStatus(sub.id, 'cancelled')}
+                            >
+                              🔴 정기 {currentTenant.terminology.donation} 중단 (해지)
+                            </Button>
                           </div>
                         )}
-                      </>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+              ) : (
+                <Card className="p-8 text-center bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                  <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    현재 매월 자동 청구 등록된 정기 {currentTenant.terminology.donation}이(가) 없습니다.
+                  </p>
+                </Card>
+              )
+            )}
 
-            <Card className="bg-amber-50 border-amber-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2 text-amber-800">
-                  <AlertCircle className="h-5 w-5" />
-                  <CardTitle className="text-base font-bold">연말정산 안내</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="text-sm text-amber-700">
-                기부금 영수증 발급을 원하시는 경우 각 항목 옆의 <strong>[기부금 영수증 PDF]</strong> 버튼을 누르시면 국세청 표준 양식 영수증을 즉시 출력/저장하실 수 있습니다.
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  variant="outline" 
-                  className="w-full bg-white border-amber-200 text-amber-800 hover:bg-amber-100 font-bold"
-                  onClick={() => navigate(`/${tenantSlug}/tax-receipt`)}
-                >
-                  국세청 자동 간소화 제출 신청하기
-                </Button>
-              </CardFooter>
-            </Card>
+            {/* TAB 3: 📋 봉헌 내역 (Default) */}
+            {activeTab === 'history' && (
+              <div className="space-y-6">
+                {/* 📅 기간 지정 필터 바 */}
+                <Card className="bg-white border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-[#3182F6]" />
+                      <span>📅 봉헌 내역 기간 지정</span>
+                    </span>
+
+                    {/* 퀵 렌지 선택 버튼 */}
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { key: 'THIS_YEAR', label: `올해 (${new Date().getFullYear()}년)` },
+                        { key: 'LAST_YEAR', label: `작년 (${new Date().getFullYear() - 1}년)` },
+                        { key: 'ALL', label: '전체' },
+                        { key: 'CUSTOM', label: '직접 입력' },
+                      ].map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => setQuickRange(key as any)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer border transition-all ${
+                            quickRange === key
+                              ? 'bg-[#3182F6] text-white border-[#3182F6] shadow-xs'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 직접 기간 입력 날짜 선택기 */}
+                  {quickRange === 'CUSTOM' && (
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs animate-in fade-in duration-150">
+                      <span className="font-bold text-slate-600 dark:text-zinc-400">조회 시작일:</span>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
+                      />
+                      <span className="text-slate-400 font-bold">~</span>
+                      <span className="font-bold text-slate-600 dark:text-zinc-400">종료일:</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
+                      />
+                      {(startDate || endDate) && (
+                        <button
+                          onClick={() => { setStartDate(''); setEndDate(''); }}
+                          className="text-[11px] font-bold text-red-500 underline ml-auto cursor-pointer"
+                        >
+                          날짜 초기화
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </Card>
+
+                {/* 📊 동적 기간 지정 필터링 로직 계산 */}
+                {(() => {
+                  const currentYear = new Date().getFullYear();
+                  const filteredHistory = history.filter((item) => {
+                    if (!item.rawDate) return true;
+                    const d = new Date(item.rawDate);
+                    if (isNaN(d.getTime())) return true;
+
+                    if (quickRange === 'THIS_YEAR') return d.getFullYear() === currentYear;
+                    if (quickRange === 'LAST_YEAR') return d.getFullYear() === currentYear - 1;
+                    if (quickRange === 'CUSTOM') {
+                      if (startDate && d < new Date(startDate)) return false;
+                      if (endDate && d > new Date(endDate + 'T23:59:59')) return false;
+                      return true;
+                    }
+                    return true; // 'ALL'
+                  });
+
+                  const filteredTotal = filteredHistory.reduce((sum, item) => sum + (item.amount || 0), 0);
+                  const filteredCount = filteredHistory.length;
+
+                  // 📄 10개씩 페이징 계산
+                  const totalPages = Math.ceil(filteredCount / ITEMS_PER_PAGE) || 1;
+                  const paginatedHistory = filteredHistory.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+                  const rangeText = quickRange === 'THIS_YEAR'
+                    ? `올해 (${currentYear}년)`
+                    : quickRange === 'LAST_YEAR'
+                    ? `작년 (${currentYear - 1}년)`
+                    : quickRange === 'CUSTOM'
+                    ? (startDate || endDate ? `${startDate || '최초'} ~ ${endDate || '현재'}` : '선택 기간')
+                    : '전체 기간';
+
+                  return (
+                    <>
+                      {/* Stats Summary 카드 */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <Card className="bg-white border-none shadow-xs">
+                          <CardContent className="pt-6">
+                            <p className="text-xs text-muted-foreground mb-1 font-bold">
+                              {rangeText} 총 {currentTenant.terminology.donation}
+                            </p>
+                            <p className="text-2xl font-black" style={{ color: currentTenant.primaryColor }}>
+                              {filteredTotal.toLocaleString()}원
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-white border-none shadow-xs">
+                          <CardContent className="pt-6">
+                            <p className="text-xs text-muted-foreground mb-1 font-bold">
+                              {rangeText} 참여 횟수
+                            </p>
+                            <p className="text-2xl font-black">{filteredCount}회</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* History List */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-zinc-200">
+                            <History className="h-5 w-5 text-[#3182F6]" />
+                            <span>봉헌 상세 내역 ({filteredCount}건)</span>
+                          </h3>
+                          <span className="text-xs text-slate-500 font-semibold">{rangeText} 조회 기준 (페이지 {currentPage}/{totalPages})</span>
+                        </div>
+
+                        {filteredHistory.length === 0 ? (
+                          <Card className="p-8 text-center bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                            <AlertCircle className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
+                            <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1">
+                              선택하신 기간({rangeText})에 등록된 보시/헌금 내역이 없습니다.
+                            </p>
+                            <p className="text-xs text-zinc-500">
+                              상단의 [전체] 또는 [직접 입력] 버튼을 눌러 다른 기간으로 조회해 보세요.
+                            </p>
+                          </Card>
+                        ) : (
+                          <>
+                            <div className="space-y-3">
+                              {paginatedHistory.map((item) => (
+                                <Card key={item.id} className="overflow-hidden hover:shadow-md transition-all border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-2xl">
+                                  <div className="flex">
+                                    {/* Left Primary Color Accent Bar */}
+                                    <div 
+                                      className="w-2 flex-shrink-0" 
+                                      style={{ backgroundColor: currentTenant.primaryColor }}
+                                    />
+                                    <div className="flex-1 p-4 sm:p-5">
+                                      <div className="flex justify-between items-start mb-2 gap-2">
+                                        <div>
+                                          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                            <Badge variant="outline" className="text-xs font-bold border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
+                                              {item.itemName}
+                                            </Badge>
+                                            {item.isRecurring && (
+                                              <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 text-[11px] font-bold border-none px-2 py-0.5">
+                                                ⚡ 정기
+                                              </Badge>
+                                            )}
+                                            {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
+                                              <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-800 border-amber-300 font-bold px-2 py-0.5">
+                                                🖥️ 현장 키오스크 결제
+                                              </Badge>
+                                            ) : (
+                                              <Badge variant="outline" className="text-[11px] bg-slate-50 text-slate-700 border-slate-300 font-semibold px-2 py-0.5">
+                                                📱 온라인 웹/모바일 결제
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <h4 className="text-xl font-extrabold tracking-tight" style={{ color: currentTenant.primaryColor }}>
+                                            {item.amount.toLocaleString()}원
+                                          </h4>
+                                        </div>
+
+                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border-none px-2.5 py-1 flex items-center gap-1 font-bold text-xs">
+                                          <CheckCircle2 className="h-3.5 w-3.5" />
+                                          {item.status}
+                                        </Badge>
+                                      </div>
+
+                                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono">
+                                          <Calendar className="h-3.5 w-3.5 text-[#3182F6]" />
+                                          <span>{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-700">|</span>
+                                          <span className="text-slate-600 dark:text-zinc-300 font-sans">{item.paymentMethod}</span>
+                                        </div>
+
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="h-8 px-3 text-xs font-bold text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-300 dark:border-zinc-700 rounded-xl cursor-pointer shadow-xs"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedReceiptData({
+                                              receiptId: item.id,
+                                              donorName: item.name,
+                                              donorPhone: item.phone,
+                                              amount: item.amount,
+                                              itemName: item.itemName,
+                                              date: item.date,
+                                            });
+                                          }}
+                                        >
+                                          <Download className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                          영수증 PDF
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+
+                            {/* 📄 10개씩 페이징 컨트롤 바 */}
+                            {totalPages > 1 && (
+                              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                                <div>
+                                  전체 <strong className="text-slate-900 dark:text-zinc-100">{filteredCount}</strong>건 중{' '}
+                                  <strong className="text-[#3182F6]">{(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredCount)}</strong>건 표시
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors"
+                                  >
+                                    ◀ 이전
+                                  </button>
+
+                                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                                    <button
+                                      key={pageNum}
+                                      onClick={() => setCurrentPage(pageNum)}
+                                      className={`w-8 h-8 rounded-lg text-xs font-black cursor-pointer border transition-all ${
+                                        currentPage === pageNum
+                                          ? 'bg-[#3182F6] text-white border-[#3182F6] shadow-xs'
+                                          : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 text-slate-700 dark:text-zinc-300'
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  ))}
+
+                                  <button
+                                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors"
+                                  >
+                                    다음 ▶
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2 text-amber-800">
+                      <AlertCircle className="h-5 w-5" />
+                      <CardTitle className="text-base font-bold">연말정산 안내</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-sm text-amber-700">
+                    기부금 영수증 발급을 원하시는 경우 각 항목 옆의 <strong>[기부금 영수증 PDF]</strong> 버튼을 누르시면 국세청 표준 양식 영수증을 즉시 출력/저장하실 수 있습니다.
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      variant="outline" 
+                      className="w-full bg-white border-amber-200 text-amber-800 hover:bg-amber-100 font-bold"
+                      onClick={() => navigate(`/${tenantSlug}/tax-receipt`)}
+                    >
+                      국세청 자동 간소화 제출 신청하기
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            )}
 
             <Button 
               variant="ghost" 
