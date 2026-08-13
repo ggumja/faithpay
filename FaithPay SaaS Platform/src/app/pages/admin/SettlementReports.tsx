@@ -43,15 +43,18 @@ export default function SettlementReports() {
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
   const [cancelledDonations, setCancelledDonations] = useState<any[]>([]);
   const [dbDonations, setDbDonations] = useState<any[]>([]);
+  const [summaryStats, setSummaryStats] = useState({
+    monthlyTotal: 0,
+    pgFee: 0,
+    finalDeposit: 0,
+    currentMonthName: `${new Date().getFullYear()}년 ${String(new Date().getMonth() + 1).padStart(2, '0')}월`,
+    settlementDateStr: `익월 5일 (토스 입금)`
+  });
 
   // PG 계약 수수료율 (각원사의 경우 3.0%, 단체별 설정값 반영)
   const contractRate = currentTenant?.paymentConfig?.contractRate ?? (
     currentTenant?.slug === 'gakwonsa' || currentTenant?.name?.includes('각원사') ? 3.0 : 3.0
   );
-
-  const monthlyTotal = 84215000;
-  const pgFee = Math.round(monthlyTotal * (contractRate / 100));
-  const finalDeposit = monthlyTotal - pgFee;
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -60,7 +63,7 @@ export default function SettlementReports() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // DB에서 실제 결제 및 승인 취소 내역 조회
+  // DB에서 실제 결제 및 승인 취소 내역 조회 및 월별 정산 집계
   useEffect(() => {
     if (!currentTenant?.id && !tenantSlug) return;
     const targetTenantId = currentTenant?.id || tenantSlug;
@@ -72,11 +75,80 @@ export default function SettlementReports() {
           const formatted = assignSequentialDonationIds(res.data);
           setDbDonations(formatted);
 
-          // 🔴 승인 취소 및 취소 실패 건 필터링 (DB 실데이터)
+          // 1. 🔴 승인 취소 및 취소 실패 건 필터링 (DB 실데이터)
           const cancelled = formatted.filter(
             (d: any) => d.paymentStatus === 'cancelled' || d.paymentStatus === 'cancel_failed'
           );
           setCancelledDonations(cancelled);
+
+          // 2. 🟢 결제 완료건 월별 그룹화 집계 (DB 실데이터)
+          const monthlyMap: Record<string, { total: number; cancelled: number }> = {};
+          
+          const now = new Date();
+          const curMonthKey = `${now.getFullYear()}년 ${String(now.getMonth() + 1).padStart(2, '0')}월`;
+
+          formatted.forEach((d: any) => {
+            const rawDate = d.createdAt || d.created_at || d.date;
+            const parsedDate = rawDate ? new Date(rawDate) : new Date();
+            const validDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+            const mKey = `${validDate.getFullYear()}년 ${String(validDate.getMonth() + 1).padStart(2, '0')}월`;
+
+            if (!monthlyMap[mKey]) {
+              monthlyMap[mKey] = { total: 0, cancelled: 0 };
+            }
+
+            if (d.paymentStatus === 'completed') {
+              monthlyMap[mKey].total += Number(d.amount || 0);
+            } else if (d.paymentStatus === 'cancelled') {
+              monthlyMap[mKey].cancelled += Number(d.amount || 0);
+            }
+          });
+
+          if (Object.keys(monthlyMap).length === 0) {
+            monthlyMap[curMonthKey] = { total: 0, cancelled: 0 };
+          }
+
+          const sortedMonths = Object.keys(monthlyMap).sort((a, b) => b.localeCompare(a));
+
+          const processedMonthly = sortedMonths.map((mKey) => {
+            const data = monthlyMap[mKey];
+            const totalDonations = data.total;
+            const pgFees = Math.round(totalDonations * (contractRate / 100));
+            const netAmount = Math.max(0, totalDonations - pgFees - data.cancelled);
+            
+            const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
+            const yearNum = parseInt(yStr, 10);
+            const monthNum = parseInt(mStr, 10);
+            let nextY = yearNum;
+            let nextM = monthNum + 1;
+            if (nextM > 12) {
+              nextY += 1;
+              nextM = 1;
+            }
+            const settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05`;
+            const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
+
+            return {
+              month: mKey,
+              totalDonations,
+              pgFees,
+              cancelledAmount: data.cancelled,
+              netAmount,
+              settlementDate,
+              status: isPast ? '완료' : '정산 예정',
+            };
+          });
+
+          setMonthlySettlement(processedMonthly);
+
+          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: '익월 5일' };
+          setSummaryStats({
+            monthlyTotal: latestMonthData.totalDonations,
+            pgFee: latestMonthData.pgFees,
+            finalDeposit: latestMonthData.netAmount,
+            currentMonthName: latestMonthData.month,
+            settlementDateStr: `${latestMonthData.settlementDate} (토스 입금)`,
+          });
         }
       } catch (err) {
         console.warn('DB 정산 내역 로딩 실패:', err);
@@ -84,24 +156,6 @@ export default function SettlementReports() {
     };
 
     fetchRealSettlements();
-
-    const rawData = [
-      { month: '2026년 03월', totalDonations: 84215000, settlementDate: '2026-04-05', status: '완료' },
-      { month: '2026년 02월', totalDonations: 53200000, settlementDate: '2026-03-05', status: '완료' },
-      { month: '2026년 01월', totalDonations: 48900000, settlementDate: '2026-02-05', status: '완료' },
-    ];
-
-    const processed = rawData.map(item => {
-      const pgFees = Math.round(item.totalDonations * (contractRate / 100));
-      const netAmount = item.totalDonations - pgFees;
-      return {
-        ...item,
-        pgFees,
-        netAmount,
-      };
-    });
-
-    setMonthlySettlement(processed);
   }, [contractRate, currentTenant, tenantSlug]);
 
 
@@ -269,13 +323,13 @@ export default function SettlementReports() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 총 봉헌액</CardTitle>
+                <CardTitle className="text-sm font-medium">이번 달 총 봉헌액 ({summaryStats.currentMonthName})</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{monthlyTotal.toLocaleString()}원</div>
+                <div className="text-2xl font-bold">{summaryStats.monthlyTotal.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <TrendingUp className="h-3 w-3 inline text-green-600 mr-1" />
-                  <span className="text-green-600">+58.3%</span> vs 전월
+                  <TrendingUp className="h-3 w-3 inline text-indigo-600 mr-1" />
+                  <span>실시간 DB 승인 누적</span>
                 </p>
               </CardContent>
             </Card>
@@ -285,8 +339,8 @@ export default function SettlementReports() {
                 <CardTitle className="text-sm font-medium">PG 수수료 ({contractRate}%)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{pgFee.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">{contractRate}% (토스 PG)</p>
+                <div className="text-2xl font-bold text-orange-600">{summaryStats.pgFee.toLocaleString()}원</div>
+                <p className="text-xs text-muted-foreground mt-1">{contractRate}% (토스페이먼츠 PG)</p>
               </CardContent>
             </Card>
 
@@ -295,10 +349,10 @@ export default function SettlementReports() {
                 <CardTitle className="text-sm font-medium">단체 계좌 최종 입금액</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{finalDeposit.toLocaleString()}원</div>
+                <div className="text-2xl font-bold text-green-600">{summaryStats.finalDeposit.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <Calendar className="h-3 w-3 inline mr-1" />
-                  정산일: 2026-04-05 (토스 입금)
+                  정산일: {summaryStats.settlementDateStr}
                 </p>
               </CardContent>
             </Card>
