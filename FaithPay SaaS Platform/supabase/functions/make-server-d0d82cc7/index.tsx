@@ -708,6 +708,20 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
   }
 });
 
+// 신도 휴대폰 번호 기반 정기결제 약정 목록 조회
+const handleGetSubscriptionsByPhone = async (c: any) => {
+  try {
+    const rawPhone = c.req.param("phone");
+    const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
+    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
+    return c.json({ success: true, data: subscriptions });
+  } catch (error) {
+    return c.json({ success: false, error: "Failed to fetch subscriptions" }, 500);
+  }
+};
+app.get("/make-server-d0d82cc7/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
+app.get("/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
+
 // 비회원 정기결제 중단/일시정지 상태 변경
 app.post("/make-server-d0d82cc7/subscriptions/:id/status", async (c) => {
   try {

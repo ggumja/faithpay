@@ -323,6 +323,11 @@ export const otpAuthAPI = {
 };
 
 export const subscriptionAPI = {
+  async getByPhone(phone: string): Promise<APIResponse<any[]>> {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    return fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`);
+  },
+
   async updateStatus(id: string, status: 'active' | 'paused' | 'cancelled'): Promise<APIResponse<{ subscription: any }>> {
     return fetchAPI<{ subscription: any }>(`/subscriptions/${id}/status`, {
       method: 'POST',

@@ -952,6 +952,21 @@ export async function getSubscriptionsByPhone(phone: string): Promise<Subscripti
     const s = await kv.get<Subscription>(`subscription:${id}`);
     if (s) subs.push(s);
   }
+
+  // 전체 subscription 접두사 백업 검색으로 누락 없는 100% 매칭 보장
+  try {
+    const allSubs = await kv.getByPrefix<Subscription>('subscription:');
+    for (const s of allSubs) {
+      if (s && s.donorPhone && s.donorPhone.replace(/[^0-9]/g, '') === cleanPhone) {
+        if (!subs.some(existing => existing.id === s.id)) {
+          subs.push(s);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Fallback subscription prefix search error:", e);
+  }
+
   return subs;
 }
 
