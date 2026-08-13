@@ -58,6 +58,42 @@ export interface MenuPermissionItem {
   groupPermissions: Record<string, PermissionLevel>; // groupId -> PermissionLevel
 }
 
+/**
+ * 숫지만 추출하여 저장용으로 반환 (예: "010-1234-5678" -> "01012345678")
+ */
+export const stripPhoneDigits = (phone: string): string => {
+  return phone.replace(/[^0-9]/g, '');
+};
+
+/**
+ * 한국 전화번호 자동 하이픈 포맷터 (입력창 및 화면 표출용)
+ * 010-1234-5678, 02-1234-5678, 031-123-4567 등 대응
+ */
+export const formatPhoneNumber = (phone: string): string => {
+  if (!phone || phone === '미입력') return phone || '';
+  const digits = phone.replace(/[^0-9]/g, '');
+  if (!digits) return phone;
+
+  if (digits.startsWith('02')) {
+    // 서울 지역번호 (02)
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6, 10)}`;
+  }
+
+  // 대표번호 1588, 1600 등 (8자리)
+  if (digits.length === 8 && (digits.startsWith('15') || digits.startsWith('16') || digits.startsWith('18'))) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+
+  // 일반 휴대폰 (010...) 및 지역번호 (031, 042...)
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  if (digits.length <= 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+};
+
 export default function AdminAccountManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
@@ -300,7 +336,7 @@ export default function AdminAccountManagement() {
       id: `staff_${Date.now()}`,
       name: newName.trim(),
       email: cleanEmail,
-      phone: newPhone.trim() || '미입력',
+      phone: stripPhoneDigits(newPhone) || '미입력',
       groupId: selectedGroupId,
       status: 'active',
       createdAt: new Date().toISOString().slice(0, 10),
@@ -324,8 +360,7 @@ export default function AdminAccountManagement() {
     setEditingStaff(staff);
     setEditName(staff.name);
     setEditEmail(staff.email);
-    setEditPhone(staff.phone);
-    setEditGroupId(staff.groupId);
+    setEditPhone(formatPhoneNumber(staff.phone));
     setIsEditStaffModalOpen(true);
   };
 
@@ -351,7 +386,7 @@ export default function AdminAccountManagement() {
               ...s,
               name: editName.trim(),
               email: cleanEmail,
-              phone: editPhone.trim() || '미입력',
+              phone: stripPhoneDigits(editPhone) || '미입력',
               groupId: editGroupId,
             }
           : s
@@ -578,7 +613,7 @@ export default function AdminAccountManagement() {
                           <TableCell className="text-slate-600 text-xs font-mono">
                             <div className="flex items-center gap-1.5">
                               <Phone className="h-3.5 w-3.5 text-slate-400" />
-                              {staff.phone}
+                              {formatPhoneNumber(staff.phone)}
                             </div>
                           </TableCell>
                           <TableCell>{renderGroupBadge(staff.groupId)}</TableCell>
@@ -872,7 +907,7 @@ export default function AdminAccountManagement() {
                 type="tel"
                 placeholder="010-0000-0000"
                 value={newPhone}
-                onChange={(e) => setNewPhone(e.target.value)}
+                onChange={(e) => setNewPhone(formatPhoneNumber(e.target.value))}
                 autoComplete="off"
                 aria-autocomplete="none"
                 name="staff_phone_no_fill"
@@ -958,8 +993,8 @@ export default function AdminAccountManagement() {
               <Input
                 type="tel"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                placeholder="연락처 입력"
+                onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
+                placeholder="010-0000-0000"
               />
             </div>
 
