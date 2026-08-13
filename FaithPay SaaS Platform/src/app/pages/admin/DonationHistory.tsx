@@ -304,8 +304,7 @@ export default function DonationHistory() {
   const [isOtpLoading, setIsOtpLoading] = useState(false);
   const [isOtpVerified, setIsOtpVerified] = useState(false);
 
-  // Filter states & Tab State
-  const [activeTab, setActiveTab] = useState<'history' | 'recurring_pending'>('history');
+  // Filter states
   const [showFailed, setShowFailed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -912,124 +911,7 @@ export default function DonationHistory() {
               </div>
             )}
 
-            {/* Tab Navigation: 실제 결제 내역 vs 정기결제 결제대기 목록 */}
-            <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-6 gap-2">
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
-                  activeTab === 'history'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                <span>📜 실제 승인/입금 내역</span>
-                <Badge variant="secondary" className="text-xs font-semibold">
-                  {filteredDonations.length}건
-                </Badge>
-              </button>
 
-              <button
-                onClick={() => setActiveTab('recurring_pending')}
-                className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
-                  activeTab === 'recurring_pending'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                <span>🗓️ 정기결제 결제대기 (미래 결제예정) 목록</span>
-                <Badge className={recurringPendingDonations.length > 0 ? "bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs font-bold" : "bg-zinc-100 text-zinc-600 text-xs font-normal"}>
-                  {recurringPendingDonations.length}건
-                </Badge>
-              </button>
-            </div>
-
-            {activeTab === 'recurring_pending' ? (
-              <Card className="mb-8 border border-amber-200 bg-amber-50/30">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-amber-950">
-                        <span>🗓️ 정기결제 결제대기 (미래 자동 결제 예정)</span>
-                      </CardTitle>
-                      <CardDescription className="text-xs text-amber-800/80 mt-1">
-                        미래 특정 날짜에 자동 이체/청구될 정기결제 대기 건들입니다. 승인 완료된 실시간 결제 내역과 구분하여 별도 관리합니다.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {recurringPendingDonations.length === 0 ? (
-                    <div className="text-center py-12 text-zinc-500 space-y-2">
-                      <Calendar className="h-8 w-8 mx-auto text-zinc-400" />
-                      <p className="font-semibold text-sm">현재 대기 중인 미래 정기결제 예약 건이 없습니다.</p>
-                      <p className="text-xs text-zinc-400">정기결제 신규 신청 시 다음 청구 예정일로 자동 예약됩니다.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>봉헌번호</TableHead>
-                            <TableHead>결제 예정일</TableHead>
-                            <TableHead>신청자</TableHead>
-                            <TableHead>봉헌항목</TableHead>
-                            <TableHead className="text-right">약정 금액</TableHead>
-                            <TableHead>결제방법</TableHead>
-                            <TableHead>상태</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {recurringPendingDonations.map((donation) => {
-                            const createdDate = new Date(donation.createdAt);
-                            const isValidDate = !isNaN(createdDate.getTime());
-                            const dateStr = isValidDate ? createdDate.toLocaleDateString('ko-KR') : '-';
-                            const isAnonymous = !donation.donorName || donation.donorName === '무기명';
-
-                            return (
-                              <TableRow key={donation.id}>
-                                <TableCell className="font-mono text-xs font-semibold text-slate-700">
-                                  {donation.id}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="text-sm font-semibold text-amber-900">
-                                    {dateStr} (예정)
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="font-medium text-slate-900">
-                                    {isAnonymous ? '무기명' : donation.donorName}
-                                  </div>
-                                  {donation.donorPhone && (
-                                    <div className="text-xs text-muted-foreground">
-                                      {formatPhoneNumber(donation.donorPhone)}
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell className="font-medium">{donation.itemName || '일반헌금/보시'}</TableCell>
-                                <TableCell className="text-right font-bold text-slate-900">
-                                  {(donation.amount || 0).toLocaleString()}원
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                                    정기결제 ({donation.paymentMethod || '신용카드'})
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
-                                    🗓️ 결제예정
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <>
                 {/* Statistics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                   <Card>
@@ -1394,8 +1276,6 @@ export default function DonationHistory() {
                     )}
                   </CardContent>
                 </Card>
-              </>
-            )}
 
             {/* Detail Modal */}
             {selectedDonation && (
