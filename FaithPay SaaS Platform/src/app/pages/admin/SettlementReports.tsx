@@ -398,56 +398,106 @@ export default function SettlementReports() {
             </div>
           </div>
 
-          {/* Toss Payments v2 Payouts Split Settlement Live Status Card */}
-          <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-3 bg-blue-600 rounded-lg text-white font-bold text-lg flex items-center justify-center">
-                    TOSS
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg text-slate-900">토스페이먼츠 v2 스플릿 정산 (지급대행)</h3>
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">KYC 승인완료 (APPROVED)</Badge>
-                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">JWE 암호화 적용</Badge>
+          {/* Dynamic PG Provider Settlement Status Banner (Toss vs Nanopay) */}
+          {paymentConfig?.pgProvider === 'nanopay' ? (
+            <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 bg-purple-600 rounded-lg text-white font-bold text-base flex items-center justify-center shadow-xs">
+                      NANO
                     </div>
-                    <p className="text-xs text-slate-600 mt-1">
-                      공식 API 엔드포인트 <code className="bg-white px-1 py-0.5 rounded text-blue-700 font-mono">POST /v2/payouts</code> 기반 자동 분할 정산이 활성화되어 있습니다.
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg text-slate-900">나노PG (Nanopay / 스몰비) 가맹점 정산</h3>
+                        <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-semibold">AES-256 암호화 연동</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-semibold">가맹점 원장 검증 (AUDIT)</Badge>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">
+                        상점식별코드 <code className="bg-white px-1 py-0.5 rounded text-purple-700 font-mono font-bold">{paymentConfig?.mid || '240000006'}</code> 기반 계약 수수료 및 일별 정산 대장이 교차 검증됩니다.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 text-sm bg-white/80 p-3 rounded-lg border border-purple-100">
+                    <div>
+                      <span className="text-slate-500 text-xs block">가맹점 상점 ID</span>
+                      <span className="font-mono font-bold text-slate-800">{paymentConfig?.mid || 'SELLER_NANO'}</span>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200" />
+                    <div>
+                      <span className="text-slate-500 text-xs block">원장 수수료율</span>
+                      <span className="font-bold text-purple-700">
+                        {paymentConfig?.contractRate ?? contractRate}% (나노PG)
+                      </span>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200" />
+                    <div>
+                      <span className="text-slate-500 text-xs block">정산 주기 (원장 설정)</span>
+                      <span className="font-bold text-slate-700">
+                        {(paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+1'
+                          ? 'D+1일 (익일 정산)'
+                          : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+2'
+                          ? 'D+2일 (2일후 정산)'
+                          : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+3'
+                          ? 'D+3일 (3일후 정산)'
+                          : `${paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'}일 정산`}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-6 text-sm bg-white/80 p-3 rounded-lg border border-blue-100">
-                  <div>
-                    <span className="text-slate-500 text-xs block">서브몰(셀러) ID</span>
-                    <span className="font-mono font-bold text-slate-800">SELLER_{currentTenant.slug.toUpperCase()}</span>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 bg-blue-600 rounded-lg text-white font-bold text-lg flex items-center justify-center shadow-xs">
+                      TOSS
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg text-slate-900">토스페이먼츠 v2 스플릿 정산 (지급대행)</h3>
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-semibold">KYC 승인완료 (APPROVED)</Badge>
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-semibold">오픈 API 실시간 연동</Badge>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">
+                        공식 API 엔드포인트 <code className="bg-white px-1 py-0.5 rounded text-blue-700 font-mono">POST /v2/payouts</code> 기반 자동 분할 정산이 활성화되어 있습니다.
+                      </p>
+                    </div>
                   </div>
-                  <div className="h-8 w-px bg-slate-200" />
-                  <div>
-                    <span className="text-slate-500 text-xs block">PG 계약 수수료율</span>
-                    <span className="font-bold text-blue-700">
-                      {paymentConfig?.contractRate ?? contractRate}% (토스 PG)
-                    </span>
-                  </div>
-                  <div className="h-8 w-px bg-slate-200" />
-                  <div>
-                    <span className="text-slate-500 text-xs block">정산 주기 (DB 설정)</span>
-                    <span className="font-bold text-slate-700">
-                      {(paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+1'
-                        ? 'D+1일 (익일 정산)'
-                        : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+2'
-                        ? 'D+2일 (2일후 정산)'
-                        : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+3'
-                        ? 'D+3일 (3일후 정산)'
-                        : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'MONTHLY' || (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'M+1'
-                        ? '월정산 (익월 5일)'
-                        : `${paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'}일 정산`}
-                    </span>
+                  <div className="flex items-center gap-6 text-sm bg-white/80 p-3 rounded-lg border border-blue-100">
+                    <div>
+                      <span className="text-slate-500 text-xs block">서브몰(셀러) ID</span>
+                      <span className="font-mono font-bold text-slate-800">SELLER_{currentTenant.slug.toUpperCase()}</span>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200" />
+                    <div>
+                      <span className="text-slate-500 text-xs block">PG 계약 수수료율</span>
+                      <span className="font-bold text-blue-700">
+                        {paymentConfig?.contractRate ?? contractRate}% (토스 PG)
+                      </span>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200" />
+                    <div>
+                      <span className="text-slate-500 text-xs block">정산 주기 (DB 설정)</span>
+                      <span className="font-bold text-slate-700">
+                        {(paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+1'
+                          ? 'D+1일 (익일 정산)'
+                          : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+2'
+                          ? 'D+2일 (2일후 정산)'
+                          : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+3'
+                          ? 'D+3일 (3일후 정산)'
+                          : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'MONTHLY' || (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'M+1'
+                          ? '월정산 (익월 5일)'
+                          : `${paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'}일 정산`}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* 🗓️ 기간 지정 필터 블록 (Period Filter Block) */}
           <Card className="border-indigo-100 shadow-sm bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-zinc-900 dark:to-zinc-900/50">

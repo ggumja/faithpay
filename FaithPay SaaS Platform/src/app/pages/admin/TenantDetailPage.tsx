@@ -1041,6 +1041,26 @@ export default function TenantDetailPage() {
                   </div>
                 ) : (
                   <>
+                    {pgProvider === 'tosspayments' && (
+                      <div className="p-3.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl flex items-start gap-2.5 text-xs text-blue-900 dark:text-blue-200">
+                        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold block mb-0.5">🔹 토스페이먼츠(Toss) 오픈 API 정산 연동 모드</span>
+                          토스페이먼츠 공식 오픈 API(<code className="bg-white/80 dark:bg-zinc-800 px-1 rounded font-mono font-bold text-blue-700">/v1/settlements</code>)를 지원합니다. 수수료율 및 정산 주기는 계약 원장 기록용이며, 상용키 가동 시 토스 서버 정산 데이터가 동적 연동됩니다.
+                        </div>
+                      </div>
+                    )}
+
+                    {pgProvider === 'nanopay' && (
+                      <div className="p-3.5 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 rounded-xl flex items-start gap-2.5 text-xs text-purple-900 dark:text-purple-200">
+                        <Info className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold block mb-0.5">🟣 나노PG (Nanopay / 스몰비) 가맹점 원장 교차검증 모드</span>
+                          나노PG 상점식별코드(<code className="bg-white/80 dark:bg-zinc-800 px-1 rounded font-mono font-bold text-purple-700">shopcode</code>) 기반으로 가동됩니다. 지정된 수수료율 및 정산 주기는 나노PG 일별 대장과 1:1 교차 검증(Audit) 용도로 활용됩니다.
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label htmlFor="mid" className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4" />
