@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp, DonationFormData, DonationItem } from '../context/AppContext';
 import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI, donationItemsAPI } from '../api/client';
@@ -275,15 +275,67 @@ export default function MyDonations() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  useEffect(() => {
-    if (currentTenant) {
-      donationItemsAPI.getItems(currentTenant.id).then((res) => {
-        if (res.success && res.data && res.data.length > 0) {
-          setDbItems(res.data);
-        }
-      }).catch(() => {});
+  const fetchDonorData = useCallback(async (targetPhone: string) => {
+    const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
+    if (!cleanPhone || !currentTenant) return;
+
+    setIsLoading(true);
+    try {
+      const dbRes = await donationAPI.getByTenant(currentTenant.id);
+      let matchedRaw: any[] = [];
+      if (dbRes.success && Array.isArray(dbRes.data)) {
+        matchedRaw = dbRes.data.filter(d => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone);
+      }
+
+      const matched: HistoryItem[] = matchedRaw.map(d => ({
+        id: d.id,
+        itemId: d.itemId,
+        itemName: d.itemName,
+        amount: d.amount,
+        name: d.donorName,
+        phone: d.donorPhone,
+        date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
+        rawDate: d.createdAt,
+        status: '결제완료',
+        isRecurring: d.isRecurring,
+        deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+        paymentMethod: cleanPaymentMethod(d.paymentMethod),
+      }));
+
+      setHistory(matched);
+      loadSavedProfile(cleanPhone, matchedRaw);
+    } catch (err) {
+      console.warn('Error fetching donor data:', err);
+    } finally {
+      setIsLoading(false);
     }
   }, [currentTenant]);
+
+  useEffect(() => {
+    if (!currentTenant) return;
+
+    // 결제 완료 후 또는 이전 인증 세션 복원
+    const savedPhone = sessionStorage.getItem('faithpay_donor_session') || localStorage.getItem('faithpay_last_donor_phone');
+    if (savedPhone) {
+      const clean = savedPhone.replace(/[^0-9]/g, '');
+      if (clean) {
+        setPhoneNumber(clean);
+        setIsAuthenticated(true);
+        fetchDonorData(clean);
+      }
+    }
+  }, [currentTenant, fetchDonorData]);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('faithpay_donor_session');
+    localStorage.removeItem('faithpay_last_donor_phone');
+    setIsAuthenticated(false);
+    setPhoneNumber('');
+    setOtpCode('');
+    setIsOtpSent(false);
+    setHistory([]);
+    toast.info('로그아웃 되었습니다.');
+  };
 
   if (!currentTenant) return null;
 
@@ -322,6 +374,8 @@ export default function MyDonations() {
     setIsLoading(true);
     try {
       const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
+      sessionStorage.setItem('faithpay_donor_session', cleanedInputPhone);
+      localStorage.setItem('faithpay_last_donor_phone', cleanedInputPhone);
 
       // 1. OTP 검증 및 DB 조회 API 호출
       const res = await otpAuthAPI.verifyOtp(phoneNumber, otpCode);
@@ -420,19 +474,32 @@ export default function MyDonations() {
         className="text-white py-12 px-4 shadow-lg mb-8"
         style={{ backgroundColor: currentTenant.primaryColor }}
       >
-        <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-white hover:bg-white/20"
-            onClick={() => navigate(`/${tenantSlug}`)}
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">내 {currentTenant.terminology.donation} 내역</h1>
-            <p className="opacity-90 mt-1">{currentTenant.name}와 함께하는 소중한 나눔</p>
+        <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/20 cursor-pointer"
+              onClick={() => navigate(`/${tenantSlug}`)}
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">내 {currentTenant.terminology.donation} 내역</h1>
+              <p className="opacity-90 mt-1">{currentTenant.name}와 함께하는 소중한 나눔</p>
+            </div>
           </div>
+
+          {isAuthenticated && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs font-bold rounded-xl cursor-pointer shadow-xs"
+            >
+              🔒 로그아웃
+            </Button>
+          )}
         </div>
       </div>
 

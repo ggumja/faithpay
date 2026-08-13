@@ -30,6 +30,13 @@ export default function DonationComplete() {
       origin: { y: 0.6 },
     });
 
+    // 결제 완료 후 마이페이지 자동 로그인을 위해 신도 세션 저장
+    if (donationFormData?.phone) {
+      const cleanPhone = donationFormData.phone.replace(/[^0-9]/g, '');
+      sessionStorage.setItem('faithpay_donor_session', cleanPhone);
+      localStorage.setItem('faithpay_last_donor_phone', cleanPhone);
+    }
+
     // Supabase DB에 실시간 결제 완료 내역 보관 저장
     if (currentTenant && donationFormData) {
       donationAPI.create({
