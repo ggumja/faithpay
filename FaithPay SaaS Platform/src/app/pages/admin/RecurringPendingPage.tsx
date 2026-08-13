@@ -28,12 +28,14 @@ import {
 } from 'lucide-react';
 import { donationAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { toast } from 'sonner';
 
 export default function RecurringPendingPage() {
   const { tenantSlug } = useParams();
   const location = useLocation();
   const { tenants, currentTenant, setCurrentTenant } = useApp();
+  const terms = useTenantTerms(currentTenant?.orgType);
 
   const [donations, setDonations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,7 +134,7 @@ export default function RecurringPendingPage() {
               <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
             </SheetContent>
           </Sheet>
-          <h1 className="text-lg font-semibold">정기결제 결제대기 목록</h1>
+          <h1 className="text-lg font-semibold">{terms.recurringPending} 목록</h1>
         </div>
 
         {/* Content Body */}
@@ -143,7 +145,7 @@ export default function RecurringPendingPage() {
               <div className="flex items-center gap-3 mb-2">
                 <Calendar className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100">
-                  정기결제 결제대기 목록
+                  {terms.recurringPending} 목록
                 </h1>
                 <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-xs">
                   미래 결제 예정

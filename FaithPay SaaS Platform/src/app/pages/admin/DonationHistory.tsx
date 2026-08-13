@@ -285,11 +285,13 @@ export function assignSequentialDonationIds(list: any[]): any[] {
   });
 }
 
+import { useTenantTerms } from '../../hooks/useTenantTerms';
+
 export default function DonationHistory() {
   const { tenantSlug } = useParams();
   const location = useLocation();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-
+  const terms = useTenantTerms(currentTenant?.orgType);
 
   const [donations, setDonations] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -765,9 +767,9 @@ export default function DonationHistory() {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <Heart className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
-                  <h1 className="text-3xl font-bold">보시/봉헌 내역 및 정기결제 관리</h1>
+                  <h1 className="text-3xl font-bold">{terms.donationHistory} 관리</h1>
                 </div>
-                <p className="text-muted-foreground">보시 및 헌금 내역을 조회하고 정기결제를 직접 중단/관리하세요</p>
+                <p className="text-muted-foreground">{terms.donationHistory}을 조회하고 정기결제를 직접 관리하세요</p>
               </div>
               <Button
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xs py-2.5 px-4 flex items-center gap-2 cursor-pointer"
