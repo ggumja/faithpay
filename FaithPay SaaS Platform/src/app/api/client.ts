@@ -90,7 +90,9 @@ async function fetchAPI<T>(
     }
 
     if (!response.ok) {
-      console.warn(`API Warning (${endpoint}): HTTP ${response.status}`);
+      if (!(options as any)?.silentFail) {
+        console.warn(`API Warning (${endpoint}): HTTP ${response.status}`);
+      }
       return {
         success: false,
         error: data.error || `HTTP ${response.status}`,
@@ -326,7 +328,7 @@ export const subscriptionAPI = {
   async getByPhone(phone: string): Promise<APIResponse<any[]>> {
     try {
       const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`);
+      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`, { silentFail: true } as any);
       if (res.success) return res;
       return { success: true, data: [] };
     } catch {
