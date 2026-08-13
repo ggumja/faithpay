@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { useApp, Tenant } from '../../context/AppContext';
+import { useApp, Tenant, getTenantPkCode } from '../../context/AppContext';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../../components/ui/table';
@@ -332,8 +332,8 @@ export default function SystemAdminDashboard() {
               <Table>
                 <TableHeader className={S.thead}>
                   <TableRow>
-                    {['NO.','단체명','종교','연락처','PG사','MID','상태','작업'].map((h,i) => (
-                      <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===7?'text-center':''}`}>{h}</TableHead>
+                    {['NO.','시스템 PK','단체명','접속 Slug (아이디)','단체 유형','연락처','PG사','MID','상태','작업'].map((h,i) => (
+                      <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===9?'text-center':''}`}>{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -347,9 +347,19 @@ export default function SystemAdminDashboard() {
                       <TableCell className={`${S.td} text-center font-bold text-slate-400 font-mono text-[11.5px]`}>
                         {tList.length - idx}
                       </TableCell>
-                      <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
+                      <TableCell className={`${S.td} font-mono text-[11.5px] font-bold text-purple-700 dark:text-purple-300`}>
+                        <span className="bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">
+                          {getTenantPkCode(t, tenants)}
+                        </span>
+                      </TableCell>
+                      <TableCell className={`${S.td} font-bold text-[var(--hm-ink)]`}>
                         <span className="flex items-center gap-1.5">
                           {t.name}<ExternalLink size={10} className="text-[var(--hm-border)]"/>
+                        </span>
+                      </TableCell>
+                      <TableCell className={`${S.td} font-mono text-[11.5px]`}>
+                        <span className="bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 px-2 py-0.5 rounded-md font-semibold border border-slate-200 dark:border-zinc-700">
+                          /{t.slug}
                         </span>
                       </TableCell>
                       <TableCell className={S.td}>
@@ -526,8 +536,8 @@ export default function SystemAdminDashboard() {
             <Table>
               <TableHeader className={S.thead}>
                 <TableRow>
-                  {['NO.','신청 단체명','종교','담당자 / 연락처','신청 경로','신청일','처리'].map((h,i) => (
-                    <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===6?'text-center':''}`}>{h}</TableHead>
+                  {['NO.','시스템 PK','신청 단체명','접속 Slug (아이디)','단체 유형','담당자 / 연락처','신청 경로','신청일','처리'].map((h,i) => (
+                    <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===8?'text-center':''}`}>{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -553,11 +563,21 @@ export default function SystemAdminDashboard() {
                     <TableCell className={`${S.td} text-center font-bold text-amber-600 font-mono text-[11.5px]`}>
                       {pendingList.length - idx}
                     </TableCell>
+                    <TableCell className={`${S.td} font-mono text-[11.5px] font-bold text-purple-700 dark:text-purple-300`}>
+                      <span className="bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">
+                        {getTenantPkCode(pt, tenants)}
+                      </span>
+                    </TableCell>
                     <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
                       <span className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"/>
                         {pt.name}
                         <ExternalLink size={10} className="text-[var(--hm-border)]" />
+                      </span>
+                    </TableCell>
+                    <TableCell className={`${S.td} font-mono text-[11.5px]`}>
+                      <span className="bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 px-2 py-0.5 rounded-md font-semibold border border-slate-200 dark:border-zinc-700">
+                        /{pt.slug}
                       </span>
                     </TableCell>
                     <TableCell className={S.td}>

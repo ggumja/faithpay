@@ -5,6 +5,39 @@ import { toast } from 'sonner';
 export type ReligionType = 'protestant' | 'buddhist' | 'catholic' | 'charity' | 'general';
 export type UserRole = 'system_admin' | 'tenant_admin' | 'finance_manager' | 'member';
 
+/**
+ * 단체 시스템 DB 고유 PK 아이디를 'fp' + 일련번호 5자리(예: fp00001) 표준 포맷으로 반환하는 헬퍼 함수
+ */
+export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string {
+  if (!targetTenant) return 'fp00001';
+
+  // 1. 이미 fp00001 형태로 저장되어 있는 경우
+  const rawId = String(targetTenant.id || targetTenant.slug || '').trim();
+  if (/^fp\d{5}$/i.test(rawId)) return rawId.toLowerCase();
+
+  // 2. 전체 단체 목록이 전달된 경우 등록 순서(생성일 오름차순) 기준 1-based 순번 부여
+  if (allTenants && allTenants.length > 0) {
+    const ascTenants = [...allTenants].sort((a, b) => {
+      const timeA = a.appliedAt ? new Date(a.appliedAt).getTime() : (parseInt(String(a.id).replace(/\D/g, ''), 10) || 0);
+      const timeB = b.appliedAt ? new Date(b.appliedAt).getTime() : (parseInt(String(b.id).replace(/\D/g, ''), 10) || 0);
+      return timeA - timeB;
+    });
+    const foundIdx = ascTenants.findIndex(t => t.id === targetTenant.id || t.slug === targetTenant.slug);
+    if (foundIdx !== -1) {
+      return `fp${String(foundIdx + 1).padStart(5, '0')}`;
+    }
+  }
+
+  // 3. ID 문자열 내 숫자 추출
+  const digits = rawId.replace(/\D/g, '');
+  if (digits.length > 0) {
+    const num = (parseInt(digits.slice(-5), 10) % 100000) || 1;
+    return `fp${String(num).padStart(5, '0')}`;
+  }
+
+  return 'fp00001';
+}
+
 export interface Tenant {
   id: string;
   slug: string;

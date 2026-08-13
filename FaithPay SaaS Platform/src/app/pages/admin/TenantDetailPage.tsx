@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useApp, Tenant } from '../../context/AppContext';
+import { useApp, Tenant, getTenantPkCode } from '../../context/AppContext';
 import { tenantAPI } from '../../api/client';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../../components/PayBrandLogos';
 
@@ -604,9 +604,14 @@ export default function TenantDetailPage() {
         {activeTab === 'basic' && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-purple-600" />
-                단체 기본 정보 및 계정 관리
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-purple-600" />
+                  단체 기본 정보 및 계정 관리
+                </span>
+                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-mono text-xs font-bold border border-purple-200">
+                  시스템 PK: {getTenantPkCode(tenant, tenants)}
+                </Badge>
               </CardTitle>
             <CardDescription>단체의 기본 정보를 수정합니다</CardDescription>
           </CardHeader>
