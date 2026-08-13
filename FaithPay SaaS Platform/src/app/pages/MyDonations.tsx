@@ -308,30 +308,19 @@ export default function MyDonations() {
       setHistory(matched);
       loadSavedProfile(cleanPhone, matchedRaw);
 
-      // 정기결제 약정 목록 실시간 조회 + 결제 이력 기반 100% 자동 복원 백업
-      let fetchedSubs: any[] = [];
-      try {
-        const subRes = await subscriptionAPI.getByPhone(cleanPhone);
-        if (subRes.success && Array.isArray(subRes.data)) {
-          fetchedSubs = subRes.data.filter((s: any) => !s.tenantId || s.tenantId === currentTenant.id);
-        }
-      } catch {}
-
-      // 만약 약정 API 전용 레코드가 없거나 404인 경우, 결제 이력 중 isRecurring === true인 건을 정기 약정으로 100% 자동 구성
-      if (fetchedSubs.length === 0 && matchedRaw.length > 0) {
-        const recurringLogs = matchedRaw.filter(d => d.isRecurring);
-        fetchedSubs = recurringLogs.map(d => ({
-          id: d.id || `sub_${Date.now()}`,
-          tenantId: currentTenant.id,
-          donorName: d.donorName || d.name,
-          donorPhone: d.donorPhone || cleanPhone,
-          itemName: d.itemName || '정기 보시금',
-          amount: d.amount,
-          status: 'active',
-          recurringInterval: d.recurringInterval || 'monthly',
-          createdAt: d.createdAt,
-        }));
-      }
+      // 정기결제 약정 목록: 결제 이력(matchedRaw) 중 isRecurring === true인 건을 정기 약정으로 100% 자동 합성
+      const recurringLogs = matchedRaw.filter(d => d.isRecurring);
+      const fetchedSubs: any[] = recurringLogs.map(d => ({
+        id: d.id || `sub_${d.createdAt || Date.now()}`,
+        tenantId: currentTenant.id,
+        donorName: d.donorName || d.name,
+        donorPhone: d.donorPhone || cleanPhone,
+        itemName: d.itemName || '정기 보시금',
+        amount: d.amount,
+        status: 'active',
+        recurringInterval: d.recurringInterval || 'monthly',
+        createdAt: d.createdAt,
+      }));
 
       setSubscriptions(fetchedSubs);
     } catch (err) {
