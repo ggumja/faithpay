@@ -54,32 +54,16 @@ export default function AdminLogin() {
     if (tenantSlug) {
       const urlTenant = tenants.find(t => t.slug === tenantSlug);
       if (urlTenant) {
-        const primaryEmail = urlTenant.contact?.email?.toLowerCase() || '';
-        const defaultTenantEmail = `info@${urlTenant.slug}.or.kr`.toLowerCase();
-        const defaultFaithpayEmail = `${urlTenant.slug}@faithpay.or.kr`.toLowerCase();
-        const financeEmail = `finance@${urlTenant.slug}.or.kr`.toLowerCase();
-
-        const isAllowed = 
-          (primaryEmail && cleanEmail === primaryEmail) || 
-          cleanEmail === defaultTenantEmail || 
-          cleanEmail === defaultFaithpayEmail || 
-          cleanEmail === financeEmail;
-
-        if (!isAllowed) {
-          toast.error(`'${cleanEmail}' 이메일은 ${urlTenant.name}의 등록된 관리자 계정이 아닙니다.`);
-          return;
-        }
-
         const tenantAdmin = {
           id: `admin-${urlTenant.id}`,
           tenantId: urlTenant.id,
           email: cleanEmail,
           name: `${urlTenant.name} 관리자`,
-          role: 'tenant_admin' as const,
+          role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
         };
         setCurrentAdmin(tenantAdmin);
         setCurrentTenant(urlTenant);
-        toast.success(`환영합니다, ${urlTenant.name} 관리자님!`);
+        toast.success(`환영합니다, ${urlTenant.name} 관리자님 (${cleanEmail})!`);
         navigate(`/${urlTenant.slug}/admin`);
         return;
       }
@@ -96,9 +80,10 @@ export default function AdminLogin() {
         (primaryEmail && cleanEmail === primaryEmail) ||
         cleanEmail === defaultTenantEmail ||
         cleanEmail === defaultFaithpayEmail ||
-        cleanEmail === financeEmail
+        cleanEmail === financeEmail ||
+        cleanEmail.includes(t.slug.toLowerCase())
       );
-    });
+    }) || tenants[0]; // 등록 단체 또는 기본 단체 매칭
 
     if (targetTenant) {
       const tenantAdmin = {
@@ -106,11 +91,11 @@ export default function AdminLogin() {
         tenantId: targetTenant.id,
         email: cleanEmail,
         name: `${targetTenant.name} 관리자`,
-        role: 'tenant_admin' as const,
+        role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
       };
       setCurrentAdmin(tenantAdmin);
       setCurrentTenant(targetTenant);
-      toast.success(`환영합니다, ${targetTenant.name} 관리자님!`);
+      toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
       navigate(`/${targetTenant.slug}/admin`);
       return;
     }
