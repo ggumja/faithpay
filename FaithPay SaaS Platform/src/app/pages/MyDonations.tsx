@@ -72,11 +72,13 @@ export default function MyDonations() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
 
-  // 👤 회원 프로필 정보 수정 상태 (이메일, 주소, 세례명/법명/직분, 성명)
+  // 👤 회원 프로필 정보 수정 상태 (이메일, 주소, 세례명/법명/직분, 성명, 비밀번호)
   const [profileName, setProfileName] = useState('');
   const [profileBaptismName, setProfileBaptismName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profileAddress, setProfileAddress] = useState('');
+  const [profilePassword, setProfilePassword] = useState('');
+  const [profilePasswordConfirm, setProfilePasswordConfirm] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // 📅 기간 지정 필터 상태 & 📄 10개씩 페이징 상태
@@ -95,6 +97,10 @@ export default function MyDonations() {
         setProfileBaptismName(parsed.baptismName || '');
         setProfileEmail(parsed.email || '');
         setProfileAddress(parsed.address || '');
+        if (parsed.password) {
+          setProfilePassword(parsed.password);
+          setProfilePasswordConfirm(parsed.password);
+        }
         return;
       }
     } catch {}
@@ -105,11 +111,17 @@ export default function MyDonations() {
       setProfileBaptismName(first.baptismName || '');
       setProfileEmail(first.donorEmail || first.email || '');
       setProfileAddress(first.address || '');
+      if (first.password) {
+        setProfilePassword(first.password);
+        setProfilePasswordConfirm(first.password);
+      }
     } else {
       setProfileName('');
       setProfileBaptismName('');
       setProfileEmail('');
       setProfileAddress('');
+      setProfilePassword('');
+      setProfilePasswordConfirm('');
     }
   };
 
@@ -117,6 +129,17 @@ export default function MyDonations() {
     if (!profileName.trim()) {
       toast.error('성명(이름)을 입력해 주세요.');
       return;
+    }
+
+    if (profilePassword || profilePasswordConfirm) {
+      if (profilePassword.length < 4) {
+        toast.error('비밀번호는 최소 4자리 이상 입력해 주세요.');
+        return;
+      }
+      if (profilePassword !== profilePasswordConfirm) {
+        toast.error('비밀번호와 비밀번호 확인이 서로 일치하지 않습니다.');
+        return;
+      }
     }
 
     const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
@@ -128,19 +151,24 @@ export default function MyDonations() {
         baptismName: profileBaptismName,
         email: profileEmail,
         address: profileAddress,
+        password: profilePassword,
         updatedAt: new Date().toISOString(),
       };
       localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(profileData));
+      if (profilePassword) {
+        localStorage.setItem(`faithpay_password_${cleanPhone}`, profilePassword);
+      }
 
       await memberAPI.updateProfile(cleanPhone, {
         name: profileName,
         baptismName: profileBaptismName,
         email: profileEmail,
         address: profileAddress,
+        password: profilePassword,
       });
 
       setHistory(prev => prev.map(h => ({ ...h, name: profileName })));
-      toast.success('회원 프로필 정보가 성공적으로 업데이트되었습니다.');
+      toast.success('회원 프로필 정보 및 비밀번호가 성공적으로 저장되었습니다.');
     } catch (e) {
       toast.success('프로필 정보가 저장되었습니다.');
     } finally {
@@ -575,6 +603,33 @@ export default function MyDonations() {
                       value={formatPhoneNumber(phoneNumber)}
                       disabled
                       className="text-xs h-10 font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-500 cursor-not-allowed border-slate-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
+                      <Lock className="h-3.5 w-3.5 text-indigo-600" />
+                      마이페이지 로그인 비밀번호 설정
+                    </Label>
+                    <Input
+                      type="password"
+                      value={profilePassword}
+                      onChange={(e) => setProfilePassword(e.target.value)}
+                      placeholder="새 비밀번호 입력 (4자리 이상)"
+                      className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      비밀번호 확인
+                    </Label>
+                    <Input
+                      type="password"
+                      value={profilePasswordConfirm}
+                      onChange={(e) => setProfilePasswordConfirm(e.target.value)}
+                      placeholder="비밀번호 재입력 확인"
+                      className="text-xs h-10 bg-slate-50 dark:bg-zinc-800 border-slate-200"
                     />
                   </div>
                 </div>

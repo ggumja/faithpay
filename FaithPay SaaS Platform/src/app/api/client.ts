@@ -458,7 +458,7 @@ export const donationAPI = {
 export const memberAPI = {
   async updateProfile(
     phone: string,
-    profile: { name?: string; baptismName?: string; email?: string; address?: string }
+    profile: { name?: string; baptismName?: string; email?: string; address?: string; password?: string }
   ): Promise<APIResponse<any>> {
     return fetchAPI<any>('/members/update-profile', {
       method: 'POST',

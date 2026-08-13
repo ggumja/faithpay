@@ -1871,13 +1871,21 @@ export async function getHybridMonthlyStats(tenantId: string, year: number, mont
   return calculatedStats;
 }
 
-// 📱 신도/회원 프로필 정보 업데이트 (전화번호 OTP 인증 기반)
+// 📱 신도/회원 프로필 정보 및 로그인 비밀번호 업데이트 (전화번호 OTP 인증 기반)
 export async function updateDonorProfile(
   phone: string,
-  updates: { name?: string; baptismName?: string; email?: string; address?: string }
+  updates: { name?: string; baptismName?: string; email?: string; address?: string; password?: string }
 ): Promise<{ updatedCount: number }> {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   if (!cleanPhone) return { updatedCount: 0 };
+
+  if (updates.password) {
+    await kv.set(`donor_pass:${cleanPhone}`, updates.password);
+    if (updates.email) {
+      const cleanEmail = updates.email.trim().toLowerCase();
+      await kv.set(`donor_pass_email:${cleanEmail}`, { phone: cleanPhone, password: updates.password });
+    }
+  }
 
   let updatedCount = 0;
   try {
@@ -1899,6 +1907,10 @@ export async function updateDonorProfile(
         }
         if (updates.address !== undefined && value.address !== updates.address) {
           value.address = updates.address;
+          changed = true;
+        }
+        if (updates.password) {
+          value.password = updates.password;
           changed = true;
         }
         if (changed) {

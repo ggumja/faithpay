@@ -1506,11 +1506,11 @@ app.post("/make-server-d0d82cc7/admin/reset-ledger", async (c) => {
 app.post("/make-server-d0d82cc7/members/update-profile", async (c) => {
   try {
     const body = await c.req.json();
-    const { phone, name, baptismName, email, address } = body;
+    const { phone, name, baptismName, email, address, password } = body;
     if (!phone) {
       return c.json({ success: false, error: 'Phone number is required' }, 400);
     }
-    const result = await db.updateDonorProfile(phone, { name, baptismName, email, address });
+    const result = await db.updateDonorProfile(phone, { name, baptismName, email, address, password });
     return c.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error updating donor profile:', error);
