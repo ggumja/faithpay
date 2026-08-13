@@ -6,7 +6,7 @@ export default function RootLayout() {
   return (
     <AppProvider>
       <Outlet />
-      <Toaster />
+      <Toaster position="top-center" richColors closeButton />
     </AppProvider>
   );
 }
