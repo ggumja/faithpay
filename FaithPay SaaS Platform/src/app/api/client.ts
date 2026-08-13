@@ -287,6 +287,20 @@ export const paymentAPI = {
   async getStatements(month: string): Promise<APIResponse<{ tenantStatements: any[]; partnerStatements: any[] }>> {
     return fetchAPI<{ tenantStatements: any[]; partnerStatements: any[] }>(`/admin/settlements/statements?month=${month}`);
   },
+
+  async getDailyClosingSummary(tenantId: string, startDate?: string, endDate?: string): Promise<APIResponse<any[]>> {
+    let query = `?tenantId=${tenantId}`;
+    if (startDate) query += `&startDate=${startDate}`;
+    if (endDate) query += `&endDate=${endDate}`;
+    return fetchAPI<any[]>(`/admin/daily-closing-summaries${query}`);
+  },
+
+  async triggerBatchClosingAggregation(targetDate?: string): Promise<APIResponse<{ message: string; aggregatedCount: number }>> {
+    return fetchAPI<{ message: string; aggregatedCount: number }>('/admin/daily-closing-batch/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ targetDate }),
+    });
+  },
 };
 
 
