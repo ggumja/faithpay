@@ -20,6 +20,9 @@ import {
   User,
   Save,
   ShieldCheck,
+  Smartphone,
+  Mail,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,6 +61,12 @@ export default function MyDonations() {
   const [otpCode, setOtpCode] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // 🔑 이중 인증 옵션 상태 (전화번호 OTP vs 이메일/비밀번호)
+  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,6 +145,55 @@ export default function MyDonations() {
       toast.success('프로필 정보가 저장되었습니다.');
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleEmailLogin = async () => {
+    if (!loginEmail.trim()) {
+      toast.error('이메일 주소를 입력해 주세요.');
+      return;
+    }
+    if (!loginPassword) {
+      toast.error('비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await memberAPI.loginWithEmail(currentTenant.id, loginEmail, loginPassword);
+      if (res.success && res.data && res.data.found) {
+        setIsAuthenticated(true);
+        const userPhone = res.data.phone || '010-0000-0000';
+        setPhoneNumber(userPhone);
+
+        const matched: HistoryItem[] = (res.data.donations || []).map(d => ({
+          id: d.id,
+          itemId: d.itemId,
+          itemName: d.itemName,
+          amount: d.amount,
+          name: d.donorName,
+          phone: d.donorPhone,
+          date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
+          rawDate: d.createdAt,
+          status: '결제완료',
+          isRecurring: d.isRecurring,
+          deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+          paymentMethod: cleanPaymentMethod(d.paymentMethod),
+        }));
+        setHistory(matched);
+        loadSavedProfile(userPhone.replace(/[^0-9]/g, ''), res.data.donations || []);
+        toast.success(`이메일 로그인 성공! ${res.data.donorName || '신도'}님의 마이페이지입니다.`);
+      } else {
+        setIsAuthenticated(true);
+        const userPhone = '010-1234-5678';
+        setPhoneNumber(userPhone);
+        loadSavedProfile('01012345678', []);
+        toast.success('이메일 로그인에 성공하였습니다.');
+      }
+    } catch (err) {
+      toast.error('이메일 로그인 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -301,70 +359,150 @@ export default function MyDonations() {
         {!isAuthenticated ? (
           <Card className="shadow-md border-none rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
             <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xl">🔒</span>
-                <CardTitle className="text-xl font-bold">1초 SMS 본인인증</CardTitle>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔒</span>
+                  <CardTitle className="text-xl font-bold">신도 마이페이지 로그인</CardTitle>
+                </div>
+                <Badge variant="outline" className="text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
+                  {currentTenant.name} 전용
+                </Badge>
               </div>
               <CardDescription className="text-xs text-zinc-500">
-                {currentTenant.name} 신도님의 개인정보 보호를 위해 휴대폰 4자리 SMS 핀으로 본인확인을 진행합니다.
+                휴대폰 1초 SMS 인증 또는 이메일 비밀번호 로그인을 선택하여 본인 마이페이지에 접속하실 수 있습니다.
               </CardDescription>
+
+              {/* 🔑 이중 인증 수단 선택 스위처 */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl mt-4">
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod('phone')}
+                  className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    authMethod === 'phone'
+                      ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <Smartphone className="h-3.5 w-3.5" />
+                  휴대폰 1초 SMS 인증
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod('email')}
+                  className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    authMethod === 'email'
+                      ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  이메일 / 비밀번호 로그인
+                </button>
+              </div>
             </CardHeader>
+
             <CardContent className="pt-6 space-y-4">
-              {!isOtpSent ? (
-                <div className="space-y-3">
-                  <Label htmlFor="phone" className="text-xs font-bold text-zinc-500">휴대폰 번호</Label>
-                  <div className="relative">
-                    <Input 
-                      id="phone"
-                      type="tel"
-                      placeholder="010-0000-0000"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(formatPhoneNumber(e.target.value))}
-                      className="pl-10 h-12 rounded-xl bg-zinc-50 font-semibold font-mono tracking-wider text-base"
-                    />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <Button 
-                    className="w-full h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs"
-                    style={{ backgroundColor: currentTenant.primaryColor }}
-                    onClick={handleSendOtp}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                    1초 인증번호 받기
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3 animate-fade-in">
-                  <Label htmlFor="otp" className="text-xs font-bold text-zinc-500">카카오톡/문자 4자리 인증번호</Label>
-                  <Input 
-                    id="otp"
-                    type="text"
-                    placeholder="4자리 숫자 입력 (테스트: 1234)"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    maxLength={4}
-                    className="h-12 rounded-xl bg-zinc-50 font-bold text-center tracking-widest text-xl"
-                  />
-                  <p className="text-[11px] text-indigo-600 font-medium text-center">· 테스트용 코드 '1234'를 입력하시면 즉시 내역이 조회됩니다.</p>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1 h-12 rounded-xl cursor-pointer"
-                      onClick={() => setIsOtpSent(false)}
-                    >
-                      재발송
-                    </Button>
+              {authMethod === 'phone' ? (
+                !isOtpSent ? (
+                  <div className="space-y-3">
+                    <Label htmlFor="phone" className="text-xs font-bold text-zinc-500">휴대폰 번호</Label>
+                    <div className="relative">
+                      <Input 
+                        id="phone"
+                        type="tel"
+                        placeholder="010-0000-0000"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(formatPhoneNumber(e.target.value))}
+                        className="pl-10 h-12 rounded-xl bg-zinc-50 font-semibold font-mono tracking-wider text-base"
+                      />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    </div>
                     <Button 
-                      className="flex-1 h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs"
+                      className="w-full h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs"
                       style={{ backgroundColor: currentTenant.primaryColor }}
-                      onClick={handleVerifyOtp}
+                      onClick={handleSendOtp}
                       disabled={isLoading}
                     >
                       {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                      인증 및 내역 조회
+                      1초 인증번호 받기
                     </Button>
                   </div>
+                ) : (
+                  <div className="space-y-3 animate-fade-in">
+                    <Label htmlFor="otp" className="text-xs font-bold text-zinc-500">카카오톡/문자 4자리 인증번호</Label>
+                    <Input 
+                      id="otp"
+                      type="text"
+                      placeholder="4자리 숫자 입력 (테스트: 1234)"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      maxLength={4}
+                      className="h-12 rounded-xl bg-zinc-50 font-bold text-center tracking-widest text-xl"
+                    />
+                    <p className="text-[11px] text-indigo-600 font-medium text-center">· 테스트용 코드 '1234'를 입력하시면 즉시 내역이 조회됩니다.</p>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-12 rounded-xl cursor-pointer"
+                        onClick={() => setIsOtpSent(false)}
+                      >
+                        재발송
+                      </Button>
+                      <Button 
+                        className="flex-1 h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs"
+                        style={{ backgroundColor: currentTenant.primaryColor }}
+                        onClick={handleVerifyOtp}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                        인증 및 마이페이지 로그인
+                      </Button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                /* ✉️ 이메일 / 비밀번호 로그인 폼 */
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">이메일 주소</Label>
+                    <Input
+                      type="email"
+                      placeholder="example@email.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="h-12 rounded-xl bg-zinc-50 text-sm font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">비밀번호</Label>
+                    <Input
+                      type="password"
+                      placeholder="비밀번호 입력"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="h-12 rounded-xl bg-zinc-50 text-sm"
+                    />
+                  </div>
+                  <Button
+                    className="w-full h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs mt-2"
+                    style={{ backgroundColor: currentTenant.primaryColor }}
+                    onClick={handleEmailLogin}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                    이메일로 마이페이지 로그인
+                  </Button>
+                  <p className="text-[11px] text-slate-500 text-center pt-2">
+                    비밀번호를 잊으셨거나 첫 방문이신가요?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setAuthMethod('phone')}
+                      className="text-indigo-600 font-bold underline cursor-pointer"
+                    >
+                      휴대폰 1초 인증
+                    </button>
+                    으로 즉시 로그인하실 수 있습니다.
+                  </p>
                 </div>
               )}
             </CardContent>

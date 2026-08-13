@@ -227,11 +227,12 @@ export default function TenantHome() {
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button
             onClick={() => navigate(`/${currentTenant.slug}/my-donations`)}
-            style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 12, color: C.ink2, fontFamily: 'inherit', fontWeight: 500, padding: '5px 10px', borderRadius: 6, transition: 'all 150ms', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobaltBorder; e.currentTarget.style.color = C.cobalt; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.ink2; }}
+            style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 12, color: C.cobalt, fontFamily: 'inherit', fontWeight: 600, padding: '5px 12px', borderRadius: 6, transition: 'all 150ms', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobalt; e.currentTarget.style.background = C.cobaltBg; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = 'none'; }}
           >
-            내 {currentTenant.terminology.donation} 내역
+            <span>🔑</span>
+            <span>신도 로그인 · 마이페이지</span>
           </button>
           <button
             onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}

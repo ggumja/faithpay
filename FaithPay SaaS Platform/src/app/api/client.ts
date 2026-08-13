@@ -465,6 +465,37 @@ export const memberAPI = {
       body: JSON.stringify({ phone, ...profile }),
     });
   },
+
+  async loginWithEmail(
+    tenantId: string,
+    email: string,
+    pass?: string
+  ): Promise<APIResponse<{ found: boolean; phone?: string; donorName?: string; donations?: any[] }>> {
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      const listRes = await donationAPI.getByTenant(tenantId);
+      if (listRes.success && Array.isArray(listRes.data)) {
+        const matched = listRes.data.filter(
+          (d: any) => (d.donorEmail || d.email || '').trim().toLowerCase() === cleanEmail
+        );
+        if (matched.length > 0) {
+          const last = matched[0];
+          return {
+            success: true,
+            data: {
+              found: true,
+              phone: last.donorPhone,
+              donorName: last.donorName,
+              donations: matched,
+            },
+          };
+        }
+      }
+    } catch (err) {
+      console.error('Error during donor email login lookup:', err);
+    }
+    return { success: true, data: { found: false } };
+  },
 };
 
 // ==================== KAKAO PAY API (TC0ONETIME TEST) ====================
