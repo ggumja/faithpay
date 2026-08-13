@@ -132,48 +132,6 @@ export default function RecurringPendingPage() {
       }
     });
 
-    // 기본 시뮬레이션 샘플 추가
-    if (Object.keys(map).length === 0) {
-      return [
-        {
-          id: 'SUB-2026-0001',
-          donorName: '김철수',
-          donorPhone: '010-2345-6789',
-          itemName: '일반후원금',
-          amount: 50000,
-          recurringDay: 15,
-          paymentMethod: '신용카드 빌링',
-          status: masterStatuses['SUB-2026-0001'] || 'active',
-          startDate: '2026-01-15',
-          nextBillingDate: '2026-08-15',
-        },
-        {
-          id: 'SUB-2026-0002',
-          donorName: '이영희',
-          donorPhone: '010-3456-7890',
-          itemName: '장학후원기금',
-          amount: 100000,
-          recurringDay: 25,
-          paymentMethod: '카카오페이 빌링',
-          status: masterStatuses['SUB-2026-0002'] || 'active',
-          startDate: '2026-03-25',
-          nextBillingDate: '2026-08-25',
-        },
-        {
-          id: 'SUB-2026-0003',
-          donorName: '박민수',
-          donorPhone: '010-4567-8901',
-          itemName: '건축후원금',
-          amount: 30000,
-          recurringDay: 5,
-          paymentMethod: 'CMS 계좌이체',
-          status: masterStatuses['SUB-2026-0003'] || 'paused',
-          startDate: '2026-02-05',
-          nextBillingDate: '2026-09-05',
-        },
-      ];
-    }
-
     return Object.values(map);
   }, [donations, masterStatuses]);
 
