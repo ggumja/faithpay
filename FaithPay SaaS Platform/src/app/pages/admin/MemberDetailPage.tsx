@@ -110,10 +110,29 @@ export default function MemberDetailPage() {
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
-  const [editRrn, setEditRrn] = useState('');
+  // Tax Receipt On-Demand Dialog State
+  const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
+  const [taxYear, setTaxYear] = useState('2026');
+  const [taxDonorName, setTaxDonorName] = useState('');
+  const [taxRrn, setTaxRrn] = useState('');
+  const [taxAddress, setTaxAddress] = useState('');
 
-  // Note state
-  const [noteText, setNoteText] = useState('');
+  const handleOpenTaxModal = () => {
+    if (!member) return;
+    setTaxYear(new Date().getFullYear().toString());
+    setTaxDonorName(member.name);
+    setTaxAddress(member.address || '');
+    setTaxRrn(''); // Always empty by default for security
+    setIsTaxModalOpen(true);
+  };
+
+  const formatRrnInput = (val: string) => {
+    const clean = val.replace(/[^0-9]/g, '').slice(0, 13);
+    if (clean.length > 6) {
+      return `${clean.slice(0, 6)}-${clean.slice(6)}`;
+    }
+    return clean;
+  };
 
   // Period filter states using official PeriodRangePicker module
   const [periodUnit, setPeriodUnit] = useState<PeriodUnit>('daily');
@@ -307,8 +326,14 @@ export default function MemberDetailPage() {
     toast.success('관리자 메모가 저장되었습니다.');
   };
 
-  // 1. 국세청 별지 제45호 서식 소득공제용 기부금 영수증 인쇄
-  const handlePrintTaxReceipt = (taxYear = '2026') => {
+  // 1. 국세청 별지 제45호 서식 소득공제용 기부금 영수증 온디맨드 인쇄
+  const handleGenerateTaxReceipt = () => {
+    if (!member || !currentTenant) return;
+    if (!taxRrn.trim()) {
+      toast.error('소득공제용 기부금영수증 발급을 위해 기부자의 주민등록번호를 입력해주세요.');
+      return;
+    }
+
     const printWindow = window.open('', '_blank', 'width=850,height=950');
     if (!printWindow) {
       toast.error('팝업 차단이 활성화되어 있습니다. 팝업 허용 후 다시 시도해 주세요.');
@@ -317,12 +342,14 @@ export default function MemberDetailPage() {
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const receiptNo = `FP-${taxYear}-${member.id.slice(-6).toUpperCase()}`;
+    const donorNameUse = taxDonorName || member.name;
+    const addressUse = taxAddress || member.address || '주소 미입력';
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>[국세청 별지 제45호 서식] 기부금 영수증 - ${member.name}</title>
+          <title>[국세청 별지 제45호 서식] 기부금 영수증 - ${donorNameUse}</title>
           <style>
             @page { size: A4 portrait; margin: 15mm; }
             body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 15px; color: #000; font-size: 12px; line-height: 1.4; }
@@ -357,13 +384,13 @@ export default function MemberDetailPage() {
             <table class="form-table">
               <tr>
                 <th>성 명 (이름)</th>
-                <td style="width: 28%;"><strong>${member.name}</strong> ${member.baptismName ? `(${member.baptismName})` : ''}</td>
+                <td style="width: 28%;"><strong>${donorNameUse}</strong> ${member.baptismName ? `(${member.baptismName})` : ''}</td>
                 <th>주민등록번호</th>
-                <td>${member.rrn || '850101-1****** (발급용)'}</td>
+                <td><strong>${taxRrn}</strong></td>
               </tr>
               <tr>
                 <th>주 소</th>
-                <td colspan="3">${member.address || '서울특별시 강남구 테헤란로 123 (주소 미입력)'}</td>
+                <td colspan="3">${addressUse}</td>
               </tr>
             </table>
 
@@ -433,6 +460,9 @@ export default function MemberDetailPage() {
       </html>
     `);
     printWindow.document.close();
+    toast.success('기부금영수증 발급 인쇄 창이 열렸습니다.');
+    setIsTaxModalOpen(false);
+    setTaxRrn(''); // Security: Instantly wipe RRN from memory
   };
 
   // 2. 전체 납부 확인서 인쇄
@@ -676,7 +706,7 @@ export default function MemberDetailPage() {
 
                 <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
                   <Button
-                    onClick={() => handlePrintTaxReceipt('2026')}
+                    onClick={handleOpenTaxModal}
                     className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2 text-xs cursor-pointer py-5 px-4 shadow-sm shadow-amber-200"
                   >
                     <FileText className="h-4 w-4" />
@@ -988,6 +1018,112 @@ export default function MemberDetailPage() {
         </div>
       </div>
 
+      {/* 🧾 소득공제용 기부금영수증 발급 전용 온디맨드 일시 입력 모달 */}
+      <Dialog open={isTaxModalOpen} onOpenChange={setIsTaxModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-amber-600" />
+              소득공제용 기부금영수증 발급
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              국세청 별지 제45호 서식 기부금영수증 출력을 위한 발급 정보를 입력합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 space-y-1 text-xs text-amber-900">
+              <div className="flex items-center gap-1.5 font-bold">
+                <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0" />
+                개인정보보호법에 따른 안전 안내
+              </div>
+              <p className="text-[11.5px] text-amber-800 leading-relaxed">
+                기부자의 <strong>주민등록번호</strong>는 영수증 출력 시에만 일시 사용되며, <strong>DB에 영구 저장되지 않으므로</strong> 개인정보 유출 우려 없이 안전하게 발급하실 수 있습니다.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">귀속 연도</Label>
+                <Input
+                  type="text"
+                  value={taxYear}
+                  onChange={(e) => setTaxYear(e.target.value)}
+                  className="text-xs bg-slate-50 border-slate-300 font-mono font-bold"
+                  placeholder="2026"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">연간 기부 총액</Label>
+                <Input
+                  type="text"
+                  readOnly
+                  value={`₩ ${member.totalDonation.toLocaleString()}원`}
+                  className="text-xs bg-slate-100 border-slate-200 font-black text-emerald-600 cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-700">기부자 성명</Label>
+              <Input
+                type="text"
+                value={taxDonorName}
+                onChange={(e) => setTaxDonorName(e.target.value)}
+                placeholder="성명 입력 (부양가족 신청 시 변경 가능)"
+                className="text-xs border-slate-300 font-semibold"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                <span>주민등록번호 <span className="text-red-500">* (필수 13자리)</span></span>
+                <span className="text-[11px] font-semibold text-slate-400">일시 사용 / DB 미저장</span>
+              </Label>
+              <Input
+                type="text"
+                value={taxRrn}
+                onChange={(e) => setTaxRrn(formatRrnInput(e.target.value))}
+                placeholder="주민등록번호 13자리 (예: 850101-1234567)"
+                maxLength={14}
+                className="text-xs border-amber-300 focus:border-amber-500 font-mono font-bold tracking-wider"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-700">기부자 주소</Label>
+              <Input
+                type="text"
+                value={taxAddress}
+                onChange={(e) => setTaxAddress(e.target.value)}
+                placeholder="서울특별시 강남구..."
+                className="text-xs border-slate-300"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsTaxModalOpen(false)}
+              className="text-xs cursor-pointer"
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              onClick={handleGenerateTaxReceipt}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 cursor-pointer shadow-sm shadow-amber-200"
+            >
+              <Printer className="h-4 w-4" />
+              영수증 출력 / PDF 저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ✏️ 회원 정보 수정 모달 */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1045,12 +1181,14 @@ export default function MemberDetailPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-amber-700 dark:text-amber-400">주민등록번호 (소득공제 기부금영수증 발급용)</Label>
-              <Input
-                value={editRrn}
-                onChange={(e) => setEditRrn(e.target.value)}
-              />
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 space-y-1">
+              <p className="font-bold text-slate-700 flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+                주민등록번호 보안 방침 안내
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                개인정보보호법에 따라 주민등록번호는 회원 DB에 저장을 허용하지 않으며, 영수증 발급 시 1회성으로 안전하게 입력받습니다.
+              </p>
             </div>
 
             <DialogFooter className="pt-2">
