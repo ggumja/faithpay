@@ -71,6 +71,7 @@ export default function MemberManagement() {
   const [memberPhone, setMemberPhone] = useState('');
   const [memberEmail, setMemberEmail] = useState('');
   const [memberAddress, setMemberAddress] = useState('');
+  const [memberRrn, setMemberRrn] = useState(''); // 주민등록번호 (기부금영수증 발급용)
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -242,6 +243,7 @@ export default function MemberManagement() {
     setMemberPhone('');
     setMemberEmail('');
     setMemberAddress('');
+    setMemberRrn('');
     setIsAddMemberModalOpen(true);
   };
 
@@ -258,6 +260,7 @@ export default function MemberManagement() {
       phone: stripPhoneDigits(memberPhone) || '01000000000',
       email: memberEmail.trim(),
       address: memberAddress.trim(),
+      rrn: memberRrn.trim() || '850101-1******',
       registeredDate: new Date().toISOString().slice(0, 10),
       totalDonation: 0,
       lastDonation: '납부 기록 없음',
@@ -278,6 +281,7 @@ export default function MemberManagement() {
     setMemberPhone(formatPhoneNumber(m.phone));
     setMemberEmail(m.email);
     setMemberAddress(m.address || '');
+    setMemberRrn(m.rrn || '');
     setIsEditMemberModalOpen(true);
   };
 
@@ -295,6 +299,7 @@ export default function MemberManagement() {
       phone: stripPhoneDigits(memberPhone),
       email: memberEmail.trim(),
       address: memberAddress.trim(),
+      rrn: memberRrn.trim() || editingMember.rrn,
     };
 
     setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? updated : m)));
@@ -674,6 +679,15 @@ export default function MemberManagement() {
               />
             </div>
 
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-amber-700 dark:text-amber-400">주민등록번호 (소득공제 기부금영수증 발급용)</Label>
+              <Input
+                placeholder="예: 850101-1234567"
+                value={memberRrn}
+                onChange={(e) => setMemberRrn(e.target.value)}
+              />
+            </div>
+
             <DialogFooter className="pt-2">
               <Button variant="outline" type="button" onClick={() => setIsAddMemberModalOpen(false)}>
                 취소
@@ -740,6 +754,15 @@ export default function MemberManagement() {
               <Input
                 value={memberAddress}
                 onChange={(e) => setMemberAddress(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-amber-700 dark:text-amber-400">주민등록번호 (소득공제 기부금영수증 발급용)</Label>
+              <Input
+                placeholder="예: 850101-1234567"
+                value={memberRrn}
+                onChange={(e) => setMemberRrn(e.target.value)}
               />
             </div>
 

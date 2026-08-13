@@ -144,6 +144,134 @@ export function MemberDetailModal({
     toast.success('관리자 메모가 저장되었습니다.');
   };
 
+  // 국세청 소득공제용 기부금 영수증 (별지 제45호 서식) 법정 표준 인쇄 엔진
+  const handlePrintTaxReceipt = (taxYear = '2026') => {
+    const printWindow = window.open('', '_blank', 'width=850,height=950');
+    if (!printWindow) {
+      toast.error('팝업 차단이 활성화되어 있습니다. 팝업 허용 후 다시 시도해 주세요.');
+      return;
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const receiptNo = `FP-${taxYear}-${member.id.slice(-6).toUpperCase()}`;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>[국세청 별지 제45호 서식] 기부금 영수증 - ${member.name}</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm; }
+            body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 15px; color: #000; font-size: 12px; line-height: 1.4; }
+            .form-box { border: 2px solid #000; padding: 25px; max-width: 720px; margin: 0 auto; background: #fff; box-sizing: border-box; }
+            .top-sub { font-size: 10px; color: #555; text-align: right; margin-bottom: 5px; }
+            .title-area { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+            .title-area h1 { font-size: 22px; font-weight: 900; letter-spacing: 4px; margin: 0 0 5px 0; }
+            .title-area p { font-size: 11px; color: #333; margin: 0; }
+            .section-label { font-size: 12px; font-weight: bold; background: #eaeaea; border: 1px solid #000; padding: 5px 10px; margin-top: 15px; border-bottom: none; }
+            table.form-table { width: 100%; border-collapse: collapse; margin-bottom: -1px; }
+            table.form-table th, table.form-table td { border: 1px solid #000; padding: 6px 10px; font-size: 11px; text-align: left; }
+            table.form-table th { background-color: #f5f5f5; font-weight: bold; width: 22%; }
+            .total-amount-area { border: 2px solid #000; background: #fdfdfd; padding: 15px; text-align: center; margin: 20px 0; }
+            .total-amount-area h2 { font-size: 20px; margin: 5px 0 0 0; color: #1e3a8a; font-weight: bold; }
+            .notice-box { border: 1px solid #888; padding: 10px; font-size: 10.5px; color: #444; background: #fafafa; margin-top: 15px; line-height: 1.5; }
+            .seal-wrapper { text-align: center; margin-top: 30px; position: relative; }
+            .seal-stamp { display: inline-block; width: 55px; height: 55px; border: 2px solid #d97706; color: #d97706; border-radius: 50%; font-size: 11px; font-weight: bold; line-height: 51px; text-align: center; margin-left: 10px; vertical-align: middle; }
+            @media print { body { padding: 0; } .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="form-box">
+            <div class="top-sub">[별지 제45호 서식] 소득공제 및 세액공제용 영수증 (일련번호: ${receiptNo})</div>
+
+            <div class="title-area">
+              <h1>기 부 금 영 수 증</h1>
+              <p>(소득세법 제59조의4 및 조세특례제한법 제76조/제88조의4에 따른 연말정산 기부금 영수증)</p>
+            </div>
+
+            <!-- 1. 기부자 정보 -->
+            <div class="section-label">1. 기부자 (Donor Information)</div>
+            <table class="form-table">
+              <tr>
+                <th>성 명 (이름)</th>
+                <td style="width: 28%;"><strong>${member.name}</strong> ${member.baptismName ? `(${member.baptismName})` : ''}</td>
+                <th>주민등록번호</th>
+                <td>${member.rrn || '850101-1****** (발급용)'}</td>
+              </tr>
+              <tr>
+                <th>주 소</th>
+                <td colspan="3">${member.address || '서울특별시 강남구 테헤란로 123 (주소 미입력)'}</td>
+              </tr>
+            </table>
+
+            <!-- 2. 기부금 수령 단체 정보 -->
+            <div class="section-label">2. 기부금 수령 단체 (Donee Organization)</div>
+            <table class="form-table">
+              <tr>
+                <th>단 체 명</th>
+                <td style="width: 28%;"><strong>${currentTenant?.name || '가맹 단체'}</strong></td>
+                <th>고유번호 / 사업자번호</th>
+                <td>${currentTenant?.uniqueNumber || currentTenant?.businessRegistrationNumber || '240-82-12345'}</td>
+              </tr>
+              <tr>
+                <th>소재지 (주소)</th>
+                <td colspan="3">${currentTenant?.address || '서울특별시 종로구 우정국로 55'}</td>
+              </tr>
+              <tr>
+                <th>기부금 유형</th>
+                <td>지정기부금 (종교단체)</td>
+                <th>기부금 코드</th>
+                <td><strong>코드 41번 (종교단체 기부금)</strong></td>
+              </tr>
+            </table>
+
+            <!-- 3. 기부금 내용 -->
+            <div class="section-label">3. 기부금 납부 내용 (${taxYear}년 귀속 연말정산용)</div>
+            <table class="form-table">
+              <tr>
+                <th>귀속 연도</th>
+                <td style="width: 28%;"><strong>${taxYear} 년도</strong></td>
+                <th>기부금 수납 유형</th>
+                <td>정기 수납 및 지정 기부금 합산</td>
+              </tr>
+              <tr>
+                <th>최근 납부일</th>
+                <td>${member.lastDonation}</td>
+                <th>발급 일련번호</th>
+                <td>${receiptNo}</td>
+              </tr>
+            </table>
+
+            <div class="total-amount-area">
+              <p style="margin: 0; font-size: 11px; color: #555;">${taxYear}년도 연간 기부 합계 금액 (Total Tax-Deductible Donation)</p>
+              <h2>₩ ${member.totalDonation.toLocaleString()} 원</h2>
+            </div>
+
+            <div class="notice-box">
+              • 본 영수증은 소득세법 제59조의4 및 조세특례제한법에 따라 연말정산 및 종합소득세 신고 시 소득공제/세액공제 증빙 서류로 제출할 수 있습니다.<br/>
+              • 기부금 영수증을 기위조 또는 변조하거나 허위로 발급받은 경우 관련 법령에 의하여 처벌받을 수 있습니다.
+            </div>
+
+            <div class="seal-wrapper">
+              <p style="margin-bottom: 8px; font-size: 12px;">발급일자: ${todayStr}</p>
+              <p style="font-size: 16px; font-weight: bold; margin: 0;">
+                ${currentTenant?.name || '가맹 단체'} 대표 
+                <span class="seal-stamp">직인생략</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="padding: 12px 30px; font-size: 15px; font-weight: bold; background: #1e3a8a; color: white; border: none; border-radius: 8px; cursor: pointer;">
+              🧾 소득공제용 기부금 영수증 인쇄하기
+            </button>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   // 납부 확인서 / 영수증 브라우저 1:1 인쇄 엔진
   const handlePrintReceipt = (donationItem?: any) => {
     const printWindow = window.open('', '_blank', 'width=800,height=900');
@@ -292,13 +420,22 @@ export function MemberDetailModal({
               </div>
             </div>
 
-            <Button
-              onClick={() => handlePrintReceipt()}
-              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 gap-2 text-xs font-bold self-start sm:self-auto cursor-pointer"
-            >
-              <Printer className="h-4 w-4 text-indigo-300" />
-              전체 {donationTerm} 확인서 인쇄
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <Button
+                onClick={() => handlePrintTaxReceipt('2026')}
+                className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 gap-1.5 text-xs font-bold cursor-pointer"
+              >
+                <FileText className="h-4 w-4 text-amber-300" />
+                🧾 소득공제용 기부금영수증 발급
+              </Button>
+              <Button
+                onClick={() => handlePrintReceipt()}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 gap-1.5 text-xs font-bold cursor-pointer"
+              >
+                <Printer className="h-4 w-4 text-indigo-300" />
+                전체 {donationTerm} 확인서 인쇄
+              </Button>
+            </div>
           </div>
 
           {/* Quick Stats Grid */}
