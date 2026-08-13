@@ -1168,9 +1168,16 @@ export default function DonationHistory() {
                                           {isCancelling ? '취소 중...' : donation.paymentStatus === 'cancel_failed' ? '취소 재시도' : '결제 취소'}
                                         </Button>
                                       ) : donation.paymentStatus === 'cancelled' ? (
-                                        <span className="text-[11px] font-semibold text-slate-400 px-2 py-1 bg-slate-100 rounded-md">
-                                          취소 완료
-                                        </span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 px-2 text-xs font-bold border-red-200 text-red-700 bg-red-50/80 hover:bg-red-100 cursor-pointer"
+                                          onClick={() => handlePrintReceipt(donation)}
+                                          title="취소 영수증 출력"
+                                        >
+                                          <Receipt className="h-3.5 w-3.5 mr-1 text-red-600" />
+                                          취소 영수증
+                                        </Button>
                                       ) : null}
                                     </div>
                                   </TableCell>
@@ -1324,11 +1331,11 @@ export default function DonationHistory() {
                         </Button>
                       )}
                       <Button
-                        className="flex-1"
+                        className={selectedDonation.paymentStatus === 'cancelled' ? "flex-1 bg-red-600 hover:bg-red-700 font-bold" : "flex-1 font-bold"}
                         onClick={() => handlePrintReceipt(selectedDonation)}
                       >
                         <Receipt className="h-4 w-4 mr-2" />
-                        영수증 출력
+                        {selectedDonation.paymentStatus === 'cancelled' ? '취소 영수증 출력' : '영수증 출력'}
                       </Button>
                       <Button variant="outline" onClick={() => setSelectedDonation(null)}>
                         닫기
@@ -1482,13 +1489,13 @@ export default function DonationHistory() {
                   {/* Modal Action Header (no-print) */}
                   <div className="flex justify-between items-center pb-4 mb-4 border-b border-zinc-100 dark:border-zinc-800 no-print">
                     <h3 className="font-bold text-lg flex items-center gap-2">
-                      <Receipt className="h-5 w-5 text-indigo-600" />
-                      <span>봉헌/보시 영수증</span>
+                      <Receipt className={`h-5 w-5 ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-indigo-600'}`} />
+                      <span>{receiptDonation.paymentStatus === 'cancelled' ? '봉헌/보시 결제 취소 영수증' : '봉헌/보시 영수증'}</span>
                     </h3>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1 rounded-xl cursor-pointer"
+                        className={`${receiptDonation.paymentStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-bold gap-1 rounded-xl cursor-pointer`}
                         onClick={() => window.print()}
                       >
                         <Printer className="h-4 w-4" />
@@ -1508,11 +1515,24 @@ export default function DonationHistory() {
                   {/* Receipt Ticket Container (printable) */}
                   <div id="printable-receipt" className="bg-white text-zinc-900 p-6 rounded-xl border border-zinc-200 space-y-6">
                     {/* Organization & Receipt Header */}
-                    <div className="text-center pb-4 border-b-2 border-zinc-900">
-                      <p className="text-xs font-bold text-indigo-600 tracking-wider mb-1">{currentTenant?.name || 'FaithPay'}</p>
-                      <h2 className="text-2xl font-black text-zinc-900 tracking-tight">봉 헌 / 보 시  영 수 증</h2>
-                      <p className="text-[11px] text-zinc-500 mt-1">OFFICIAL DONATION RECEIPT</p>
+                    <div className={`text-center pb-4 border-b-2 ${receiptDonation.paymentStatus === 'cancelled' ? 'border-red-600' : 'border-zinc-900'}`}>
+                      <p className={`text-xs font-bold tracking-wider mb-1 ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-indigo-600'}`}>
+                        {currentTenant?.name || 'FaithPay'}
+                      </p>
+                      <h2 className={`text-2xl font-black tracking-tight ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-zinc-900'}`}>
+                        {receiptDonation.paymentStatus === 'cancelled' ? '봉 헌 / 결 제  취 소  영 수 증' : '봉 헌 / 보 시  영 수 증'}
+                      </h2>
+                      <p className={`text-[11px] font-semibold mt-1 ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-500' : 'text-zinc-500'}`}>
+                        {receiptDonation.paymentStatus === 'cancelled' ? 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)' : 'OFFICIAL DONATION RECEIPT'}
+                      </p>
                     </div>
+
+                    {receiptDonation.paymentStatus === 'cancelled' && (
+                      <div className="bg-red-50 border border-red-300 p-3 rounded-xl text-center text-red-700 font-extrabold text-xs flex items-center justify-center gap-2">
+                        <RotateCcw className="h-4 w-4 text-red-600" />
+                        <span>[승인 취소 완료] 본 결제건은 정상적으로 승인 취소 처리되었습니다.</span>
+                      </div>
+                    )}
 
                     {/* Metadata */}
                     <div className="flex justify-between text-xs text-zinc-600 bg-zinc-50 p-3 rounded-lg border border-zinc-100">
@@ -1538,11 +1558,15 @@ export default function DonationHistory() {
                       </div>
                       <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
                         <span className="text-zinc-500 font-medium">봉 헌 항 목</span>
-                        <span className="col-span-2 font-bold text-indigo-700">{receiptDonation.itemName || receiptDonation.item}</span>
+                        <span className={`col-span-2 font-bold ${receiptDonation.paymentStatus === 'cancelled' ? 'text-zinc-700 line-through' : 'text-indigo-700'}`}>
+                          {receiptDonation.itemName || receiptDonation.item}
+                        </span>
                       </div>
                       <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
                         <span className="text-zinc-500 font-medium">결 제 수 단</span>
-                        <span className="col-span-2 font-medium text-zinc-800">{receiptDonation.paymentMethod || receiptDonation.method || '신용카드'} (정상 처리)</span>
+                        <span className={`col-span-2 font-bold ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-zinc-800'}`}>
+                          {receiptDonation.paymentMethod || receiptDonation.method || '신용카드'} ({receiptDonation.paymentStatus === 'cancelled' ? '승인 취소 완료' : '정상 처리'})
+                        </span>
                       </div>
                       <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
                         <span className="text-zinc-500 font-medium">접 수 채 널</span>
@@ -1550,14 +1574,16 @@ export default function DonationHistory() {
                           {receiptDonation.deviceType === 'KIOSK' ? '현장 키오스크 (KIOSK)' : '온라인 모바일/웹 (Mobile)'}
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 py-3 bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 items-center">
-                        <span className="text-indigo-900 font-bold">봉 헌 금 액</span>
+                      <div className={`grid grid-cols-3 py-3 p-3 rounded-xl border items-center ${receiptDonation.paymentStatus === 'cancelled' ? 'bg-red-50/80 border-red-200' : 'bg-indigo-50/70 border-indigo-100'}`}>
+                        <span className={`font-bold ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-900' : 'text-indigo-900'}`}>
+                          {receiptDonation.paymentStatus === 'cancelled' ? '취 소 금 액' : '봉 헌 금 액'}
+                        </span>
                         <div className="col-span-2">
-                          <p className="text-xs text-indigo-700 font-semibold mb-0.5">
+                          <p className={`text-xs font-semibold mb-0.5 ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600 line-through' : 'text-indigo-700'}`}>
                             일금 {numberToKorean(receiptDonation.amount || 0)}원정
                           </p>
-                          <p className="text-xl font-black text-indigo-950">
-                            ₩ {(receiptDonation.amount || 0).toLocaleString()} 원
+                          <p className={`text-xl font-black ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-indigo-950'}`}>
+                            {receiptDonation.paymentStatus === 'cancelled' ? '-' : ''} ₩ {(receiptDonation.amount || 0).toLocaleString()} 원
                           </p>
                         </div>
                       </div>
@@ -1574,8 +1600,17 @@ export default function DonationHistory() {
                     {/* Gratitude Statement & Stamp Seal */}
                     <div className="pt-4 border-t-2 border-zinc-900 text-center relative">
                       <p className="text-xs font-semibold text-zinc-700 leading-relaxed">
-                        위 금액을 정성 어린 봉헌/보시금으로 정히 수령하였습니다.<br />
-                        소중한 마음과 기도가 함께 하기를 기원합니다.
+                        {receiptDonation.paymentStatus === 'cancelled' ? (
+                          <>
+                            위 봉헌/결제건은 승인 취소가 완료되었음을 확인합니다.<br />
+                            (취소 처리 일시: {new Date(receiptDonation.updatedAt || receiptDonation.createdAt || Date.now()).toLocaleDateString('ko-KR')})
+                          </>
+                        ) : (
+                          <>
+                            위 금액을 정성 어린 봉헌/보시금으로 정히 수령하였습니다.<br />
+                            소중한 마음과 기도가 함께 하기를 기원합니다.
+                          </>
+                        )}
                       </p>
                       
                       <div className="mt-6 flex items-center justify-center gap-6">
@@ -1585,9 +1620,9 @@ export default function DonationHistory() {
                         </div>
 
                         {/* Stamp SVG */}
-                        <div className="w-14 h-14 rounded-full border-2 border-red-600 text-red-600 flex flex-col items-center justify-center text-[10px] font-black leading-tight transform -rotate-12 select-none shadow-xs">
+                        <div className={`w-14 h-14 rounded-full border-2 text-red-600 border-red-600 flex flex-col items-center justify-center text-[10px] font-black leading-tight transform -rotate-12 select-none shadow-xs ${receiptDonation.paymentStatus === 'cancelled' ? 'bg-red-50/50' : ''}`}>
                           <span>{currentTenant?.name?.slice(0, 4) || 'Faith'}</span>
-                          <span className="text-[8px]">인 영</span>
+                          <span className="text-[8px]">{receiptDonation.paymentStatus === 'cancelled' ? '취 소' : '인 영'}</span>
                         </div>
                       </div>
                     </div>
