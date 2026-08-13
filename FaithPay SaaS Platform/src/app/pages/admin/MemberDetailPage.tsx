@@ -580,53 +580,53 @@ export default function MemberDetailPage() {
             </div>
           </div>
 
-          {/* Full Page Header Profile Summary */}
-          <Card className="overflow-hidden border-none shadow-xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
+          {/* Full Page Header Profile Summary (Clean Light Mode) */}
+          <Card className="overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-md bg-white dark:bg-zinc-900 border-t-4 border-t-indigo-600">
             <CardContent className="p-6 sm:p-8 space-y-6">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-3xl font-black text-indigo-200 shadow-inner shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl font-black text-indigo-700 shadow-inner shrink-0">
                     {member.name.slice(0, 1)}
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-3xl font-black">{member.name}</h1>
+                      <h1 className="text-3xl font-black text-slate-900 dark:text-zinc-100">{member.name}</h1>
                       {member.baptismName && (
-                        <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/40 text-xs font-bold px-2.5 py-1">
+                        <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold text-xs px-2.5 py-1">
                           {getTitleLabel()}: {member.baptismName}
                         </Badge>
                       )}
                       {member.recurringCount > 0 ? (
-                        <Badge className="bg-emerald-500/30 text-emerald-300 border-emerald-400/40 text-xs font-bold px-2.5 py-1 flex items-center gap-1">
-                          <RefreshCw className="h-3 w-3 animate-spin-slow" />
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-xs px-2.5 py-1 flex items-center gap-1">
+                          <RefreshCw className="h-3 w-3 animate-spin-slow text-emerald-700" />
                           정기 약정 {member.recurringCount}건
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-slate-300 border-slate-700 text-xs px-2.5 py-1">
+                        <Badge variant="outline" className="text-slate-600 border-slate-300 text-xs px-2.5 py-1">
                           일반 회원
                         </Badge>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-300 pt-1">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-600 dark:text-zinc-400 pt-1 font-medium">
                       <span className="flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-indigo-400" />
+                        <Phone className="h-3.5 w-3.5 text-indigo-600" />
                         {formatPhoneNumber(member.phone)}
-                        <button onClick={handleCopyPhone} title="연락처 복사" className="hover:text-white transition-colors">
+                        <button onClick={handleCopyPhone} title="연락처 복사" className="hover:text-indigo-600 transition-colors">
                           <Copy className="h-3 w-3 ml-0.5" />
                         </button>
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5 text-indigo-400" />
+                        <Mail className="h-3.5 w-3.5 text-indigo-600" />
                         {member.email || '이메일 미등록'}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
+                        <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
                         주민번호: {member.rrn || '850101-1******'}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+                        <Calendar className="h-3.5 w-3.5 text-indigo-600" />
                         가입일: {member.registeredDate}
                       </span>
                     </div>
@@ -636,47 +636,47 @@ export default function MemberDetailPage() {
                 <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
                   <Button
                     onClick={() => handlePrintTaxReceipt('2026')}
-                    className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 gap-2 text-xs font-bold cursor-pointer py-5 px-4"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2 text-xs cursor-pointer py-5 px-4 shadow-sm shadow-amber-200"
                   >
-                    <FileText className="h-4 w-4 text-amber-300" />
+                    <FileText className="h-4 w-4" />
                     🧾 소득공제용 기부금영수증 발급
                   </Button>
                   <Button
                     onClick={() => handlePrintReceipt()}
-                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 gap-2 text-xs font-bold cursor-pointer py-5 px-4"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 text-xs cursor-pointer py-5 px-4 shadow-sm shadow-indigo-200"
                   >
-                    <Printer className="h-4 w-4 text-indigo-300" />
+                    <Printer className="h-4 w-4" />
                     전체 {donationTerm} 확인서 인쇄
                   </Button>
                 </div>
               </div>
 
               {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-white/10">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <span className="text-xs text-slate-400 block font-medium">총 누적 {donationTerm} 금액</span>
-                  <span className="text-2xl font-black text-emerald-400 mt-1 block">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
+                  <span className="text-xs font-bold text-slate-500 block">총 누적 {donationTerm} 금액</span>
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
                     ₩ {member.totalDonation.toLocaleString()}원
                   </span>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <span className="text-xs text-slate-400 block font-medium">최근 {donationTerm}일</span>
-                  <span className="text-base font-bold text-slate-200 mt-1.5 block">
+                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
+                  <span className="text-xs font-bold text-slate-500 block">최근 {donationTerm}일</span>
+                  <span className="text-base font-bold text-slate-800 dark:text-zinc-200 mt-1.5 block">
                     {member.lastDonation || '기록 없음'}
                   </span>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <span className="text-xs text-slate-400 block font-medium">정기 결제 약정 현황</span>
-                  <span className="text-base font-bold text-indigo-300 mt-1.5 block">
+                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
+                  <span className="text-xs font-bold text-slate-500 block">정기 결제 약정 현황</span>
+                  <span className="text-base font-bold text-indigo-600 dark:text-indigo-400 mt-1.5 block">
                     {member.recurringCount > 0 ? `${member.recurringCount}개 약정 유지 중` : '단발 전용'}
                   </span>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <span className="text-xs text-slate-400 block font-medium">주소</span>
-                  <span className="text-xs font-medium text-slate-300 mt-2 block truncate" title={member.address}>
+                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
+                  <span className="text-xs font-bold text-slate-500 block">주소</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 mt-2 block truncate" title={member.address}>
                     {member.address || '주소 미입력'}
                   </span>
                 </div>
