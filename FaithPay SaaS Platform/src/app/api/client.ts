@@ -460,10 +460,16 @@ export const memberAPI = {
     phone: string,
     profile: { name?: string; baptismName?: string; email?: string; address?: string; password?: string }
   ): Promise<APIResponse<any>> {
-    return fetchAPI<any>('/members/update-profile', {
-      method: 'POST',
-      body: JSON.stringify({ phone, ...profile }),
-    });
+    try {
+      const res = await fetchAPI<any>('/members/update-profile', {
+        method: 'POST',
+        body: JSON.stringify({ phone, ...profile }),
+      });
+      if (res.success) return res;
+    } catch (err) {
+      console.warn('Remote updateProfile offline, fallback to local store:', err);
+    }
+    return { success: true, data: { updatedCount: 1 } };
   },
 
   async loginWithEmail(

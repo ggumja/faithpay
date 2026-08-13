@@ -1502,8 +1502,8 @@ app.post("/make-server-d0d82cc7/admin/reset-ledger", async (c) => {
   }
 });
 
-// 📱 신도/회원 프로필 정보 업데이트 API (전화번호 OTP 본인인증 기반)
-app.post("/make-server-d0d82cc7/members/update-profile", async (c) => {
+// 📱 신도/회원 프로필 정보 및 비밀번호 업데이트 API (전화번호 OTP 본인인증 기반)
+const handleUpdateProfile = async (c: any) => {
   try {
     const body = await c.req.json();
     const { phone, name, baptismName, email, address, password } = body;
@@ -1516,6 +1516,9 @@ app.post("/make-server-d0d82cc7/members/update-profile", async (c) => {
     console.error('Error updating donor profile:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
-});
+};
+
+app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
+app.post("/members/update-profile", handleUpdateProfile);
 
 Deno.serve(app.fetch);
