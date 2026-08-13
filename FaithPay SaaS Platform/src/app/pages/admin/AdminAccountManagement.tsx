@@ -81,6 +81,9 @@ export default function AdminAccountManagement() {
 
   // Modal States
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  const [isEditStaffModalOpen, setIsEditStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffAdminUser | null>(null);
+
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<AdminGroup | null>(null);
 
@@ -90,6 +93,12 @@ export default function AdminAccountManagement() {
   const [newPhone, setNewPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('finance_manager');
+
+  // Edit Staff Form State
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editGroupId, setEditGroupId] = useState('finance_manager');
 
   // Group Form State
   const [groupName, setGroupName] = useState('');
@@ -214,7 +223,6 @@ export default function AdminAccountManagement() {
     }
 
     if (editingGroup) {
-      // 그룹 수정
       setAdminGroups((prev) =>
         prev.map((g) =>
           g.id === editingGroup.id
@@ -224,7 +232,6 @@ export default function AdminAccountManagement() {
       );
       toast.success(`[${groupName.trim()}] 그룹 정보가 수정되었습니다.`);
     } else {
-      // 신규 그룹 추가
       const newGroupId = `group_${Date.now()}`;
       const newGroup: AdminGroup = {
         id: newGroupId,
@@ -236,7 +243,6 @@ export default function AdminAccountManagement() {
 
       setAdminGroups((prev) => [...prev, newGroup]);
 
-      // 매트릭스에도 기본 권한(read) 추가
       setPermissionMatrix((prev) =>
         prev.map((item) => ({
           ...item,
@@ -294,6 +300,41 @@ export default function AdminAccountManagement() {
     setSelectedGroupId('finance_manager');
 
     toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
+  };
+
+  // ✏️ 스태프 계정 정보 수정
+  const handleOpenEditStaffModal = (staff: StaffAdminUser) => {
+    setEditingStaff(staff);
+    setEditName(staff.name);
+    setEditEmail(staff.email);
+    setEditPhone(staff.phone);
+    setEditGroupId(staff.groupId);
+    setIsEditStaffModalOpen(true);
+  };
+
+  const handleSaveEditStaff = () => {
+    if (!editingStaff) return;
+    if (!editName.trim() || !editEmail.trim()) {
+      toast.error('성명과 이메일을 입력해 주세요');
+      return;
+    }
+
+    setStaffList((prev) =>
+      prev.map((s) =>
+        s.id === editingStaff.id
+          ? {
+              ...s,
+              name: editName.trim(),
+              email: editEmail.trim(),
+              phone: editPhone.trim() || '미입력',
+              groupId: editGroupId,
+            }
+          : s
+      )
+    );
+
+    setIsEditStaffModalOpen(false);
+    toast.success(`[${editName.trim()}] 관리자 계정 정보가 성공적으로 수정되었습니다.`);
   };
 
   const handleToggleStatus = (id: string) => {
@@ -377,7 +418,7 @@ export default function AdminAccountManagement() {
                 관리자 계정 및 그룹 권한 센터
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                {currentTenant.name}의 관리자 계정을 관리하고, 신규 관리자 그룹을 생성/수정하며 메뉴별 접근 권한을 설정합니다.
+                {currentTenant.name}의 관리자 계정 정보/그룹을 관리하고 메뉴별 접근 권한을 설정합니다.
               </p>
             </div>
 
@@ -532,6 +573,16 @@ export default function AdminAccountManagement() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="계정 정보 수정"
+                                onClick={() => handleOpenEditStaffModal(staff)}
+                                className="h-7 px-2 text-xs gap-1 cursor-pointer bg-slate-50 hover:bg-slate-100 font-semibold"
+                              >
+                                <Edit2 className="h-3.5 w-3.5 text-indigo-600" />
+                                정보수정
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -763,7 +814,6 @@ export default function AdminAccountManagement() {
           </DialogHeader>
 
           <form onSubmit={(e) => { e.preventDefault(); handleAddStaff(); }} autoComplete="off" className="space-y-4 py-3">
-            {/* Chrome Autofill Trap (Prevent Chrome Password Manager from hijacking input fields) */}
             <input type="text" name="prevent_autofill_email" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
             <input type="password" name="prevent_autofill_pwd" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
@@ -845,7 +895,78 @@ export default function AdminAccountManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* 2. 관리자 그룹 추가/수정 모달 */}
+      {/* 2. 관리자 계정 정보 수정 모달 */}
+      <Dialog open={isEditStaffModalOpen} onOpenChange={setIsEditStaffModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="h-5 w-5 text-indigo-600" />
+              관리자 계정 정보 수정
+            </DialogTitle>
+            <DialogDescription>
+              선택한 관리자 계정의 이름, 이메일, 연락처 및 소속 그룹을 변경합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveEditStaff(); }} autoComplete="off" className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">성명 (이름)</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="성명 입력"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">이메일 (로그인 ID)</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="이메일 주소 입력"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">휴대폰 번호</Label>
+              <Input
+                type="tel"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="연락처 입력"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold">소속 관리자 그룹 변경</Label>
+              <Select value={editGroupId} onValueChange={(val) => setEditGroupId(val)}>
+                <SelectTrigger className="bg-white font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {adminGroups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name} - {group.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </form>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditStaffModalOpen(false)}>
+              취소
+            </Button>
+            <Button onClick={handleSaveEditStaff} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              수정 사항 저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. 관리자 그룹 추가/수정 모달 */}
       <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
