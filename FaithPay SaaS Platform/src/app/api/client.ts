@@ -255,6 +255,14 @@ export const paymentAPI = {
     });
   },
 
+  async getTossSettlements(tenantId: string, startDate?: string, endDate?: string): Promise<APIResponse<any>> {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return fetchAPI<any>(`/payment/settlements/toss/${tenantId}${query}`);
+  },
+
   async processManual(payload: any): Promise<APIResponse<any>> {
     return fetchAPI<any>('/payment/process/manual', {
       method: 'POST',

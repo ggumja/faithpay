@@ -504,6 +504,51 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
   }
 });
 
+// 토스페이먼츠 공식 정산 내역 조회 API 연동 (GET /v1/settlements)
+app.get("/make-server-d0d82cc7/payment/settlements/toss/:tenantId", async (c) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    const startDate = c.req.query('startDate') || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const endDate = c.req.query('endDate') || new Date().toISOString().slice(0, 10);
+    const dateType = c.req.query('dateType') || 'soldDate';
+
+    const config = await db.getPaymentConfig(tenantId);
+    let secretKey = config?.secretKey || "test_sk_ZzO2771wYM0kPzW6kZ8V3E59125z";
+    if (!secretKey || secretKey.length < 10) {
+      secretKey = "test_sk_ZzO2771wYM0kPzW6kZ8V3E59125z";
+    }
+
+    const authHeader = `Basic ${btoa(secretKey + ':')}`;
+    const tossUrl = `https://api.tosspayments.com/v1/settlements?startDate=${startDate}&endDate=${endDate}&dateType=${dateType}&size=100`;
+
+    const tossRes = await fetch(tossUrl, {
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await tossRes.json();
+
+    if (tossRes.ok && Array.isArray(result)) {
+      return c.json({
+        success: true,
+        source: 'toss_api',
+        data: result
+      });
+    } else {
+      return c.json({
+        success: false,
+        error: result.message || '토스페이먼츠 정산 조회 실패',
+        tossError: result
+      }, tossRes.status || 400);
+    }
+  } catch (error: any) {
+    console.error('Toss Settlement API error:', error);
+    return c.json({ success: false, error: '토스페이먼츠 정산 조회 중 서버 오류 발생' }, 500);
+  }
+});
+
 // 인증결제 요청 처리
 app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
   try {
