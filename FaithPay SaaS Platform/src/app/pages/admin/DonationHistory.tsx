@@ -619,7 +619,7 @@ export default function DonationHistory() {
     if (checkIsRecurring(targetDonation)) {
       setRecurringCancelModalDonation(targetDonation);
     } else {
-      if (window.confirm(`[${targetDonation.donorName || '무기명'}] 성도님의 결제(${(targetDonation.amount || 0).toLocaleString()}원)를 취소하시겠습니까?`)) {
+      if (window.confirm(`[${targetDonation.donorName || '무기명'}] 님의 결제(${(targetDonation.amount || 0).toLocaleString()}원)를 취소하시겠습니까?`)) {
         executeCancelPayment(targetDonation.id, false);
       }
     }
