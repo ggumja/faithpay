@@ -385,6 +385,25 @@ export function maskPhone(phone?: string): string {
   return phone;
 }
 
+export function normalizePaymentMethod(rawMethod?: string, isRecurring?: boolean): string {
+  if (isRecurring && (!rawMethod || rawMethod === 'card' || rawMethod === 'billing')) {
+    return '정기결제';
+  }
+  if (!rawMethod || typeof rawMethod !== 'string') return '신용카드';
+  const m = rawMethod.trim();
+  if (!m) return '신용카드';
+
+  if (m.includes('OffPG') || m.includes('현장')) return '신용카드 (OffPG)';
+  if (m.includes('카카오') || m.toLowerCase().includes('kakao')) return '카카오페이';
+  if (m.includes('네이버') || m.toLowerCase().includes('naver')) return '네이버페이';
+  if (m.includes('계좌') || m.includes('이체')) return '계좌이체';
+  if (m.includes('가상')) return '가상계좌';
+  if (m.includes('카드') || m.toLowerCase().includes('card')) return '신용카드';
+  if (m.includes('정기') || m.includes('빌링')) return '정기결제';
+
+  return m;
+}
+
 export async function recordDonationToLedger(donation: Donation): Promise<any> {
   try {
     const supabase = pgClient();
@@ -451,6 +470,7 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
     const maskedDonorName = maskName(donation.donorName);
     const maskedDonorPhone = maskPhone(donation.donorPhone);
     const maskedBaptismName = maskName(donation.baptismName);
+    const cleanMethod = normalizePaymentMethod(donation.paymentMethod, donation.isRecurring);
 
     // 3. partner_commissions 원장에 4자간 분구 내역 기입 (확장 필드 적용)
     const { data: inserted, error } = await supabase
@@ -468,7 +488,7 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
         agent_rate: agentRate,
         settlement_status: 'pending',
         settlement_month: currentMonth,
-        payment_method: donation.paymentMethod || (donation.isRecurring ? '빌링키 정기결제' : '카드 인증결제'),
+        payment_method: cleanMethod,
         pg_provider: 'toss',
         pg_tid: donation.transactionId || donationId,
         item_name: donation.itemName || '일반 헌금',
@@ -481,7 +501,7 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
         platform_fee_amount: platformFeeAmount,
         is_recurring: donation.isRecurring || false,
         payment_type: donation.isRecurring ? 'BILLING' : 'AUTH',
-        device_type: donation.deviceType || ((donation.paymentMethod || '').includes('OffPG') || (donation.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+        device_type: donation.deviceType || ((cleanMethod || '').includes('OffPG') || (cleanMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
       })
       .select()
       .maybeSingle();
@@ -500,8 +520,10 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
 
 export async function createDonation(donation: Omit<Donation, 'createdAt' | 'updatedAt'>): Promise<Donation> {
   const now = new Date().toISOString();
+  const normalizedMethod = normalizePaymentMethod(donation.paymentMethod, donation.isRecurring);
   const newDonation: Donation = {
     ...donation,
+    paymentMethod: normalizedMethod,
     createdAt: now,
     updatedAt: now,
   };

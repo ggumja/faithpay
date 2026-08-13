@@ -348,6 +348,25 @@ export const donationItemsAPI = {
 
 // ==================== DONATION API ====================
 
+export function normalizePaymentMethod(rawMethod?: string, isRecurring?: boolean): string {
+  if (isRecurring && (!rawMethod || rawMethod === 'card' || rawMethod === 'billing')) {
+    return '정기결제';
+  }
+  if (!rawMethod || typeof rawMethod !== 'string') return '신용카드';
+  const m = rawMethod.trim();
+  if (!m) return '신용카드';
+
+  if (m.includes('OffPG') || m.includes('현장')) return '신용카드 (OffPG)';
+  if (m.includes('카카오') || m.toLowerCase().includes('kakao')) return '카카오페이';
+  if (m.includes('네이버') || m.toLowerCase().includes('naver')) return '네이버페이';
+  if (m.includes('계좌') || m.includes('이체')) return '계좌이체';
+  if (m.includes('가상')) return '가상계좌';
+  if (m.includes('카드') || m.toLowerCase().includes('card')) return '신용카드';
+  if (m.includes('정기') || m.includes('빌링')) return '정기결제';
+
+  return m;
+}
+
 export const donationAPI = {
   async getAll(): Promise<APIResponse<Donation[]>> {
     return fetchAPI<Donation[]>('/donations');
@@ -358,9 +377,13 @@ export const donationAPI = {
   },
 
   async create(donation: Omit<Donation, 'createdAt' | 'updatedAt'>): Promise<APIResponse<Donation>> {
+    const normalizedMethod = normalizePaymentMethod(donation.paymentMethod, donation.isRecurring);
     return fetchAPI<Donation>('/donations', {
       method: 'POST',
-      body: JSON.stringify(donation),
+      body: JSON.stringify({
+        ...donation,
+        paymentMethod: normalizedMethod,
+      }),
     });
   },
 
