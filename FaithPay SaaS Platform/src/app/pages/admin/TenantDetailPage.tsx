@@ -737,7 +737,7 @@ export default function TenantDetailPage() {
                   <div className="relative">
                     <Input 
                       type={showSecretKey ? "text" : "password"}
-                      value="fp348320" 
+                      value={tenant.tempPassword || "fp348320"} 
                       disabled 
                       className="bg-amber-50/60 dark:bg-amber-950/30 text-sm font-extrabold font-mono text-amber-900 dark:text-amber-300 border-amber-200" 
                     />
