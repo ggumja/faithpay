@@ -733,38 +733,42 @@ export default function MyDonations() {
               </CardContent>
             </Card>
 
-            {/* Subscriptions Self-Management Card (항시 노출) */}
-            <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
-              <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                    <span>⚡ 내 정기{currentTenant.terminology.donation} 셀프 관리</span>
-                  </CardTitle>
-                  <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
-                </div>
-                <CardDescription className="text-xs text-indigo-700 dark:text-indigo-400">
-                  매월 자동 청구되는 정기 {currentTenant.terminology.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-3">
-                {subscriptions.length === 0 ? (
-                  <div className="text-center py-6 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900">
-                    <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-3">
-                      현재 매월 자동 청구 등록된 정기 {currentTenant.terminology.donation}이(가) 없습니다.
-                    </p>
-                    <Button
-                      size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-xs"
-                      onClick={() => {
-                        const items = currentTenant ? getTenantDonationItems(currentTenant) : [];
-                        const firstItem = items && items.length > 0 ? items[0] : null;
-                        navigate(`/${tenantSlug}/donate`, { state: { selectedItem: firstItem, isRecurring: true } });
-                      }}
-                    >
-                      ⚡ 정기 {currentTenant.terminology.donation} 신청하러 가기
-                    </Button>
+            {/* Subscriptions Self-Management Card (정기결제 지원 단체이거나 기존 정기 약정이 존재하는 경우에만 표출) */}
+            {((currentTenant ? getTenantDonationItems(currentTenant) : []).some(item => item.enabled !== false && item.allowRecurring) || subscriptions.length > 0) && (
+              <Card className="border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl overflow-hidden shadow-xs">
+                <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
+                      <span>⚡ 내 정기{currentTenant.terminology.donation} 셀프 관리</span>
+                    </CardTitle>
+                    <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
                   </div>
-                ) : (
+                  <CardDescription className="text-xs text-indigo-700 dark:text-indigo-400">
+                    매월 자동 청구되는 정기 {currentTenant.terminology.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-3">
+                  {subscriptions.length === 0 ? (
+                    <div className="text-center py-6 bg-white dark:bg-zinc-900 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-900">
+                      <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-3">
+                        현재 매월 자동 청구 등록된 정기 {currentTenant.terminology.donation}이(가) 없습니다.
+                      </p>
+                      {/* 정기결제/정기보시를 지원하는 단체인 경우에만 신청하기 버튼 노출 */}
+                      {(currentTenant ? getTenantDonationItems(currentTenant) : []).some(item => item.enabled !== false && item.allowRecurring) && (
+                        <Button
+                          size="sm"
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-xs"
+                          onClick={() => {
+                            const items = currentTenant ? getTenantDonationItems(currentTenant) : [];
+                            const recurringItem = items.find(i => i.enabled !== false && i.allowRecurring) || (items.length > 0 ? items[0] : null);
+                            navigate(`/${tenantSlug}/donate`, { state: { selectedItem: recurringItem, isRecurring: true } });
+                          }}
+                        >
+                          ⚡ 정기 {currentTenant.terminology.donation} 신청하러 가기
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
                   subscriptions.map(sub => (
                     <div key={sub.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col gap-3">
                       <div>
@@ -816,6 +820,7 @@ export default function MyDonations() {
                 )}
               </CardContent>
             </Card>
+            )}
             {/* 📅 기간 지정 필터 바 */}
             <Card className="bg-white border border-slate-200 dark:border-zinc-800 p-4 rounded-2xl shadow-xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
