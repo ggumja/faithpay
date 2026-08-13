@@ -75,53 +75,21 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
       </div>
 
       {currentAdmin && (
-        <div className="mb-6 p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50/90 via-purple-50/50 to-blue-50/70 border border-indigo-100/90 shadow-sm relative overflow-hidden group">
-          {/* Soft background glow effect */}
-          <div className="absolute -top-10 -right-10 w-28 h-28 bg-indigo-300/20 rounded-full blur-xl group-hover:bg-indigo-400/25 transition-all duration-500" />
-          
-          <div className="flex items-start gap-3 relative z-10">
-            {/* Avatar circle */}
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 p-[1.5px] shrink-0 shadow-sm">
-              <div className="w-full h-full rounded-[9.5px] bg-white flex items-center justify-center font-bold text-sm text-indigo-700 shadow-inner">
-                {currentAdmin.name ? currentAdmin.name[0] : '관'}
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-bold tracking-wider text-indigo-600 uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  접속 중
-                </span>
-                {currentTenant && (
-                  <span className="text-[10px] text-slate-500 font-mono font-medium">
-                    /{currentTenant.slug}
-                  </span>
-                )}
-              </div>
-
-              <h4 className="font-bold text-sm text-slate-900 truncate mt-0.5" title={currentAdmin.name}>
-                {currentAdmin.name}
-              </h4>
-
+        <div className="mb-6 p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center shrink-0">
+            {currentAdmin.name ? currentAdmin.name[0] : '관'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm text-slate-800 truncate">{currentAdmin.name}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-semibold rounded-md border border-blue-200/60">
+                {getRoleName(currentAdmin.role)}
+              </span>
               {currentTenant?.name && (
-                <p className="text-[11px] text-slate-600 truncate mt-0.5 flex items-center gap-1 font-medium">
-                  <Building2 className="w-3 h-3 text-indigo-500 shrink-0" />
-                  <span className="truncate">{currentTenant.name}</span>
-                </p>
-              )}
-
-              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100/80 text-indigo-700 border border-indigo-200/80">
-                  <ShieldCheck className="w-2.5 h-2.5 mr-1 text-indigo-600" />
-                  {getRoleName(currentAdmin.role)}
+                <span className="text-[11px] text-slate-500 truncate">
+                  · {currentTenant.name}
                 </span>
-                {currentTenant?.religionType && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/90 text-slate-700 border border-slate-200 shadow-2xs">
-                    {currentTenant.religionType === 'buddhist' ? '🪷 불교' : currentTenant.religionType === 'catholic' ? '⛪ 천주교' : '✝️ 기독교'}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
