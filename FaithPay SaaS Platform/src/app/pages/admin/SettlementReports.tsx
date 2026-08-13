@@ -174,8 +174,15 @@ export default function SettlementReports() {
             const data = monthlyMap[mKey];
             const totalDonations = data.total;
             const pgFees = Math.round(totalDonations * (contractRate / 100));
-            const netAmount = Math.max(0, totalDonations - pgFees - data.cancelled);
             
+            // 💡 취소건(cancelled)은 completed 합산에 포함되어 있지 않으므로 중복 차감하지 않고 순수 실정산액 산출
+            const netAmount = Math.max(0, totalDonations - pgFees);
+            
+            const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
+            const yearNum = parseInt(yStr, 10);
+            const monthNum = parseInt(mStr, 10);
+            const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
+
             // 정산 예정일 구하기 (D+3 영업일 입금 기준 반영)
             const settlementCycle = currentTenant?.paymentConfig?.settlementCycle || 'D+3';
             let settlementDate = '';
@@ -184,18 +191,23 @@ export default function SettlementReports() {
               let nextY = yearNum;
               let nextM = monthNum + 1;
               if (nextM > 12) { nextY += 1; nextM = 1; }
-              settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
+              settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (${isPast ? '월정산 완료' : '월정산 예정'})`;
             } else {
               const daysToAdd = settlementCycle === 'D+1' ? 1 : settlementCycle === 'D+2' ? 2 : 3;
-              const latestTxDate = filtered.length > 0 && (filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
-                ? new Date(filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
-                : now;
-              const payoutDate = new Date(isNaN(latestTxDate.getTime()) ? now : latestTxDate);
-              payoutDate.setDate(payoutDate.getDate() + daysToAdd);
-              settlementDate = `${payoutDate.toISOString().slice(0, 10)} (${settlementCycle} 입금)`;
+              if (isPast) {
+                // 과거 월의 경우 해당 월 말일 + D+3 완료 표기
+                const lastDayOfMonth = new Date(yearNum, monthNum, 0);
+                lastDayOfMonth.setDate(lastDayOfMonth.getDate() + daysToAdd);
+                settlementDate = `${lastDayOfMonth.toISOString().slice(0, 10)} (${settlementCycle} 완료)`;
+              } else {
+                const latestTxDate = filtered.length > 0 && (filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
+                  ? new Date(filtered[0].createdAt || filtered[0].created_at || filtered[0].date)
+                  : now;
+                const payoutDate = new Date(isNaN(latestTxDate.getTime()) ? now : latestTxDate);
+                payoutDate.setDate(payoutDate.getDate() + daysToAdd);
+                settlementDate = `${payoutDate.toISOString().slice(0, 10)} (${settlementCycle} 예정)`;
+              }
             }
-
-            const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
 
             return {
               month: mKey,
@@ -215,7 +227,7 @@ export default function SettlementReports() {
             monthlyTotal: latestMonthData.totalDonations,
             pgFee: latestMonthData.pgFees,
             finalDeposit: latestMonthData.netAmount,
-            currentMonthName: latestMonthData.month,
+            currentMonthName: periodSelection.label || latestMonthData.month,
             settlementDateStr: latestMonthData.settlementDate,
           });
         }
@@ -617,7 +629,7 @@ export default function SettlementReports() {
                         <TableHead>원 결제 승인일</TableHead>
                         <TableHead>신도명 / 항목</TableHead>
                         <TableHead className="text-right">취소 요청 금액</TableHead>
-                        <TableHead className="text-right">PG/SaaS 보정 차감액</TableHead>
+                        <TableHead className="text-right">PG 수수료 보정 차감액</TableHead>
                         <TableHead>차기 이월 정산 반영일</TableHead>
                         <TableHead>승인 상태</TableHead>
                       </TableRow>
