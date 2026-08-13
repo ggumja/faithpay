@@ -38,6 +38,7 @@ import TenantStatsPage from "./pages/admin/TenantStatsPage";
 import TenantStatisticsPage from "./pages/admin/TenantStatisticsPage";
 import RecurringPendingPage from "./pages/admin/RecurringPendingPage";
 import AdminRedirectGuard from "./pages/admin/AdminRedirectGuard";
+import AdminAccountManagement from "./pages/admin/AdminAccountManagement";
 
 
 
@@ -173,6 +174,10 @@ export const router = createBrowserRouter([
       {
         path: "/:tenantSlug/admin/banners",
         Component: BannerManagement,
+      },
+      {
+        path: "/:tenantSlug/admin/accounts",
+        Component: AdminAccountManagement,
       },
       {
         path: "/:tenantSlug/admin/settings",

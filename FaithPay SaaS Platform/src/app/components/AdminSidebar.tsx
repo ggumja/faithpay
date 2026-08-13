@@ -16,6 +16,7 @@ import {
   Image,
   ExternalLink,
   BarChart3,
+  UserCheck,
 } from 'lucide-react';
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     { id: 'members', icon: Users, label: '회원 관리', path: `/admin/members` },
     { id: 'settlement', icon: DollarSign, label: '정산', path: `/admin/settlement` },
     { id: 'banners', icon: Image, label: '배너 관리', path: `/admin/banners` },
+    { id: 'accounts', icon: UserCheck, label: '관리자 계정 관리', path: `/admin/accounts` },
     { id: 'settings', icon: Settings, label: '설정', path: `/admin/settings` },
   ];
 
