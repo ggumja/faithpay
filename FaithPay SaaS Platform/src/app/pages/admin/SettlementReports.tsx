@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { donationAPI } from '../../api/client';
+import { donationAPI, paymentAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 
@@ -46,6 +46,7 @@ export default function SettlementReports() {
   const [dailySettlement, setDailySettlement] = useState<any[]>([]);
   const [cancelledDonations, setCancelledDonations] = useState<any[]>([]);
   const [dbDonations, setDbDonations] = useState<any[]>([]);
+  const [paymentConfig, setPaymentConfig] = useState<any>(null);
 
   // 🗓️ 기간 지정 필터 상태 (Period Filter State)
   const [periodUnit, setPeriodUnit] = useState<PeriodUnit>('all');
@@ -122,6 +123,21 @@ export default function SettlementReports() {
 
     const fetchRealSettlements = async () => {
       try {
+        let loadedConfig = paymentConfig;
+        try {
+          const cfgRes = await paymentAPI.getConfig(targetTenantId);
+          if (cfgRes.success && cfgRes.data) {
+            loadedConfig = cfgRes.data;
+            setPaymentConfig(cfgRes.data);
+          }
+        } catch (e) {
+          console.warn('paymentConfig load error:', e);
+        }
+
+        const realConfig = loadedConfig || currentTenant?.paymentConfig;
+        const currentContractRate = realConfig?.contractRate ?? 3.0;
+        const currentSettlementCycle = realConfig?.settlementCycle ?? 'D+1';
+
         const res = await donationAPI.getByTenant(targetTenantId);
         if (res.success && Array.isArray(res.data)) {
           const formatted = assignSequentialDonationIds(res.data);
@@ -169,9 +185,8 @@ export default function SettlementReports() {
             monthlyMap[curMonthKey] = { total: 0, cancelled: 0 };
           }
 
-          // 3. 🔵 일별/건별 D+3 정산 명세 데이터 생성
-          const settlementCycle = currentTenant?.paymentConfig?.settlementCycle || 'D+3';
-          const daysToAdd = settlementCycle === 'D+1' ? 1 : settlementCycle === 'D+2' ? 2 : 3;
+          // 3. 🔵 일별/건별 정산 명세 데이터 생성 (DB 정산주기 반영)
+          const daysToAdd = currentSettlementCycle === 'D+1' ? 1 : currentSettlementCycle === 'D+2' ? 2 : currentSettlementCycle === 'D+3' ? 3 : 1;
 
           const dailyList = filtered
             .filter((d: any) => d.paymentStatus === 'completed')
@@ -185,7 +200,7 @@ export default function SettlementReports() {
               const isPaidOut = payoutDate.getTime() <= now.getTime();
               
               const amt = Number(d.amount || 0);
-              const fee = Math.round(amt * (contractRate / 100));
+              const fee = Math.round(amt * (currentContractRate / 100));
               const net = amt - fee;
               
               return {
@@ -198,7 +213,7 @@ export default function SettlementReports() {
                 pgFee: fee,
                 netAmount: net,
                 payoutDate: payoutDate.toISOString().slice(0, 10),
-                status: isPaidOut ? '입금 완료' : `${settlementCycle} 입금 예정`
+                status: isPaidOut ? '입금 완료' : `${currentSettlementCycle} 입금 예정`
               };
             });
 
@@ -209,7 +224,7 @@ export default function SettlementReports() {
           const processedMonthly = sortedMonths.map((mKey) => {
             const data = monthlyMap[mKey];
             const totalDonations = data.total;
-            const pgFees = Math.round(totalDonations * (contractRate / 100));
+            const pgFees = Math.round(totalDonations * (currentContractRate / 100));
             const netAmount = Math.max(0, totalDonations - pgFees);
             
             const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
@@ -220,15 +235,14 @@ export default function SettlementReports() {
             let settlementDate = '';
             let statusStr = '';
             
-            if (settlementCycle === 'MONTHLY') {
+            if (currentSettlementCycle === 'MONTHLY') {
               let nextY = yearNum;
               let nextM = monthNum + 1;
               if (nextM > 12) { nextY += 1; nextM = 1; }
               settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
               statusStr = isPast ? '완료' : '정산 예정';
             } else {
-              // D+3 등 일별 입금 방식인 경우 월별 통합표에는 'D+3 순차 입금' 개념으로 정확히 표기
-              settlementDate = isPast ? `${settlementCycle} 입금 완료` : `매일 ${settlementCycle} 순차 입금`;
+              settlementDate = isPast ? `${currentSettlementCycle} 입금 완료` : `매일 ${currentSettlementCycle} 순차 입금`;
               statusStr = isPast ? '지급 완료' : '순차 입금 진행 중';
             }
 
@@ -245,7 +259,7 @@ export default function SettlementReports() {
 
           setMonthlySettlement(processedMonthly);
 
-          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: 'D+3 순차 입금' };
+          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: `${currentSettlementCycle} 순차 입금` };
           setSummaryStats({
             monthlyTotal: latestMonthData.totalDonations,
             pgFee: latestMonthData.pgFees,
@@ -411,12 +425,22 @@ export default function SettlementReports() {
                   <div className="h-8 w-px bg-slate-200" />
                   <div>
                     <span className="text-slate-500 text-xs block">PG 계약 수수료율</span>
-                    <span className="font-bold text-blue-700">{contractRate}% (토스 PG)</span>
+                    <span className="font-bold text-blue-700">
+                      {paymentConfig?.contractRate ?? contractRate}% (토스 PG)
+                    </span>
                   </div>
                   <div className="h-8 w-px bg-slate-200" />
                   <div>
-                    <span className="text-slate-500 text-xs block">정산 주기</span>
-                    <span className="font-bold text-slate-700">D+3일 실시간 분할입금</span>
+                    <span className="text-slate-500 text-xs block">정산 주기 (DB 설정)</span>
+                    <span className="font-bold text-slate-700">
+                      {paymentConfig?.settlementCycle === 'D+1'
+                        ? 'D+1일 (익일 정산)'
+                        : paymentConfig?.settlementCycle === 'D+2'
+                        ? 'D+2일 정산'
+                        : paymentConfig?.settlementCycle === 'MONTHLY'
+                        ? '월정산 (익월 5일)'
+                        : `${paymentConfig?.settlementCycle || 'D+1'}일 정산`}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -540,8 +564,8 @@ export default function SettlementReports() {
 
           <Tabs defaultValue="monthly" className="space-y-6">
             <TabsList>
-              <TabsTrigger value="monthly">월별 정산 (D+3 요약)</TabsTrigger>
-              <TabsTrigger value="daily">일별/건별 D+3 정산 명세</TabsTrigger>
+              <TabsTrigger value="monthly">월별 정산 ({paymentConfig?.settlementCycle || 'D+1'} 요약)</TabsTrigger>
+              <TabsTrigger value="daily">일별/건별 {paymentConfig?.settlementCycle || 'D+1'} 정산 명세</TabsTrigger>
               <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
             </TabsList>
 
@@ -637,13 +661,13 @@ export default function SettlementReports() {
               </Card>
             </TabsContent>
 
-            {/* Daily D+3 Settlement Breakdown */}
+            {/* Daily Settlement Breakdown */}
             <TabsContent value="daily" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>일별/건별 D+3 정산 명세</CardTitle>
+                  <CardTitle>일별/건별 {paymentConfig?.settlementCycle || 'D+1'} 정산 명세</CardTitle>
                   <CardDescription>
-                    승인완료된 각 결제건별 PG 수수료({contractRate}%) 차감 후 D+3 영업일 정산 입금 예정/완료 명세입니다.
+                    승인완료된 각 결제건별 PG 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.settlementCycle || 'D+1'} 영업일 정산 입금 예정/완료 명세입니다.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -654,9 +678,9 @@ export default function SettlementReports() {
                         <TableHead>거래 번호</TableHead>
                         <TableHead>신도명 / 항목</TableHead>
                         <TableHead className="text-right">승인 금액</TableHead>
-                        <TableHead className="text-right">PG 수수료 ({contractRate}%)</TableHead>
+                        <TableHead className="text-right">PG 수수료 ({paymentConfig?.contractRate ?? contractRate}%)</TableHead>
                         <TableHead className="text-right">실 입금액</TableHead>
-                        <TableHead>D+3 입금 예정일</TableHead>
+                        <TableHead>{paymentConfig?.settlementCycle || 'D+1'} 입금 예정일</TableHead>
                         <TableHead>정산 상태</TableHead>
                       </TableRow>
                     </TableHeader>
