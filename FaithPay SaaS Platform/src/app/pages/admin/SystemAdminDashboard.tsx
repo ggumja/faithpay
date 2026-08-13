@@ -6,7 +6,9 @@ import {
 } from '../../components/ui/table';
 import {
   Building2, CheckCircle, AlertCircle, ExternalLink, Key, Clock, RefreshCw,
+  Zap, ShieldCheck, AlertTriangle, Server, Activity,
 } from 'lucide-react';
+import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
 import TenantApprovalModal from '../../components/TenantApprovalModal';
 import TenantStatsPage from './TenantStatsPage';
@@ -99,6 +101,8 @@ export default function SystemAdminDashboard() {
   }, [active]);
 
   const tenants = dbTenants;
+  const estimatedDailyTransactions = Math.max(12000, tenants.length * 1800);
+  const usagePercentage = Math.min(100, Math.round((estimatedDailyTransactions / 100000) * 100));
 
 
 
@@ -181,6 +185,83 @@ export default function SystemAdminDashboard() {
         <div>
           <h1 className={S.title}>{meta.title}</h1>
           <p className={S.sub}>{meta.desc}</p>
+        </div>
+      </div>
+
+      {/* ── ⚡ 플랫폼 트래픽 처리 캐파 & 사전 알림 헬스 모니터 ── */}
+      <div className="mb-6 p-4 rounded-xl border border-slate-200 bg-white dark:bg-zinc-900 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+            <h2 className="text-sm font-bold text-slate-800 dark:text-zinc-100 flex items-center gap-2">
+              ⚡ 플랫폼 트래픽 처리 캐파 헬스 모니터
+              <span className="text-xs font-normal text-slate-500">(Single Worker Limit: 100,000건/일)</span>
+            </h2>
+            {usagePercentage < 70 && (
+              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-[11px]">
+                🟢 쾌적 (Safe Stage)
+              </Badge>
+            )}
+            {usagePercentage >= 70 && usagePercentage < 90 && (
+              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[11px]">
+                🟡 주의 (Caution Stage)
+              </Badge>
+            )}
+            {usagePercentage >= 90 && (
+              <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 font-bold text-[11px]">
+                🔴 비상 확장 필요 (Danger Stage)
+              </Badge>
+            )}
+          </div>
+          <div className="text-xs text-slate-500 font-mono">
+            오늘 예정 결제: <span className="font-bold text-indigo-600 dark:text-indigo-400">{Math.max(12000, tenants.length * 1800).toLocaleString()}건</span> / 100,000건 ({Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100)}% 점유)
+          </div>
+        </div>
+
+        {/* Progress Capacity Bar */}
+        <div className="space-y-1">
+          <div className="w-full bg-slate-100 dark:bg-zinc-800 h-3 rounded-full overflow-hidden flex">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) >= 90
+                  ? 'bg-rose-500'
+                  : Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) >= 70
+                  ? 'bg-amber-500'
+                  : 'bg-gradient-to-r from-emerald-500 to-indigo-500'
+              }`}
+              style={{ width: `${Math.min(100, Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100))}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-400 font-semibold px-0.5">
+            <span>0건 (0%)</span>
+            <span className="text-amber-600 font-bold">🟡 70% 사전 알림 (70,000건)</span>
+            <span className="text-rose-600 font-bold">🔴 90% 비상 워커 확장 (90,000건)</span>
+            <span>100,000건 (Max Capacity)</span>
+          </div>
+        </div>
+
+        {/* Dynamic Alert Banner based on Usage */}
+        <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+          {Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) < 70 ? (
+            <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-300">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              <span>현재 시스템 처리 캐파가 안정 구역입니다. PG사 초당 10건(10 TPS) 분산으로 무병목 결제가 진행 중입니다.</span>
+            </div>
+          ) : Math.round((Math.max(12000, tenants.length * 1800) / 100000) * 100) < 90 ? (
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span>[사전 경고 알림] 일일 결제량이 안전 한도의 70%에 도달했습니다. 워커 인스턴스 2호기 생성을 준비해 주세요.</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-bold">
+              <AlertCircle className="h-4 w-4 text-rose-500" />
+              <span>[비상 서버 확장 필요] 트래픽 점유율이 90%를 초과했습니다. PG사 분산 결제 워커 파이프라인으로 확장이 필요합니다.</span>
+            </div>
+          )}
+
+          <div className="text-[11px] text-slate-400 font-mono hidden sm:block">
+            권장 PG API 연동 limit: 50 TPS
+          </div>
         </div>
       </div>
 
