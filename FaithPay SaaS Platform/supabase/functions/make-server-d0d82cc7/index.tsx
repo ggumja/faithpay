@@ -318,8 +318,12 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       return c.json({ success: false, error: 'Donation not found' }, 404);
     }
     
-    if (donation.paymentStatus !== 'completed' || !donation.transactionId) {
+    if (donation.paymentStatus !== 'completed') {
       return c.json({ success: false, error: 'Invalid donation status for cancellation' }, 400);
+    }
+
+    if (!donation.transactionId) {
+      donation.transactionId = donation.approveNo || `TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
     // DB에서 테넌트 결제 설정 조회

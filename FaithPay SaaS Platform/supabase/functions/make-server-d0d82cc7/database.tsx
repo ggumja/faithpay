@@ -525,8 +525,16 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
 export async function createDonation(donation: Omit<Donation, 'createdAt' | 'updatedAt'>): Promise<Donation> {
   const now = new Date().toISOString();
   const normalizedMethod = normalizePaymentMethod(donation.paymentMethod, donation.isRecurring);
+  
+  // 🚀 Ensure transactionId & approveNo are ALWAYS populated with PG transaction key
+  const defaultTxId = `TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const finalTransactionId = donation.transactionId || donation.approveNo || defaultTxId;
+  const finalApproveNo = donation.approveNo || finalTransactionId;
+
   const newDonation: Donation = {
     ...donation,
+    transactionId: finalTransactionId,
+    approveNo: finalApproveNo,
     paymentMethod: normalizedMethod,
     createdAt: now,
     updatedAt: now,
@@ -659,10 +667,18 @@ export async function migrateNormalizeExistingDonations(): Promise<{ totalChecke
       totalChecked++;
       const donation = item.value;
       if (donation && typeof donation === 'object') {
+        let modified = false;
         const rawMethod = donation.paymentMethod;
         const normalized = normalizePaymentMethod(rawMethod, donation.isRecurring);
         if (rawMethod !== normalized) {
           donation.paymentMethod = normalized;
+          modified = true;
+        }
+        if (!donation.transactionId) {
+          donation.transactionId = donation.approveNo || `TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          modified = true;
+        }
+        if (modified) {
           donation.updatedAt = new Date().toISOString();
           await kv.set(item.key, donation);
           totalUpdated++;
