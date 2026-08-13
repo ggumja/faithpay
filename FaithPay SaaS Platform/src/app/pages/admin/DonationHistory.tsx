@@ -521,9 +521,14 @@ export default function DonationHistory() {
   const currentDonations = filteredDonations.slice(startIndex, endIndex);
 
   // Statistics
-  const totalAmount = filteredDonations.reduce((sum, d) => sum + d.amount, 0);
+  const totalAmount = filteredDonations.reduce((sum, d) => sum + (d.paymentStatus === 'completed' ? d.amount : 0), 0);
   const completedCount = filteredDonations.filter((d) => d.paymentStatus === 'completed').length;
-  const pendingCount = filteredDonations.filter((d) => d.paymentStatus === 'pending').length;
+  
+  // 누적 결제 금액 (전체 수납 내역 중 정상 결제완료 총 금액)
+  const cumulativeAmount = donations
+    .filter((d) => d.paymentStatus === 'completed')
+    .reduce((sum, d) => sum + (d.amount || 0), 0);
+  const cumulativeCount = donations.filter((d) => d.paymentStatus === 'completed').length;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -787,11 +792,11 @@ export default function DonationHistory() {
 
 
                 {/* Statistics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
-                        총 봉헌액
+                        조회 기간 봉헌액
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -799,7 +804,7 @@ export default function DonationHistory() {
                         {totalAmount.toLocaleString()}원
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {filteredDonations.length}건
+                        조회 {completedCount}건 승인
                       </p>
                     </CardContent>
                   </Card>
@@ -807,13 +812,29 @@ export default function DonationHistory() {
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
-                        결제완료
+                        결제완료 건수
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold text-green-600">{completedCount}건</div>
                       <p className="text-xs text-muted-foreground mt-1">
                         정상 승인된 봉헌
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        누적 결제 금액
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-indigo-600">
+                        {cumulativeAmount.toLocaleString()}원
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        전체 누적 {cumulativeCount}건 승인
                       </p>
                     </CardContent>
                   </Card>
