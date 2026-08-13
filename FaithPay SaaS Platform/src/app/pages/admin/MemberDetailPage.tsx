@@ -50,6 +50,7 @@ import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
+import { cleanPaymentMethod } from './DonationHistory';
 
 export interface MemberDetailData {
   id: string;
@@ -193,7 +194,7 @@ export default function MemberDetailPage() {
                 date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
                 itemName: d.itemName || (d.isRecurring ? `${currentTenant.terminology?.donation || '보시/후원'} (정기)` : `특별 ${currentTenant.terminology?.donation || '보시/후원'}`),
                 amount: d.amount || 0,
-                paymentMethod: d.paymentMethod || '신용카드',
+                paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
                 type: d.isRecurring ? 'recurring' : 'once',
                 status: 'completed',
               })),
