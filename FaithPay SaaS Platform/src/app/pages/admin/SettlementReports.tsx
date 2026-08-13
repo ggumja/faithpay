@@ -76,7 +76,24 @@ export default function SettlementReports() {
     });
 
     setMonthlySettlement(processed);
-  }, [contractRate]);
+
+    const isBuddhist = currentTenant?.religionType === 'buddhist';
+    const isCatholic = currentTenant?.religionType === 'catholic';
+
+    setCategoryData([
+      { name: isBuddhist ? '인등보시' : isCatholic ? '주일헌금' : '십일조', value: 45200000, color: '#4f46e5' },
+      { name: isBuddhist ? '대웅전 보시' : isCatholic ? '교무금' : '감사헌금', value: 22100000, color: '#06b6d4' },
+      { name: isBuddhist ? '특별기도' : isCatholic ? '미사지향' : '건축헌금', value: 12415000, color: '#f59e0b' },
+      { name: '기타 보시', value: 4500000, color: '#10b981' },
+    ]);
+
+    setPaymentMethodData([
+      { name: '신용카드', value: 42100000, color: '#4f46e5' },
+      { name: '카카오페이', value: 24500000, color: '#facc15' },
+      { name: '토스페이', value: 12615000, color: '#3b82f6' },
+      { name: '가상계좌', value: 5000000, color: '#10b981' },
+    ]);
+  }, [contractRate, currentTenant]);
 
 
   if (!currentTenant) {
@@ -469,7 +486,6 @@ export default function SettlementReports() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableRow className="border-none" />
                         <TableHead>원 결제 승인일</TableHead>
                         <TableHead>신도명 / 항목</TableHead>
                         <TableHead className="text-right">취소 요청 금액</TableHead>
@@ -525,7 +541,7 @@ export default function SettlementReports() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
+                        <Tooltip formatter={(value: number) => `${(value ?? 0).toLocaleString()}원`} />
                       </PieChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -547,13 +563,13 @@ export default function SettlementReports() {
                               />
                               <span className="font-medium">{item.name}</span>
                             </div>
-                            <span className="font-bold">{item.value.toLocaleString()}원</span>
+                            <span className="font-bold">{(item?.value ?? 0).toLocaleString()}원</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
                               className="h-2 rounded-full"
                               style={{
-                                width: `${(item.value / 84215000) * 100}%`,
+                                width: `${((item?.value ?? 0) / 84215000) * 100}%`,
                                 backgroundColor: item.color,
                               }}
                             />
@@ -593,7 +609,7 @@ export default function SettlementReports() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
+                        <Tooltip formatter={(value: number) => `${(value ?? 0).toLocaleString()}원`} />
                       </PieChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -615,13 +631,13 @@ export default function SettlementReports() {
                               />
                               <span className="font-medium">{item.name}</span>
                             </div>
-                            <span className="font-bold">{item.value.toLocaleString()}원</span>
+                            <span className="font-bold">{(item?.value ?? 0).toLocaleString()}원</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
                               className="h-2 rounded-full"
                               style={{
-                                width: `${(item.value / 84215000) * 100}%`,
+                                width: `${((item?.value ?? 0) / 84215000) * 100}%`,
                                 backgroundColor: item.color,
                               }}
                             />
