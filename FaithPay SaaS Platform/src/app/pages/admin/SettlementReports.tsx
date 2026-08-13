@@ -41,8 +41,6 @@ export default function SettlementReports() {
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
 
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
-  const [paymentMethodData, setPaymentMethodData] = useState<any[]>([]);
   const [cancelledDonations, setCancelledDonations] = useState<any[]>([]);
   const [dbDonations, setDbDonations] = useState<any[]>([]);
 
@@ -104,23 +102,6 @@ export default function SettlementReports() {
     });
 
     setMonthlySettlement(processed);
-
-    const isBuddhist = currentTenant?.religionType === 'buddhist';
-    const isCatholic = currentTenant?.religionType === 'catholic';
-
-    setCategoryData([
-      { name: isBuddhist ? '인등보시' : isCatholic ? '주일헌금' : '십일조', value: 45200000, color: '#4f46e5' },
-      { name: isBuddhist ? '대웅전 보시' : isCatholic ? '교무금' : '감사헌금', value: 22100000, color: '#06b6d4' },
-      { name: isBuddhist ? '특별기도' : isCatholic ? '미사지향' : '건축헌금', value: 12415000, color: '#f59e0b' },
-      { name: '기타 보시', value: 4500000, color: '#10b981' },
-    ]);
-
-    setPaymentMethodData([
-      { name: '신용카드', value: 42100000, color: '#4f46e5' },
-      { name: '카카오페이', value: 24500000, color: '#facc15' },
-      { name: '토스페이', value: 12615000, color: '#3b82f6' },
-      { name: '가상계좌', value: 5000000, color: '#10b981' },
-    ]);
   }, [contractRate, currentTenant, tenantSlug]);
 
 
@@ -327,8 +308,6 @@ export default function SettlementReports() {
             <TabsList>
               <TabsTrigger value="monthly">월별 정산</TabsTrigger>
               <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
-              <TabsTrigger value="category">항목별 분석</TabsTrigger>
-              <TabsTrigger value="payment">결제 수단별</TabsTrigger>
             </TabsList>
 
             {/* Monthly Settlement */}
@@ -499,141 +478,6 @@ export default function SettlementReports() {
               </Card>
             </TabsContent>
 
-            {/* Category Analysis */}
-            <TabsContent value="category" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>항목별 봉헌액 (이번 달)</CardTitle>
-                    <CardDescription>총 84,215,000원</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={categoryData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) =>
-                            `${name} ${(percent * 100).toFixed(0)}%`
-                          }
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {categoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => `${(value ?? 0).toLocaleString()}원`} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>항목별 상세</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {categoryData.map((item) => (
-                        <div key={item.name}>
-                          <div className="flex justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: item.color }}
-                              />
-                              <span className="font-medium">{item.name}</span>
-                            </div>
-                            <span className="font-bold">{(item?.value ?? 0).toLocaleString()}원</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full"
-                              style={{
-                                width: `${((item?.value ?? 0) / 84215000) * 100}%`,
-                                backgroundColor: item.color,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Payment Method */}
-            <TabsContent value="payment" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>결제 수단별 분포 (이번 달)</CardTitle>
-                    <CardDescription>총 84,215,000원</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={paymentMethodData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) =>
-                            `${name} ${(percent * 100).toFixed(0)}%`
-                          }
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {paymentMethodData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => `${(value ?? 0).toLocaleString()}원`} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>결제 수단별 상세</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {paymentMethodData.map((item) => (
-                        <div key={item.name}>
-                          <div className="flex justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: item.color }}
-                              />
-                              <span className="font-medium">{item.name}</span>
-                            </div>
-                            <span className="font-bold">{(item?.value ?? 0).toLocaleString()}원</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full"
-                              style={{
-                                width: `${((item?.value ?? 0) / 84215000) * 100}%`,
-                                backgroundColor: item.color,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
           </Tabs>
 
           {/* Info */}
