@@ -53,6 +53,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
+import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 
 export interface MemberDetailData {
   id: string;
@@ -114,45 +115,30 @@ export default function MemberDetailPage() {
   // Note state
   const [noteText, setNoteText] = useState('');
 
-  // Period filter states for Tab 1 (Donations History)
-  const [historyStartDate, setHistoryStartDate] = useState<string>('');
-  const [historyEndDate, setHistoryEndDate] = useState<string>('');
-  const [historyPreset, setHistoryPreset] = useState<'all' | '1m' | '3m' | '6m' | '1y' | 'custom'>('all');
-
-  const handleApplyHistoryPreset = (preset: 'all' | '1m' | '3m' | '6m' | '1y') => {
-    setHistoryPreset(preset);
+  // Period filter states using official PeriodRangePicker module
+  const [periodUnit, setPeriodUnit] = useState<PeriodUnit>('daily');
+  const [periodSelection, setPeriodSelection] = useState<PeriodSelection>(() => {
     const now = new Date();
-    const endStr = now.toISOString().slice(0, 10);
-
-    if (preset === 'all') {
-      setHistoryStartDate('');
-      setHistoryEndDate('');
-      return;
-    }
-
-    let start = new Date();
-    if (preset === '1m') {
-      start.setMonth(start.getMonth() - 1);
-    } else if (preset === '3m') {
-      start.setMonth(start.getMonth() - 3);
-    } else if (preset === '6m') {
-      start.setMonth(start.getMonth() - 6);
-    } else if (preset === '1y') {
-      start.setFullYear(start.getFullYear() - 1);
-    }
-
-    setHistoryStartDate(start.toISOString().slice(0, 10));
-    setHistoryEndDate(endStr);
-  };
+    const start = new Date(2020, 0, 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return {
+      unit: 'daily',
+      startDate: start,
+      endDate: end,
+      label: '전체 기간',
+    };
+  });
 
   const filteredDonationsHistory = useMemo(() => {
     if (!member || !member.donationsHistory) return [];
     return member.donationsHistory.filter((don) => {
-      if (historyStartDate && don.date < historyStartDate) return false;
-      if (historyEndDate && don.date > historyEndDate) return false;
-      return true;
+      if (!periodSelection || !periodSelection.startDate || !periodSelection.endDate) return true;
+      const donTime = new Date(don.date).getTime();
+      const startTime = new Date(periodSelection.startDate).setHours(0, 0, 0, 0);
+      const endTime = new Date(periodSelection.endDate).setHours(23, 59, 59, 999);
+      return donTime >= startTime && donTime <= endTime;
     });
-  }, [member, historyStartDate, historyEndDate]);
+  }, [member, periodSelection]);
 
   const filteredTotalSum = useMemo(() => {
     return filteredDonationsHistory.reduce((sum, don) => sum + (don.amount || 0), 0);
@@ -782,115 +768,25 @@ export default function MemberDetailPage() {
                     </Button>
                   </div>
 
-                  {/* 🔍 기간 조회 검색 컨트롤 바 */}
-                  <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 p-3.5 rounded-2xl space-y-3 shadow-2xs">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* 🔍 기간 지정 모듈 (PeriodRangePicker) */}
+                  <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 p-4 rounded-2xl space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                          조회 기간 선택:
+                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 whitespace-nowrap">
+                          <Calendar className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                          기간 선택:
                         </span>
-                        <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-0.5 shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => handleApplyHistoryPreset('all')}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                              historyPreset === 'all'
-                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            전체
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleApplyHistoryPreset('1m')}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                              historyPreset === '1m'
-                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            1개월
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleApplyHistoryPreset('3m')}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                              historyPreset === '3m'
-                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            3개월
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleApplyHistoryPreset('6m')}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                              historyPreset === '6m'
-                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            6개월
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleApplyHistoryPreset('1y')}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                              historyPreset === '1y'
-                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            1년
-                          </button>
-                        </div>
+                        <PeriodRangePicker
+                          unit={periodUnit}
+                          onUnitChange={(u) => setPeriodUnit(u)}
+                          selection={periodSelection}
+                          onSelectionChange={(newSel) => setPeriodSelection(newSel)}
+                        />
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="date"
-                          value={historyStartDate}
-                          onChange={(e) => {
-                            setHistoryStartDate(e.target.value);
-                            setHistoryPreset('custom');
-                          }}
-                          className="w-36 text-xs h-8 bg-white dark:bg-zinc-800 border-slate-300 rounded-lg font-mono"
-                        />
-                        <span className="text-xs font-bold text-slate-400">~</span>
-                        <Input
-                          type="date"
-                          value={historyEndDate}
-                          onChange={(e) => {
-                            setHistoryEndDate(e.target.value);
-                            setHistoryPreset('custom');
-                          }}
-                          className="w-36 text-xs h-8 bg-white dark:bg-zinc-800 border-slate-300 rounded-lg font-mono"
-                        />
-                        {(historyStartDate || historyEndDate) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleApplyHistoryPreset('all')}
-                            className="h-8 px-2 text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer"
-                          >
-                            <RotateCcw className="h-3 w-3 mr-1 text-slate-400" />
-                            초기화
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Filtered Period Statistics Summary */}
-                    <div className="flex flex-wrap items-center justify-between text-xs font-medium text-slate-600 dark:text-zinc-400 pt-2.5 border-t border-slate-200/80 dark:border-zinc-800">
-                      <div className="flex items-center gap-1.5">
-                        <Filter className="h-3.5 w-3.5 text-indigo-600" />
-                        <span>선택 구간: <strong className="text-slate-900 dark:text-zinc-100 font-bold">{historyStartDate || '최초'} ~ {historyEndDate || '현재'}</strong></span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span>조회 건수: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold">{filteredDonationsHistory.length}건</strong></span>
+                      <div className="flex items-center gap-3 self-end sm:self-auto text-xs font-medium text-slate-600 dark:text-zinc-400">
+                        <span>조회 건수: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm">{filteredDonationsHistory.length}건</strong></span>
+                        <span className="text-slate-300">|</span>
                         <span>기간 합계 금액: <strong className="text-emerald-600 dark:text-emerald-400 font-black text-sm">₩ {filteredTotalSum.toLocaleString()}원</strong></span>
                       </div>
                     </div>
