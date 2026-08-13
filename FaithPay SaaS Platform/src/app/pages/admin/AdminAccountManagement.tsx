@@ -281,22 +281,16 @@ export default function AdminAccountManagement() {
 
     const cleanEmail = newEmail.trim().toLowerCase();
     
-    // 1. 현재 단체 내 이메일 중복 체크
+    // 1. 동일 단체 내 이메일 중복만 체크
     if (staffList.some((s) => s.email.toLowerCase() === cleanEmail)) {
-      toast.error(`'${cleanEmail}' 이메일은 이미 등록된 관리자 계정입니다.`);
+      toast.error(`'${cleanEmail}' 이메일은 이미 본 단체에 등록된 관리자 계정입니다.`);
       return;
     }
 
-    // 2. 다른 단체(Cross-Tenant) 이메일 중복 체크
+    // 2. 다른 단체(Cross-Tenant) 등록 여부 체크 (허용 및 통합 가이드 제공)
     const otherTenantWithSameEmail = tenants.find(
       (t) => t.id !== currentTenant.id && t.contact?.email?.toLowerCase() === cleanEmail
     );
-    if (otherTenantWithSameEmail) {
-      toast.error(
-        `'${cleanEmail}' 이메일은 이미 타 단체([${otherTenantWithSameEmail.name}])의 대표 계정으로 등록되어 있습니다. 다른 이메일을 입력해 주세요.`
-      );
-      return;
-    }
 
     const newStaff: StaffAdminUser = {
       id: `staff_${Date.now()}`,
@@ -318,7 +312,13 @@ export default function AdminAccountManagement() {
     setNewPassword('');
     setSelectedGroupId('finance_manager');
 
-    toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
+    if (otherTenantWithSameEmail) {
+      toast.success(
+        `[${newStaff.name}] 계정이 추가되었습니다. '${cleanEmail}' 이메일은 [${otherTenantWithSameEmail.name}]에도 등록되어 있어 1개 이메일로 다중 회계 단체를 통합 관리할 수 있습니다.`
+      );
+    } else {
+      toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
+    }
   };
 
   // ✏️ 스태프 계정 정보 수정
@@ -342,20 +342,14 @@ export default function AdminAccountManagement() {
 
     // 1. 현재 단체 내 다른 관리자 이메일 중복 체크
     if (staffList.some((s) => s.id !== editingStaff.id && s.email.toLowerCase() === cleanEmail)) {
-      toast.error(`'${cleanEmail}' 이메일은 이미 등록된 다른 관리자의 이메일입니다.`);
+      toast.error(`'${cleanEmail}' 이메일은 이미 본 단체에 등록된 다른 관리자의 이메일입니다.`);
       return;
     }
 
-    // 2. 다른 단체(Cross-Tenant) 이메일 중복 체크
+    // 2. 다른 단체(Cross-Tenant) 등록 여부 체크 (허용)
     const otherTenantWithSameEmail = tenants.find(
       (t) => t.id !== currentTenant.id && t.contact?.email?.toLowerCase() === cleanEmail
     );
-    if (otherTenantWithSameEmail) {
-      toast.error(
-        `'${cleanEmail}' 이메일은 이미 타 단체([${otherTenantWithSameEmail.name}])의 대표 계정으로 등록되어 있습니다. 다른 이메일을 입력해 주세요.`
-      );
-      return;
-    }
 
     setStaffList((prev) =>
       prev.map((s) =>
@@ -372,7 +366,13 @@ export default function AdminAccountManagement() {
     );
 
     setIsEditStaffModalOpen(false);
-    toast.success(`[${editName.trim()}] 관리자 계정 정보가 성공적으로 수정되었습니다.`);
+    if (otherTenantWithSameEmail) {
+      toast.success(
+        `[${editName.trim()}] 관리자 정보가 수정되었습니다. '${cleanEmail}' 이메일은 [${otherTenantWithSameEmail.name}]와(과) 공유되어 로그인 시 단체 선택 모달이 지원됩니다.`
+      );
+    } else {
+      toast.success(`[${editName.trim()}] 관리자 계정 정보가 성공적으로 수정되었습니다.`);
+    }
   };
 
   const handleToggleStatus = (id: string) => {

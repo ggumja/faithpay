@@ -16,6 +16,10 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // 다중 단체 관리 계정 (회계법인 등) 선택 모달
+  const [multiTenantModalOpen, setMultiTenantModalOpen] = useState(false);
+  const [matchedTenants, setMatchedTenants] = useState<any[]>([]);
+
   // 이메일 / 비밀번호 찾기 모달 상태
   const [findEmailOpen, setFindEmailOpen] = useState(false);
   const [findPwOpen, setFindPwOpen] = useState(false);
@@ -70,7 +74,7 @@ export default function AdminLogin() {
     }
 
     // 2. 전체 단체 관리자 일반 로그인 (/admin/login)
-    const targetTenant = tenants.find(t => {
+    const matchingTenantsList = tenants.filter(t => {
       const primaryEmail = t.contact?.email?.toLowerCase() || '';
       const defaultTenantEmail = `info@${t.slug}.or.kr`.toLowerCase();
       const defaultFaithpayEmail = `${t.slug}@faithpay.or.kr`.toLowerCase();
@@ -81,10 +85,22 @@ export default function AdminLogin() {
         cleanEmail === defaultTenantEmail ||
         cleanEmail === defaultFaithpayEmail ||
         cleanEmail === financeEmail ||
-        cleanEmail.includes(t.slug.toLowerCase())
+        cleanEmail.includes(t.slug.toLowerCase()) ||
+        cleanEmail.includes('tax') ||
+        cleanEmail.includes('account') ||
+        cleanEmail.includes('cpa')
       );
-    }) || tenants[0]; // 등록 단체 또는 기본 단체 매칭
+    });
 
+    // 2개 이상의 단체에 등록된 회계법인/통합 관리자 계정일 경우 단체 선택 모달 오픈
+    if (matchingTenantsList.length > 1) {
+      setMatchedTenants(matchingTenantsList);
+      setMultiTenantModalOpen(true);
+      toast.info(`💡 '${cleanEmail}' 이메일로 ${matchingTenantsList.length}개 가맹 단체가 조회되었습니다. 접속할 단체를 선택하세요.`);
+      return;
+    }
+
+    const targetTenant = matchingTenantsList[0] || tenants[0];
     if (targetTenant) {
       const tenantAdmin = {
         id: `admin-${targetTenant.id}`,
@@ -287,72 +303,124 @@ export default function AdminLogin() {
             </button>
           </div>
         </div>
-
       </div>
 
-      {/* ── [Modal 1] 가맹 단체 이메일 찾기 모달 ── */}
-      <Dialog open={findEmailOpen} onOpenChange={setFindEmailOpen}>
-        <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 shadow-2xl">
-          <DialogHeader className="space-y-1 text-left">
-            <div className="flex items-center gap-2 text-blue-600 font-bold text-xs">
-              <Search className="h-4 w-4" />
-              <span>가맹 단체 계정 조회</span>
-            </div>
-            <DialogTitle className="text-xl font-bold text-slate-900">
-              담당자 이메일 찾기
+      {/* 🏢 1. 다중 단체 관리 계정 (회계법인/통합 관리자) 선택 모달 */}
+      <Dialog open={multiTenantModalOpen} onOpenChange={setMultiTenantModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Building2 className="h-5 w-5 text-indigo-600" />
+              접속할 가맹 단체 선택
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              개설 신청 시 등록하신 단체 명칭 또는 담당자 연락처를 입력해 주세요.
+              입력하신 이메일(<span className="font-bold text-indigo-600">{email}</span>)로 
+              등록된 <span className="font-bold text-slate-900">{matchedTenants.length}개 가맹 단체</span>가 조회되었습니다.
+              접속하실 단체를 선택해 주세요.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSearchEmail} className="space-y-4 my-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-700">단체 명칭 또는 담당자 성명 *</Label>
-              <Input
-                placeholder="예: 각원사 / 홍길동"
-                value={searchOrgName}
-                onChange={(e) => setSearchOrgName(e.target.value)}
-                required
-                className="h-11 rounded-xl bg-slate-50 border-slate-200 text-sm font-semibold"
-              />
-            </div>
+          <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+            {matchedTenants.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => handleSelectTenantAndLogin(t)}
+                className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/40 hover:border-indigo-300 transition-all cursor-pointer flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border flex items-center justify-center text-lg font-bold text-indigo-600 shadow-sm">
+                    {t.name.slice(0, 1)}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-zinc-100 text-sm flex items-center gap-2">
+                      {t.name}
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold">
+                        {t.religionType === 'buddhist' ? '사찰' : t.religionType === 'protestant' ? '교회' : t.religionType === 'catholic' ? '성당' : '기부단체'}
+                      </span>
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                      /{t.slug} • {t.address || '주소 미입력'}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-700">담당자 연락처 *</Label>
-              <Input
-                placeholder="010-1234-5678"
-                value={searchPhone}
-                onChange={(e) => setSearchPhone(e.target.value)}
-                required
-                className="h-11 rounded-xl bg-slate-50 border-slate-200 text-sm font-semibold"
-              />
-            </div>
-
-            <Button type="submit" className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm cursor-pointer">
-              이메일 조회하기
-            </Button>
-          </form>
-
-          {/* 조회 결과 표출 */}
-          {emailSearchResult && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl space-y-2 mt-2">
-              <div className="flex items-center gap-2 text-blue-900 font-bold text-xs">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                <span>[{emailSearchResult.orgName}] 계정 조회 성공</span>
+                <Button
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1 rounded-xl group-hover:translate-x-0.5 transition-transform"
+                >
+                  진입
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
               </div>
-              <p className="text-sm font-bold text-blue-700 font-mono">
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMultiTenantModalOpen(false)} className="w-full rounded-xl text-xs font-bold">
+              취소
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 🔍 2. 이메일 계정 찾기 모달 */}
+      <Dialog open={findEmailOpen} onOpenChange={setFindEmailOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <Search className="h-5 w-5 text-blue-600" />
+              가맹 단체 이메일 계정 찾기
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              가맹 단체명 또는 담당자 연락처를 입력하시면 등록된 관리자 이메일을 조회합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!emailSearchResult ? (
+            <form onSubmit={handleSearchEmail} className="space-y-4 my-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">가맹 단체명 또는 담당자 성명</Label>
+                <Input
+                  placeholder="예: 각원사 / 홍길동"
+                  value={searchOrgName}
+                  onChange={(e) => setSearchOrgName(e.target.value)}
+                  className="h-11 rounded-xl bg-slate-50 border-slate-200 text-sm font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">담당자 휴대폰 번호</Label>
+                <Input
+                  placeholder="010-1234-5678"
+                  value={searchPhone}
+                  onChange={(e) => setSearchPhone(e.target.value)}
+                  className="h-11 rounded-xl bg-slate-50 border-slate-200 text-sm font-semibold"
+                />
+              </div>
+
+              <Button type="submit" className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm cursor-pointer">
+                이메일 계정 검색
+              </Button>
+            </form>
+          ) : (
+            <div className="p-5 bg-blue-50 border border-blue-200 rounded-2xl space-y-3 my-2">
+              <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
+                <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                {emailSearchResult.orgName} 등록 관리자 계정
+              </div>
+
+              <div className="bg-white p-3.5 rounded-xl border border-blue-100 font-mono text-center text-sm font-bold text-slate-800">
                 {emailSearchResult.maskedEmail}
-              </p>
+              </div>
+
               <Button
                 type="button"
-                size="sm"
                 onClick={() => {
                   setEmail(emailSearchResult.fullEmail);
                   setFindEmailOpen(false);
-                  toast.success('조회된 이메일이 입력창에 자동 반영되었습니다.');
+                  setEmailSearchResult(null);
                 }}
-                className="w-full h-9 bg-blue-600 text-white rounded-lg text-xs font-bold mt-1"
+                className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
               >
                 이 이메일로 로그인하기
               </Button>
@@ -367,16 +435,13 @@ export default function AdminLogin() {
         </DialogContent>
       </Dialog>
 
-      {/* ── [Modal 2] 가맹 단체 비밀번호 재설정 모달 ── */}
+      {/* 🔑 3. 비밀번호 재설정 모달 */}
       <Dialog open={findPwOpen} onOpenChange={setFindPwOpen}>
-        <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 shadow-2xl">
-          <DialogHeader className="space-y-1 text-left">
-            <div className="flex items-center gap-2 text-blue-600 font-bold text-xs">
-              <KeyRound className="h-4 w-4" />
-              <span>보안 인증 및 재설정</span>
-            </div>
-            <DialogTitle className="text-xl font-bold text-slate-900">
-              비밀번호 재설정
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <KeyRound className="h-5 w-5 text-blue-600" />
+              비밀번호 재설정 요청
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               가맹 단체 등록 이메일을 입력하시면 본인 확인 인증 링크가 발송됩니다.
@@ -440,7 +505,6 @@ export default function AdminLogin() {
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
