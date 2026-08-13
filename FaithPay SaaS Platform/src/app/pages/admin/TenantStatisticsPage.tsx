@@ -121,9 +121,16 @@ export default function TenantStatisticsPage() {
       // 2. 선택 시작일 이상
       if (created < startLimit) return false;
 
-      // 3. 정상 승인 완료건(completed)만
-      const status = d.paymentStatus || d.payment_status || d.status || 'completed';
-      return status === 'completed';
+      // 3. 정상 승인 완료건(completed/paid/success/approved)만
+      const rawStatus = String(d.paymentStatus || d.payment_status || d.status || 'completed').toLowerCase();
+      const isCompleted =
+        rawStatus === 'completed' ||
+        rawStatus === 'success' ||
+        rawStatus === 'paid' ||
+        rawStatus === 'approved' ||
+        rawStatus === '결제완료' ||
+        rawStatus === '승인완료';
+      return isCompleted;
     });
   }, [donations, periodSelection, yesterdayCutoff]);
 
