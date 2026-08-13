@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
 import { toast } from 'sonner';
+import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 
 function numberToKorean(amount: number): string {
   if (!amount || isNaN(amount)) return '영';
@@ -310,8 +311,80 @@ export default function DonationHistory() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
   const [deviceFilter, setDeviceFilter] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+
+  // 🚀 Hot-Cold Hybrid: Default initial view is Today (당일 실시간 Hot Data 모드)
+  const [periodUnit, setPeriodUnit] = useState<PeriodUnit>('daily');
+  const [periodSelection, setPeriodSelection] = useState<PeriodSelection>(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    return {
+      unit: 'daily',
+      startDate: todayStart,
+      endDate: todayEnd,
+      label: `🔥 오늘 (${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일)`,
+    };
+  });
+
+  // Check if current view is Today mode
+  const isTodayMode = useMemo(() => {
+    if (!periodSelection || !periodSelection.startDate || !periodSelection.endDate) return false;
+    const now = new Date();
+    const s = periodSelection.startDate;
+    const e = periodSelection.endDate;
+    return (
+      s.getFullYear() === now.getFullYear() &&
+      s.getMonth() === now.getMonth() &&
+      s.getDate() === now.getDate() &&
+      e.getFullYear() === now.getFullYear() &&
+      e.getMonth() === now.getMonth() &&
+      e.getDate() === now.getDate()
+    );
+  }, [periodSelection]);
+
+  // Quick period presets
+  const setQuickPeriod = (type: 'today' | 'this_week' | 'this_month' | 'all') => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+    let label = '';
+    let unit: PeriodUnit = 'daily';
+
+    if (type === 'today') {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      label = `🔥 오늘 (${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일)`;
+      unit = 'daily';
+    } else if (type === 'this_week') {
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0, 0);
+      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+      start = monday;
+      end = sunday;
+      label = `📅 이번 주 (${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()})`;
+      unit = 'weekly';
+    } else if (type === 'this_month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      label = `🗓️ 이번 달 (${now.getFullYear()}년 ${now.getMonth() + 1}월 전체)`;
+      unit = 'monthly';
+    } else if (type === 'all') {
+      start = new Date(2020, 0, 1, 0, 0, 0, 0);
+      end = new Date(2030, 11, 31, 23, 59, 59, 999);
+      label = `📊 전체 기간`;
+      unit = 'yearly';
+    }
+
+    setPeriodUnit(unit);
+    setPeriodSelection({
+      unit,
+      startDate: start,
+      endDate: end,
+      label,
+    });
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
   const [receiptDonation, setReceiptDonation] = useState<any>(null);
@@ -408,6 +481,25 @@ export default function DonationHistory() {
     };
     fetchDonations();
   }, [currentTenant]);
+
+  // ⚡ 1. 당일 실시간 핫 갱신 (Hot Real-time Polling)
+  // 오늘(Today) 선택 모드일 때만 15초 마다 실시간 신규 결제 자동 수신!
+  useEffect(() => {
+    if (!currentTenant || !isTodayMode) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await donationAPI.getByTenant(currentTenant.id);
+        if (res.success && res.data) {
+          setDonations(assignSequentialDonationIds(res.data));
+        }
+      } catch (e) {
+        console.error('Real-time polling error:', e);
+      }
+    }, 15000); // 15s quiet background poll when today mode active
+
+    return () => clearInterval(interval);
+  }, [currentTenant, isTodayMode]);
 
   if (!currentTenant) {
     return (
@@ -520,14 +612,14 @@ export default function DonationHistory() {
     const matchesDevice = deviceFilter === 'all' || donation.deviceType === deviceFilter;
     
     let matchesDate = true;
-    if (startDate || endDate) {
-      const dDate = new Date(donation.createdAt).toISOString().split('T')[0];
-      if (startDate && endDate) {
-        matchesDate = dDate >= startDate && dDate <= endDate;
-      } else if (startDate) {
-        matchesDate = dDate >= startDate;
-      } else if (endDate) {
-        matchesDate = dDate <= endDate;
+    if (periodSelection && periodSelection.startDate && periodSelection.endDate) {
+      const dDate = new Date(donation.createdAt);
+      if (!isNaN(dDate.getTime())) {
+        const start = new Date(periodSelection.startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(periodSelection.endDate);
+        end.setHours(23, 59, 59, 999);
+        matchesDate = dDate >= start && dDate <= end;
       }
     }
 
@@ -1052,27 +1144,69 @@ export default function DonationHistory() {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          시작일
-                        </label>
-                        <Input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                        />
+                    {/* Hot-Cold Hybrid Data Loading Control Banner */}
+                    <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        {isTodayMode ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span>🔥 당일 실시간 핫 서빙 모드 (DB 과부하 0%, 15초 자동 갱신 중)</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 px-3 py-1.5 rounded-xl">
+                            <span>📦 과거 내역 온디맨드(On-Demand) 정적 조회 모드 (실시간 동기화 오프, DB 서버 보호)</span>
+                          </div>
+                        )}
+
+                        {/* Quick Preset Buttons */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setQuickPeriod('today')}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              isTodayMode
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            🔥 오늘 (실시간)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickPeriod('this_week')}
+                            className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
+                          >
+                            📅 이번 주
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickPeriod('this_month')}
+                            className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
+                          >
+                            🗓️ 이번 달
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQuickPeriod('all')}
+                            className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
+                          >
+                            📊 전체 보기
+                          </button>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          종료일
-                        </label>
-                        <Input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
+
+                      <div className="pt-2">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                          기간 상세 지정 (일별, 주별, 월별, 년별)
+                        </span>
+                        <PeriodRangePicker
+                          unit={periodUnit}
+                          onUnitChange={setPeriodUnit}
+                          selection={periodSelection}
+                          onSelectionChange={setPeriodSelection}
                         />
                       </div>
                     </div>
