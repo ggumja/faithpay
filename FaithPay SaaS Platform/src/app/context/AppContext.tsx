@@ -16,10 +16,14 @@ export interface Tenant {
   description: string;
   address: string;
   uniqueNumber?: string;              // 종교/비영리 단체 고유번호증 번호 (예: 240-82-12345)
+  uniqueNumberFile?: string;          // 고유번호증 사본 파일 첨부 (선택)
   businessRegistrationNumber?: string; // 수익사업용 사업자등록번호 (선택사항, 바자회/물품 판매용)
+  businessRegistrationFile?: string;   // 사업자등록증 사본 파일 첨부 (선택)
   businessInfo?: {
     uniqueNumber?: string;
+    uniqueNumberFile?: string;
     registrationNumber?: string;
+    registrationFile?: string;
     address?: string;
     representativeName?: string;
     taxInvoiceEmail?: string;

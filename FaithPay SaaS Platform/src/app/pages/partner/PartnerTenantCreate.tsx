@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Building2, ArrowLeft, CheckCircle2, Key, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Building2, ArrowLeft, CheckCircle2, Key, AlertTriangle, TrendingUp, Paperclip, Upload, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { partnerAPI, Partner } from '../../api/client';
 
@@ -39,10 +39,34 @@ export default function PartnerTenantCreate() {
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [uniqueNumber, setUniqueNumber] = useState('240-82-12345');
+  const [uniqueNumberFile, setUniqueNumberFile] = useState<string | null>(null);
+  const [uniqueNumberFileName, setUniqueNumberFileName] = useState('');
   const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('');
+  const [businessRegistrationFile, setBusinessRegistrationFile] = useState<string | null>(null);
+  const [businessRegistrationFileName, setBusinessRegistrationFileName] = useState('');
   const [adminName, setAdminName] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [initialTempPassword] = useState(() => `fp${Math.floor(100000 + Math.random() * 900000)}`);
+
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setFile: (val: string | null) => void,
+    setFileName: (val: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('파일 크기는 10MB 이하만 첨부 가능합니다.');
+      return;
+    }
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFile(reader.result as string);
+      toast.success(`${file.name} 서류 첨부 완료`);
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const sessionRaw = localStorage.getItem('faithpay_partner_session');
@@ -127,6 +151,17 @@ export default function PartnerTenantCreate() {
         apiKey: 'test_ck_docs', secretKey: 'test_sk_docs',
         mid: 'toss_test_mid', isActive: true,
         updatedAt: new Date().toISOString(),
+      },
+      uniqueNumber: uniqueNumber || '240-82-12345',
+      uniqueNumberFile: uniqueNumberFile || undefined,
+      businessRegistrationNumber: businessRegistrationNumber || undefined,
+      businessRegistrationFile: businessRegistrationFile || undefined,
+      businessInfo: {
+        uniqueNumber: uniqueNumber || '240-82-12345',
+        uniqueNumberFile: uniqueNumberFile || undefined,
+        registrationNumber: businessRegistrationNumber || undefined,
+        registrationFile: businessRegistrationFile || undefined,
+        address: address || '서울특별시 종로구 인사동길 45',
       },
       status: 'pending',
       appliedAt: new Date().toISOString(),
@@ -229,11 +264,90 @@ export default function PartnerTenantCreate() {
                   <Label className="text-xs font-bold text-slate-700">종교/비영리 단체 고유번호증 번호 *</Label>
                   <Input placeholder="예: 240-82-12345" value={uniqueNumber} onChange={e => setUniqueNumber(e.target.value)} className="font-mono text-xs font-bold" />
                   <p className="text-[10px] text-slate-500">순수 비영리 헌금/보시 수납용 국세청 고유번호 (10자리)</p>
+
+                  {/* 📄 고유번호증 사본 파일 첨부 (선택) */}
+                  <div className="pt-1.5">
+                    <Label className="text-[11px] font-bold text-slate-600 flex items-center gap-1 mb-1">
+                      <Paperclip className="h-3 w-3 text-purple-600" />
+                      <span>고유번호증 사본 첨부 (선택)</span>
+                    </Label>
+                    {uniqueNumberFile ? (
+                      <div className="flex items-center justify-between p-2 bg-purple-50 border border-purple-200 rounded-lg text-xs">
+                        <span className="font-semibold text-purple-900 truncate max-w-[160px] flex items-center gap-1">
+                          <FileText className="h-3.5 w-3.5 text-purple-600" />
+                          {uniqueNumberFileName}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-slate-400 hover:text-red-600 cursor-pointer"
+                          onClick={() => {
+                            setUniqueNumberFile(null);
+                            setUniqueNumberFileName('');
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center gap-1.5 p-2.5 border border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer transition-all">
+                        <Upload className="h-3.5 w-3.5 text-slate-500" />
+                        <span>서류 파일 첨부 (PDF/이미지)</span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          onChange={e => handleFileUpload(e, setUniqueNumberFile, setUniqueNumberFileName)}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-slate-700">수익사업용 사업자등록번호 (선택)</Label>
                   <Input placeholder="예: 240-81-67890 (바자회/물품 판매 겸업 시)" value={businessRegistrationNumber} onChange={e => setBusinessRegistrationNumber(e.target.value)} className="font-mono text-xs" />
                   <p className="text-[10px] text-slate-500">바자회/물품 판매 겸업 시 세무서 발급 사업자번호</p>
+
+                  {/* 📄 사업자등록증 사본 파일 첨부 (선택) */}
+                  <div className="pt-1.5">
+                    <Label className="text-[11px] font-bold text-slate-600 flex items-center gap-1 mb-1">
+                      <Paperclip className="h-3 w-3 text-blue-600" />
+                      <span>사업자등록증 사본 첨부 (선택)</span>
+                    </Label>
+                    {businessRegistrationFile ? (
+                      <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                        <span className="font-semibold text-blue-900 truncate max-w-[160px] flex items-center gap-1">
+                          <FileText className="h-3.5 w-3.5 text-blue-600" />
+                          {businessRegistrationFileName}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-slate-400 hover:text-red-600 cursor-pointer"
+                          onClick={() => {
+                            setBusinessRegistrationFile(null);
+                            setBusinessRegistrationFileName('');
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center gap-1.5 p-2.5 border border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer transition-all">
+                        <Upload className="h-3.5 w-3.5 text-slate-500" />
+                        <span>서류 파일 첨부 (PDF/이미지)</span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          onChange={e => handleFileUpload(e, setBusinessRegistrationFile, setBusinessRegistrationFileName)}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
 

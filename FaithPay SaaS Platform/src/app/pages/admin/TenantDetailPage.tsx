@@ -754,9 +754,22 @@ export default function TenantDetailPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-purple-600"></span>
-                    종교/비영리 단체 고유번호증 번호 (비영리 헌금/보시 수납용)
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between gap-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                      종교/비영리 단체 고유번호증 번호 (비영리 헌금/보시 수납용)
+                    </span>
+                    {(tenant.uniqueNumberFile || tenant.businessInfo?.uniqueNumberFile) && (
+                      <a
+                        href={tenant.uniqueNumberFile || tenant.businessInfo?.uniqueNumberFile}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 hover:text-purple-800 bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800"
+                      >
+                        <FileText className="h-3 w-3" />
+                        <span>📄 고유번호증 첨부 서류 열기</span>
+                      </a>
+                    )}
                   </Label>
                   <Input 
                     value={tenant.uniqueNumber || tenant.businessInfo?.uniqueNumber || '240-82-12345'} 
@@ -766,9 +779,22 @@ export default function TenantDetailPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    수익사업용 사업자등록번호 (바자회/물품 판매 겸업 시)
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between gap-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      수익사업용 사업자등록번호 (바자회/물품 판매 겸업 시)
+                    </span>
+                    {(tenant.businessRegistrationFile || tenant.businessInfo?.registrationFile) && (
+                      <a
+                        href={tenant.businessRegistrationFile || tenant.businessInfo?.registrationFile}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800"
+                      >
+                        <FileText className="h-3 w-3" />
+                        <span>📄 사업자등록증 첨부 서류 열기</span>
+                      </a>
+                    )}
                   </Label>
                   <Input 
                     value={tenant.businessRegistrationNumber || tenant.businessInfo?.registrationNumber || '미등록 (순수 비영리)'} 
