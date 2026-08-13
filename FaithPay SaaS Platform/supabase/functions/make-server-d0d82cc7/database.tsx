@@ -600,6 +600,57 @@ export async function updateDonation(tenantId: string, id: string, updates: Part
   return updated;
 }
 
+export async function migrateNormalizeExistingDonations(): Promise<{ totalChecked: number; totalUpdated: number }> {
+  let totalChecked = 0;
+  let totalUpdated = 0;
+
+  // 1. Update kv_store_d0d82cc7 table
+  try {
+    const entries = await kv.getByPrefixWithKeys('donation:');
+    for (const item of entries) {
+      totalChecked++;
+      const donation = item.value;
+      if (donation && typeof donation === 'object') {
+        const rawMethod = donation.paymentMethod;
+        const normalized = normalizePaymentMethod(rawMethod, donation.isRecurring);
+        if (rawMethod !== normalized) {
+          donation.paymentMethod = normalized;
+          donation.updatedAt = new Date().toISOString();
+          await kv.set(item.key, donation);
+          totalUpdated++;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error normalizing KV donations:', err);
+  }
+
+  // 2. Update partner_commissions table in PostgreSQL
+  try {
+    const supabase = kv.client ? (kv as any).client() : null;
+    if (supabase) {
+      const { data: records } = await supabase.from('partner_commissions').select('id, payment_method, is_recurring');
+      if (records) {
+        for (const rec of records) {
+          const rawMethod = rec.payment_method;
+          const normalized = normalizePaymentMethod(rawMethod, rec.is_recurring);
+          if (rawMethod !== normalized) {
+            await supabase
+              .from('partner_commissions')
+              .update({ payment_method: normalized })
+              .eq('id', rec.id);
+            totalUpdated++;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error normalizing partner_commissions table:', err);
+  }
+
+  return { totalChecked, totalUpdated };
+}
+
 // ==================== ADMIN USER OPERATIONS ====================
 
 export async function createAdmin(admin: Omit<AdminUser, 'createdAt' | 'updatedAt'>): Promise<AdminUser> {

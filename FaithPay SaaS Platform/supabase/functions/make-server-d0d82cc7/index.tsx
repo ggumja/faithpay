@@ -283,7 +283,7 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
         prayerText: donationData.prayerText,
         isRecurring: donationData.isRecurring || false,
         paymentStatus: 'completed',
-        paymentMethod: 'card',
+        paymentMethod: '신용카드',
         transactionId: result.tranNo || result.apprNo,
       });
       return c.json({ success: true, data: donation });
@@ -293,6 +293,17 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
   } catch (error) {
     console.error('Error processing manual payment:', error);
     return c.json({ success: false, error: 'Failed to process payment' }, 500);
+  }
+});
+
+// DB 내 기존 결제 수단 일괄 정규화 마이그레이션
+app.post("/make-server-d0d82cc7/admin/migrate-payment-methods", async (c) => {
+  try {
+    const result = await db.migrateNormalizeExistingDonations();
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error running payment method migration:', error);
+    return c.json({ success: false, error: 'Migration failed' }, 500);
   }
 });
 

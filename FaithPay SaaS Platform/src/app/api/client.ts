@@ -369,11 +369,27 @@ export function normalizePaymentMethod(rawMethod?: string, isRecurring?: boolean
 
 export const donationAPI = {
   async getAll(): Promise<APIResponse<Donation[]>> {
-    return fetchAPI<Donation[]>('/donations');
+    const res = await fetchAPI<Donation[]>('/donations');
+    if (res.success && Array.isArray(res.data)) {
+      res.data.forEach((d) => {
+        if (d.paymentMethod) {
+          d.paymentMethod = normalizePaymentMethod(d.paymentMethod, d.isRecurring);
+        }
+      });
+    }
+    return res;
   },
 
   async getByTenant(tenantId: string): Promise<APIResponse<Donation[]>> {
-    return fetchAPI<Donation[]>(`/donations/${tenantId}`);
+    const res = await fetchAPI<Donation[]>(`/donations/${tenantId}`);
+    if (res.success && Array.isArray(res.data)) {
+      res.data.forEach((d) => {
+        if (d.paymentMethod) {
+          d.paymentMethod = normalizePaymentMethod(d.paymentMethod, d.isRecurring);
+        }
+      });
+    }
+    return res;
   },
 
   async create(donation: Omit<Donation, 'createdAt' | 'updatedAt'>): Promise<APIResponse<Donation>> {
