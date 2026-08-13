@@ -16,6 +16,7 @@ function fmt(n: number) {
 export default function DonationComplete() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  const { currentTenant, donationFormData } = useApp();
   const [receiptId] = useState(() => {
     const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const seqPart = Date.now().toString().slice(-8);
