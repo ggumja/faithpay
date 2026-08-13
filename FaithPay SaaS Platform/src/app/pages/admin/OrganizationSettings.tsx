@@ -241,7 +241,7 @@ export default function OrganizationSettings() {
                 <div className="flex items-center gap-3">
                   <Info className="h-5 w-5 text-blue-600" />
                   <div>
-                    <p className="font-semibold text-blue-900">종교 유형</p>
+                    <p className="font-semibold text-blue-900">단체 유형</p>
                     <p className="text-sm text-blue-700">{getReligionLabel(currentTenant.religionType)}</p>
                   </div>
                 </div>

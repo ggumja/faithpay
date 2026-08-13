@@ -197,7 +197,7 @@ export default function PendingTenantDetailPage() {
         <div className={S.body}>
           {/* row 1 */}
           <div className={S.row3}>
-            <Field label="종교 유형">
+            <Field label="단체 유형">
               <span
                 className="inline-flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-[6px] border"
                 style={{ borderColor: rel.color + '44', background: rel.bg, color: rel.color }}

@@ -344,7 +344,7 @@ export default function AddTenantDialog({ isOpen, onClose, onAddTenant }: AddTen
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="religionType">종교 유형 *</Label>
+                <Label htmlFor="religionType">단체 유형 *</Label>
                 <Select value={religionType} onValueChange={(v) => setReligionType(v as ReligionType)}>
                   <SelectTrigger id="religionType">
                     <SelectValue />

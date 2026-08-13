@@ -180,9 +180,9 @@ export default function PartnerTenantCreate() {
           <form onSubmit={handleSubmit}>
             <CardContent className="p-6 space-y-6">
 
-              {/* 1. 종교 유형 */}
+              {/* 1. 단체 유형 */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700">종교 유형 선택 *</Label>
+                <Label className="text-xs font-bold text-slate-700">단체 유형 선택 *</Label>
                 <div className="grid grid-cols-3 gap-3">
                   {([
                     { key: 'buddhist',   label: '⛩️ 불교 (사찰/암자)',  active: 'bg-orange-50 border-orange-500 text-orange-950 ring-2 ring-orange-400/20' },

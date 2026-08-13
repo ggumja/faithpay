@@ -149,9 +149,9 @@ export default function EditTenantDialog({
             </p>
           </div>
 
-          {/* 종교 유형 */}
+          {/* 단체 유형 */}
           <div className="space-y-2">
-            <Label htmlFor="religionType">종교 유형 *</Label>
+            <Label htmlFor="religionType">단체 유형 *</Label>
             <Select
               value={formData.religionType}
               onValueChange={(value) =>

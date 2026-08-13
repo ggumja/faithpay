@@ -608,11 +608,11 @@ export default function TenantDetailPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="religionType">
-                  종교 유형 <span className="text-red-500">*</span>
+                  단체 유형 <span className="text-red-500">*</span>
                 </Label>
                 <Select value={religionType} onValueChange={setReligionType}>
                   <SelectTrigger id="religionType">
-                    <SelectValue placeholder="종교 유형 선택" />
+                    <SelectValue placeholder="단체 유형 선택" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="protestant">기독교</SelectItem>
