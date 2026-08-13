@@ -40,6 +40,7 @@ import {
   X,
   Monitor,
   Smartphone,
+  RotateCcw,
 } from 'lucide-react';
 import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
 import { toast } from 'sonner';
@@ -1209,23 +1210,44 @@ export default function DonationHistory() {
                                   <TableCell>{donation.paymentMethod || '신용카드'}</TableCell>
                                   <TableCell>{getStatusBadge(donation.paymentStatus)}</TableCell>
                                   <TableCell className="text-center">
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center justify-center gap-1.5">
                                       <Button
                                         variant="ghost"
-                                        size="icon"
+                                        size="sm"
+                                        className="h-8 px-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
                                         onClick={() => handleViewDetail(donation)}
                                         title="상세보기"
                                       >
-                                        <Eye className="h-4 w-4" />
+                                        <Eye className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                        상세
                                       </Button>
                                       <Button
                                         variant="ghost"
-                                        size="icon"
+                                        size="sm"
+                                        className="h-8 px-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
                                         onClick={() => handlePrintReceipt(donation)}
                                         title="영수증 출력"
                                       >
-                                        <Receipt className="h-4 w-4" />
+                                        <Receipt className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                        영수증
                                       </Button>
+                                      {donation.paymentStatus === 'completed' ? (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 px-2 text-xs font-bold border-red-200 text-red-600 bg-red-50/70 hover:bg-red-100 hover:text-red-700 cursor-pointer"
+                                          onClick={() => handleCancelPayment(donation.id)}
+                                          disabled={isCancelling}
+                                          title="결제 취소 요청"
+                                        >
+                                          <RotateCcw className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                          {isCancelling ? '취소 중...' : '결제 취소'}
+                                        </Button>
+                                      ) : donation.paymentStatus === 'cancelled' ? (
+                                        <span className="text-[11px] font-semibold text-slate-400 px-2 py-1 bg-slate-100 rounded-md">
+                                          취소 완료
+                                        </span>
+                                      ) : null}
                                     </div>
                                   </TableCell>
                                 </TableRow>
@@ -1359,13 +1381,15 @@ export default function DonationHistory() {
                     )}
 
                     <div className="flex gap-3 pt-4">
-                      {selectedDonation.paymentStatus === 'completed' && selectedDonation.paymentMethod === 'card' && (
+                      {selectedDonation.paymentStatus === 'completed' && (
                         <Button 
                           variant="destructive" 
                           onClick={() => handleCancelPayment(selectedDonation.id)}
                           disabled={isCancelling}
+                          className="gap-1.5"
                         >
-                          {isCancelling ? '취소 중...' : '결제 취소'}
+                          <RotateCcw className="h-4 w-4" />
+                          {isCancelling ? '취소 중...' : '결제 취소 요청'}
                         </Button>
                       )}
                       <Button
