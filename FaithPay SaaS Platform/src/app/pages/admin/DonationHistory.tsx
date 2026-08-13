@@ -540,6 +540,8 @@ export default function DonationHistory() {
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 font-semibold">결제실패</Badge>;
       case 'cancelled':
         return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 font-semibold">결제취소</Badge>;
+      case 'cancel_failed':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 font-semibold border-red-300">취소실패</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -558,6 +560,7 @@ export default function DonationHistory() {
       const statusKorean = d.paymentStatus === 'completed' ? '결제완료' 
         : d.paymentStatus === 'pending' ? '결제대기' 
         : d.paymentStatus === 'cancelled' ? '결제취소' 
+        : d.paymentStatus === 'cancel_failed' ? '취소실패'
         : d.paymentStatus === 'failed' ? '결제실패' : (d.paymentStatus || d.status);
       
       const cleanPrayer = (d.prayerText || d.prayer || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""');
@@ -664,24 +667,56 @@ export default function DonationHistory() {
           }
         }
 
+        // Update local state to cancelled immediately
+        setDonations((prev) =>
+          prev.map((d) => (d.id === donationId ? { ...d, paymentStatus: 'cancelled', cancelFailureReason: undefined } : d))
+        );
+
         toast.success(
           cancelSubscriptionAlso
-            ? '해당 결제건이 취소되었으며, 향후 정기결제 스케줄도 해지되었습니다.'
-            : '해당 결제건만 정상적으로 취소되었습니다.'
+            ? '해당 결제건이 결제취소 처리되었으며, 향후 정기결제 스케줄도 해지되었습니다.'
+            : '해당 결제건이 결제취소 처리되었습니다.'
         );
         setSelectedDonation(null);
         setRecurringCancelModalDonation(null);
 
-        // refresh data
+        // refresh data from server
         const refreshRes = await donationAPI.getByTenant(currentTenant.id);
         if (refreshRes.success && refreshRes.data) {
-          setDonations(assignSequentialDonationIds(refreshRes.data));
+          const serverList = assignSequentialDonationIds(refreshRes.data);
+          setDonations(serverList.map(item => item.id === donationId ? { ...item, paymentStatus: 'cancelled' } : item));
         }
       } else {
-        toast.error(`취소 실패: ${res.error}`);
+        const errorReason = res.error || 'PG 승인취소 거부 / 카드사 처리 오류';
+        setDonations((prev) =>
+          prev.map((d) =>
+            d.id === donationId
+              ? { ...d, paymentStatus: 'cancel_failed', cancelFailureReason: errorReason }
+              : d
+          )
+        );
+        setSelectedDonation((prev) =>
+          prev && prev.id === donationId
+            ? { ...prev, paymentStatus: 'cancel_failed', cancelFailureReason: errorReason }
+            : prev
+        );
+        toast.error(`결제 취소 실패: ${errorReason}`);
       }
-    } catch (e) {
-      toast.error('취소 처리 중 오류가 발생했습니다.');
+    } catch (e: any) {
+      const errorReason = e.message || '네트워크 통신 오류';
+      setDonations((prev) =>
+        prev.map((d) =>
+          d.id === donationId
+            ? { ...d, paymentStatus: 'cancel_failed', cancelFailureReason: errorReason }
+            : d
+        )
+      );
+      setSelectedDonation((prev) =>
+        prev && prev.id === donationId
+          ? { ...prev, paymentStatus: 'cancel_failed', cancelFailureReason: errorReason }
+          : prev
+      );
+      toast.error(`결제 취소 중 오류 발생: ${errorReason}`);
     } finally {
       setIsCancelling(false);
     }
@@ -1088,7 +1123,16 @@ export default function DonationHistory() {
                                     {(donation.amount || 0).toLocaleString()}원
                                   </TableCell>
                                   <TableCell>{donation.paymentMethod || '신용카드'}</TableCell>
-                                  <TableCell>{getStatusBadge(donation.paymentStatus)}</TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-col items-start gap-1">
+                                      {getStatusBadge(donation.paymentStatus)}
+                                      {donation.cancelFailureReason && (
+                                        <span className="text-[10px] text-red-600 font-semibold bg-red-50 border border-red-200 px-1.5 py-0.5 rounded max-w-[130px] truncate" title={`취소실패 사유: ${donation.cancelFailureReason}`}>
+                                          ⚠️ {donation.cancelFailureReason}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </TableCell>
                                   <TableCell className="text-center">
                                     <div className="flex items-center justify-center gap-1.5">
                                       <Button
@@ -1111,17 +1155,17 @@ export default function DonationHistory() {
                                         <Receipt className="h-3.5 w-3.5 mr-1 text-slate-500" />
                                         영수증
                                       </Button>
-                                      {donation.paymentStatus === 'completed' ? (
+                                      {donation.paymentStatus === 'completed' || donation.paymentStatus === 'cancel_failed' ? (
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           className="h-8 px-2 text-xs font-bold border-red-200 text-red-600 bg-red-50/70 hover:bg-red-100 hover:text-red-700 cursor-pointer"
-                                          onClick={() => handleCancelPayment(donation.id)}
+                                          onClick={() => handleCancelPayment(donation)}
                                           disabled={isCancelling}
-                                          title="결제 취소 요청"
+                                          title={donation.cancelFailureReason ? `취소 실패 사유: ${donation.cancelFailureReason}` : "결제 취소 요청"}
                                         >
                                           <RotateCcw className="h-3.5 w-3.5 mr-1 text-red-500" />
-                                          {isCancelling ? '취소 중...' : '결제 취소'}
+                                          {isCancelling ? '취소 중...' : donation.paymentStatus === 'cancel_failed' ? '취소 재시도' : '결제 취소'}
                                         </Button>
                                       ) : donation.paymentStatus === 'cancelled' ? (
                                         <span className="text-[11px] font-semibold text-slate-400 px-2 py-1 bg-slate-100 rounded-md">
@@ -1260,16 +1304,23 @@ export default function DonationHistory() {
                       </div>
                     )}
 
+                    {selectedDonation.cancelFailureReason && (
+                      <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                        <span className="font-bold text-red-800 shrink-0">⚠️ 취소 실패 사유:</span>
+                        <span className="font-semibold">{selectedDonation.cancelFailureReason}</span>
+                      </div>
+                    )}
+
                     <div className="flex gap-3 pt-4">
-                      {selectedDonation.paymentStatus === 'completed' && (
+                      {(selectedDonation.paymentStatus === 'completed' || selectedDonation.paymentStatus === 'cancel_failed') && (
                         <Button 
                           variant="destructive" 
-                          onClick={() => handleCancelPayment(selectedDonation.id)}
+                          onClick={() => handleCancelPayment(selectedDonation)}
                           disabled={isCancelling}
-                          className="gap-1.5"
+                          className="gap-1.5 cursor-pointer font-bold"
                         >
                           <RotateCcw className="h-4 w-4" />
-                          {isCancelling ? '취소 중...' : '결제 취소 요청'}
+                          {isCancelling ? '취소 중...' : selectedDonation.paymentStatus === 'cancel_failed' ? '결제 취소 재시도' : '결제 취소 요청'}
                         </Button>
                       )}
                       <Button
