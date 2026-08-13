@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '../../components/ui/table';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
-import { Menu, Printer, Download, CheckCircle2 } from 'lucide-react';
+import { Menu, Printer, Download, CheckCircle2, FileSpreadsheet, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI } from '../../api/client';
@@ -30,6 +30,8 @@ interface PrayerItem {
   printed: boolean;
 }
 
+export type LabelFormatType = 'formtec_3108' | 'formtec_3107' | 'roll_5030' | 'a4_report';
+
 export default function PrayerManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
@@ -40,6 +42,7 @@ export default function PrayerManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPrayers, setSelectedPrayers] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>('all');
+  const [labelFormat, setLabelFormat] = useState<LabelFormatType>('formtec_3108');
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -124,8 +127,9 @@ export default function PrayerManagement() {
     );
   };
 
-  // 🖨️ 1. 실제 브라우저 인쇄 실행 엔진 (Print Engine)
-  const handlePrint = (targetIds: string[], mode: 'label' | 'a4' = 'label') => {
+  // 🖨️ 대한민국 표준 라벨지 규격 인쇄 엔진 (Formtec / Roll Printer Engine)
+  const handlePrint = (targetIds: string[], formatOverride?: LabelFormatType) => {
+    const selectedFormat = formatOverride || labelFormat;
     if (targetIds.length === 0) {
       toast.error('인쇄할 항목을 선택해주세요');
       return;
@@ -137,8 +141,7 @@ export default function PrayerManagement() {
       return;
     }
 
-    // 인쇄용 새 창 열기
-    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    const printWindow = window.open('', '_blank', 'width=900,height=900');
     if (!printWindow) {
       toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제해 주세요.');
       return;
@@ -147,29 +150,159 @@ export default function PrayerManagement() {
     const orgName = currentTenant.name || '단체명';
     const prayerTerm = terms.prayer || '메시지/지향';
 
-    // 🏷️ 라벨지 전용 인쇄 vs 📄 A4 서식 인쇄 분기
     let printHtml = '';
 
-    if (mode === 'label') {
-      // 🏷️ 50mm × 30mm 롤/스티커 라벨지 규격 (제목 완전히 제거!)
+    if (selectedFormat === 'formtec_3108') {
+      // 🏆 1위: 폼텍 3108 / 애니라벨 V3108 (A4 16칸 - 2열 × 8행 / 99.1mm × 33.9mm)
       printHtml = `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>${orgName} - 라벨 인쇄</title>
+            <title>${orgName} - 폼텍 3108 라벨 인쇄</title>
+            <meta charset="utf-8" />
+            <style>
+              @media print {
+                @page { size: A4 portrait; margin: 12mm 5mm 12mm 5mm; }
+                body { margin: 0; padding: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+                .sheet { page-break-after: always; }
+              }
+              body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; margin: 0; padding: 0; background: #fff; }
+              .grid-3108 {
+                display: grid;
+                grid-template-columns: 99.1mm 99.1mm;
+                column-gap: 2.5mm;
+                row-gap: 0mm;
+                justify-content: center;
+              }
+              .cell-3108 {
+                width: 99.1mm;
+                height: 33.9mm;
+                box-sizing: border-box;
+                padding: 3mm 4mm;
+                border: 1px dashed #ccc;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                background: #fff;
+              }
+              @media print {
+                .cell-3108 { border: none; }
+              }
+              .c-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; }
+              .c-name { font-weight: 900; font-size: 13px; color: #000; }
+              .c-item { font-weight: bold; font-size: 11px; color: #1d4ed8; }
+              .c-body { font-size: 11px; font-weight: 600; line-height: 1.4; color: #111; margin: 3px 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-all; }
+              .c-footer { display: flex; justify-content: space-between; font-size: 9px; color: #666; border-top: 0.5px solid #ddd; padding-top: 2px; }
+            </style>
+          </head>
+          <body>
+            <div class="grid-3108">
+              ${itemsToPrint
+                .map(
+                  (item) => `
+                <div class="cell-3108">
+                  <div class="c-header">
+                    <span class="c-name">신청자: ${item.name}</span>
+                    <span class="c-item">[${item.item}]</span>
+                  </div>
+                  <div class="c-body">${item.prayer}</div>
+                  <div class="c-footer">
+                    <span>${orgName}</span>
+                    <span>${item.date}</span>
+                  </div>
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+          </body>
+        </html>
+      `;
+    } else if (selectedFormat === 'formtec_3107') {
+      // 🥈 2위: 폼텍 3107 / 애니라벨 V3107 (A4 21칸 - 3열 × 7행 / 63.5mm × 38.1mm)
+      printHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${orgName} - 폼텍 3107 라벨 인쇄</title>
+            <meta charset="utf-8" />
+            <style>
+              @media print {
+                @page { size: A4 portrait; margin: 15mm 7mm; }
+                body { margin: 0; padding: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+              }
+              body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; margin: 0; padding: 0; background: #fff; }
+              .grid-3107 {
+                display: grid;
+                grid-template-columns: 63.5mm 63.5mm 63.5mm;
+                column-gap: 2mm;
+                row-gap: 0mm;
+                justify-content: center;
+              }
+              .cell-3107 {
+                width: 63.5mm;
+                height: 38.1mm;
+                box-sizing: border-box;
+                padding: 3mm;
+                border: 1px dashed #ccc;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                background: #fff;
+              }
+              @media print {
+                .cell-3107 { border: none; }
+              }
+              .c-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; }
+              .c-name { font-weight: 900; font-size: 11px; color: #000; }
+              .c-item { font-weight: bold; font-size: 9.5px; color: #1d4ed8; }
+              .c-body { font-size: 9.5px; font-weight: 600; line-height: 1.3; color: #111; margin: 2px 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-all; }
+              .c-footer { display: flex; justify-content: space-between; font-size: 8px; color: #666; border-top: 0.5px solid #ddd; padding-top: 2px; }
+            </style>
+          </head>
+          <body>
+            <div class="grid-3107">
+              ${itemsToPrint
+                .map(
+                  (item) => `
+                <div class="cell-3107">
+                  <div class="c-header">
+                    <span class="c-name">${item.name}</span>
+                    <span class="c-item">[${item.item}]</span>
+                  </div>
+                  <div class="c-body">${item.prayer}</div>
+                  <div class="c-footer">
+                    <span>${orgName}</span>
+                    <span>${item.date}</span>
+                  </div>
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+          </body>
+        </html>
+      `;
+    } else if (selectedFormat === 'roll_5030') {
+      // 🥉 3위: 감열 롤 라벨 (1열 롤 - 50mm × 30mm)
+      printHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${orgName} - 롤 라벨 인쇄</title>
             <meta charset="utf-8" />
             <style>
               @media print {
                 @page { size: 50mm 30mm; margin: 0; }
                 body { margin: 0; padding: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
-                .label-page { page-break-after: always; page-break-inside: avoid; }
+                .roll-page { page-break-after: always; page-break-inside: avoid; }
               }
               body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; margin: 0; padding: 0; background: #fff; }
-              .label-card {
+              .roll-card {
                 width: 50mm;
                 height: 30mm;
                 box-sizing: border-box;
-                padding: 4mm;
+                padding: 3.5mm;
                 border: 1px dashed #bbb;
                 display: flex;
                 flex-direction: column;
@@ -177,27 +310,27 @@ export default function PrayerManagement() {
                 background: #fff;
               }
               @media print {
-                .label-card { border: none; }
+                .roll-card { border: none; }
               }
-              .label-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #000; padding-bottom: 2px; }
-              .label-name { font-weight: 900; font-size: 11px; color: #000; }
-              .label-item { font-weight: bold; font-size: 10px; color: #1d4ed8; }
-              .label-body { font-size: 10px; font-weight: 600; line-height: 1.3; color: #111; margin: 3px 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-all; }
-              .label-footer { display: flex; justify-content: space-between; font-size: 8px; color: #555; border-top: 0.5px solid #ddd; pt: 2px; }
+              .c-header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; }
+              .c-name { font-weight: 900; font-size: 11px; color: #000; }
+              .c-item { font-weight: bold; font-size: 9.5px; color: #1d4ed8; }
+              .c-body { font-size: 9.5px; font-weight: 600; line-height: 1.3; color: #111; margin: 2px 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-all; }
+              .c-footer { display: flex; justify-content: space-between; font-size: 8px; color: #666; border-top: 0.5px solid #ddd; padding-top: 2px; }
             </style>
           </head>
           <body>
             ${itemsToPrint
               .map(
                 (item) => `
-              <div class="label-page">
-                <div class="label-card">
-                  <div class="label-header">
-                    <span class="label-name">${item.name}</span>
-                    <span class="label-item">[${item.item}]</span>
+              <div class="roll-page">
+                <div class="roll-card">
+                  <div class="c-header">
+                    <span class="c-name">${item.name}</span>
+                    <span class="c-item">[${item.item}]</span>
                   </div>
-                  <div class="label-body">${item.prayer}</div>
-                  <div class="label-footer">
+                  <div class="c-body">${item.prayer}</div>
+                  <div class="c-footer">
                     <span>${orgName}</span>
                     <span>${item.date}</span>
                   </div>
@@ -210,7 +343,7 @@ export default function PrayerManagement() {
         </html>
       `;
     } else {
-      // 📄 A4 서식 일반 대장 인쇄
+      // 📄 A4 서식 대장 인쇄 (보고서 보관용)
       printHtml = `
         <!DOCTYPE html>
         <html>
@@ -237,7 +370,7 @@ export default function PrayerManagement() {
           </head>
           <body>
             <div class="header">
-              <h1>${orgName} ${prayerTerm} A4 명세 출력물</h1>
+              <h1>${orgName} ${prayerTerm} A4 대장 출력물</h1>
               <p>인쇄 일시: ${new Date().toLocaleString()} | 총 ${itemsToPrint.length}건</p>
             </div>
             <div class="grid">
@@ -264,18 +397,23 @@ export default function PrayerManagement() {
     printWindow.document.write(printHtml);
     printWindow.document.close();
 
-    // 렌더링 완료 후 인쇄 다이얼로그 호출
     setTimeout(() => {
       printWindow.focus();
       printWindow.print();
     }, 250);
 
-    // 인쇄 완료 상태 업데이트
     setPrayers((prev) =>
       prev.map((p) => (targetIds.includes(p.id) ? { ...p, printed: true } : p))
     );
     setSelectedPrayers([]);
-    toast.success(`${itemsToPrint.length}건의 ${prayerTerm} ${mode === 'label' ? '라벨지' : 'A4'} 서식을 출력창으로 전송했습니다.`);
+
+    const formatLabelMap: Record<LabelFormatType, string> = {
+      formtec_3108: '폼텍 3108 (A4 16칸)',
+      formtec_3107: '폼텍 3107 (A4 21칸)',
+      roll_5030: '감열 롤 라벨 (50x30mm)',
+      a4_report: 'A4 대장',
+    };
+    toast.success(`${itemsToPrint.length}건의 ${prayerTerm} [${formatLabelMap[selectedFormat]}] 서식을 출력창으로 전송했습니다.`);
   };
 
   // 📊 2. 실제 CSV 엑셀 다운로드 엔진 (Export Engine)
@@ -296,7 +434,7 @@ export default function PrayerManagement() {
       csvRows.push([cleanName, cleanItem, cleanPrayer, p.date, status].join(','));
     });
 
-    const csvContent = '\uFEFF' + csvRows.join('\n'); // UTF-8 BOM 추가 (엑셀 한글 깨짐 방지)
+    const csvContent = '\uFEFF' + csvRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -340,7 +478,7 @@ export default function PrayerManagement() {
                 {terms.prayer} 관리 센터
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                후원자분들이 작성하신 {terms.prayer} 내역을 실시간 조회하고 팝업 서식으로 출력할 수 있습니다.
+                후원자분들이 작성하신 {terms.prayer} 내역을 대한민국 표준 라벨지 서식으로 즉시 출력합니다.
               </p>
             </div>
             <Button variant="outline" onClick={handleExport} className="gap-2 cursor-pointer self-start md:self-auto">
@@ -391,54 +529,74 @@ export default function PrayerManagement() {
             </Card>
           </div>
 
-          {/* Filters and Actions */}
-          <Card>
+          {/* Filters and Label Format Selector Card */}
+          <Card className="border-indigo-100 dark:border-indigo-900/40">
             <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <label className="text-xs font-bold text-slate-600">조회 필터:</label>
-                  <Select value={filter} onValueChange={setFilter}>
-                    <SelectTrigger className="w-[180px] bg-white text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">전체보기</SelectItem>
-                      <SelectItem value="unprinted">⏳ 미인쇄 대기만</SelectItem>
-                      <SelectItem value="printed">✅ 인쇄 완료만</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">조회 필터:</label>
+                    <Select value={filter} onValueChange={setFilter}>
+                      <SelectTrigger className="w-[140px] bg-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">전체보기</SelectItem>
+                        <SelectItem value="unprinted">⏳ 미인쇄 대기만</SelectItem>
+                        <SelectItem value="printed">✅ 인쇄 완료만</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                      <Tag className="h-3.5 w-3.5" />
+                      라벨지 폼 규격:
+                    </label>
+                    <Select value={labelFormat} onValueChange={(val) => setLabelFormat(val as LabelFormatType)}>
+                      <SelectTrigger className="w-[250px] bg-white text-xs font-bold border-indigo-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="formtec_3108">
+                          🏆 폼텍 3108 / 애니라벨 (A4 16칸 / 99.1x33.9mm) [인기 1위]
+                        </SelectItem>
+                        <SelectItem value="formtec_3107">
+                          🥈 폼텍 3107 / 애니라벨 (A4 21칸 / 63.5x38.1mm)
+                        </SelectItem>
+                        <SelectItem value="roll_5030">
+                          🥉 감열식 롤 라벨 (1열 / 50x30mm 롤프린터)
+                        </SelectItem>
+                        <SelectItem value="a4_report">
+                          📄 A4 서식 대장 (보고서 보관용)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end lg:self-auto">
                   <Button
-                    onClick={() => handlePrint(selectedPrayers, 'label')}
+                    onClick={() => handlePrint(selectedPrayers)}
                     disabled={selectedPrayers.length === 0}
                     className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer"
                   >
                     <Printer className="h-4 w-4" />
-                    🏷️ 라벨지 정밀 출력 ({selectedPrayers.length}건)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePrint(selectedPrayers, 'a4')}
-                    disabled={selectedPrayers.length === 0}
-                    className="gap-2 font-bold cursor-pointer"
-                  >
-                    📄 A4 대장 출력 ({selectedPrayers.length}건)
+                    선택 항목 라벨 인쇄 ({selectedPrayers.length}건)
                   </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Prayer List */}
+          {/* Prayer List Table */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold">
                   {terms.prayer} 명세 목록 ({filteredPrayers.length}건)
                 </CardTitle>
-                <CardDescription>인쇄할 항목을 체크박스로 선택 후 상단 [선택 항목 인쇄]를 누르세요</CardDescription>
+                <CardDescription>인쇄할 항목을 선택 후 [선택 항목 라벨 인쇄]를 누르시면 상단에 설정된 규격대로 정밀 출력됩니다</CardDescription>
               </div>
             </CardHeader>
 
