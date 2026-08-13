@@ -17,6 +17,8 @@ import {
   ExternalLink,
   BarChart3,
   UserCheck,
+  ShieldCheck,
+  Building2,
 } from 'lucide-react';
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
@@ -73,12 +75,55 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
       </div>
 
       {currentAdmin && (
-        <div className="mb-6 p-3 bg-slate-50 rounded-lg">
-          <p className="text-xs text-muted-foreground mb-1">로그인</p>
-          <p className="font-semibold text-sm">{currentAdmin.name}</p>
-          <Badge variant="secondary" className="text-xs mt-1">
-            {getRoleName(currentAdmin.role)}
-          </Badge>
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg border border-indigo-500/20 relative overflow-hidden group">
+          {/* Subtle background glow effect */}
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-all duration-500" />
+          
+          <div className="flex items-start gap-3 relative z-10">
+            {/* Avatar circle */}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-[1.5px] shrink-0 shadow-md">
+              <div className="w-full h-full rounded-[10px] bg-slate-900 flex items-center justify-center font-bold text-sm text-indigo-200">
+                {currentAdmin.name ? currentAdmin.name[0] : '관'}
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] font-bold tracking-wider text-indigo-300 uppercase flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  접속 중
+                </span>
+                {currentTenant && (
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    /{currentTenant.slug}
+                  </span>
+                )}
+              </div>
+
+              <h4 className="font-bold text-sm text-white truncate mt-0.5" title={currentAdmin.name}>
+                {currentAdmin.name}
+              </h4>
+
+              {currentTenant?.name && (
+                <p className="text-[11px] text-slate-300 truncate mt-0.5 flex items-center gap-1">
+                  <Building2 className="w-3 h-3 text-indigo-400 shrink-0" />
+                  <span className="truncate">{currentTenant.name}</span>
+                </p>
+              )}
+
+              <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                  <ShieldCheck className="w-2.5 h-2.5 mr-1 text-indigo-300" />
+                  {getRoleName(currentAdmin.role)}
+                </span>
+                {currentTenant?.religionType && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                    {currentTenant.religionType === 'buddhist' ? '🪷 불교' : currentTenant.religionType === 'catholic' ? '⛪ 천주교' : '✝️ 기독교'}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
