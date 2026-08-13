@@ -45,6 +45,8 @@ import {
   MapPin,
   Trash2,
   ShieldCheck,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
@@ -111,6 +113,50 @@ export default function MemberDetailPage() {
 
   // Note state
   const [noteText, setNoteText] = useState('');
+
+  // Period filter states for Tab 1 (Donations History)
+  const [historyStartDate, setHistoryStartDate] = useState<string>('');
+  const [historyEndDate, setHistoryEndDate] = useState<string>('');
+  const [historyPreset, setHistoryPreset] = useState<'all' | '1m' | '3m' | '6m' | '1y' | 'custom'>('all');
+
+  const handleApplyHistoryPreset = (preset: 'all' | '1m' | '3m' | '6m' | '1y') => {
+    setHistoryPreset(preset);
+    const now = new Date();
+    const endStr = now.toISOString().slice(0, 10);
+
+    if (preset === 'all') {
+      setHistoryStartDate('');
+      setHistoryEndDate('');
+      return;
+    }
+
+    let start = new Date();
+    if (preset === '1m') {
+      start.setMonth(start.getMonth() - 1);
+    } else if (preset === '3m') {
+      start.setMonth(start.getMonth() - 3);
+    } else if (preset === '6m') {
+      start.setMonth(start.getMonth() - 6);
+    } else if (preset === '1y') {
+      start.setFullYear(start.getFullYear() - 1);
+    }
+
+    setHistoryStartDate(start.toISOString().slice(0, 10));
+    setHistoryEndDate(endStr);
+  };
+
+  const filteredDonationsHistory = useMemo(() => {
+    if (!member || !member.donationsHistory) return [];
+    return member.donationsHistory.filter((don) => {
+      if (historyStartDate && don.date < historyStartDate) return false;
+      if (historyEndDate && don.date > historyEndDate) return false;
+      return true;
+    });
+  }, [member, historyStartDate, historyEndDate]);
+
+  const filteredTotalSum = useMemo(() => {
+    return filteredDonationsHistory.reduce((sum, don) => sum + (don.amount || 0), 0);
+  }, [filteredDonationsHistory]);
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -718,19 +764,136 @@ export default function MemberDetailPage() {
 
                 {/* TAB 1: 결제 / 납부 내역 */}
                 <TabsContent value="history" className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
-                        {member.name} {memberTerm}의 상세 {donationTerm} 전체 기록
+                      <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base flex items-center gap-2">
+                        {member.name} {memberTerm}의 {donationTerm} 내역
+                        <Badge variant="outline" className="text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
+                          {filteredDonationsHistory.length}건 / 전체 {donations.length}건
+                        </Badge>
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        건별 영수증 1:1 출력 및 결제 내역을 조회합니다.
+                        기간 검색 필터 조회를 제공하며 건별 영수증 1:1 출력이 가능합니다.
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handlePrintReceipt()} className="gap-1.5 text-xs font-bold bg-white">
+                    <Button variant="outline" size="sm" onClick={() => handlePrintReceipt()} className="gap-1.5 text-xs font-bold bg-white cursor-pointer shadow-2xs">
                       <Printer className="h-3.5 w-3.5" />
                       납부확인서 인쇄
                     </Button>
+                  </div>
+
+                  {/* 🔍 기간 조회 검색 컨트롤 바 */}
+                  <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 p-3.5 rounded-2xl space-y-3 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                          조회 기간 선택:
+                        </span>
+                        <div className="flex items-center gap-1 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-0.5 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleApplyHistoryPreset('all')}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                              historyPreset === 'all'
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                          >
+                            전체
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyHistoryPreset('1m')}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                              historyPreset === '1m'
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                          >
+                            1개월
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyHistoryPreset('3m')}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                              historyPreset === '3m'
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                          >
+                            3개월
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyHistoryPreset('6m')}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                              historyPreset === '6m'
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                          >
+                            6개월
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyHistoryPreset('1y')}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                              historyPreset === '1y'
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                          >
+                            1년
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="date"
+                          value={historyStartDate}
+                          onChange={(e) => {
+                            setHistoryStartDate(e.target.value);
+                            setHistoryPreset('custom');
+                          }}
+                          className="w-36 text-xs h-8 bg-white dark:bg-zinc-800 border-slate-300 rounded-lg font-mono"
+                        />
+                        <span className="text-xs font-bold text-slate-400">~</span>
+                        <Input
+                          type="date"
+                          value={historyEndDate}
+                          onChange={(e) => {
+                            setHistoryEndDate(e.target.value);
+                            setHistoryPreset('custom');
+                          }}
+                          className="w-36 text-xs h-8 bg-white dark:bg-zinc-800 border-slate-300 rounded-lg font-mono"
+                        />
+                        {(historyStartDate || historyEndDate) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleApplyHistoryPreset('all')}
+                            className="h-8 px-2 text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1 text-slate-400" />
+                            초기화
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Filtered Period Statistics Summary */}
+                    <div className="flex flex-wrap items-center justify-between text-xs font-medium text-slate-600 dark:text-zinc-400 pt-2.5 border-t border-slate-200/80 dark:border-zinc-800">
+                      <div className="flex items-center gap-1.5">
+                        <Filter className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>선택 구간: <strong className="text-slate-900 dark:text-zinc-100 font-bold">{historyStartDate || '최초'} ~ {historyEndDate || '현재'}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span>조회 건수: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold">{filteredDonationsHistory.length}건</strong></span>
+                        <span>기간 합계 금액: <strong className="text-emerald-600 dark:text-emerald-400 font-black text-sm">₩ {filteredTotalSum.toLocaleString()}원</strong></span>
+                      </div>
+                    </div>
                   </div>
 
                   <Table className="border rounded-xl">
@@ -745,32 +908,43 @@ export default function MemberDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {donations.map((don) => (
-                        <TableRow key={don.id}>
-                          <TableCell className="font-mono text-xs text-slate-600">{don.date}</TableCell>
-                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
-                          <TableCell>
-                            <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">
-                              {don.type === 'recurring' ? '🔄 정기' : '⚡ 단발'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600">{don.paymentMethod}</TableCell>
-                          <TableCell className="text-right font-black text-slate-900 dark:text-zinc-100">
-                            ₩ {don.amount.toLocaleString()}원
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handlePrintReceipt(don)}
-                              className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                              인쇄
-                            </Button>
+                      {filteredDonationsHistory.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                            <div className="space-y-1">
+                              <p className="font-bold text-slate-700">선택하신 기간에 해당하는 결제 내역이 없습니다.</p>
+                              <p className="text-xs text-slate-400">기간 설정을 변경하거나 '초기화' 버튼을 눌러 전체 목록을 확인해보세요.</p>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        filteredDonationsHistory.map((don) => (
+                          <TableRow key={don.id}>
+                            <TableCell className="font-mono text-xs text-slate-600">{don.date}</TableCell>
+                            <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
+                            <TableCell>
+                              <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">
+                                {don.type === 'recurring' ? '🔄 정기' : '⚡ 단발'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 font-medium">{don.paymentMethod}</TableCell>
+                            <TableCell className="text-right font-black text-slate-900 dark:text-zinc-100">
+                              ₩ {don.amount.toLocaleString()}원
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePrintReceipt(don)}
+                                className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                                인쇄
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </TabsContent>
