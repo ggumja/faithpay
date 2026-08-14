@@ -309,7 +309,7 @@ body {
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
-  --input: transparent;
+  --input: rgba(0, 0, 0, 0.16);
   --input-background: #f3f3f5;
   --switch-background: #cbced4;
   --font-weight-medium: 500;
