@@ -911,7 +911,7 @@ export default function AdminAccountManagement() {
                     const allowedCount = permissionMatrix.filter(m => (m.groupPermissions[group.id] || 'none') !== 'none').length;
                     return (
                       <SelectItem key={group.id} value={group.id}>
-                        {group.name} - {group.description} ({allowedCount}개 메뉴 접근)
+                        {group.name} - {group.description}
                       </SelectItem>
                     );
                   })}
@@ -1003,7 +1003,7 @@ export default function AdminAccountManagement() {
                     const allowedCount = permissionMatrix.filter(m => (m.groupPermissions[group.id] || 'none') !== 'none').length;
                     return (
                       <SelectItem key={group.id} value={group.id}>
-                        {group.name} - {group.description} ({allowedCount}개 메뉴 접근)
+                        {group.name} - {group.description}
                       </SelectItem>
                     );
                   })}
