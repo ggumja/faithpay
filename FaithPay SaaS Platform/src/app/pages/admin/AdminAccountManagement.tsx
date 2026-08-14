@@ -569,18 +569,14 @@ export default function AdminAccountManagement() {
 
           {/* Sub Navigation Tabs */}
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-full">
-            <TabsList className="grid grid-cols-3 w-full max-w-2xl bg-slate-200 dark:bg-zinc-800 p-1">
+            <TabsList className="grid grid-cols-2 w-full max-w-xl bg-slate-200 dark:bg-zinc-800 p-1">
               <TabsTrigger value="accounts" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
                 <UserCheck className="h-4 w-4" />
                 1. 관리자 계정 목록 ({staffList.length}명)
               </TabsTrigger>
               <TabsTrigger value="groups" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
                 <Layers className="h-4 w-4" />
-                2. 관리자 그룹 관리 ({adminGroups.length}개)
-              </TabsTrigger>
-              <TabsTrigger value="permissions" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
-                <Shield className="h-4 w-4" />
-                3. 메뉴 접근 권한 (RBAC)
+                2. 관리자 권한 그룹 및 메뉴 설정 ({adminGroups.length}개)
               </TabsTrigger>
             </TabsList>
 
@@ -765,9 +761,10 @@ export default function AdminAccountManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-100 dark:bg-zinc-900">
-                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹 배지 표시</TableHead>
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹 배지</TableHead>
                         <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹명</TableHead>
                         <TableHead className="font-bold text-slate-900 dark:text-zinc-100">그룹 설명 및 역할</TableHead>
+                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">허용 메뉴 및 권한 요약</TableHead>
                         <TableHead className="text-center font-bold text-slate-900 dark:text-zinc-100">소속 인원</TableHead>
                         <TableHead className="text-center font-bold text-slate-900 dark:text-zinc-100">구분</TableHead>
                         <TableHead className="text-right font-bold text-slate-900 dark:text-zinc-100">그룹 작업</TableHead>
@@ -776,6 +773,7 @@ export default function AdminAccountManagement() {
                     <TableBody>
                       {adminGroups.map((group) => {
                         const assignedCount = staffList.filter((s) => s.groupId === group.id).length;
+                        const allowedMenus = permissionMatrix.filter(m => (m.groupPermissions[group.id] || 'none') !== 'none');
                         return (
                           <TableRow key={group.id}>
                             <TableCell>{renderGroupBadge(group.id)}</TableCell>
@@ -784,6 +782,23 @@ export default function AdminAccountManagement() {
                             </TableCell>
                             <TableCell className="text-xs text-slate-600 dark:text-zinc-400">
                               {group.description}
+                            </TableCell>
+                            <TableCell className="max-w-[280px]">
+                              <div className="flex flex-wrap gap-1">
+                                {group.id === 'tenant_admin' ? (
+                                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 text-[10px] font-bold border-purple-300">
+                                    ⚡ 전체 11개 메뉴 (FULL 권한)
+                                  </Badge>
+                                ) : allowedMenus.length === 0 ? (
+                                  <Badge variant="outline" className="text-[10px] text-slate-400">접근 허용 메뉴 없음</Badge>
+                                ) : (
+                                  allowedMenus.map(m => (
+                                    <Badge key={m.id} variant="outline" className="text-[10px] bg-slate-50 dark:bg-zinc-800 font-medium">
+                                      {m.menuName} ({(m.groupPermissions[group.id] === 'full' ? '전체' : '조회')})
+                                    </Badge>
+                                  ))
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-center font-mono font-bold text-slate-800 dark:text-zinc-200">
                               {assignedCount}명
@@ -801,10 +816,10 @@ export default function AdminAccountManagement() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleOpenGroupModal(group)}
-                                  className="h-7 px-2 text-xs gap-1 cursor-pointer"
+                                  className="h-7 px-2 text-xs gap-1 cursor-pointer font-bold"
                                 >
                                   <Edit2 className="h-3.5 w-3.5" />
-                                  수정
+                                  그룹 및 권한 수정
                                 </Button>
                                 {!group.isSystemGroup && (
                                   <Button
@@ -821,90 +836,6 @@ export default function AdminAccountManagement() {
                           </TableRow>
                         );
                       })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* 🛡️ TAB 3: 역할별 메뉴 접근 권한 설정 (RBAC Matrix) */}
-            <TabsContent value="permissions" className="space-y-6 mt-6">
-              <Card className="border-indigo-100 dark:border-indigo-950">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-lg font-bold flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-indigo-600" />
-                      관리자 그룹별 메뉴 접근 권한 매트릭스 (RBAC Matrix)
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      생성된 모든 관리자 그룹별로 11개 메뉴의 상세 접근 권한 (전체 / 읽기 전용 / 차단)을 설정합니다.
-                    </CardDescription>
-                  </div>
-                  <Button
-                    onClick={handleSavePermissions}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer self-start sm:self-auto"
-                  >
-                    <Save className="h-4 w-4" />
-                    권한 설정 저장
-                  </Button>
-                </CardHeader>
-
-                <CardContent className="overflow-x-auto">
-                  <Table className="min-w-[700px]">
-                    <TableHeader>
-                      <TableRow className="bg-slate-100 dark:bg-zinc-900">
-                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">메뉴명 (기능)</TableHead>
-                        <TableHead className="font-bold text-slate-900 dark:text-zinc-100">경로 (URL)</TableHead>
-                        {adminGroups.map((group) => (
-                          <TableHead key={group.id} className="text-center font-bold text-slate-900 dark:text-zinc-100 min-w-[140px]">
-                            {group.name}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {permissionMatrix.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
-                            {item.menuName}
-                          </TableCell>
-                          <TableCell className="text-xs font-mono text-slate-500">
-                            {item.path}
-                          </TableCell>
-
-                          {adminGroups.map((group) => {
-                            if (group.id === 'tenant_admin') {
-                              return (
-                                <TableCell key={group.id} className="text-center bg-purple-50/50 dark:bg-purple-950/20">
-                                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-300 font-bold">
-                                    FULL (전체)
-                                  </Badge>
-                                </TableCell>
-                              );
-                            }
-
-                            const currentLevel = item.groupPermissions[group.id] || 'read';
-
-                            return (
-                              <TableCell key={group.id} className="text-center">
-                                <Select
-                                  value={currentLevel}
-                                  onValueChange={(val) => handlePermissionChange(item.id, group.id, val as PermissionLevel)}
-                                >
-                                  <SelectTrigger className="w-[130px] mx-auto bg-white text-xs font-bold">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="full">🟢 전체 (읽기/수정)</SelectItem>
-                                    <SelectItem value="read">🟡 읽기 전용 (조회)</SelectItem>
-                                    <SelectItem value="none">🔴 접근 불가 (차단)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
