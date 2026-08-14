@@ -43,6 +43,44 @@ export default function AdminLogin() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  // 단체별 이메일 매칭 및 격리 검증 헬퍼
+  const isEmailMatchingTenant = (emailVal: string, tenant: any): boolean => {
+    const clean = emailVal.trim().toLowerCase();
+    const primaryEmail = (tenant.contact?.email || '').trim().toLowerCase();
+    const slug = (tenant.slug || '').toLowerCase();
+
+    // 1. 등록된 대표 연락처 이메일 일치
+    if (primaryEmail && clean === primaryEmail) return true;
+
+    // 2. 단체 Slug 기반 표준 패턴 이메일 허용 (예: admin@gakwonsa.org, info@gakwonsa.or.kr)
+    const validPatternEmails = [
+      `admin@${slug}.org`,
+      `admin@${slug}.or.kr`,
+      `info@${slug}.or.kr`,
+      `${slug}@faithpay.or.kr`,
+      `finance@${slug}.or.kr`,
+    ];
+    if (validPatternEmails.includes(clean)) return true;
+
+    // 3. 해당 단체의 localStorage 등록 스태프 관리자 이메일 일치
+    try {
+      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`);
+      if (savedStaffStr) {
+        const staffList = JSON.parse(savedStaffStr);
+        if (Array.isArray(staffList) && staffList.some((s: any) => s.email && s.email.trim().toLowerCase() === clean)) {
+          return true;
+        }
+      }
+    } catch (e) {}
+
+    // 4. 다중 단체 관리 법인/CPA/Tax 계정 패턴
+    if (clean.includes('cpa') || clean.includes('tax') || clean.includes('account')) {
+      return true;
+    }
+
+    return false;
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
@@ -58,6 +96,19 @@ export default function AdminLogin() {
     if (tenantSlug) {
       const urlTenant = tenants.find(t => t.slug === tenantSlug);
       if (urlTenant) {
+        // 단체 격리(Tenant Isolation) 검증: 해당 단체 이메일이 맞는지 확인
+        if (!isEmailMatchingTenant(cleanEmail, urlTenant)) {
+          // 타 단체 계정인지 체크
+          const otherTenant = tenants.find(t => t.id !== urlTenant.id && isEmailMatchingTenant(cleanEmail, t));
+          if (otherTenant) {
+            toast.error(`'${cleanEmail}' 계정은 [${otherTenant.name}] 관리자 계정입니다. [${urlTenant.name}] 로그인 페이지에서는 접속하실 수 없습니다.`);
+            return;
+          } else {
+            toast.error(`'${cleanEmail}'은(는) [${urlTenant.name}]에 등록된 관리자 이메일이 아닙니다.`);
+            return;
+          }
+        }
+
         const tenantAdmin = {
           id: `admin-${urlTenant.id}`,
           tenantId: urlTenant.id,
@@ -74,23 +125,12 @@ export default function AdminLogin() {
     }
 
     // 2. 전체 단체 관리자 일반 로그인 (/admin/login)
-    const matchingTenantsList = tenants.filter(t => {
-      const primaryEmail = t.contact?.email?.toLowerCase() || '';
-      const defaultTenantEmail = `info@${t.slug}.or.kr`.toLowerCase();
-      const defaultFaithpayEmail = `${t.slug}@faithpay.or.kr`.toLowerCase();
-      const financeEmail = `finance@${t.slug}.or.kr`.toLowerCase();
+    const matchingTenantsList = tenants.filter(t => isEmailMatchingTenant(cleanEmail, t));
 
-      return (
-        (primaryEmail && cleanEmail === primaryEmail) ||
-        cleanEmail === defaultTenantEmail ||
-        cleanEmail === defaultFaithpayEmail ||
-        cleanEmail === financeEmail ||
-        cleanEmail.includes(t.slug.toLowerCase()) ||
-        cleanEmail.includes('tax') ||
-        cleanEmail.includes('account') ||
-        cleanEmail.includes('cpa')
-      );
-    });
+    if (matchingTenantsList.length === 0) {
+      toast.error(`'${cleanEmail}'은(는) 등록되지 않은 가맹 단체 관리자 이메일입니다. 이메일을 다시 확인해 주세요.`);
+      return; // ⚠️ 미등록 이메일일 경우 타 단체(은혜성당 등)로 오폴백되는 보안 오류 차단
+    }
 
     // 2개 이상의 단체에 등록된 회계법인/통합 관리자 계정일 경우 단체 선택 모달 오픈
     if (matchingTenantsList.length > 1) {
@@ -100,23 +140,18 @@ export default function AdminLogin() {
       return;
     }
 
-    const targetTenant = matchingTenantsList[0] || tenants[0];
-    if (targetTenant) {
-      const tenantAdmin = {
-        id: `admin-${targetTenant.id}`,
-        tenantId: targetTenant.id,
-        email: cleanEmail,
-        name: `${targetTenant.name} 관리자`,
-        role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
-      };
-      setCurrentAdmin(tenantAdmin);
-      setCurrentTenant(targetTenant);
-      toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
-      navigate(`/${targetTenant.slug}/admin`);
-      return;
-    }
-
-    toast.error('등록되지 않은 가맹 단체 관리자 이메일입니다.');
+    const targetTenant = matchingTenantsList[0];
+    const tenantAdmin = {
+      id: `admin-${targetTenant.id}`,
+      tenantId: targetTenant.id,
+      email: cleanEmail,
+      name: `${targetTenant.name} 관리자`,
+      role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
+    };
+    setCurrentAdmin(tenantAdmin);
+    setCurrentTenant(targetTenant);
+    toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
+    navigate(`/${targetTenant.slug}/admin`);
   };
 
   // 이메일 찾기 실행
