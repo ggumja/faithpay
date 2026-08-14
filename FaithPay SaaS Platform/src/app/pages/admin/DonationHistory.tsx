@@ -608,6 +608,23 @@ export default function DonationHistory() {
     setReceiptDonation(donation);
   };
 
+  /**
+   * 결제 일시 기준 45일 경과 여부 체크 헬퍼 함수
+   */
+  const isExpiredForCancel = (donation: any): boolean => {
+    if (!donation) return false;
+    const dateStr = donation.createdAt || donation.approvedAt || donation.paidAt || donation.date;
+    if (!dateStr) return false;
+
+    const paymentTime = new Date(dateStr).getTime();
+    if (isNaN(paymentTime)) return false;
+
+    const now = Date.now();
+    const diffDays = (now - paymentTime) / (1000 * 60 * 60 * 24);
+
+    return diffDays > 45;
+  };
+
   const checkIsRecurring = (donation: any) => {
     if (!donation) return false;
     if (donation.isSubscription || donation.subscriptionId || donation.subscription_id || donation.is_subscription) return true;
@@ -620,6 +637,12 @@ export default function DonationHistory() {
   const handleCancelPayment = (donation: any) => {
     const targetDonation = typeof donation === 'string' ? donations.find(d => d.id === donation || d.originalId === donation) : donation;
     if (!targetDonation) return;
+
+    if (isExpiredForCancel(targetDonation)) {
+      const dateStr = new Date(targetDonation.createdAt || targetDonation.approvedAt || Date.now()).toLocaleDateString('ko-KR');
+      toast.error(`결제 후 45일이 경과한 결제건(${dateStr})은 PG 자동 승인 취소가 불가능합니다. (수동 환불 처리 필요)`);
+      return;
+    }
 
     if (checkIsRecurring(targetDonation)) {
       setRecurringCancelModalDonation(targetDonation);
@@ -1162,17 +1185,30 @@ export default function DonationHistory() {
                                         영수증
                                       </Button>
                                       {donation.paymentStatus === 'completed' || donation.paymentStatus === 'cancel_failed' ? (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8 px-2 text-xs font-bold border-red-200 text-red-600 bg-red-50/70 hover:bg-red-100 hover:text-red-700 cursor-pointer"
-                                          onClick={() => handleCancelPayment(donation)}
-                                          disabled={isCancelling}
-                                          title={donation.cancelFailureReason ? `취소 실패 사유: ${donation.cancelFailureReason}` : "결제 취소 요청"}
-                                        >
-                                          <RotateCcw className="h-3.5 w-3.5 mr-1 text-red-500" />
-                                          {isCancelling ? '취소 중...' : donation.paymentStatus === 'cancel_failed' ? '취소 재시도' : '결제 취소'}
-                                        </Button>
+                                        isExpiredForCancel(donation) ? (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled
+                                            className="h-8 px-2 text-xs font-semibold border-slate-200 text-slate-400 bg-slate-100 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-500 cursor-not-allowed opacity-75"
+                                            title="결제 후 45일이 경과하여 PG 자동 승인 취소가 불가능합니다. (수동 환불 필요)"
+                                          >
+                                            <RotateCcw className="h-3.5 w-3.5 mr-1 text-slate-400" />
+                                            취소 불가 (45일 경과)
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-2 text-xs font-bold border-red-200 text-red-600 bg-red-50/70 hover:bg-red-100 hover:text-red-700 cursor-pointer"
+                                            onClick={() => handleCancelPayment(donation)}
+                                            disabled={isCancelling}
+                                            title={donation.cancelFailureReason ? `취소 실패 사유: ${donation.cancelFailureReason}` : "결제 취소 요청"}
+                                          >
+                                            <RotateCcw className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                            {isCancelling ? '취소 중...' : donation.paymentStatus === 'cancel_failed' ? '취소 재시도' : '결제 취소'}
+                                          </Button>
+                                        )
                                       ) : donation.paymentStatus === 'cancelled' ? (
                                         <Button
                                           variant="outline"
@@ -1317,6 +1353,13 @@ export default function DonationHistory() {
                       </div>
                     )}
 
+                    {isExpiredForCancel(selectedDonation) && selectedDonation.paymentStatus !== 'cancelled' && (
+                      <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                        <span className="font-bold shrink-0">⚠️ 결제 취소 불가:</span>
+                        <span>결제일로부터 45일이 경과한 결제건은 PG 자동 승인 취소가 불가능합니다. (후원자 계좌로 수동 입금 환불 필요)</span>
+                      </div>
+                    )}
+
                     {selectedDonation.cancelFailureReason && (
                       <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
                         <span className="font-bold text-red-800 shrink-0">⚠️ 취소 실패 사유:</span>
@@ -1329,11 +1372,12 @@ export default function DonationHistory() {
                         <Button 
                           variant="destructive" 
                           onClick={() => handleCancelPayment(selectedDonation)}
-                          disabled={isCancelling}
-                          className="gap-1.5 cursor-pointer font-bold"
+                          disabled={isCancelling || isExpiredForCancel(selectedDonation)}
+                          className={isExpiredForCancel(selectedDonation) ? "gap-1.5 font-bold opacity-60 cursor-not-allowed bg-slate-300 text-slate-600 border-slate-300 hover:bg-slate-300 dark:bg-zinc-800 dark:text-zinc-400" : "gap-1.5 cursor-pointer font-bold"}
+                          title={isExpiredForCancel(selectedDonation) ? "결제일로부터 45일이 경과하여 승인 취소가 불가능합니다." : ""}
                         >
                           <RotateCcw className="h-4 w-4" />
-                          {isCancelling ? '취소 중...' : selectedDonation.paymentStatus === 'cancel_failed' ? '결제 취소 재시도' : '결제 취소 요청'}
+                          {isExpiredForCancel(selectedDonation) ? '취소 불가 (45일 경과)' : isCancelling ? '취소 중...' : selectedDonation.paymentStatus === 'cancel_failed' ? '결제 취소 재시도' : '결제 취소 요청'}
                         </Button>
                       )}
                       <Button
