@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { openDaumPostcode } from '../../utils/daumPostcode';
 import { Separator } from '../../components/ui/separator';
+import { RBACRouteGuard } from '../../components/RBACRouteGuard';
 
 interface ScheduleItem {
   label: string;
@@ -222,7 +223,8 @@ export default function OrganizationSettings() {
         </div>
 
         {/* Content */}
-        <div className="p-6 lg:p-8">
+        <RBACRouteGuard menuId="settings">
+          <div className="p-6 lg:p-8">
           <div className="w-full">
             {/* Header */}
             <div className="mb-8">
@@ -559,7 +561,8 @@ export default function OrganizationSettings() {
             </Card>
           </div>
         </div>
-      </div>
+      </RBACRouteGuard>
     </div>
-  );
+  </div>
+);
 }

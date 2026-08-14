@@ -29,6 +29,7 @@ import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { RBACRouteGuard } from '../../components/RBACRouteGuard';
 
 export interface AdminGroup {
   id: string;
@@ -523,7 +524,8 @@ export default function AdminAccountManagement() {
 
       {/* Main Content */}
       <div className="flex-1 min-w-0 overflow-auto">
-        <div className="p-6 lg:p-8 space-y-6">
+        <RBACRouteGuard menuId="accounts">
+          <div className="p-6 lg:p-8 space-y-6">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -824,7 +826,8 @@ export default function AdminAccountManagement() {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
+      </RBACRouteGuard>
+    </div>
 
       {/* 1. 신규 관리자 계정 추가 모달 */}
       <Dialog open={isAddStaffModalOpen} onOpenChange={setIsAddStaffModalOpen}>

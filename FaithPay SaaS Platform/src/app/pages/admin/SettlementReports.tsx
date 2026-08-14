@@ -36,6 +36,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
+import { RBACRouteGuard } from '../../components/RBACRouteGuard';
 
 export default function SettlementReports() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
@@ -378,7 +379,8 @@ export default function SettlementReports() {
 
       {/* Main Content */}
       <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
-        <div className="w-full space-y-6">
+        <RBACRouteGuard menuId="settlement">
+          <div className="w-full space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산 & 기부금 리포트</h1>
@@ -861,7 +863,8 @@ export default function SettlementReports() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </RBACRouteGuard>
     </div>
-  );
+  </div>
+);
 }

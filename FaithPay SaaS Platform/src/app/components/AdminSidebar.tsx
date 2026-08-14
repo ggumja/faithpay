@@ -23,6 +23,8 @@ import {
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
 
+import { useAdminPermissions } from '../hooks/useAdminPermissions';
+
 interface AdminSidebarProps {
   tenantSlug?: string;
   currentPath: string;
@@ -32,6 +34,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const navigate = useNavigate();
   const { currentAdmin, setCurrentAdmin, currentTenant, setCurrentTenant } = useApp();
   const terms = useTenantTerms(currentTenant?.orgType);
+  const { canAccessMenu, getMenuPermission } = useAdminPermissions();
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: '대시보드', path: `/admin` },
@@ -47,6 +50,8 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     { id: 'settings', icon: Settings, label: '설정', path: `/admin/settings` },
   ];
 
+  const accessibleMenuItems = menuItems.filter((item) => canAccessMenu(item.id));
+
   const handleLogout = () => {
     setCurrentAdmin(null);
     setCurrentTenant(null);
@@ -57,11 +62,13 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const getRoleName = (role: string) => {
     switch (role) {
       case 'tenant_admin':
-        return '단체 관리자';
+        return '👑 최고 관리자';
       case 'finance_manager':
-        return '재정 담당자';
+        return '💳 재정 담당자';
+      case 'staff':
+        return '📝 일반 실무자';
       default:
-        return '관리자';
+        return '👥 관리자';
     }
   };
 
@@ -96,17 +103,26 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
       )}
 
       <nav className="space-y-2 flex-1">
-        {menuItems.map((item) => {
+        {accessibleMenuItems.map((item) => {
           const fullPath = `/${tenantSlug}${item.path}`;
           const isActive = currentPath === fullPath;
+          const permLevel = getMenuPermission(item.id);
+
           return (
             <Link key={item.id} to={fullPath}>
               <Button
                 variant={isActive ? 'default' : 'ghost'}
-                className="w-full justify-start"
+                className="w-full justify-between group"
               >
-                <item.icon className="h-4 w-4 mr-3" />
-                {item.label}
+                <div className="flex items-center min-w-0">
+                  <item.icon className="h-4 w-4 mr-3 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {permLevel === 'read' && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-semibold opacity-80 shrink-0">
+                    조회
+                  </span>
+                )}
               </Button>
             </Link>
           );
