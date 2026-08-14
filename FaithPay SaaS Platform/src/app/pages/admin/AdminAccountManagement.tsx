@@ -536,7 +536,7 @@ export default function AdminAccountManagement() {
               </p>
             </div>
 
-            {activeTab === 'accounts' && (
+            {activeTab === 'accounts' ? (
               <Button
                 onClick={() => setIsAddStaffModalOpen(true)}
                 className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer self-start md:self-auto"
@@ -544,25 +544,13 @@ export default function AdminAccountManagement() {
                 <UserPlus className="h-4 w-4" />
                 신규 관리자 추가
               </Button>
-            )}
-
-            {activeTab === 'groups' && (
+            ) : (
               <Button
                 onClick={() => handleOpenGroupModal()}
                 className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold cursor-pointer self-start md:self-auto"
               >
                 <Plus className="h-4 w-4" />
                 신규 관리자 그룹 추가
-              </Button>
-            )}
-
-            {activeTab === 'permissions' && (
-              <Button
-                onClick={handleSavePermissions}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer self-start md:self-auto"
-              >
-                <Save className="h-4 w-4" />
-                권한 설정 저장
               </Button>
             )}
           </div>
@@ -748,13 +736,6 @@ export default function AdminAccountManagement() {
                       단체 실무 구조에 맞춰 새로운 관리자 그룹(예: 축원 전담팀, 감사팀 등)을 자유롭게 추가 및 수정할 수 있습니다.
                     </CardDescription>
                   </div>
-                  <Button
-                    onClick={() => handleOpenGroupModal()}
-                    className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold cursor-pointer self-start sm:self-auto"
-                  >
-                    <Plus className="h-4 w-4" />
-                    신규 관리자 그룹 추가
-                  </Button>
                 </CardHeader>
 
                 <CardContent>
