@@ -81,9 +81,57 @@ export default function AdminLogin() {
     return false;
   };
 
+  // 🔐 비밀번호 검증 헬퍼 함수
+  const verifyTenantPassword = (inputPassword: string, tenant: any): boolean => {
+    const cleanInput = inputPassword.trim();
+    if (!cleanInput) return false;
+
+    // 1. 개별 단체 온보딩/수정 시 저장된 커스텀 관리자 비밀번호
+    const savedTenantPw = localStorage.getItem(`faithpay_tenant_password_${tenant.id}`);
+    if (savedTenantPw && savedTenantPw === cleanInput) {
+      return true;
+    }
+
+    // 2. 해당 단체의 localStorage 등록 스태프 관리자 비밀번호
+    try {
+      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`);
+      if (savedStaffStr) {
+        const staffList = JSON.parse(savedStaffStr);
+        if (Array.isArray(staffList)) {
+          const matchedStaff = staffList.find((s: any) => s.email && s.email.trim().toLowerCase() === email.trim().toLowerCase());
+          if (matchedStaff && matchedStaff.password && matchedStaff.password === cleanInput) {
+            return true;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. 데모 및 가맹 단체 표준 기본 비밀번호 패밀리
+    const slug = (tenant.slug || '').toLowerCase();
+    const validDefaultPasswords = [
+      'admin1234',
+      'admin1234!',
+      '1234',
+      '123456',
+      `${slug}1234`,
+      `${slug}1234!`,
+    ];
+
+    if (validDefaultPasswords.includes(cleanInput.toLowerCase())) {
+      return true;
+    }
+
+    return false;
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
+
+    if (!password.trim()) {
+      toast.error('비밀번호를 입력해 주세요.');
+      return;
+    }
 
     // 최고 시스템 관리자 이메일 입력 시 시스템 로그인 페이지 안내
     if (cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr' || cleanEmail === 'system@faithpay.kr') {
@@ -109,6 +157,12 @@ export default function AdminLogin() {
           }
         }
 
+        // 🔒 비밀번호 일치 검증
+        if (!verifyTenantPassword(password, urlTenant)) {
+          toast.error('비밀번호가 일치하지 않습니다. 다시 확인 후 입력해 주세요.');
+          return;
+        }
+
         const tenantAdmin = {
           id: `admin-${urlTenant.id}`,
           tenantId: urlTenant.id,
@@ -129,11 +183,17 @@ export default function AdminLogin() {
 
     if (matchingTenantsList.length === 0) {
       toast.error(`'${cleanEmail}'은(는) 등록되지 않은 가맹 단체 관리자 이메일입니다. 이메일을 다시 확인해 주세요.`);
-      return; // ⚠️ 미등록 이메일일 경우 타 단체(은혜성당 등)로 오폴백되는 보안 오류 차단
+      return;
     }
 
     // 2개 이상의 단체에 등록된 회계법인/통합 관리자 계정일 경우 단체 선택 모달 오픈
     if (matchingTenantsList.length > 1) {
+      const isValidPassForAny = matchingTenantsList.some(t => verifyTenantPassword(password, t));
+      if (!isValidPassForAny) {
+        toast.error('비밀번호가 일치하지 않습니다. 다시 확인 후 입력해 주세요.');
+        return;
+      }
+
       setMatchedTenants(matchingTenantsList);
       setMultiTenantModalOpen(true);
       toast.info(`💡 '${cleanEmail}' 이메일로 ${matchingTenantsList.length}개 가맹 단체가 조회되었습니다. 접속할 단체를 선택하세요.`);
@@ -141,6 +201,13 @@ export default function AdminLogin() {
     }
 
     const targetTenant = matchingTenantsList[0];
+
+    // 🔒 비밀번호 검증
+    if (!verifyTenantPassword(password, targetTenant)) {
+      toast.error('비밀번호가 일치하지 않습니다. 다시 확인 후 입력해 주세요.');
+      return;
+    }
+
     const tenantAdmin = {
       id: `admin-${targetTenant.id}`,
       tenantId: targetTenant.id,
@@ -151,6 +218,26 @@ export default function AdminLogin() {
     setCurrentAdmin(tenantAdmin);
     setCurrentTenant(targetTenant);
     toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
+    navigate(`/${targetTenant.slug}/admin`);
+  };
+
+  const handleSelectTenantAndLogin = (targetTenant: any) => {
+    if (!verifyTenantPassword(password, targetTenant)) {
+      toast.error(`[${targetTenant.name}] 비밀번호가 일치하지 않습니다.`);
+      return;
+    }
+
+    const tenantAdmin = {
+      id: `admin-${targetTenant.id}`,
+      tenantId: targetTenant.id,
+      email: email.trim().toLowerCase(),
+      name: `${targetTenant.name} 관리자`,
+      role: email.toLowerCase().includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
+    };
+    setCurrentAdmin(tenantAdmin);
+    setCurrentTenant(targetTenant);
+    setMultiTenantModalOpen(false);
+    toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${email})!`);
     navigate(`/${targetTenant.slug}/admin`);
   };
 
