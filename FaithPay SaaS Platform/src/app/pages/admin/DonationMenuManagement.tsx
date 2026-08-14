@@ -176,6 +176,7 @@ export default function DonationMenuManagement() {
   const { currentTenant, setCurrentTenant, currentAdmin, tenants, getTenantDonationItems, saveDonationItem, deleteDonationItem } = useApp();
   const [editingItem, setEditingItem] = useState<DonationItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dbItems, setDbItems] = useState<DonationItem[]>([]);
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -184,6 +185,25 @@ export default function DonationMenuManagement() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  useEffect(() => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [currentTenant]);
+
+  const refreshItems = () => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  };
 
   if (!currentTenant) {
     return (
@@ -215,29 +235,7 @@ export default function DonationMenuManagement() {
   }
 
   const currentPath = `/${tenantSlug}/admin/menu`;
-  const [dbItems, setDbItems] = useState<DonationItem[]>([]);
-
-  useEffect(() => {
-    if (currentTenant) {
-      donationItemsAPI.getItems(currentTenant.id).then((res) => {
-        if (res.success && res.data && res.data.length > 0) {
-          setDbItems(res.data);
-        }
-      }).catch(() => {});
-    }
-  }, [currentTenant]);
-
   const donationItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
-
-  const refreshItems = () => {
-    if (currentTenant) {
-      donationItemsAPI.getItems(currentTenant.id).then((res) => {
-        if (res.success && res.data) {
-          setDbItems(res.data);
-        }
-      }).catch(() => {});
-    }
-  };
 
   const handleSave = (itemData: Partial<DonationItem>) => {
     saveDonationItem(currentTenant.slug, currentTenant.religionType, {
