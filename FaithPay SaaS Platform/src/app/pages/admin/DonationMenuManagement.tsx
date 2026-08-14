@@ -229,6 +229,16 @@ export default function DonationMenuManagement() {
 
   const donationItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
 
+  const refreshItems = () => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && res.data) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  };
+
   const handleSave = (itemData: Partial<DonationItem>) => {
     saveDonationItem(currentTenant.slug, currentTenant.religionType, {
       ...itemData,
@@ -242,11 +252,17 @@ export default function DonationMenuManagement() {
     }
     setIsDialogOpen(false);
     setEditingItem(null);
+    setTimeout(() => {
+      refreshItems();
+    }, 100);
   };
 
   const handleDelete = (itemId: string) => {
     deleteDonationItem(currentTenant.slug, currentTenant.religionType, itemId);
     toast.success('봉헌 항목이 삭제되었습니다');
+    setTimeout(() => {
+      refreshItems();
+    }, 100);
   };
 
   const handleAddNew = () => {

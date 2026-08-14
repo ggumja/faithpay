@@ -135,9 +135,9 @@ export default function RecurringPendingPage() {
     return Object.values(map);
   }, [donations, masterStatuses]);
 
-  // 2. ⚡ Tab 2: 스케줄러 결제 실행 대기열 생성
+  // 2. ⚡ Tab 2: 스케줄러 결제 실행 대기열 생성 (해지건 제외)
   const scheduledExecutions = useMemo(() => {
-    return subscriptionMasters.map((sub, idx) => {
+    return subscriptionMasters.filter(sub => sub.status !== 'cancelled').map((sub, idx) => {
       const schId = `SCH-202608${String(sub.recurringDay).padStart(2, '0')}-${String(idx + 1).padStart(3, '0')}`;
       const status = scheduleStatuses[schId] || (sub.status === 'paused' ? 'skipped' : 'pending');
 

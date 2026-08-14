@@ -146,10 +146,23 @@ export default function AdminAccountManagement() {
     if (tenant) {
       setCurrentTenant(tenant);
 
-      // 모의 스태프 관리자 초기 데이터 (기존 수정 데이터 유지)
-      setStaffList((prev) => {
-        if (prev.length > 0) return prev;
-        return [
+      // 1. 저장된 관리자 그룹 로드
+      const savedGroups = localStorage.getItem(`faithpay_groups_${tenant.id}`);
+      if (savedGroups) {
+        try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
+      }
+
+      // 2. 저장된 스태프 목록 로드
+      const savedStaff = localStorage.getItem(`faithpay_staff_${tenant.id}`);
+      if (savedStaff) {
+        try {
+          const parsed = JSON.parse(savedStaff);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStaffList(parsed);
+          }
+        } catch {}
+      } else {
+        setStaffList([
           {
             id: `admin-${tenant.id}-1`,
             name: (tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사')
@@ -172,13 +185,20 @@ export default function AdminAccountManagement() {
             createdAt: '2026-02-01',
             lastLoginAt: '2026-08-12 16:20',
           },
-        ];
-      });
+        ]);
+      }
 
-      // 메뉴별 권한 매트릭스 초기화 (기존 수정 데이터 유지)
-      setPermissionMatrix((prev) => {
-        if (prev.length > 0) return prev;
-        return [
+      // 3. 저장된 권한 매트릭스 로드
+      const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
+      if (savedPerms) {
+        try {
+          const parsed = JSON.parse(savedPerms);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setPermissionMatrix(parsed);
+          }
+        } catch {}
+      } else {
+        setPermissionMatrix([
           { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
           { id: 'donations', menuName: '수납/보시 내역', path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
           { id: 'recurring_pending', menuName: '정기결제 마감', path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
@@ -190,10 +210,29 @@ export default function AdminAccountManagement() {
           { id: 'banners', menuName: '배너 관리', path: '/admin/banners', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
           { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
           { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-        ];
-      });
+        ]);
+      }
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
+
+  // 💾 변경사항 localStorage 영구 보존 동기화
+  useEffect(() => {
+    if (currentTenant && staffList.length > 0) {
+      localStorage.setItem(`faithpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
+    }
+  }, [staffList, currentTenant]);
+
+  useEffect(() => {
+    if (currentTenant && adminGroups.length > 0) {
+      localStorage.setItem(`faithpay_groups_${currentTenant.id}`, JSON.stringify(adminGroups));
+    }
+  }, [adminGroups, currentTenant]);
+
+  useEffect(() => {
+    if (currentTenant && permissionMatrix.length > 0) {
+      localStorage.setItem(`faithpay_permissions_${currentTenant.id}`, JSON.stringify(permissionMatrix));
+    }
+  }, [permissionMatrix, currentTenant]);
 
   if (!currentTenant) {
     return (
