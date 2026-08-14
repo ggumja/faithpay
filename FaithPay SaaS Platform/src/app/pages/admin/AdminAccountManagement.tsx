@@ -140,6 +140,7 @@ export default function AdminAccountManagement() {
   const [groupName, setGroupName] = useState('');
   const [groupDesc, setGroupDesc] = useState('');
   const [groupColor, setGroupColor] = useState('emerald');
+  const [groupMenuPermissions, setGroupMenuPermissions] = useState<Record<string, PermissionLevel>>({});
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -281,8 +282,21 @@ export default function AdminAccountManagement() {
     );
   };
 
-  // 👥 그룹 추가/수정 처리 핸들러
+  // 👥 그룹 추가/수정 처리 핸들러 (모달 내 메뉴 접근 권한 동시 설정)
   const handleOpenGroupModal = (groupToEdit?: AdminGroup) => {
+    const initialPerms: Record<string, PermissionLevel> = {};
+
+    permissionMatrix.forEach((menu) => {
+      if (groupToEdit) {
+        initialPerms[menu.id] = menu.groupPermissions[groupToEdit.id] || 'none';
+      } else {
+        // 신규 그룹 생성 시 기본 권한 설정 (대시보드는 전체, 나머지는 필요에 따라 선택)
+        initialPerms[menu.id] = menu.id === 'dashboard' ? 'full' : menu.id === 'donations' ? 'read' : 'none';
+      }
+    });
+
+    setGroupMenuPermissions(initialPerms);
+
     if (groupToEdit) {
       setEditingGroup(groupToEdit);
       setGroupName(groupToEdit.name);
@@ -303,6 +317,8 @@ export default function AdminAccountManagement() {
       return;
     }
 
+    const groupId = editingGroup ? editingGroup.id : `group_${Date.now()}`;
+
     if (editingGroup) {
       setAdminGroups((prev) =>
         prev.map((g) =>
@@ -311,32 +327,29 @@ export default function AdminAccountManagement() {
             : g
         )
       );
-      toast.success(`[${groupName.trim()}] 그룹 정보가 수정되었습니다.`);
     } else {
-      const newGroupId = `group_${Date.now()}`;
       const newGroup: AdminGroup = {
-        id: newGroupId,
+        id: groupId,
         name: groupName.trim(),
         description: groupDesc.trim() || '커스텀 관리자 그룹',
         isSystemGroup: false,
         badgeColor: groupColor,
       };
-
       setAdminGroups((prev) => [...prev, newGroup]);
-
-      setPermissionMatrix((prev) =>
-        prev.map((item) => ({
-          ...item,
-          groupPermissions: {
-            ...item.groupPermissions,
-            [newGroupId]: 'read',
-          },
-        }))
-      );
-
-      toast.success(`[${newGroup.name}] 신규 관리자 그룹이 추가되었습니다.`);
     }
 
+    // 🛡️ 모달에서 선택한 메뉴별 접근 권한(Checkboxes)을 매트릭스에 100% 저장
+    setPermissionMatrix((prev) =>
+      prev.map((item) => ({
+        ...item,
+        groupPermissions: {
+          ...item.groupPermissions,
+          [groupId]: groupMenuPermissions[item.id] || 'none',
+        },
+      }))
+    );
+
+    toast.success(editingGroup ? `[${groupName.trim()}] 권한 그룹 및 메뉴 설정이 수정되었습니다.` : `[${groupName.trim()}] 신규 권한 그룹 및 메뉴 접근 권한이 등록되었습니다.`);
     setIsGroupModalOpen(false);
   };
 
@@ -969,19 +982,37 @@ export default function AdminAccountManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold">소속 관리자 그룹</Label>
+              <Label className="text-xs font-bold">소속 관리자 그룹 *</Label>
               <Select value={selectedGroupId} onValueChange={(val) => setSelectedGroupId(val)}>
-                <SelectTrigger className="bg-white">
+                <SelectTrigger className="bg-white font-bold">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {adminGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name} - {group.description}
-                    </SelectItem>
-                  ))}
+                  {adminGroups.map((group) => {
+                    const allowedCount = permissionMatrix.filter(m => (m.groupPermissions[group.id] || 'none') !== 'none').length;
+                    return (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name} - {group.description} ({allowedCount}개 메뉴 접근)
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+
+              {selectedGroupId && (
+                <div className="p-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-[11px] text-slate-600 dark:text-zinc-400">
+                  <span className="font-bold text-slate-800 dark:text-zinc-200 block mb-1">
+                    🛡️ 선택된 그룹 허용 메뉴 ({permissionMatrix.filter(m => (m.groupPermissions[selectedGroupId] || 'none') !== 'none').length}개):
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {permissionMatrix.filter(m => (m.groupPermissions[selectedGroupId] || 'none') !== 'none').map(m => (
+                      <Badge key={m.id} variant="outline" className="text-[10px] bg-white dark:bg-zinc-800 font-semibold">
+                        {m.menuName} ({(m.groupPermissions[selectedGroupId] === 'full' ? '전체' : '조회')})
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </form>
 
@@ -1046,13 +1077,31 @@ export default function AdminAccountManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {adminGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name} - {group.description}
-                    </SelectItem>
-                  ))}
+                  {adminGroups.map((group) => {
+                    const allowedCount = permissionMatrix.filter(m => (m.groupPermissions[group.id] || 'none') !== 'none').length;
+                    return (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name} - {group.description} ({allowedCount}개 메뉴 접근)
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+
+              {editGroupId && (
+                <div className="p-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-[11px] text-slate-600 dark:text-zinc-400">
+                  <span className="font-bold text-slate-800 dark:text-zinc-200 block mb-1">
+                    🛡️ 변경된 그룹 허용 메뉴 ({permissionMatrix.filter(m => (m.groupPermissions[editGroupId] || 'none') !== 'none').length}개):
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {permissionMatrix.filter(m => (m.groupPermissions[editGroupId] || 'none') !== 'none').map(m => (
+                      <Badge key={m.id} variant="outline" className="text-[10px] bg-white dark:bg-zinc-800 font-semibold">
+                        {m.menuName} ({(m.groupPermissions[editGroupId] === 'full' ? '전체' : '조회')})
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </form>
 
@@ -1067,53 +1116,144 @@ export default function AdminAccountManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* 3. 관리자 그룹 추가/수정 모달 */}
+      {/* 3. 관리자 그룹 추가/수정 모달 (메뉴 접근 권한 체크박스 동시 설정) */}
       <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
               <Layers className="h-5 w-5 text-purple-600" />
-              {editingGroup ? '관리자 그룹 정보 수정' : '신규 관리자 그룹 생성'}
+              {editingGroup ? '관리자 그룹 및 메뉴 권한 수정' : '신규 관리자 권한 그룹 생성'}
             </DialogTitle>
-            <DialogDescription>
-              단체의 직책이나 실무 업무에 맞춘 관리자 그룹명과 배지 색상을 설정하세요.
+            <DialogDescription className="text-xs text-slate-500">
+              그룹명과 설명을 입력하고 아래에서 접근을 허용할 메뉴 권한을 직접 체크하세요.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">관리자 그룹명</Label>
-              <Input
-                placeholder="예: 축원 전담팀 / 부목사 그룹 / 감사팀"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">관리자 그룹명 *</Label>
+                <Input
+                  placeholder="예: 축원 전담팀 / 부목사 그룹"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  className="bg-white dark:bg-zinc-900 font-semibold text-xs h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">그룹 배지 색상</Label>
+                <Select value={groupColor} onValueChange={(val) => setGroupColor(val)}>
+                  <SelectTrigger className="bg-white dark:bg-zinc-900 text-xs font-semibold h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="emerald">🟢 에메랄드 그린</SelectItem>
+                    <SelectItem value="blue">🔵 블루</SelectItem>
+                    <SelectItem value="purple">🟣 퍼플</SelectItem>
+                    <SelectItem value="amber">🟠 앰버 주황</SelectItem>
+                    <SelectItem value="rose">🔴 로즈 핑크</SelectItem>
+                    <SelectItem value="slate">⚪ 슬레이트 그레이</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">그룹 역할 설명</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">그룹 역할 설명</Label>
               <Input
                 placeholder="예: 사찰 발원문 및 성당 지향문 전담 관리 그룹"
                 value={groupDesc}
                 onChange={(e) => setGroupDesc(e.target.value)}
+                className="bg-white dark:bg-zinc-900 text-xs h-10"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">그룹 대표 배지 색상</Label>
-              <Select value={groupColor} onValueChange={(val) => setGroupColor(val)}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="emerald">🟢 에메랄드 그린</SelectItem>
-                  <SelectItem value="blue">🔵 블루</SelectItem>
-                  <SelectItem value="purple">🟣 퍼플</SelectItem>
-                  <SelectItem value="amber">🟠 앰버 주황</SelectItem>
-                  <SelectItem value="rose">🔴 로즈 핑크</SelectItem>
-                  <SelectItem value="slate">⚪ 슬레이트 그레이</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* 🛡️ 메뉴 접근 권한 체크박스 설정 */}
+            <div className="space-y-2.5 pt-3 border-t border-slate-200 dark:border-zinc-800">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <Shield className="h-4 w-4 text-purple-600" />
+                  메뉴 접근 권한 체크박스 설정 ({permissionMatrix.length}개 메뉴)
+                </Label>
+                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] text-purple-700 hover:text-purple-900 p-1 cursor-pointer font-bold"
+                    onClick={() => {
+                      const allFull: Record<string, PermissionLevel> = {};
+                      permissionMatrix.forEach(m => allFull[m.id] = 'full');
+                      setGroupMenuPermissions(allFull);
+                    }}
+                  >
+                    ⚡ 전체 허용
+                  </Button>
+                  <span>|</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] text-slate-500 hover:text-slate-700 p-1 cursor-pointer font-bold"
+                    onClick={() => {
+                      const allNone: Record<string, PermissionLevel> = {};
+                      permissionMatrix.forEach(m => allNone[m.id] = 'none');
+                      setGroupMenuPermissions(allNone);
+                    }}
+                  >
+                    🚫 전체 차단
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-zinc-800 bg-white dark:bg-zinc-900 text-xs">
+                {permissionMatrix.map((menu) => {
+                  const currentLevel = groupMenuPermissions[menu.id] || 'none';
+                  return (
+                    <div key={menu.id} className="p-2.5 sm:p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-zinc-200">{menu.menuName}</span>
+                        <span className="text-[11px] text-slate-400 font-mono ml-2">({menu.path})</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 cursor-pointer select-none">
+                          <input
+                            type="radio"
+                            name={`perm_${menu.id}`}
+                            checked={currentLevel === 'full'}
+                            onChange={() => setGroupMenuPermissions(prev => ({ ...prev, [menu.id]: 'full' }))}
+                            className="text-purple-600 focus:ring-purple-500"
+                          />
+                          <span className="text-purple-700 dark:text-purple-300 font-bold text-[11px]">🟢 전체</span>
+                        </label>
+
+                        <label className="flex items-center gap-1 cursor-pointer select-none">
+                          <input
+                            type="radio"
+                            name={`perm_${menu.id}`}
+                            checked={currentLevel === 'read'}
+                            onChange={() => setGroupMenuPermissions(prev => ({ ...prev, [menu.id]: 'read' }))}
+                            className="text-amber-600 focus:ring-amber-500"
+                          />
+                          <span className="text-amber-700 dark:text-amber-300 font-medium text-[11px]">🟡 읽기</span>
+                        </label>
+
+                        <label className="flex items-center gap-1 cursor-pointer select-none">
+                          <input
+                            type="radio"
+                            name={`perm_${menu.id}`}
+                            checked={currentLevel === 'none'}
+                            onChange={() => setGroupMenuPermissions(prev => ({ ...prev, [menu.id]: 'none' }))}
+                            className="text-rose-600 focus:ring-rose-500"
+                          />
+                          <span className="text-slate-400 dark:text-zinc-500 font-medium text-[11px]">🔴 차단</span>
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -1122,7 +1262,7 @@ export default function AdminAccountManagement() {
               취소
             </Button>
             <Button onClick={handleSaveGroup} className="bg-purple-600 hover:bg-purple-700 text-white font-bold">
-              {editingGroup ? '수정 완료' : '그룹 생성 완료'}
+              {editingGroup ? '권한 수정 완료' : '그룹 및 권한 등록'}
             </Button>
           </DialogFooter>
         </DialogContent>
