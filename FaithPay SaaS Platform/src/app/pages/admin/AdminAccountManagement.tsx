@@ -846,19 +846,20 @@ export default function AdminAccountManagement() {
             <input type="text" name="prevent_autofill_email" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
             <input type="password" name="prevent_autofill_pwd" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">성명 (이름)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">성명 (이름) *</Label>
               <Input
                 placeholder="예: 홍길동 실무관"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 autoComplete="off"
                 name="staff_name_no_fill"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">이메일 (로그인 ID)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">이메일 (로그인 ID) *</Label>
               <Input
                 type="email"
                 placeholder="example@organization.or.kr"
@@ -867,11 +868,12 @@ export default function AdminAccountManagement() {
                 autoComplete="off"
                 aria-autocomplete="none"
                 name="staff_email_no_fill"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">휴대폰 번호</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">휴대폰 번호</Label>
               <Input
                 type="tel"
                 placeholder="010-0000-0000"
@@ -880,11 +882,12 @@ export default function AdminAccountManagement() {
                 autoComplete="off"
                 aria-autocomplete="none"
                 name="staff_phone_no_fill"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">초기 임시 비밀번호</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">초기 임시 비밀번호 *</Label>
               <Input
                 type="password"
                 placeholder="초기 비밀번호 입력"
@@ -893,13 +896,14 @@ export default function AdminAccountManagement() {
                 autoComplete="new-password"
                 aria-autocomplete="none"
                 name="staff_pwd_no_fill"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">소속 관리자 그룹 *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">소속 관리자 그룹 *</Label>
               <Select value={selectedGroupId} onValueChange={(val) => setSelectedGroupId(val)}>
-                <SelectTrigger className="bg-white font-bold">
+                <SelectTrigger className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-bold">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -956,39 +960,42 @@ export default function AdminAccountManagement() {
           </DialogHeader>
 
           <form onSubmit={(e) => { e.preventDefault(); handleSaveEditStaff(); }} autoComplete="off" className="space-y-4 py-3">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">성명 (이름)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">성명 (이름) *</Label>
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="성명 입력"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">이메일 (로그인 ID)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">이메일 (로그인 ID) *</Label>
               <Input
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 placeholder="이메일 주소 입력"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">휴대폰 번호</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">휴대폰 번호</Label>
               <Input
                 type="tel"
                 value={editPhone}
                 onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
                 placeholder="010-0000-0000"
+                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-semibold"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs font-bold">소속 관리자 그룹 변경</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">소속 관리자 그룹 변경 *</Label>
               <Select value={editGroupId} onValueChange={(val) => setEditGroupId(val)}>
-                <SelectTrigger className="bg-white font-bold">
+                <SelectTrigger className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl h-10 text-xs font-bold">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
