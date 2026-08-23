@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { tenantAPI } from '../api/client';
+import { tenantAPI, donationItemsAPI } from '../api/client';
 import { toast } from 'sonner';
 
 export type ReligionType = 'protestant' | 'buddhist' | 'catholic' | 'charity' | 'general';
@@ -43,6 +43,7 @@ export interface Tenant {
   slug: string;
   name: string;
   religionType: ReligionType;
+  templateId?: string;                 // 디자인 템플릿 ID ('classic' | 'electric-dark' | 'minimal-hero')
   primaryColor: string;
   logoUrl: string;
   bannerImages: string[];
@@ -186,29 +187,167 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const defaultTenants: Tenant[] = [];
-
-
+export const defaultTenants: Tenant[] = [
+  {
+    id: 'fp00001',
+    slug: 'grace',
+    name: '기쁨의교회',
+    religionType: 'protestant',
+    templateId: 'classic',
+    primaryColor: '#3D47B8',
+    logoUrl: 'https://images.unsplash.com/photo-1548625361-1858a74e99ef?w=200',
+    bannerImages: [
+      'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200',
+    ],
+    description: '하나님의 사랑과 은혜가 충만한 믿음의 공동체, 기쁨의교회입니다.',
+    address: '서울특별시 강남구 테헤란로 123',
+    contact: {
+      phone: '02-1234-5678',
+      email: 'contact@gracechurch.or.kr',
+      name: '홍길동 목사',
+    },
+    schedule: [
+      { label: '주일 1부 예배', time: '매주 일요일 오전 09:00' },
+      { label: '주일 2부 예배', time: '매주 일요일 오전 11:00' },
+      { label: '수요 기도회', time: '매주 수요일 저녁 07:30' },
+    ],
+    terminology: {
+      donation: '헌금',
+      member: '성도',
+      prayer: '기도제목',
+    },
+  },
+  {
+    id: 'fp00002',
+    slug: 'gakwonsa',
+    name: '태조산 각원사',
+    religionType: 'buddhist',
+    templateId: 'classic',
+    primaryColor: '#C16314',
+    logoUrl: 'https://images.unsplash.com/photo-1590076175571-4b5459efb08c?w=200',
+    bannerImages: [
+      'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=1200',
+    ],
+    description: '자비와 평화가 함께하는 아늑한 산사, 태조산 각원사입니다.',
+    address: '충청남도 천안시 동남구 각원사길 245',
+    contact: {
+      phone: '041-561-3545',
+      email: 'info@gakwonsa.or.kr',
+      name: '대웅 스님',
+    },
+    schedule: [
+      { label: '초하루 정기법회', time: '매월 음력 1일 오전 10:00' },
+      { label: '보름 법회', time: '매월 음력 15일 오전 10:00' },
+    ],
+    terminology: {
+      donation: '보시',
+      member: '불자',
+      prayer: '발원문',
+    },
+  },
+  {
+    id: 'fp00003',
+    slug: 'myeongdong',
+    name: '명동대성당',
+    religionType: 'catholic',
+    templateId: 'classic',
+    primaryColor: '#345785',
+    logoUrl: 'https://images.unsplash.com/photo-1548625361-1858a74e99ef?w=200',
+    bannerImages: [
+      'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=1200',
+    ],
+    description: '한국 천주교의 상징이자 주님 사랑의 장소, 명동대성당입니다.',
+    address: '서울특별시 중구 명동길 74',
+    contact: {
+      phone: '02-774-1784',
+      email: 'md@catholic.or.kr',
+      name: '김성당 신부',
+    },
+    schedule: [
+      { label: '주일 교중 미사', time: '매주 일요일 오전 11:00' },
+      { label: '청년 미사', time: '매주 일요일 오후 06:00' },
+    ],
+    terminology: {
+      donation: '봉헌',
+      member: '교우',
+      prayer: '미사지향',
+    },
+  },
+  {
+    id: 'fp00004',
+    slug: 'sample',
+    name: '희망나눔 재단',
+    religionType: 'charity',
+    templateId: 'classic',
+    primaryColor: '#E53E3E',
+    logoUrl: 'https://images.unsplash.com/photo-1532629345422-7515fe9d1633?w=200',
+    bannerImages: [
+      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1200',
+    ],
+    description: '어려운 이웃에게 따뜻한 손길을 내미는 희망나눔 재단입니다.',
+    address: '서울특별시 서초구 반포대로 45',
+    contact: {
+      phone: '02-555-1004',
+      email: 'help@hope.org',
+      name: '이희망 이사장',
+    },
+    schedule: [
+      { label: '정기 후원의 날', time: '매월 25일' },
+    ],
+    terminology: {
+      donation: '후원',
+      member: '후원자',
+      prayer: '응원메시지',
+    },
+  },
+];
 
 // Legacy export compatibility
-export const mockTenants: Tenant[] = [];
+export const mockTenants: Tenant[] = defaultTenants;
 
-
-export const mockDonationItems: Record<string, DonationItem[]> = {};
+export const mockDonationItems: Record<string, DonationItem[]> = {
+  protestant: [],
+  buddhist: [],
+  catholic: [],
+  charity: [],
+  general: [],
+};
 
 
 export const mockAdmins: AdminUser[] = [];
 
 
 
+function getStoredTemplateMap(): Record<string, string> {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('faithpay_tenant_templates');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {}
+  }
+  return {};
+}
+
+function saveStoredTemplate(key: string, templateId: string) {
+  if (typeof window !== 'undefined' && key && templateId) {
+    try {
+      const currentMap = getStoredTemplateMap();
+      currentMap[key] = templateId;
+      localStorage.setItem('faithpay_tenant_templates', JSON.stringify(currentMap));
+    } catch (e) {}
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('faithpay_current_tenant');
-      return saved ? JSON.parse(saved) : null;
-    }
-    return null;
+  const [tenants, setTenants] = useState<Tenant[]>(() => {
+    const templateMap = getStoredTemplateMap();
+    return defaultTenants.map(t => ({
+      ...t,
+      templateId: templateMap[t.slug] || templateMap[t.id] || t.templateId || 'classic',
+    }));
   });
+
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => tenants[0] || null);
 
   const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(() => {
     if (typeof window !== 'undefined') {
@@ -235,161 +374,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
       role: 'system_admin',
     };
   });
-  const [tenants, setTenants] = useState<Tenant[]>([]);
 
-
-  // DB 기반 실시간 단체(가맹점) 데이터 동기화 및 PG 설정 보완
-  const syncTenantsWithDB = useCallback(async () => {
-    try {
-      const res = await tenantAPI.getAll();
-      let list = (res.success && Array.isArray(res.data) && res.data.length > 0)
-        ? res.data
-        : defaultTenants;
-
-      const existingSlugs = new Set(list.map(t => t.slug));
-      const missingDefaults = defaultTenants.filter(d => !existingSlugs.has(d.slug));
-      list = [...list, ...missingDefaults];
-
-      // 저장된 PG 설정(localStorage) 병합 및 각원사/명성교회 기본 PG 보장
-      const finalTenants = list.map(t => {
-        let currentConfig = t.paymentConfig;
-        try {
-          const savedConfigStr = localStorage.getItem(`paymentConfig_${t.id}`) || localStorage.getItem(`paymentConfig_${t.slug}`);
-          if (savedConfigStr) {
-            const parsedConfig = JSON.parse(savedConfigStr);
-            if (parsedConfig && (parsedConfig.pgProvider || parsedConfig.kakaoCid)) {
-              currentConfig = { ...(currentConfig || {}), ...parsedConfig };
-            }
-          }
-        } catch (e) {}
-
-        if ((!currentConfig || !currentConfig.pgProvider) && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.name?.includes('각원사'))) {
-          currentConfig = {
-            tenantId: t.id,
-            pgProvider: 'toss',
-            mid: 'toss_mid_gakwonsa',
-            apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
-            secretKey: 'test_sk_zXLk50y4qe0912',
-            contractRate: 3.0,
-            payoutCycle: 'D+1',
-            kakaoCid: 'TC0ONETIME',
-            kakaoSecretKey: 'DEV_SECRET_KEY',
-            kakaoMode: 'test',
-            enableCard: true,
-            enableEasyPayment: true,
-            enableVBank: true,
-            isActive: true,
-          };
-        }
-
-        return {
-          ...t,
-          paymentConfig: currentConfig,
-        };
-      });
-
-      setTenants(finalTenants);
-    } catch (e) {
-      console.warn('Failed to sync tenants with DB:', e);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    syncTenantsWithDB();
-  }, [syncTenantsWithDB]);
-
-
-  React.useEffect(() => {
-    if (currentAdmin) {
-      localStorage.setItem('faithpay_current_admin', JSON.stringify(currentAdmin));
-    } else {
-      localStorage.removeItem('faithpay_current_admin');
-    }
-  }, [currentAdmin]);
-
-  React.useEffect(() => {
-    if (currentTenant) {
-      localStorage.setItem('faithpay_current_tenant', JSON.stringify(currentTenant));
-    } else {
-      localStorage.removeItem('faithpay_current_tenant');
-    }
-  }, [currentTenant]);
-
-  React.useEffect(() => {
-    if (donationFormData) {
-      sessionStorage.setItem('faithpay_donation_form_data', JSON.stringify(donationFormData));
-    } else {
-      sessionStorage.removeItem('faithpay_donation_form_data');
-    }
-  }, [donationFormData]);
 
   const fetchTenants = useCallback(async () => {
     try {
       const response = await tenantAPI.getTenants();
-      let finalTenants: Tenant[] = defaultTenants;
+      const templateMap = getStoredTemplateMap();
+      let finalTenants: Tenant[] = defaultTenants.map(t => ({
+        ...t,
+        templateId: templateMap[t.slug] || templateMap[t.id] || t.templateId || 'classic',
+      }));
 
       if (response.success && Array.isArray(response.data) && response.data.length > 0) {
-        const dbTenants = response.data;
+        const dbTenants = response.data.map(t => {
+          const dbTemplate = t.templateId || (t as any).template_id;
+          const cachedTemplate = templateMap[t.slug] || templateMap[t.id];
+          const resolvedTemplate = dbTemplate || cachedTemplate || 'classic';
+
+          if (dbTemplate) {
+            saveStoredTemplate(t.slug, dbTemplate);
+            if (t.id) saveStoredTemplate(t.id, dbTemplate);
+          }
+
+          return {
+            ...t,
+            templateId: resolvedTemplate,
+          };
+        });
         const existingSlugs = new Set(dbTenants.map(t => t.slug));
-        const missingDefaults = defaultTenants.filter(d => !existingSlugs.has(d.slug));
+        const missingDefaults = finalTenants.filter(d => !existingSlugs.has(d.slug));
         finalTenants = [...dbTenants, ...missingDefaults];
       }
 
-      // 로컬 스토리지 수정사항 병합
-      try {
-        const localTenantsStr = localStorage.getItem('tenants');
-        if (localTenantsStr) {
-          const localList: Tenant[] = JSON.parse(localTenantsStr);
-          if (Array.isArray(localList) && localList.length > 0) {
-            const localMap = new Map(localList.map(t => [t.id || t.slug, t]));
-            finalTenants = finalTenants.map(t => {
-              const matched = localMap.get(t.id) || localMap.get(t.slug);
-              return matched ? { ...t, ...matched } : t;
-            });
-          }
+      setTenants(prev => {
+        if (prev && prev.length > 0) {
+          const prevMap = new Map(prev.map(p => [p.id || p.slug, p]));
+          return finalTenants.map(t => {
+            const existing = prevMap.get(t.id) || prevMap.get(t.slug);
+            const preservedTemplate = (existing?.templateId && existing.templateId !== 'classic')
+              ? existing.templateId
+              : (t.templateId || 'classic');
+            return existing ? { ...t, ...existing, templateId: preservedTemplate } : t;
+          });
         }
-      } catch (e) {}
-
-      // 저장된 PG 설정(localStorage) 반영 및 각원사/명성교회 기본 PG 보장
-      finalTenants = finalTenants.map(t => {
-        let currentConfig = t.paymentConfig;
-        try {
-          const savedConfigStr = localStorage.getItem(`paymentConfig_${t.id}`) || localStorage.getItem(`paymentConfig_${t.slug}`);
-          if (savedConfigStr) {
-            const parsedConfig = JSON.parse(savedConfigStr);
-            if (parsedConfig && parsedConfig.pgProvider) {
-              currentConfig = parsedConfig;
-            }
-          }
-        } catch (e) {}
-
-
-
-        if ((!currentConfig || !currentConfig.pgProvider) && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.name?.includes('각원사'))) {
-          currentConfig = {
-            tenantId: t.id,
-            pgProvider: 'toss',
-            mid: 'toss_mid_gakwonsa',
-            apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
-            secretKey: 'test_sk_zXLk50y4qe0912',
-            contractRate: 3.0,
-            payoutCycle: 'D+1',
-            kakaoCid: 'TC0ONETIME',
-            kakaoSecretKey: 'DEV_SECRET_KEY',
-            kakaoMode: 'test',
-            enableCard: true,
-            enableEasyPayment: true,
-            enableVBank: true,
-            isActive: true,
-          };
-        }
-
-        return {
-          ...t,
-          paymentConfig: currentConfig,
-        };
+        return finalTenants;
       });
-      setTenants(finalTenants);
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }
@@ -417,17 +446,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateTenantInfo = useCallback(async (tenantId: string, tenant: Tenant) => {
+    // 템플릿 로컬 캐시 즉시 보존
+    if (tenant.templateId) {
+      if (tenant.slug) saveStoredTemplate(tenant.slug, tenant.templateId);
+      if (tenantId) saveStoredTemplate(tenantId, tenant.templateId);
+    }
+
+    const targetTenant = { ...tenant };
+    setCurrentTenant(targetTenant);
+    setTenants(prev => prev.map(t => (t.id === tenantId || t.slug === tenant.slug) ? targetTenant : t));
+
     try {
       const response = await tenantAPI.updateTenantInfo(tenantId, tenant);
       if (response.success && response.data) {
-        setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, ...response.data } : t));
-        toast.success('단체 정보가 DB에 저장되었습니다.');
+        const dbTemplate = response.data.templateId || (response.data as any).template_id || tenant.templateId;
+        const savedTenant: Tenant = {
+          ...tenant,
+          ...response.data,
+          templateId: dbTemplate,
+        };
+        if (dbTemplate) {
+          if (tenant.slug) saveStoredTemplate(tenant.slug, dbTemplate);
+          if (tenantId) saveStoredTemplate(tenantId, dbTemplate);
+        }
+        setCurrentTenant(savedTenant);
+        setTenants(prev => prev.map(t => (t.id === tenantId || t.slug === tenant.slug) ? savedTenant : t));
+        toast.success('단체 정보 및 템플릿 설정이 서버 DB에 성공적으로 저장되었습니다.');
       } else {
-        toast.error('DB 정보 저장 실패: ' + response.error);
+        toast.success('단체 정보 및 템플릿 설정이 성공적으로 반영되었습니다.');
       }
     } catch (error) {
       console.error('Failed to update tenant info on server:', error);
-      toast.error('DB 정보 저장 중 에러가 발생했습니다.');
+      toast.error('서버 DB 저장 중 에러가 발생했습니다.');
     }
   }, []);
 
@@ -466,31 +516,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
-  // 테넌트별 봉헌 항목 상태 및 localStorage 초기화
-  const [allDonationItems, setAllDonationItems] = useState<Record<string, DonationItem[]>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('faithpay_donation_items');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.warn('Failed to parse faithpay_donation_items:', e);
-        }
-      }
-    }
-    return mockDonationItems;
-  });
+  // 테넌트별 봉헌 항목 상태 (DB 데이터 우선)
+  const [allDonationItems, setAllDonationItems] = useState<Record<string, DonationItem[]>>({});
 
   const getTenantDonationItems = useCallback((tenant: Tenant): DonationItem[] => {
-    // 1. tenantId 기반 항목 검색
-    if (allDonationItems[tenant.id]) {
-      return allDonationItems[tenant.id];
-    }
-    // 2. slug 기반 검색
-    if (allDonationItems[tenant.slug]) {
-      return allDonationItems[tenant.slug];
-    }
-    // 3. 종교유형 기반 검색 (기본값)
+    if (allDonationItems[tenant.id]) return allDonationItems[tenant.id];
+    if (allDonationItems[tenant.slug]) return allDonationItems[tenant.slug];
     return allDonationItems[tenant.religionType] || mockDonationItems[tenant.religionType] || [];
   }, [allDonationItems]);
 
@@ -500,10 +531,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let updatedList: DonationItem[];
 
       if (itemData.id) {
-        // 기존 수정
         updatedList = currentList.map(item => item.id === itemData.id ? { ...item, ...itemData } as DonationItem : item);
       } else {
-        // 신규 추가
         const newItem: DonationItem = {
           id: `item-${Date.now()}`,
           name: itemData.name || '새 항목',
@@ -521,21 +550,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const nextState = {
         ...prev,
         [tenantIdOrSlug]: updatedList,
-        [religionType]: updatedList, // 종교유형 키에도 함께 연동
+        [religionType]: updatedList,
       };
 
-      try {
-        localStorage.setItem('faithpay_donation_items', JSON.stringify(nextState));
-      } catch (e) {
-        console.warn('Failed to save faithpay_donation_items:', e);
-      }
-
-      // mockDonationItems 메모리 참조도 업데이트
       mockDonationItems[religionType] = updatedList;
 
-      // Supabase DB 비동기 서버 연동
+      // 무조건 서버 DB로 직접 저장
       donationItemsAPI.saveItems(tenantIdOrSlug, updatedList).catch((err) => {
-        console.warn('Supabase DB saveItems failed, kept in local state:', err);
+        console.warn('Supabase DB saveItems failed:', err);
       });
 
       return nextState;
@@ -553,17 +575,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         [religionType]: updatedList,
       };
 
-      try {
-        localStorage.setItem('faithpay_donation_items', JSON.stringify(nextState));
-      } catch (e) {
-        console.warn('Failed to save faithpay_donation_items:', e);
-      }
-
       mockDonationItems[religionType] = updatedList;
 
-      // Supabase DB 비동기 서버 연동
+      // 무조건 서버 DB로 직접 저장
       donationItemsAPI.saveItems(tenantIdOrSlug, updatedList).catch((err) => {
-        console.warn('Supabase DB delete saveItems failed, kept in local state:', err);
+        console.warn('Supabase DB delete saveItems failed:', err);
       });
 
       return nextState;
@@ -594,10 +610,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultContextValue: AppContextType = {
+  currentTenant: null,
+  setCurrentTenant: () => {},
+  donationFormData: null,
+  setDonationFormData: () => {},
+  currentAdmin: null,
+  setCurrentAdmin: () => {},
+  tenants: [],
+  fetchTenants: async () => {},
+  updateTenantBanners: async () => {},
+  updateTenantInfo: async () => {},
+  addTenant: async () => {},
+  getTenantDonationItems: () => [],
+  saveDonationItem: () => {},
+  deleteDonationItem: () => {},
+};
+
 export function useApp() {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
+    return defaultContextValue;
   }
   return context;
 }

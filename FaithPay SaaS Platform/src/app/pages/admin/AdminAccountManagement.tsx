@@ -146,9 +146,19 @@ export default function AdminAccountManagement() {
     if (tenant) {
       setCurrentTenant(tenant);
 
-      // 모의 스태프 관리자 초기 데이터 (기존 수정 데이터 유지)
+      // 모의 스태프 관리자 초기 데이터 (기존 수정 데이터 유지 및 localStorage 로드)
       setStaffList((prev) => {
         if (prev.length > 0) return prev;
+        try {
+          const saved = localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch (e) {
+          // ignore
+        }
+
         return [
           {
             id: `admin-${tenant.id}-1`,
@@ -194,6 +204,16 @@ export default function AdminAccountManagement() {
       });
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
+
+  useEffect(() => {
+    if (currentTenant?.id && staffList.length > 0) {
+      try {
+        localStorage.setItem(`faithpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [staffList, currentTenant]);
 
   if (!currentTenant) {
     return (

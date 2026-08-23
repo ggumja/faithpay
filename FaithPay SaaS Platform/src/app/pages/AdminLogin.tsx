@@ -43,9 +43,63 @@ export default function AdminLogin() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  const isEmailRegisteredForTenant = (t: any, checkEmail: string): boolean => {
+    if (!checkEmail) return false;
+    const clean = checkEmail.trim().toLowerCase();
+    const regList = new Set<string>();
+
+    // 1. 가맹 신청 DB에 등록된 공식 대표 담당자 이메일
+    if (t.contact?.email) {
+      regList.add(t.contact.email.trim().toLowerCase());
+    }
+
+    // 2. 관리자 계정 관리(AdminAccountManagement) 페이지에서 등록/생성된 스태프 및 담당자 계정
+    try {
+      const savedStaff = localStorage.getItem(`faithpay_staff_accounts_${t.id}`);
+      if (savedStaff) {
+        const parsed = JSON.parse(savedStaff);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsed.forEach((s: any) => {
+            if (s.email && s.status !== 'locked') {
+              regList.add(String(s.email).trim().toLowerCase());
+            }
+          });
+        }
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    // 3. 기본 생성 재무/실무 담당자 계정
+    regList.add(`finance@${t.slug}.or.kr`.toLowerCase());
+
+    return regList.has(clean);
+  };
+
+  const handleSelectTenantAndLogin = (targetTenant: any) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const tenantAdmin = {
+      id: `admin-${targetTenant.id}`,
+      tenantId: targetTenant.id,
+      email: cleanEmail,
+      name: `${targetTenant.name} 관리자`,
+      role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
+    };
+    setCurrentAdmin(tenantAdmin);
+    setCurrentTenant(targetTenant);
+    setMultiTenantModalOpen(false);
+    toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
+    navigate(`/${targetTenant.slug}/admin`);
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      toast.error('이메일과 비밀번호를 입력해 주세요.');
+      return;
+    }
 
     // 최고 시스템 관리자 이메일 입력 시 시스템 로그인 페이지 안내
     if (cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr' || cleanEmail === 'system@faithpay.kr') {
@@ -58,6 +112,12 @@ export default function AdminLogin() {
     if (tenantSlug) {
       const urlTenant = tenants.find(t => t.slug === tenantSlug);
       if (urlTenant) {
+        const isValid = isEmailRegisteredForTenant(urlTenant, cleanEmail);
+        if (!isValid) {
+          toast.error(`'${cleanEmail}' 계정은 ${urlTenant.name} 등록 관리자가 아닙니다. 등록된 이메일을 입력하세요.`);
+          return;
+        }
+
         const tenantAdmin = {
           id: `admin-${urlTenant.id}`,
           tenantId: urlTenant.id,
@@ -74,23 +134,12 @@ export default function AdminLogin() {
     }
 
     // 2. 전체 단체 관리자 일반 로그인 (/admin/login)
-    const matchingTenantsList = tenants.filter(t => {
-      const primaryEmail = t.contact?.email?.toLowerCase() || '';
-      const defaultTenantEmail = `info@${t.slug}.or.kr`.toLowerCase();
-      const defaultFaithpayEmail = `${t.slug}@faithpay.or.kr`.toLowerCase();
-      const financeEmail = `finance@${t.slug}.or.kr`.toLowerCase();
+    const matchingTenantsList = tenants.filter(t => isEmailRegisteredForTenant(t, cleanEmail));
 
-      return (
-        (primaryEmail && cleanEmail === primaryEmail) ||
-        cleanEmail === defaultTenantEmail ||
-        cleanEmail === defaultFaithpayEmail ||
-        cleanEmail === financeEmail ||
-        cleanEmail.includes(t.slug.toLowerCase()) ||
-        cleanEmail.includes('tax') ||
-        cleanEmail.includes('account') ||
-        cleanEmail.includes('cpa')
-      );
-    });
+    if (matchingTenantsList.length === 0) {
+      toast.error(`'${cleanEmail}' 이메일로 등록된 가맹 단체 관리자 계정이 존재하지 않습니다.`);
+      return;
+    }
 
     // 2개 이상의 단체에 등록된 회계법인/통합 관리자 계정일 경우 단체 선택 모달 오픈
     if (matchingTenantsList.length > 1) {
@@ -100,18 +149,8 @@ export default function AdminLogin() {
       return;
     }
 
-    const targetTenant = matchingTenantsList[0] || tenants[0];
+    const targetTenant = matchingTenantsList[0];
     if (targetTenant) {
-      const tenantAdmin = {
-        id: `admin-${targetTenant.id}`,
-        tenantId: targetTenant.id,
-        email: cleanEmail,
-        name: `${targetTenant.name} 관리자`,
-        role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
-      };
-      setCurrentAdmin(tenantAdmin);
-      setCurrentTenant(targetTenant);
-      toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
       navigate(`/${targetTenant.slug}/admin`);
       return;
     }

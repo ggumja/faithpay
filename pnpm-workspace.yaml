@@ -1,2 +1,5 @@
 packages:
   - 'FaithPay SaaS Platform'
+allowBuilds:
+  '@tailwindcss/oxide': true
+  esbuild: true
