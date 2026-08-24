@@ -82,7 +82,7 @@ export default function OnboardingFlow() {
       setSlugStatus({
         checked: true,
         isAvailable: true,
-        message: `🟢 '${cleanSlug}' 주소는 즉시 사용 가능합니다! (faithpay.info/${cleanSlug})`,
+        message: `🟢 '${cleanSlug}' 주소는 즉시 사용 가능합니다! (soulpay.info/${cleanSlug})`,
       });
     }
   };
@@ -163,7 +163,7 @@ export default function OnboardingFlow() {
           appliedAt: new Date().toISOString(),
           // 직접 신청 = 플랫폼이 영업 담당
           registrationSource: 'self',
-          registeredByPartnerName: 'FaithPay 플랫폼',
+          registeredByPartnerName: 'SoulPay 플랫폼',
           registeredByReferralCode: 'PLATFORM',
         } as any);
         setStep('complete');
@@ -188,7 +188,7 @@ export default function OnboardingFlow() {
           <span>돌아가기</span>
         </button>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-150 dark:bg-zinc-800 text-[10px] font-extrabold uppercase tracking-widest text-zinc-550 dark:text-zinc-400">
-          FaithPay 가입신청
+          SoulPay 가입신청
         </span>
         <div className="w-14" />
       </header>
@@ -365,7 +365,7 @@ export default function OnboardingFlow() {
                   </div>
                   <div className="flex gap-2 mt-1">
                     <div className="relative flex-1 flex items-center">
-                      <div className="absolute left-3.5 text-xs text-zinc-400 font-bold select-none">faithpay.info/</div>
+                      <div className="absolute left-3.5 text-xs text-zinc-400 font-bold select-none">soulpay.info/</div>
                       <Input 
                         id="slug" 
                         name="org_slug_nofill"
@@ -679,11 +679,11 @@ export default function OnboardingFlow() {
                   className="font-display text-lg sm:text-xl font-extrabold tracking-tight break-all mb-4"
                   style={{ color: ft.primary }}
                 >
-                  faithpay.info/{formData.slug || 'church-name'}
+                  soulpay.info/{formData.slug || 'church-name'}
                 </h3>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`faithpay.info/${formData.slug || 'church-name'}`);
+                    navigator.clipboard.writeText(`soulpay.info/${formData.slug || 'church-name'}`);
                     toast.success('주소가 클립보드에 복사되었습니다.');
                   }}
                   className="h-10 px-5 rounded-full bg-white dark:bg-zinc-950 text-xs font-bold cursor-pointer shadow-xs border transition-colors"

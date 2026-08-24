@@ -30,16 +30,17 @@ export function PartnerHomeSection({
   let pgCost = 1.5;
   let platformMargin = 0.5;
   try {
-    const pgs = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]');
+    const pgs = JSON.parse(localStorage.getItem('soulpay:pg_rates') || localStorage.getItem('faithpay:pg_rates') || '[]');
     if (pgs.length > 0) pgCost = pgs[0].rate ?? 1.5;
-    const pm = parseFloat(localStorage.getItem('faithpay:platform_margin') || '');
+    const pm = parseFloat(localStorage.getItem('soulpay:platform_margin') || localStorage.getItem('faithpay:platform_margin') || '');
     if (!isNaN(pm)) platformMargin = pm;
   } catch {}
 
   // 영업자 베이스 수수료 하한선 (PG 1.5% + 플랫폼 0.5% + 대리점 지정 수수료율)
   let agencyRateForAgent = 0.3;
+  let agentRatesMap: Record<string, number> = {};
   try {
-    const agentRatesMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}');
+    agentRatesMap = JSON.parse(localStorage.getItem('soulpay:agent_rates') || localStorage.getItem('faithpay:agent_rates') || '{}');
     if (agentRatesMap[partner.id] !== undefined) {
       agencyRateForAgent = agentRatesMap[partner.id];
     }

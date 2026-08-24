@@ -9,8 +9,8 @@ import { Building2, ArrowLeft, CheckCircle2, Key, AlertTriangle, TrendingUp, Pap
 import { toast } from 'sonner';
 import { partnerAPI, Partner } from '../../api/client';
 
-const STORAGE_KEY_PG     = 'faithpay:pg_rates';
-const STORAGE_KEY_MARGIN = 'faithpay:platform_margin';
+const STORAGE_KEY_PG     = 'soulpay:pg_rates';
+const STORAGE_KEY_MARGIN = 'soulpay:platform_margin';
 
 function loadFeeConfig() {
   let pgCost = 1.5, platformMargin = 0.5;
@@ -69,7 +69,7 @@ export default function PartnerTenantCreate() {
   };
 
   useEffect(() => {
-    const sessionRaw = localStorage.getItem('faithpay_partner_session');
+    const sessionRaw = localStorage.getItem('soulpay_partner_session') || localStorage.getItem('faithpay_partner_session');
     let sessionPartnerId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
     let sessionPartner: any = null;
 
@@ -102,7 +102,7 @@ export default function PartnerTenantCreate() {
 
   // ── Guardrail 계산 ──────────────────────────────
   let savedRatesTC: Record<string, number> = {};
-  try { savedRatesTC = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
+  try { savedRatesTC = JSON.parse(localStorage.getItem('soulpay:agent_rates') || localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
   const agencyRate = (myPartner?.id && savedRatesTC[myPartner.id]) ?? (myPartner as any)?.agencyRate ?? 0.5;
   const floorRate  = +(feeConfig.pgCost + feeConfig.platformMargin + agencyRate).toFixed(2);
   const spread     = +(Math.max(0, contractRate - floorRate)).toFixed(2);
@@ -242,7 +242,7 @@ export default function PartnerTenantCreate() {
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-slate-700">고유 도메인 슬러그 (URL) *</Label>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-400 font-mono">faithpay.kr/</span>
+                    <span className="text-xs text-slate-400 font-mono">soulpay.kr/</span>
                     <Input placeholder="gakwonsa" value={slug} onChange={e => handleSlugChange(e.target.value)} className="font-mono" required />
                   </div>
                 </div>

@@ -99,13 +99,13 @@ export default function PartnerDashboard() {
         let sessionPartner: Partial<Partner> = {
           id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
           name: '한국불교문화원',
-          email: 'agency@faithpay.kr',
+          email: 'agency@soulpay.kr',
           role: 'master_agency',
           referralCode: 'BIT2024',
-          agencyRate: 0.5,
+          phone: '010-1234-5678',
         };
         try {
-          const raw = localStorage.getItem('faithpay_partner_session');
+          const raw = localStorage.getItem('soulpay_partner_session') || localStorage.getItem('faithpay_partner_session');
           if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed && parsed.id) sessionPartner = parsed;
@@ -139,7 +139,7 @@ export default function PartnerDashboard() {
           currentPartner = {
             id: sessionPartner.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
             name: sessionPartner.name || '한국불교문화원',
-            email: sessionPartner.email || 'agency@faithpay.kr',
+            email: sessionPartner.email || 'agency@soulpay.kr',
             phone: sessionPartner.phone || '02-567-8901',
             role: (sessionPartner.role as any) || 'master_agency',
             commissionRate: sessionPartner.agencyRate ?? 0.5,
@@ -250,9 +250,9 @@ export default function PartnerDashboard() {
 
           {/* 브랜드 */}
           <div className={S.brand}>
-            <div className={S.brandDot}>FP</div>
+            <div className={S.brandDot}>SP</div>
             <div>
-              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">FaithPay</div>
+              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">SoulPay</div>
               <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">
                 {isAgency ? '대리점 포털' : '영업자 포털'}
               </div>
@@ -314,6 +314,7 @@ export default function PartnerDashboard() {
           <div className={S.sidefoot}>
             <button
               onClick={() => {
+                localStorage.removeItem('soulpay_partner_session');
                 localStorage.removeItem('faithpay_partner_session');
                 toast.success('파트너 포털에서 로그아웃 되었습니다.');
                 navigate('/partner/login');

@@ -1,5 +1,5 @@
 /**
- * API Client for FaithPay Backend
+ * API Client for SoulPay Backend
  * 
  * Supabase Edge Function과 통신하는 클라이언트입니다.
  */
@@ -757,6 +757,7 @@ export const partnerAPI = {
 
     // 로컬 스토리지에 파트너 상태 저장 (폴백)
     try {
+      localStorage.setItem(`soulpay:partner_status:${id}`, status);
       localStorage.setItem(`faithpay:partner_status:${id}`, status);
     } catch {}
 

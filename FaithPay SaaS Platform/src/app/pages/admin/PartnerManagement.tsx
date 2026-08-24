@@ -59,7 +59,7 @@ export default function PartnerManagement() {
         const res = await partnerAPI.getAll();
         if (res.success && Array.isArray(res.data)) {
           const mapped = res.data.map(p => {
-            const savedStatus = localStorage.getItem(`faithpay:partner_status:${p.id}`);
+            const savedStatus = localStorage.getItem(`soulpay:partner_status:${p.id}`) || localStorage.getItem(`faithpay:partner_status:${p.id}`);
             return savedStatus ? { ...p, status: savedStatus as any } : p;
           });
           setPartners(mapped);
@@ -589,7 +589,7 @@ export default function PartnerManagement() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs font-bold">이메일 *</Label>
-                <Input type="email" placeholder="partner@faithpay.kr" value={email} onChange={e => setEmail(e.target.value)} className="h-8 text-xs" required />
+                <Input type="email" placeholder="partner@soulpay.kr" value={email} onChange={e => setEmail(e.target.value)} className="h-8 text-xs" required />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-bold">추천 코드 (미입력 시 자동)</Label>
@@ -728,7 +728,7 @@ export default function PartnerManagement() {
                 <>
                   <span className="font-bold text-slate-900">{confirmDialog.partnerName}</span> 영업 파트너 계정을 승인하시겠습니까?
                   <br />
-                  승인 시 해당 파트너는 FaithPay 대시보드 로그인 및 가맹점 유치 활동이 정상적으로 가능해집니다.
+                  승인 시 해당 파트너는 SoulPay 대시보드 로그인 및 가맹점 유치 활동이 정상적으로 가능해집니다.
                 </>
               ) : (
                 <>

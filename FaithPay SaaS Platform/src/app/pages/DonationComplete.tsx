@@ -33,7 +33,9 @@ export default function DonationComplete() {
     // 결제 완료 후 마이페이지 자동 로그인을 위해 신도 세션 저장
     if (donationFormData?.phone) {
       const cleanPhone = donationFormData.phone.replace(/[^0-9]/g, '');
+      sessionStorage.setItem('soulpay_donor_session', cleanPhone);
       sessionStorage.setItem('faithpay_donor_session', cleanPhone);
+      localStorage.setItem('soulpay_last_donor_phone', cleanPhone);
       localStorage.setItem('faithpay_last_donor_phone', cleanPhone);
     }
 

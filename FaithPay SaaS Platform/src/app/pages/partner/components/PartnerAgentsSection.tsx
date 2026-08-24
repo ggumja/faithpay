@@ -187,9 +187,9 @@ export function PartnerAgentsSection({
                   : agentRates[agent.id] ?? editAgencyRate ?? 0.3;
                 let pgCost2 = 1.5, platformMargin2 = 0.5;
                 try {
-                  const pgs2 = JSON.parse(localStorage.getItem('faithpay:pg_rates') || '[]');
+                  const pgs2 = JSON.parse(localStorage.getItem('soulpay:pg_rates') || localStorage.getItem('faithpay:pg_rates') || '[]');
                   if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5;
-                  const pm2 = parseFloat(localStorage.getItem('faithpay:platform_margin') || '');
+                  const pm2 = parseFloat(localStorage.getItem('soulpay:platform_margin') || localStorage.getItem('faithpay:platform_margin') || '');
                   if (!isNaN(pm2)) platformMargin2 = pm2;
                 } catch {}
                 const subAgentFloor = +(pgCost2 + platformMargin2 + rate).toFixed(2);

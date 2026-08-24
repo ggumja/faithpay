@@ -347,7 +347,7 @@ export default function SettlementReports() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `국세청_기부금영수증_전산제출_${year}_${currentTenant?.slug || 'faithpay'}.txt`;
+    link.download = `국세청_기부금영수증_전산제출_${year}_${currentTenant?.slug || 'soulpay'}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

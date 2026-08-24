@@ -78,7 +78,7 @@ export default function PartnerApply() {
             className="flex items-center gap-1.5 text-sm font-bold text-[#4E5968] hover:text-[#191F28] cursor-pointer transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>FaithPay 메인으로</span>
+            <span>SoulPay 메인으로</span>
           </button>
           
           <div className="flex items-center gap-2">
@@ -132,8 +132,8 @@ export default function PartnerApply() {
 
             <p className="text-[#4E5968] text-sm sm:text-base leading-relaxed font-medium">
               {isAgencyMode
-                ? 'FaithPay 영업 대리점(Tier-1)은 하위 영업자(Tier-2)를 직접 모집·관리하며 오버라이딩 수수료 수익 구조를 갖습니다. 법인 및 전문 팀 단위 신청을 지원합니다.'
-                : 'FaithPay는 전국 종교 및 구호 단체를 위한 SaaS 기반 디지털 보시/헌금/후원 수납 플랫폼입니다. 사찰, 교회, 구호재단을 가입 신청 완료하고 매월 수납되는 결제액에 대한 파트너 정산 수수료를 지속 받으실 수 있습니다.'}
+                ? 'SoulPay 영업 대리점(Tier-1)은 하위 영업자(Tier-2)를 직접 모집·관리하며 오버라이딩 수수료 수익 구조를 갖습니다. 법인 및 전문 팀 단위 신청을 지원합니다.'
+                : 'SoulPay는 전국 종교 및 구호 단체를 위한 SaaS 기반 디지털 보시/헌금/후원 수납 플랫폼입니다. 사찰, 교회, 구호재단을 가입 신청 완료하고 매월 수납되는 결제액에 대한 파트너 정산 수수료를 지속 받으실 수 있습니다.'}
             </p>
           </div>
 
@@ -358,7 +358,7 @@ export default function PartnerApply() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-[#E5E8EB] py-8 text-center text-xs text-[#8B95A1] bg-white">
-        © 2026 FaithPay Platform Inc. All rights reserved. 영업 제휴 문의: partner@faithpay.kr
+        © 2026 SoulPay Platform Inc. All rights reserved. 영업 제휴 문의: partner@soulpay.kr
       </footer>
     </div>
   );

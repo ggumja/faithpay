@@ -36,7 +36,7 @@ export interface TossPayoutRequest {
   splitDetails: {
     grossAmount: number; // 총 결제액
     pgFee: number; // PG 수수료 (e.g. 1.8%)
-    platformFee: number; // FaithPay SaaS 이용료 (e.g. 0.5% 또는 정액)
+    platformFee: number; // SoulPay SaaS 이용료 (e.g. 0.5% 또는 정액)
     netPayoutAmount: number; // 최종 종교 단체 입금액
   };
 }

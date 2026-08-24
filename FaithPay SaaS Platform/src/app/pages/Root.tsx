@@ -266,9 +266,9 @@ export default function Root() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 2px 10px var(--hm-warm-amber-glow)',
             }}>
-              <span style={{ color: 'white', fontSize: 13, fontWeight: 900, letterSpacing: '-0.02em' }}>FP</span>
+              <span style={{ color: 'white', fontSize: 13, fontWeight: 900, letterSpacing: '-0.02em' }}>SP</span>
             </div>
-            <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--hm-warm-ink)', letterSpacing: '-0.03em' }}>FaithPay</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--hm-warm-ink)', letterSpacing: '-0.03em' }}>SoulPay</span>
           </div>
 
           {/* Center links */}
@@ -392,7 +392,7 @@ export default function Root() {
           {/* Right Hero Image (Authentic Editorial Photography) */}
           <div className="rp-hero-img-wrap rp-up rp-d2">
             <img
-              src="/faithpay/images/hero-illustration.png"
+              src="/soulpay/images/hero-illustration.png"
               alt="진정성을 담은 두 손과 따뜻한 봉헌의 모습"
               className="rp-hero-img"
               onError={(e) => {
@@ -410,7 +410,7 @@ export default function Root() {
       }}>
         <div style={{ marginBottom: 40, textAlign: 'center' }}>
           <div className="rp-chip" style={{ marginBottom: 14 }}>서비스 핵심 가치</div>
-          <h2 className="rp-section-h2">왜 FaithPay인가요?</h2>
+          <h2 className="rp-section-h2">왜 SoulPay인가요?</h2>
           <p style={{ fontSize: 15, color: 'var(--hm-warm-ink-3)', marginTop: 10, lineHeight: 1.65 }}>
             종교 단체 및 구호/비영리 재단의 고유한 모금·봉헌 문화와 기부금 영수증 체계에 맞춰 세밀하게 설계되었습니다.
           </p>
@@ -477,8 +477,8 @@ export default function Root() {
             {/* Dashboard Real Photo */}
             <div style={{ position: 'relative' }}>
               <img
-                src="/faithpay/images/dashboard-mockup.png"
-                alt="실제 데스크 환경에서 활용되는 FaithPay 관리자 시스템"
+                src="/soulpay/images/dashboard-mockup.png"
+                alt="실제 데스크 환경에서 활용되는 SoulPay 관리자 시스템"
                 style={{
                   width: '100%',
                   height: 'auto',
@@ -580,7 +580,7 @@ export default function Root() {
           모든 종교 공동체와 비영리 · 구호 단체를 위한 솔루션
         </h2>
         <p style={{ fontSize: 14.5, color: 'var(--hm-warm-ink-3)', lineHeight: 1.7, maxWidth: 540, margin: '12px auto 44px' }}>
-          FaithPay는 기독교, 불교, 천주교, 구호재단, 비영리법인 각 단체의 언어와 기부 문화를 존중하고 성심껏 지원합니다.
+          SoulPay는 기독교, 불교, 천주교, 구호재단, 비영리법인 각 단체의 언어와 기부 문화를 존중하고 성심껏 지원합니다.
         </p>
 
         <div className="rp-religion">
@@ -626,7 +626,7 @@ export default function Root() {
           position: 'absolute', inset: 0, zIndex: 0,
         }}>
           <img
-            src="/faithpay/images/community-banner.png"
+            src="/soulpay/images/community-banner.png"
             alt="평화로운 성소와 햇살"
             style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, filter: 'blur(1px)' }}
             onError={(e) => {
@@ -664,7 +664,7 @@ export default function Root() {
             lineHeight: 1.75, marginBottom: 40,
           }}>
             가입비 없이 무료로 시작하고, 신도 및 기부자도 사용하기 편한<br />
-            FaithPay의 스마트 기부 · 봉헌 솔루션을 경험하세요.
+            SoulPay의 스마트 기부 · 봉헌 솔루션을 경험하세요.
           </p>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -714,7 +714,7 @@ export default function Root() {
               }}>
                 <span style={{ color: 'white', fontSize: 11, fontWeight: 900 }}>FP</span>
               </div>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'oklch(0.85 0.010 70)', letterSpacing: '-0.02em' }}>FaithPay</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'oklch(0.85 0.010 70)', letterSpacing: '-0.02em' }}>SoulPay</span>
             </div>
 
             {/* Links */}
@@ -752,7 +752,7 @@ export default function Root() {
               textAlign: 'right', lineHeight: 1.6,
             }}>
               ISMS-P · PCI-DSS · SSL 256-bit<br />
-              © 2026 FaithPay Platform
+              © 2026 SoulPay Platform
             </div>
           </div>
         </div>

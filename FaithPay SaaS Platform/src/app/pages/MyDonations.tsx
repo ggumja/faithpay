@@ -115,7 +115,7 @@ export default function MyDonations() {
 
   const loadSavedProfile = (cleanPhone: string, donationsList: any[]) => {
     try {
-      const localStr = localStorage.getItem(`faithpay_profile_${cleanPhone}`);
+      const localStr = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
       if (localStr) {
         const parsed = JSON.parse(localStr);
         setProfileName(parsed.name || '');
@@ -195,8 +195,10 @@ export default function MyDonations() {
         password: profilePassword,
         updatedAt: new Date().toISOString(),
       };
+      localStorage.setItem(`soulpay_profile_${cleanPhone}`, JSON.stringify(profileData));
       localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(profileData));
       if (profilePassword) {
+        localStorage.setItem(`soulpay_password_${cleanPhone}`, profilePassword);
         localStorage.setItem(`faithpay_password_${cleanPhone}`, profilePassword);
       }
 
@@ -256,7 +258,9 @@ export default function MyDonations() {
         setIsAuthenticated(true);
         const targetPh = (phoneNumber || '01071404795').replace(/[^0-9]/g, '');
         setPhoneNumber(targetPh);
+        sessionStorage.setItem('soulpay_donor_session', targetPh);
         sessionStorage.setItem('faithpay_donor_session', targetPh);
+        localStorage.setItem('soulpay_last_donor_phone', targetPh);
         localStorage.setItem('faithpay_last_donor_phone', targetPh);
         fetchDonorData(targetPh);
         toast.success('이메일 로그인에 성공하였습니다.');
@@ -337,7 +341,7 @@ export default function MyDonations() {
     if (!currentTenant) return;
 
     // 결제 완료 후 또는 이전 인증 세션 복원
-    const savedPhone = sessionStorage.getItem('faithpay_donor_session') || localStorage.getItem('faithpay_last_donor_phone');
+    const savedPhone = sessionStorage.getItem('soulpay_donor_session') || sessionStorage.getItem('faithpay_donor_session') || localStorage.getItem('soulpay_last_donor_phone') || localStorage.getItem('faithpay_last_donor_phone');
     if (savedPhone) {
       const clean = savedPhone.replace(/[^0-9]/g, '');
       if (clean) {
@@ -349,7 +353,9 @@ export default function MyDonations() {
   }, [currentTenant, fetchDonorData]);
 
   const handleLogout = () => {
+    sessionStorage.removeItem('soulpay_donor_session');
     sessionStorage.removeItem('faithpay_donor_session');
+    localStorage.removeItem('soulpay_last_donor_phone');
     localStorage.removeItem('faithpay_last_donor_phone');
     setIsAuthenticated(false);
     setPhoneNumber('');
@@ -396,7 +402,9 @@ export default function MyDonations() {
     setIsLoading(true);
     try {
       const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
+      sessionStorage.setItem('soulpay_donor_session', cleanedInputPhone);
       sessionStorage.setItem('faithpay_donor_session', cleanedInputPhone);
+      localStorage.setItem('soulpay_last_donor_phone', cleanedInputPhone);
       localStorage.setItem('faithpay_last_donor_phone', cleanedInputPhone);
 
       // 1. OTP 검증 및 DB 조회 API 호출

@@ -49,7 +49,7 @@ export function PartnerAgentDetailView({
     (t as any).referralCode === selectedAgent.referralCode
   );
 
-  const historyStorageKey = `faithpay:agent_history:${selectedAgent.id}`;
+  const historyStorageKey = `soulpay:agent_history:${selectedAgent.id}`;
   const [history, setHistory] = useState<HistoryEntry[]>(() => {
     try {
       const raw = localStorage.getItem(historyStorageKey);
@@ -189,9 +189,9 @@ export function PartnerAgentDetailView({
                 try {
                   await partnerAPI.updateAgentRate(selectedAgent.id, currentRate);
                   let savedMap: Record<string, number> = {};
-                  try { savedMap = JSON.parse(localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
-                  const prevRate = savedMap[selectedAgent.id] ?? 0.3;
+                  try { savedMap = JSON.parse(localStorage.getItem('soulpay:agent_rates') || localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
                   savedMap[selectedAgent.id] = currentRate;
+                  localStorage.setItem('soulpay:agent_rates', JSON.stringify(savedMap));
                   localStorage.setItem('faithpay:agent_rates', JSON.stringify(savedMap));
 
                   // 수정 이력 추가 저장
@@ -266,7 +266,7 @@ export function PartnerAgentDetailView({
                       {t.religionType === 'buddhist' ? '⛩️ 불교' : t.religionType === 'catholic' ? '✝️ 천주교' : '⛪ 기독교'}
                     </TableCell>
                     <TableCell className="font-bold text-[12.5px] text-slate-800">{t.name}</TableCell>
-                    <TableCell className="font-mono text-[11px] text-slate-500">faithpay.kr/{t.slug}</TableCell>
+                    <TableCell className="font-mono text-[11px] text-slate-500">soulpay.kr/{t.slug}</TableCell>
                     <TableCell className="text-[11px] text-slate-400">
                       {(t as any).appliedAt ? new Date((t as any).appliedAt).toLocaleDateString('ko-KR') : '—'}
                     </TableCell>

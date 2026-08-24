@@ -479,7 +479,7 @@ export default function SystemAdminDashboard() {
                               <span className="flex items-center gap-1.5">
                                 {t.name} <ExternalLink size={10} className="text-slate-400" />
                               </span>
-                              <span className="font-mono text-[10.5px] text-slate-400 font-normal">faithpay.kr/{t.slug}</span>
+                              <span className="font-mono text-[10.5px] text-slate-400 font-normal">soulpay.kr/{t.slug}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-xs">
@@ -635,7 +635,7 @@ export default function SystemAdminDashboard() {
                         return (
                           <div>
                             <span className={S.chip('bg-slate-100','text-slate-600','border-slate-300')}>
-                              🏠 FaithPay 플랫폼
+                              🏠 SoulPay 플랫폼
                             </span>
                             <div className="text-[10.5px] text-[var(--hm-ink-3)] mt-0.5">직접 유치 (플랫폼이 대리점/영업자 역할)</div>
                           </div>

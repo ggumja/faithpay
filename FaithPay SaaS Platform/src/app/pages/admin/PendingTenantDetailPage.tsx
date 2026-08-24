@@ -209,7 +209,7 @@ export default function PendingTenantDetailPage() {
               <p className={S.value}>{tenant.name}</p>
             </Field>
             <Field label="슬러그 (URL)">
-              <p className={S.mono}>faithpay.kr/<strong>{tenant.slug}</strong></p>
+              <p className={S.mono}>soulpay.kr/<strong>{tenant.slug}</strong></p>
             </Field>
           </div>
 
@@ -269,7 +269,7 @@ export default function PendingTenantDetailPage() {
                   }`}>
                     {src === 'agency' ? '🏢 대리점이 등록한 신청' :
                      src === 'agent' ? '💼 영업자가 등록한 신청' :
-                     '🏠 FaithPay 플랫폼 직접 유치'}
+                     '🏠 SoulPay 플랫폼 직접 유치'}
                   </p>
                   {hasPartner && (
                     <div className={S.row2}>

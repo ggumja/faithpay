@@ -61,7 +61,7 @@ export default function PartnerDetailPage() {
   // PG 원가율 로드 (SystemSettings localStorage)
   const pgCostRate: number = (() => {
     try {
-      const raw = localStorage.getItem('faithpay:pg_rates');
+      const raw = localStorage.getItem('soulpay:pg_rates') || localStorage.getItem('faithpay:pg_rates');
       if (raw) {
         const parsed: { id: string; rate: number }[] = JSON.parse(raw);
         const first = parsed[0];
@@ -904,7 +904,7 @@ export default function PartnerDetailPage() {
                 value={assignAgentEmail}
                 onChange={e => setAssignAgentEmail(e.target.value)}
                 className="mt-1 text-xs"
-                placeholder="agent@faithpay.kr"
+                placeholder="agent@soulpay.kr"
               />
             </div>
             <div>

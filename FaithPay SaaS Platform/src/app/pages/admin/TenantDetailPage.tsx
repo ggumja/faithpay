@@ -291,7 +291,7 @@ export default function TenantDetailPage() {
 
   const handleSendPasswordReset = (adminName: string, adminEmail: string) => {
     const dummyToken = `rst_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36)}`;
-    const resetUrl = `https://faithpay.info/${tenant?.slug || 'demo'}/reset-password?token=${dummyToken}`;
+    const resetUrl = `https://soulpay.info/${tenant?.slug || 'demo'}/reset-password?token=${dummyToken}`;
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(resetUrl).catch(() => {});
@@ -703,7 +703,7 @@ export default function TenantDetailPage() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground font-mono">
-                  신도/기부자용 접속 URL: faithpay.info/{slug}
+                  신도/기부자용 접속 URL: soulpay.info/{slug}
                 </p>
               </div>
 

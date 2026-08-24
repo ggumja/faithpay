@@ -383,7 +383,7 @@ export default function PrayerManagement() {
                     <span class="card-item">[${item.item}]</span>
                   </div>
                   <div class="card-body">${item.prayer}</div>
-                  <div class="card-footer">접수일자: ${item.date} | FaithPay 정품 발급</div>
+                  <div class="card-footer">접수일자: ${item.date} | SoulPay 정품 발급</div>
                 </div>
               `
                 )

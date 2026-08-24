@@ -48,7 +48,7 @@ export default function DonationFlow() {
 
   const [saveDonorInfo, setSaveDonorInfo] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const savedFlag = localStorage.getItem('faithpay_save_donor_info_enabled');
+      const savedFlag = localStorage.getItem('soulpay_save_donor_info_enabled') || localStorage.getItem('faithpay_save_donor_info_enabled');
       return savedFlag !== null ? savedFlag === 'true' : true;
     }
     return true;
@@ -57,8 +57,8 @@ export default function DonationFlow() {
   // 💾 저장된 교인 성명 및 전화번호 자동 불러오기
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedName = localStorage.getItem('faithpay_saved_donor_name');
-      const savedPhone = localStorage.getItem('faithpay_saved_donor_phone');
+      const savedName = localStorage.getItem('soulpay_saved_donor_name') || localStorage.getItem('faithpay_saved_donor_name');
+      const savedPhone = localStorage.getItem('soulpay_saved_donor_phone') || localStorage.getItem('faithpay_saved_donor_phone');
       if (savedName && !name) {
         setName(savedName);
       }
@@ -71,8 +71,14 @@ export default function DonationFlow() {
   // 💾 성명 및 전화번호 실시간 기기 저장 동기화
   useEffect(() => {
     if (saveDonorInfo && typeof window !== 'undefined') {
-      if (name) localStorage.setItem('faithpay_saved_donor_name', name);
-      if (phone) localStorage.setItem('faithpay_saved_donor_phone', phone);
+      if (name) {
+        localStorage.setItem('soulpay_saved_donor_name', name);
+        localStorage.setItem('faithpay_saved_donor_name', name);
+      }
+      if (phone) {
+        localStorage.setItem('soulpay_saved_donor_phone', phone);
+        localStorage.setItem('faithpay_saved_donor_phone', phone);
+      }
     }
   }, [name, phone, saveDonorInfo]);
 
@@ -80,12 +86,22 @@ export default function DonationFlow() {
     setSaveDonorInfo(checked);
     if (typeof window !== 'undefined') {
       if (checked) {
+        localStorage.setItem('soulpay_save_donor_info_enabled', 'true');
         localStorage.setItem('faithpay_save_donor_info_enabled', 'true');
-        if (name) localStorage.setItem('faithpay_saved_donor_name', name);
-        if (phone) localStorage.setItem('faithpay_saved_donor_phone', phone);
+        if (name) {
+          localStorage.setItem('soulpay_saved_donor_name', name);
+          localStorage.setItem('faithpay_saved_donor_name', name);
+        }
+        if (phone) {
+          localStorage.setItem('soulpay_saved_donor_phone', phone);
+          localStorage.setItem('faithpay_saved_donor_phone', phone);
+        }
       } else {
+        localStorage.removeItem('soulpay_save_donor_info_enabled');
         localStorage.removeItem('faithpay_save_donor_info_enabled');
+        localStorage.removeItem('soulpay_saved_donor_name');
         localStorage.removeItem('faithpay_saved_donor_name');
+        localStorage.removeItem('soulpay_saved_donor_phone');
         localStorage.removeItem('faithpay_saved_donor_phone');
       }
     }

@@ -588,7 +588,7 @@ export default function DonationHistory() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const tenantName = currentTenant?.name || 'FaithPay';
+    const tenantName = currentTenant?.name || 'SoulPay';
     
     link.setAttribute('href', url);
     link.setAttribute('download', `${tenantName}_봉헌내역_${dateStr}.csv`);
@@ -1567,7 +1567,7 @@ export default function DonationHistory() {
                     {/* Organization & Receipt Header */}
                     <div className={`text-center pb-4 border-b-2 ${receiptDonation.paymentStatus === 'cancelled' ? 'border-red-600' : 'border-zinc-900'}`}>
                       <p className={`text-xs font-bold tracking-wider mb-1 ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-indigo-600'}`}>
-                        {currentTenant?.name || 'FaithPay'}
+                        {currentTenant?.name || 'SoulPay'}
                       </p>
                       <h2 className={`text-2xl font-black tracking-tight ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-600' : 'text-zinc-900'}`}>
                         {receiptDonation.paymentStatus === 'cancelled' ? '봉 헌 / 결 제  취 소  영 수 증' : '봉 헌 / 보 시  영 수 증'}
@@ -1680,7 +1680,7 @@ export default function DonationHistory() {
                       <div className="mt-6 flex items-center justify-center gap-6">
                         <div className="text-right">
                           <p className="text-xs text-zinc-500">{new Date(receiptDonation.createdAt || Date.now()).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                          <p className="text-sm font-bold text-zinc-900 mt-1">{currentTenant?.name || 'FaithPay (페이쓰페이)'}</p>
+                          <p className="text-sm font-bold text-zinc-900 mt-1">{currentTenant?.name || 'SoulPay (소울페이)'}</p>
                         </div>
 
                         {/* Stamp SVG */}

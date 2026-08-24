@@ -116,7 +116,7 @@ export default function SystemAdminShell() {
       const sysAdmin = {
         id: 'system_admin',
         tenantId: 'system',
-        email: 'admin@faithpay.kr',
+        email: 'admin@soulpay.kr',
         name: '시스템 최고 관리자',
         role: 'system_admin' as const,
       };
@@ -132,9 +132,9 @@ export default function SystemAdminShell() {
         <aside className={S.sidebar}>
           {/* brand */}
           <div className={S.brand}>
-            <div className={S.brandDot}>FP</div>
+            <div className={S.brandDot}>SP</div>
             <div>
-              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">FaithPay</div>
+              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">SoulPay</div>
               <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">관리자 시스템</div>
             </div>
           </div>

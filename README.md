@@ -1,1 +1,1 @@
-# faithpay
+# soulpay

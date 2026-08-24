@@ -72,7 +72,7 @@ export default function AgentDashboard() {
       setIsLoading(true);
       try {
         /* ── 세션에서 영업자 정보 읽기 (하드코딩 없음) ── */
-        const sessionRaw = localStorage.getItem('faithpay_partner_session');
+        const sessionRaw = localStorage.getItem('soulpay_partner_session') || localStorage.getItem('faithpay_partner_session');
         if (!sessionRaw) {
           navigate('/partner/login');
           return;
@@ -166,9 +166,9 @@ export default function AgentDashboard() {
 
           {/* 브랜드 */}
           <div className={S.brand}>
-            <div className={S.brandDot}>FP</div>
+            <div className={S.brandDot}>SP</div>
             <div>
-              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">FaithPay</div>
+              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">SoulPay</div>
               <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">영업자 포털</div>
             </div>
           </div>
@@ -213,6 +213,7 @@ export default function AgentDashboard() {
           <div className={S.sidefoot}>
             <button
               onClick={() => {
+                localStorage.removeItem('soulpay_partner_session');
                 localStorage.removeItem('faithpay_partner_session');
                 toast.success('로그아웃되었습니다.');
                 navigate('/partner/login');

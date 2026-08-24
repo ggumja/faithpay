@@ -11,7 +11,7 @@ export default function KakaoPaySandbox() {
   const partnerOrderId = searchParams.get('partner_order_id') || `FP-${Date.now()}`;
   const partnerUserId = searchParams.get('partner_user_id') || `USER-${Date.now()}`;
   const amount = Number(searchParams.get('amount') || 50000);
-  const itemName = searchParams.get('item_name') || 'FaithPay 온라인/현장 봉헌금';
+  const itemName = searchParams.get('item_name') || 'SoulPay 온라인/현장 봉헌금';
 
   const [scanStep, setScanStep] = useState<'SCANNING' | 'RECOGNIZED' | 'APPROVING'>('SCANNING');
   const [hasWebcam, setHasWebcam] = useState<boolean | null>(null);
@@ -185,7 +185,7 @@ export default function KakaoPaySandbox() {
       </main>
 
       <footer className="py-4 text-center text-xs text-[#8B95A1]">
-        FaithPay Kakao Pay Camera Reader Sandbox © {new Date().getFullYear()}
+        SoulPay Kakao Pay Camera Reader Sandbox © {new Date().getFullYear()}
       </footer>
     </div>
   );

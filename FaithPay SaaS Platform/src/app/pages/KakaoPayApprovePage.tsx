@@ -19,7 +19,7 @@ export default function KakaoPayApprovePage() {
       const amountStr = searchParams.get('amount') || '50000';
 
       // Read stored pending donation info from sessionStorage
-      const rawPending = sessionStorage.getItem('faithpay_kakaopay_pending');
+      const rawPending = sessionStorage.getItem('soulpay_kakaopay_pending') || sessionStorage.getItem('faithpay_kakaopay_pending');
       let pending: any = {};
       try {
         if (rawPending) pending = JSON.parse(rawPending);
@@ -61,6 +61,7 @@ export default function KakaoPayApprovePage() {
         setStatus('success');
         toast.success('💛 카카오페이 개발자 테스트 결제가 성공적으로 완료되었습니다!');
         
+        sessionStorage.removeItem('soulpay_kakaopay_pending');
         sessionStorage.removeItem('faithpay_kakaopay_pending');
 
         setTimeout(() => {

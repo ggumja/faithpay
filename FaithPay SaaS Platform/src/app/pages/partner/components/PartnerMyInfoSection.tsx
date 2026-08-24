@@ -59,6 +59,7 @@ export function PartnerMyInfoSection({
   // 사업자 유형 — 단일 변수로 통일 (배지 + 세무 폼 분기 공유)
   const businessType: string =
     (partner as any).businessType ||
+    localStorage.getItem(`soulpay:partner_type:${partner.id}`) ||
     localStorage.getItem(`faithpay:partner_type:${partner.id}`) ||
     'CORPORATE';
   const isCorporate = businessType !== 'INDIVIDUAL' && businessType !== 'freelancer';
@@ -72,7 +73,7 @@ export function PartnerMyInfoSection({
   const [editRealName,  setEditRealName]  = useState((partner as any).realName  || partner.name || '');
   const [editResNo,     setEditResNo]     = useState((partner as any).resNo     || '920110-1******');
 
-  const historyStorageKey = `faithpay:myinfo_history:${partner.id}`;
+  const historyStorageKey = `soulpay:myinfo_history:${partner.id}`;
   const [history, setHistory] = useState<MyInfoHistoryEntry[]>(() => {
     try {
       const raw = localStorage.getItem(historyStorageKey);

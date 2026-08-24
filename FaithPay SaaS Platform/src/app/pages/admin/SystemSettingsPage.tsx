@@ -24,21 +24,21 @@ const DEFAULT_PGS: PGEntry[] = [
   { id: 'toss', name: '토스페이먼츠 (TossPayments)', rate: 1.5, margin: 0.5 },
 ];
 
-const STORAGE_KEY        = 'faithpay:pg_rates';
-const STORAGE_KEY_MARGIN = 'faithpay:platform_margin';
-const STORAGE_KEY_ACCOUNT = 'faithpay:platform_payout_account';
+const STORAGE_KEY        = 'soulpay:pg_rates';
+const STORAGE_KEY_MARGIN = 'soulpay:platform_margin';
+const STORAGE_KEY_ACCOUNT = 'soulpay:platform_payout_account';
 
 const DEFAULT_ACCOUNT: PlatformAccount = {
   bank: '088', // 신한은행
   accountNumber: '110-482-992014',
-  holderName: '주식회사 페이스페이 (FaithPay)',
+  holderName: '주식회사 소울페이 (SoulPay)',
   businessNumber: '128-86-94021',
   payoutCycle: 'D+1',
 };
 
 function loadRates(): PGEntry[] {
   try {
-    const r = localStorage.getItem(STORAGE_KEY);
+    const r = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('faithpay:pg_rates');
     if (r) {
       const parsed = JSON.parse(r);
       return DEFAULT_PGS.map(d => {
@@ -63,7 +63,7 @@ function saveRates(list: PGEntry[]) {
 
 function loadAccount(): PlatformAccount {
   try {
-    const a = localStorage.getItem(STORAGE_KEY_ACCOUNT);
+    const a = localStorage.getItem(STORAGE_KEY_ACCOUNT) || localStorage.getItem('faithpay:platform_payout_account');
     if (a) {
       return { ...DEFAULT_ACCOUNT, ...JSON.parse(a) };
     }

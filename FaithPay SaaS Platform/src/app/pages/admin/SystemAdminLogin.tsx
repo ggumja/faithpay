@@ -31,9 +31,11 @@ export default function SystemAdminLogin() {
 
       // 최고 시스템 관리자 이메일 검증
       if (
+        cleanEmail === 'admin@soulpay.com' ||
+        cleanEmail === 'admin@soulpay.kr' ||
+        cleanEmail === 'system@soulpay.kr' ||
         cleanEmail === 'admin@faithpay.com' ||
         cleanEmail === 'admin@faithpay.kr' ||
-        cleanEmail === 'system@faithpay.kr' ||
         cleanEmail.startsWith('admin') ||
         cleanEmail.startsWith('system')
       ) {
@@ -45,7 +47,7 @@ export default function SystemAdminLogin() {
           role: 'system_admin' as const,
         };
         setCurrentAdmin(sysAdmin);
-        toast.success(`환영합니다, FaithPay 최고 관리자님!`);
+        toast.success(`환영합니다, SoulPay 최고 관리자님!`);
         navigate('/system/admin');
         return;
       }
@@ -69,7 +71,7 @@ export default function SystemAdminLogin() {
           onClick={() => navigate('/')}
           className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" /> FaithPay 메인으로
+          <ArrowLeft className="h-4 w-4" /> SoulPay 메인으로
         </button>
       </header>
 
@@ -82,7 +84,7 @@ export default function SystemAdminLogin() {
               <ShieldCheck className="h-7 w-7 text-white" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              FaithPay 시스템 최고 관리자
+              SoulPay 시스템 최고 관리자
             </h1>
             <p className="text-xs text-slate-400 font-medium">
               플랫폼 통합 대시보드 및 가맹 단체/정산 수수료 관리를 위한 전용 포털
@@ -115,7 +117,7 @@ export default function SystemAdminLogin() {
                     <Input
                       id="sys-email"
                       type="email"
-                      placeholder="admin@faithpay.com"
+                      placeholder="admin@soulpay.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -183,7 +185,7 @@ export default function SystemAdminLogin() {
 
       {/* Footer */}
       <footer className="p-6 text-center text-xs text-slate-500 relative z-10">
-        © 2026 FaithPay Platform Inc. System Security Center
+        © 2026 SoulPay Platform Inc. System Security Center
       </footer>
     </div>
   );

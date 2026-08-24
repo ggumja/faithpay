@@ -57,14 +57,14 @@ export default function AdminLogin() {
       `admin@${slug}.org`,
       `admin@${slug}.or.kr`,
       `info@${slug}.or.kr`,
-      `${slug}@faithpay.or.kr`,
+      `${slug}@soulpay.or.kr`,
       `finance@${slug}.or.kr`,
     ];
     if (validPatternEmails.includes(clean)) return true;
 
     // 3. 해당 단체의 localStorage 등록 스태프 관리자 이메일 일치
     try {
-      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+      const savedStaffStr = localStorage.getItem(`soulpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaffStr) {
         const staffList = JSON.parse(savedStaffStr);
         if (Array.isArray(staffList) && staffList.some((s: any) => s.email && s.email.trim().toLowerCase() === clean)) {
@@ -87,14 +87,14 @@ export default function AdminLogin() {
     if (!cleanInput) return false;
 
     // 1. 개별 단체 온보딩/수정 시 저장된 커스텀 관리자 비밀번호
-    const savedTenantPw = localStorage.getItem(`faithpay_tenant_password_${tenant.id}`);
+    const savedTenantPw = localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) || localStorage.getItem(`faithpay_tenant_password_${tenant.id}`);
     if (savedTenantPw && savedTenantPw === cleanInput) {
       return true;
     }
 
     // 2. 해당 단체의 localStorage 등록 스태프 관리자 비밀번호
     try {
-      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+      const savedStaffStr = localStorage.getItem(`soulpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaffStr) {
         const staffList = JSON.parse(savedStaffStr);
         if (Array.isArray(staffList)) {
@@ -134,7 +134,7 @@ export default function AdminLogin() {
     }
 
     // 최고 시스템 관리자 이메일 입력 시 시스템 로그인 페이지 안내
-    if (cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr' || cleanEmail === 'system@faithpay.kr') {
+    if (cleanEmail === 'admin@soulpay.com' || cleanEmail === 'admin@soulpay.kr' || cleanEmail === 'system@soulpay.kr' || cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr') {
       toast.info('💡 최고 시스템 관리자는 /system/login 로그인 전용 페이지를 이용해 주세요.');
       navigate('/system/login');
       return;
@@ -305,7 +305,7 @@ export default function AdminLogin() {
             onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            {tenantSlug ? '단체 봉헌 메인으로' : 'FaithPay 메인으로'}
+            {tenantSlug ? '단체 봉헌 메인으로' : 'SoulPay 메인으로'}
           </Button>
           {tenantSlug && (
             <span className="bg-blue-50 text-blue-700 text-xs font-black px-3.5 py-1 rounded-full border border-blue-200 shadow-xs">
@@ -314,14 +314,14 @@ export default function AdminLogin() {
           )}
         </div>
 
-        {/* 🤍 중앙 대형 깔끔한 FaithPay 로고 심볼 & 타이틀 헤더 */}
+        {/* 🤍 중앙 대형 깔끔한 SoulPay 로고 심볼 & 타이틀 헤더 */}
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-xl shadow-blue-500/25 text-white mb-1 transition-transform hover:scale-105">
             <Building2 className="h-8 w-8" />
           </div>
           <div>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-3xl font-black text-slate-900 tracking-tight">FaithPay</span>
+              <span className="text-3xl font-black text-slate-900 tracking-tight">SoulPay</span>
               <span className="bg-blue-600 text-white text-[11px] font-black px-2.5 py-0.5 rounded-md shadow-xs">
                 가맹 단체 포털
               </span>
@@ -404,7 +404,7 @@ export default function AdminLogin() {
         {/* 역할 전환 푸터 링크 카드 */}
         <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-2.5 text-xs text-slate-600">
           <div className="flex items-center justify-between">
-            <span>🛡️ FaithPay 최고 시스템 관리자이신가요?</span>
+            <span>🛡️ SoulPay 최고 시스템 관리자이신가요?</span>
             <button
               onClick={() => navigate('/system/login')}
               className="font-bold text-purple-600 hover:underline cursor-pointer bg-transparent border-0 flex items-center gap-0.5"

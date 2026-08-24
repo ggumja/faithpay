@@ -5,7 +5,7 @@
 
 
 /* =========================================================================
-   FaithPay — Wanted Design System tokens
+   SoulPay — Wanted Design System tokens
    ========================================================================= */
 :root {
   --font-ui: "Pretendard Variable", "Pretendard", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
@@ -97,7 +97,7 @@ body {
 }
 
 /* =========================================================================
-   FaithPay Premium Utilities
+   SoulPay Premium Utilities
    ========================================================================= */
 .glass-panel {
   background: rgba(255, 255, 255, 0.75);

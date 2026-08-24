@@ -179,7 +179,7 @@ export default function MultiPartySettlementLedger() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `FaithPay_4Party_Settlement_Ledger_${Date.now()}.csv`);
+    link.setAttribute('download', `SoulPay_4Party_Settlement_Ledger_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -560,7 +560,7 @@ export default function MultiPartySettlementLedger() {
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 font-sans font-bold text-purple-700">2. FaithPay 본사</td>
+                    <td className="py-2.5 px-3 font-sans font-bold text-purple-700">2. SoulPay 본사</td>
                     <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">플랫폼 운영사</td>
                     <td className="py-2.5 px-3 text-right font-bold text-purple-600">0.5%</td>
                     <td className="py-2.5 px-3 text-right text-purple-600 font-bold">{selectedDetail.platformFee.toLocaleString()}원</td>

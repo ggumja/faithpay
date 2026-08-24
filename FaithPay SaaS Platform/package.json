@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build && cp dist/index.html dist/404.html && touch dist/.nojekyll",
     "dev": "vite",
-    "predeploy": "VITE_BASE_PATH=/faithpay/ pnpm run build",
+    "predeploy": "VITE_BASE_PATH=/soulpay/ pnpm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {

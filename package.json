@@ -1,5 +1,5 @@
 {
-  "name": "faithpay-monorepo",
+  "name": "soulpay-monorepo",
   "private": true,
   "scripts": {
     "build": "pnpm --prefix \"FaithPay SaaS Platform\" run build",

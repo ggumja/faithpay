@@ -1,7 +1,7 @@
 
-  # FaithPay SaaS Platform
+  # SoulPay SaaS Platform
 
-  This is a code bundle for FaithPay SaaS Platform. The original project is available at https://www.figma.com/design/dTg6iUq9XQDvrMqvUjDM7V/FaithPay-SaaS-Platform.
+  This is a code bundle for SoulPay SaaS Platform.
 
   ## Running the code
 

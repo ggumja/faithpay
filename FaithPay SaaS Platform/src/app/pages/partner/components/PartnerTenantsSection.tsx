@@ -128,7 +128,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                           </Badge>
                         </div>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          도메인: faithpay.kr/{t.slug} · 종교: {t.religionType === 'buddhist' ? '불교' : t.religionType === 'catholic' ? '천주교' : '기독교'} · PG사: {t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : t.paymentConfig?.pgProvider === 'nanopay' ? '나노PG' : '미지정'}
+                          도메인: soulpay.kr/{t.slug} · 종교: {t.religionType === 'buddhist' ? '불교' : t.religionType === 'catholic' ? '천주교' : '기독교'} · PG사: {t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : t.paymentConfig?.pgProvider === 'nanopay' ? '나노PG' : '미지정'}
                         </p>
                       </div>
                     </div>
@@ -210,7 +210,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                                   {t.status === 'active' ? '운영중' : '승인대기'}
                                 </Badge>
                               </div>
-                              <span className="text-[10.5px] text-slate-400 font-mono mt-0.5 block">faithpay.kr/{t.slug}</span>
+                              <span className="text-[10.5px] text-slate-400 font-mono mt-0.5 block">soulpay.kr/{t.slug}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -293,7 +293,7 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                                     {t.status === 'active' ? '운영중' : '승인대기'}
                                   </Badge>
                                 </div>
-                                <p className="text-[10.5px] text-slate-400 font-mono mt-0.5">faithpay.kr/{t.slug}</p>
+                                <p className="text-[10.5px] text-slate-400 font-mono mt-0.5">soulpay.kr/{t.slug}</p>
                               </div>
                             </div>
 

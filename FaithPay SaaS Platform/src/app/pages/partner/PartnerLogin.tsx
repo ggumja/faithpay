@@ -42,6 +42,7 @@ export default function PartnerLogin() {
       if (res.success && Array.isArray(res.data)) {
         const found = res.data.find(a => a.email?.toLowerCase() === email.toLowerCase());
         if (found) {
+          localStorage.setItem('soulpay_partner_session', JSON.stringify(found));
           localStorage.setItem('faithpay_partner_session', JSON.stringify(found));
           toast.success(`${found.name}님, 환영합니다!`);
           if (found.role === 'sales_agent') {
@@ -158,7 +159,7 @@ export default function PartnerLogin() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="partner@faithpay.kr"
+                placeholder="partner@soulpay.kr"
                 autoComplete="email"
                 className="w-full bg-slate-800/60 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-[13px] text-white placeholder:text-slate-600
                   focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all"
@@ -340,7 +341,7 @@ export default function PartnerLogin() {
                 <Label className="text-xs font-bold text-slate-300">등록된 파트너 이메일 *</Label>
                 <Input
                   type="email"
-                  placeholder="partner@faithpay.kr"
+                  placeholder="partner@soulpay.kr"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   required

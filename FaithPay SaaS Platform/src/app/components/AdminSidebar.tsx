@@ -76,7 +76,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     <div className="w-64 bg-white border-r h-screen sticky top-0 p-6 flex flex-col overflow-y-auto shrink-0 z-20">
       <div className="mb-8">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          FaithPay
+          SoulPay
         </h2>
         <p className="text-sm text-muted-foreground">관리자 대시보드</p>
       </div>
