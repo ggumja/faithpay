@@ -859,8 +859,7 @@ export default function TenantDetailPage() {
                     : defaultLeaderTitle;
 
                   return [
-                    { id: `admin-${tenant.id}`, name: adminDisplayName, email: (tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `info@${tenant.slug}.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' },
-                    { id: `finance-${tenant.id}`, name: '재무/보시 실무 담당자', email: `finance@${tenant.slug}.or.kr`, role: 'finance_manager', createdAt: '2026-02-01' }
+                    { id: `admin-${tenant.id}`, name: adminDisplayName, email: (tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `admin@${tenant.slug}.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' }
                   ];
                 })().map((adminUser) => (
                   <div

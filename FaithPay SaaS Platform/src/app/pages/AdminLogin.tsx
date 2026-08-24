@@ -76,14 +76,6 @@ export default function AdminLogin() {
         groupId: 'tenant_admin',
         status: 'active',
       },
-      {
-        id: `admin-${tenant.id}-2`,
-        name: '재무/보시 실무 담당자',
-        email: `finance@${tenant.slug}.or.kr`,
-        password: 'admin1234!',
-        groupId: 'finance_manager',
-        status: 'active',
-      },
     ];
   };
 

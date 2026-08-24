@@ -179,17 +179,6 @@ export default function AdminAccountManagement() {
             createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
             lastLoginAt: '2026-08-13 11:45',
           },
-          {
-            id: `admin-${tenant.id}-2`,
-            name: '재무/보시 실무 담당자',
-            email: `finance@${tenant.slug}.or.kr`,
-            phone: '010-9876-5432',
-            groupId: 'finance_manager',
-            password: 'admin1234!',
-            status: 'active',
-            createdAt: '2026-02-01',
-            lastLoginAt: '2026-08-12 16:20',
-          },
         ]);
       }
 
