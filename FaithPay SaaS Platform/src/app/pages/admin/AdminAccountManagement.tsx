@@ -48,6 +48,7 @@ export interface StaffAdminUser {
   status: 'active' | 'locked';
   createdAt: string;
   lastLoginAt?: string;
+  password?: string;
 }
 
 export type PermissionLevel = 'full' | 'read' | 'none';
@@ -173,6 +174,7 @@ export default function AdminAccountManagement() {
             email: tenant.contact?.email || `admin@${tenant.slug}.or.kr`,
             phone: tenant.contact?.phone || '010-1234-5678',
             groupId: 'tenant_admin',
+            password: 'admin1234!',
             status: 'active',
             createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
             lastLoginAt: '2026-08-13 11:45',
@@ -183,6 +185,7 @@ export default function AdminAccountManagement() {
             email: `finance@${tenant.slug}.or.kr`,
             phone: '010-9876-5432',
             groupId: 'finance_manager',
+            password: 'admin1234!',
             status: 'active',
             createdAt: '2026-02-01',
             lastLoginAt: '2026-08-12 16:20',
@@ -393,6 +396,7 @@ export default function AdminAccountManagement() {
       email: cleanEmail,
       phone: stripPhoneDigits(newPhone) || '미입력',
       groupId: selectedGroupId,
+      password: newPassword.trim() || 'admin1234!',
       status: 'active',
       createdAt: new Date().toISOString().slice(0, 10),
       lastLoginAt: '방금 생성됨',
@@ -465,8 +469,12 @@ export default function AdminAccountManagement() {
     );
   };
 
-  const handleResetPassword = (name: string) => {
-    toast.success(`[${name}] 계정의 비밀번호 재설정 링크가 이메일로 발송되었습니다.`);
+  const handleResetPassword = (staff: StaffAdminUser) => {
+    const defaultPw = 'admin1234!';
+    setStaffList((prev) =>
+      prev.map((s) => (s.id === staff.id ? { ...s, password: defaultPw } : s))
+    );
+    toast.success(`[${staff.name}] 계정 비밀번호가 '${defaultPw}'로 초기화되었습니다.`);
   };
 
   const handleDeleteStaff = (id: string, name: string) => {
@@ -687,7 +695,7 @@ export default function AdminAccountManagement() {
                                 variant="outline"
                                 size="sm"
                                 title="비밀번호 재설정"
-                                onClick={() => handleResetPassword(staff.name)}
+                                onClick={() => handleResetPassword(staff)}
                                 className="h-7 px-2 text-xs gap-1 cursor-pointer"
                               >
                                 <KeyRound className="h-3.5 w-3.5" />

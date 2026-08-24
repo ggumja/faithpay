@@ -43,85 +43,88 @@ export default function AdminLogin() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // 단체별 이메일 매칭 및 격리 검증 헬퍼
-  const isEmailMatchingTenant = (emailVal: string, tenant: any): boolean => {
-    const clean = emailVal.trim().toLowerCase();
-    const primaryEmail = (tenant.contact?.email || '').trim().toLowerCase();
-    const slug = (tenant.slug || '').toLowerCase();
-
-    // 1. 등록된 대표 연락처 이메일 일치
-    if (primaryEmail && clean === primaryEmail) return true;
-
-    // 2. 단체 Slug 기반 표준 패턴 이메일 허용 (예: admin@gakwonsa.org, info@gakwonsa.or.kr)
-    const validPatternEmails = [
-      `admin@${slug}.org`,
-      `admin@${slug}.or.kr`,
-      `info@${slug}.or.kr`,
-      `${slug}@soulpay.or.kr`,
-      `finance@${slug}.or.kr`,
-    ];
-    if (validPatternEmails.includes(clean)) return true;
-
-    // 3. 해당 단체의 localStorage 등록 스태프 관리자 이메일 일치
+  // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기 (Strict Registration Lookup)
+  const getTenantStaffAccounts = (tenant: any): any[] => {
+    if (!tenant) return [];
     try {
-      const savedStaffStr = localStorage.getItem(`soulpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+      const savedStaffStr =
+        localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
+        localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
+        localStorage.getItem(`faithpay_staff_${tenant.id}`) ||
+        localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaffStr) {
         const staffList = JSON.parse(savedStaffStr);
-        if (Array.isArray(staffList) && staffList.some((s: any) => s.email && s.email.trim().toLowerCase() === clean)) {
-          return true;
+        if (Array.isArray(staffList) && staffList.length > 0) {
+          return staffList;
         }
       }
     } catch (e) {}
 
-    // 4. 다중 단체 관리 법인/CPA/Tax 계정 패턴
-    if (clean.includes('cpa') || clean.includes('tax') || clean.includes('account')) {
-      return true;
-    }
+    // 등록된 스태프 목록이 아직 없을 시 단체 기본 등록 계정 리턴
+    const primaryEmail = (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase();
+    const primaryPw =
+      localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) ||
+      localStorage.getItem(`faithpay_tenant_password_${tenant.id}`) ||
+      'admin1234!';
 
-    return false;
+    return [
+      {
+        id: `admin-${tenant.id}-1`,
+        name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
+        email: primaryEmail,
+        password: primaryPw,
+        groupId: 'tenant_admin',
+        status: 'active',
+      },
+      {
+        id: `admin-${tenant.id}-2`,
+        name: '재무/보시 실무 담당자',
+        email: `finance@${tenant.slug}.or.kr`,
+        password: 'admin1234!',
+        groupId: 'finance_manager',
+        status: 'active',
+      },
+    ];
   };
 
-  // 🔐 비밀번호 검증 헬퍼 함수
-  const verifyTenantPassword = (inputPassword: string, tenant: any): boolean => {
-    const cleanInput = inputPassword.trim();
-    if (!cleanInput) return false;
+  // 🔐 특정 단체에 대해 이메일 및 비밀번호 엄격 검증
+  const verifyTenantLogin = (
+    emailVal: string,
+    passwordVal: string,
+    tenant: any
+  ): { success: boolean; reason: 'ok' | 'unregistered' | 'locked' | 'wrong_password'; account?: any } => {
+    const cleanEmail = emailVal.trim().toLowerCase();
+    const cleanPassword = passwordVal.trim();
 
-    // 1. 개별 단체 온보딩/수정 시 저장된 커스텀 관리자 비밀번호
-    const savedTenantPw = localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) || localStorage.getItem(`faithpay_tenant_password_${tenant.id}`);
-    if (savedTenantPw && savedTenantPw === cleanInput) {
-      return true;
+    const staffAccounts = getTenantStaffAccounts(tenant);
+    const matchedAccount = staffAccounts.find((s) => s.email && s.email.trim().toLowerCase() === cleanEmail);
+
+    if (!matchedAccount) {
+      return { success: false, reason: 'unregistered' };
     }
 
-    // 2. 해당 단체의 localStorage 등록 스태프 관리자 비밀번호
-    try {
-      const savedStaffStr = localStorage.getItem(`soulpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
-      if (savedStaffStr) {
-        const staffList = JSON.parse(savedStaffStr);
-        if (Array.isArray(staffList)) {
-          const matchedStaff = staffList.find((s: any) => s.email && s.email.trim().toLowerCase() === email.trim().toLowerCase());
-          if (matchedStaff && matchedStaff.password && matchedStaff.password === cleanInput) {
-            return true;
-          }
-        }
-      }
-    } catch (e) {}
-
-    // 3. 데모 및 가맹 단체 표준 기본 비밀번호 패밀리
-    const slug = (tenant.slug || '').toLowerCase();
-    const validDefaultPasswords = [
-      'admin1234',
-      'admin1234!',
-      '1234',
-      '123456',
-      `${slug}1234`,
-      `${slug}1234!`,
-    ];
-
-    if (validDefaultPasswords.includes(cleanInput.toLowerCase())) {
-      return true;
+    if (matchedAccount.status === 'locked') {
+      return { success: false, reason: 'locked', account: matchedAccount };
     }
 
-    return false;
+    const expectedPassword =
+      matchedAccount.password ||
+      localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) ||
+      localStorage.getItem(`faithpay_tenant_password_${tenant.id}`) ||
+      'admin1234!';
+
+    if (cleanPassword !== expectedPassword) {
+      return { success: false, reason: 'wrong_password', account: matchedAccount };
+    }
+
+    return { success: true, reason: 'ok', account: matchedAccount };
+  };
+
+  // 단체별 이메일 등록 여부 확인 헬퍼
+  const isEmailRegisteredForTenant = (emailVal: string, tenant: any): boolean => {
+    const cleanEmail = emailVal.trim().toLowerCase();
+    const staffAccounts = getTenantStaffAccounts(tenant);
+    return staffAccounts.some((s) => s.email && s.email.trim().toLowerCase() === cleanEmail);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -134,110 +137,131 @@ export default function AdminLogin() {
     }
 
     // 최고 시스템 관리자 이메일 입력 시 시스템 로그인 페이지 안내
-    if (cleanEmail === 'admin@soulpay.com' || cleanEmail === 'admin@soulpay.kr' || cleanEmail === 'system@soulpay.kr' || cleanEmail === 'admin@faithpay.com' || cleanEmail === 'admin@faithpay.kr') {
+    if (
+      cleanEmail === 'admin@soulpay.com' ||
+      cleanEmail === 'admin@soulpay.kr' ||
+      cleanEmail === 'system@soulpay.kr' ||
+      cleanEmail === 'admin@faithpay.com' ||
+      cleanEmail === 'admin@faithpay.kr'
+    ) {
       toast.info('💡 최고 시스템 관리자는 /system/login 로그인 전용 페이지를 이용해 주세요.');
       navigate('/system/login');
       return;
     }
 
-    // 1. URL에 특정 단체 slug가 명시된 경우 (예: /gakwonsa/admin/login)
+    // 1. URL에 특정 단체 slug가 명시된 경우 (예: /dream/admin/login, /gakwonsa/admin/login)
     if (tenantSlug) {
-      const urlTenant = tenants.find(t => t.slug === tenantSlug);
+      const urlTenant = tenants.find((t) => t.slug === tenantSlug);
       if (urlTenant) {
-        // 단체 격리(Tenant Isolation) 검증: 해당 단체 이메일이 맞는지 확인
-        if (!isEmailMatchingTenant(cleanEmail, urlTenant)) {
+        const loginResult = verifyTenantLogin(cleanEmail, password, urlTenant);
+
+        if (loginResult.reason === 'unregistered') {
           // 타 단체 계정인지 체크
-          const otherTenant = tenants.find(t => t.id !== urlTenant.id && isEmailMatchingTenant(cleanEmail, t));
+          const otherTenant = tenants.find((t) => t.id !== urlTenant.id && isEmailRegisteredForTenant(cleanEmail, t));
           if (otherTenant) {
-            toast.error(`'${cleanEmail}' 계정은 [${otherTenant.name}] 관리자 계정입니다. [${urlTenant.name}] 로그인 페이지에서는 접속하실 수 없습니다.`);
-            return;
+            toast.error(
+              `'${cleanEmail}' 계정은 [${otherTenant.name}] 관리자 계정입니다. [${urlTenant.name}] 로그인 페이지에서는 접속하실 수 없습니다.`
+            );
           } else {
             toast.error(`'${cleanEmail}'은(는) [${urlTenant.name}]에 등록된 관리자 이메일이 아닙니다.`);
-            return;
           }
+          return;
         }
 
-        // 🔒 비밀번호 일치 검증
-        if (!verifyTenantPassword(password, urlTenant)) {
+        if (loginResult.reason === 'locked') {
+          toast.error(`[${loginResult.account?.name || '관리자'}] 계정은 현재 일시 잠금 상태입니다. 최고 관리자에게 문의하세요.`);
+          return;
+        }
+
+        if (loginResult.reason === 'wrong_password') {
           toast.error('비밀번호가 일치하지 않습니다. 다시 확인 후 입력해 주세요.');
           return;
         }
 
+        const matchedAccount = loginResult.account;
         const tenantAdmin = {
-          id: `admin-${urlTenant.id}`,
+          id: matchedAccount?.id || `admin-${urlTenant.id}`,
           tenantId: urlTenant.id,
           email: cleanEmail,
-          name: `${urlTenant.name} 관리자`,
-          role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
+          name: matchedAccount?.name || `${urlTenant.name} 관리자`,
+          role: (matchedAccount?.groupId === 'finance_manager' || cleanEmail.includes('finance'))
+            ? ('finance_manager' as const)
+            : ('tenant_admin' as const),
         };
         setCurrentAdmin(tenantAdmin);
         setCurrentTenant(urlTenant);
-        toast.success(`환영합니다, ${urlTenant.name} 관리자님 (${cleanEmail})!`);
+        toast.success(`환영합니다, ${tenantAdmin.name}님 (${cleanEmail})!`);
         navigate(`/${urlTenant.slug}/admin`);
         return;
       }
     }
 
     // 2. 전체 단체 관리자 일반 로그인 (/admin/login)
-    const matchingTenantsList = tenants.filter(t => isEmailMatchingTenant(cleanEmail, t));
+    const matchingTenantsList = tenants.filter((t) => isEmailRegisteredForTenant(cleanEmail, t));
 
     if (matchingTenantsList.length === 0) {
       toast.error(`'${cleanEmail}'은(는) 등록되지 않은 가맹 단체 관리자 이메일입니다. 이메일을 다시 확인해 주세요.`);
       return;
     }
 
-    // 2개 이상의 단체에 등록된 회계법인/통합 관리자 계정일 경우 단체 선택 모달 오픈
-    if (matchingTenantsList.length > 1) {
-      const isValidPassForAny = matchingTenantsList.some(t => verifyTenantPassword(password, t));
-      if (!isValidPassForAny) {
-        toast.error('비밀번호가 일치하지 않습니다. 다시 확인 후 입력해 주세요.');
-        return;
-      }
+    // 비밀번호까지 일치하는 단체 필터링
+    const validLoginTenants = matchingTenantsList.filter(
+      (t) => verifyTenantLogin(cleanEmail, password, t).success
+    );
 
-      setMatchedTenants(matchingTenantsList);
-      setMultiTenantModalOpen(true);
-      toast.info(`💡 '${cleanEmail}' 이메일로 ${matchingTenantsList.length}개 가맹 단체가 조회되었습니다. 접속할 단체를 선택하세요.`);
-      return;
-    }
-
-    const targetTenant = matchingTenantsList[0];
-
-    // 🔒 비밀번호 검증
-    if (!verifyTenantPassword(password, targetTenant)) {
+    if (validLoginTenants.length === 0) {
       toast.error('비밀번호가 일치하지 않습니다. 다시 확인 후 입력해 주세요.');
       return;
     }
 
+    // 2개 이상의 단체에 등록된 통합 관리자 계정일 경우 단체 선택 모달 오픈
+    if (validLoginTenants.length > 1) {
+      setMatchedTenants(validLoginTenants);
+      setMultiTenantModalOpen(true);
+      toast.info(`💡 '${cleanEmail}' 이메일로 ${validLoginTenants.length}개 가맹 단체가 조회되었습니다. 접속할 단체를 선택하세요.`);
+      return;
+    }
+
+    const targetTenant = validLoginTenants[0];
+    const loginResult = verifyTenantLogin(cleanEmail, password, targetTenant);
+
+    const matchedAccount = loginResult.account;
     const tenantAdmin = {
-      id: `admin-${targetTenant.id}`,
+      id: matchedAccount?.id || `admin-${targetTenant.id}`,
       tenantId: targetTenant.id,
       email: cleanEmail,
-      name: `${targetTenant.name} 관리자`,
-      role: cleanEmail.includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
+      name: matchedAccount?.name || `${targetTenant.name} 관리자`,
+      role: (matchedAccount?.groupId === 'finance_manager' || cleanEmail.includes('finance'))
+        ? ('finance_manager' as const)
+        : ('tenant_admin' as const),
     };
     setCurrentAdmin(tenantAdmin);
     setCurrentTenant(targetTenant);
-    toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${cleanEmail})!`);
+    toast.success(`환영합니다, ${tenantAdmin.name}님 (${cleanEmail})!`);
     navigate(`/${targetTenant.slug}/admin`);
   };
 
   const handleSelectTenantAndLogin = (targetTenant: any) => {
-    if (!verifyTenantPassword(password, targetTenant)) {
+    const loginResult = verifyTenantLogin(email, password, targetTenant);
+    if (!loginResult.success) {
       toast.error(`[${targetTenant.name}] 비밀번호가 일치하지 않습니다.`);
       return;
     }
 
+    const matchedAccount = loginResult.account;
     const tenantAdmin = {
-      id: `admin-${targetTenant.id}`,
+      id: matchedAccount?.id || `admin-${targetTenant.id}`,
       tenantId: targetTenant.id,
       email: email.trim().toLowerCase(),
-      name: `${targetTenant.name} 관리자`,
-      role: email.toLowerCase().includes('finance') ? ('finance_manager' as const) : ('tenant_admin' as const),
+      name: matchedAccount?.name || `${targetTenant.name} 관리자`,
+      role: (matchedAccount?.groupId === 'finance_manager' || email.toLowerCase().includes('finance'))
+        ? ('finance_manager' as const)
+        : ('tenant_admin' as const),
     };
     setCurrentAdmin(tenantAdmin);
     setCurrentTenant(targetTenant);
     setMultiTenantModalOpen(false);
-    toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${email})!`);
+    toast.success(`환영합니다, ${tenantAdmin.name}님 (${email})!`);
   };
 
   // 이메일 찾기 실행
