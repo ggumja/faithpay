@@ -155,7 +155,7 @@ export default function AdminAccountManagement() {
       }
 
       // 2. 저장된 스태프 목록 로드
-      const savedStaff = localStorage.getItem(`faithpay_staff_${tenant.id}`);
+      const savedStaff = localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaff) {
         try {
           const parsed = JSON.parse(savedStaff);
@@ -221,6 +221,7 @@ export default function AdminAccountManagement() {
   useEffect(() => {
     if (currentTenant && staffList.length > 0) {
       localStorage.setItem(`faithpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
+      localStorage.setItem(`faithpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
     }
   }, [staffList, currentTenant]);
 
@@ -235,7 +236,6 @@ export default function AdminAccountManagement() {
       localStorage.setItem(`faithpay_permissions_${currentTenant.id}`, JSON.stringify(permissionMatrix));
     }
   }, [permissionMatrix, currentTenant]);
-
   if (!currentTenant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">

@@ -166,10 +166,26 @@ export const tenantAPI = {
   },
 
   async updateTenantInfo(id: string, tenant: Tenant): Promise<APIResponse<Tenant>> {
-    return fetchAPI<Tenant>(`/tenants/${id}`, {
+    const payload = {
+      ...tenant,
+      templateId: tenant.templateId,
+      template_id: tenant.templateId,
+    };
+    const res = await fetchAPI<Tenant>(`/tenants/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(tenant),
-    });
+      body: JSON.stringify(payload),
+      silentFail: true,
+    } as any);
+
+    // 서버 DB에 단체 레코드가 없어서 404 반환 시 POST /tenants로 자동 생성(Upsert) 처리
+    if (!res.success) {
+      return fetchAPI<Tenant>('/tenants', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    }
+
+    return res;
   },
 
   async updateTenantBanners(id: string, bannerImages: string[]): Promise<APIResponse<Tenant>> {

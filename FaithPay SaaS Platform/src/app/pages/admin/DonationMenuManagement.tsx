@@ -237,16 +237,43 @@ export default function DonationMenuManagement() {
   const currentPath = `/${tenantSlug}/admin/menu`;
   const donationItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
 
-  const handleSave = (itemData: Partial<DonationItem>) => {
-    saveDonationItem(currentTenant.slug, currentTenant.religionType, {
-      ...itemData,
-      id: editingItem?.id,
-    });
+  const handleSave = async (itemData: Partial<DonationItem>) => {
+    let updatedList: DonationItem[];
+
+    if (editingItem?.id) {
+      updatedList = dbItems.map(item => item.id === editingItem.id ? { ...item, ...itemData } as DonationItem : item);
+    } else {
+      const newItem: DonationItem = {
+        id: `item-${Date.now()}`,
+        name: itemData.name || '새 항목',
+        description: itemData.description || '',
+        amountType: itemData.amountType || 'flexible',
+        fixedAmount: itemData.fixedAmount,
+        allowRecurring: itemData.allowRecurring ?? true,
+        allowOneTime: itemData.allowOneTime ?? true,
+        enablePrayerField: itemData.enablePrayerField ?? true,
+        enabled: itemData.enabled ?? true,
+      };
+      updatedList = [...dbItems, newItem];
+    }
+
+    setDbItems(updatedList);
+    saveDonationItem(currentTenant.slug, currentTenant.religionType, { ...itemData, id: editingItem?.id });
+
+    // 무조건 서버 DB로 100% 저장
+    try {
+      await donationItemsAPI.saveItems(currentTenant.id, updatedList);
+      if (currentTenant.slug && currentTenant.slug !== currentTenant.id) {
+        await donationItemsAPI.saveItems(currentTenant.slug, updatedList);
+      }
+    } catch (e) {
+      console.warn('Failed to save items to DB:', e);
+    }
 
     if (editingItem) {
-      toast.success('봉헌 항목이 수정되었습니다');
+      toast.success('봉헌 항목이 DB에 저장되었습니다');
     } else {
-      toast.success('새로운 봉헌 항목이 추가되었습니다');
+      toast.success('새 봉헌 항목이 DB에 저장되었습니다');
     }
     setIsDialogOpen(false);
     setEditingItem(null);
@@ -255,9 +282,22 @@ export default function DonationMenuManagement() {
     }, 100);
   };
 
-  const handleDelete = (itemId: string) => {
+  const handleDelete = async (itemId: string) => {
+    const updatedList = dbItems.filter(item => item.id !== itemId);
+
+    setDbItems(updatedList);
     deleteDonationItem(currentTenant.slug, currentTenant.religionType, itemId);
-    toast.success('봉헌 항목이 삭제되었습니다');
+    // 무조건 서버 DB에서 100% 삭제 반영
+    try {
+      await donationItemsAPI.saveItems(currentTenant.id, updatedList);
+      if (currentTenant.slug && currentTenant.slug !== currentTenant.id) {
+        await donationItemsAPI.saveItems(currentTenant.slug, updatedList);
+      }
+    } catch (e) {
+      console.warn('Failed to delete item from DB:', e);
+    }
+
+    toast.success('봉헌 항목이 DB에서 삭제되었습니다');
     setTimeout(() => {
       refreshItems();
     }, 100);

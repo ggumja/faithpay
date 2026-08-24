@@ -64,7 +64,7 @@ export default function AdminLogin() {
 
     // 3. 해당 단체의 localStorage 등록 스태프 관리자 이메일 일치
     try {
-      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`);
+      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaffStr) {
         const staffList = JSON.parse(savedStaffStr);
         if (Array.isArray(staffList) && staffList.some((s: any) => s.email && s.email.trim().toLowerCase() === clean)) {
@@ -94,7 +94,7 @@ export default function AdminLogin() {
 
     // 2. 해당 단체의 localStorage 등록 스태프 관리자 비밀번호
     try {
-      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`);
+      const savedStaffStr = localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaffStr) {
         const staffList = JSON.parse(savedStaffStr);
         if (Array.isArray(staffList)) {
@@ -128,8 +128,8 @@ export default function AdminLogin() {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!password.trim()) {
-      toast.error('비밀번호를 입력해 주세요.');
+    if (!cleanEmail || !password.trim()) {
+      toast.error('이메일과 비밀번호를 입력해 주세요.');
       return;
     }
 
@@ -238,7 +238,6 @@ export default function AdminLogin() {
     setCurrentTenant(targetTenant);
     setMultiTenantModalOpen(false);
     toast.success(`환영합니다, ${targetTenant.name} 관리자님 (${email})!`);
-    navigate(`/${targetTenant.slug}/admin`);
   };
 
   // 이메일 찾기 실행
