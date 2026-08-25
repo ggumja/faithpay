@@ -291,6 +291,25 @@ export default function PaymentSelection() {
         const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
         const customerKey = `customer_${currentTenant.id}_${cleanPhone || Date.now()}`;
 
+        // 💾 리다이렉트 후 복구를 위한 세션 스냅샷 저장
+        const snapshot = {
+          formData: {
+            ...donationFormData,
+            amount,
+            orderName,
+            customerName,
+            customerPhone: cleanPhone,
+          },
+          tenant: currentTenant,
+          timestamp: Date.now(),
+        };
+        try {
+          sessionStorage.setItem(`pending_donation_${tempDonationId}`, JSON.stringify(snapshot));
+          sessionStorage.setItem('pending_donation_latest', JSON.stringify(snapshot));
+        } catch (e) {
+          console.warn('Failed to save donation session snapshot:', e);
+        }
+
         // 🔴 정기 결제 (Toss Payments 빌링키 발급 요청)
         if (donationFormData.isRecurring) {
           toast.info('토스페이먼츠 정기 결제(빌링키 등록) 카드 인증 창을 호출합니다...');
