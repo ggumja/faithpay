@@ -276,9 +276,12 @@ export default function PaymentSelection() {
 
       try {
         await loadTossScript();
-        const tossClientKey = (pgApiKey && pgApiKey.startsWith('test_ck_'))
-          ? pgApiKey
-          : (pgApiKey || 'test_ck_OEP5eLpqWEMqYNm7JaEr3779KMlW');
+        const tossClientKey = pgApiKey || currentTenant?.paymentConfig?.apiKey || 'test_ck_OEP5eLpqWEMqYNm7JaEr3779KMlW';
+        if (!tossClientKey) {
+          toast.error('토스페이먼츠 Client Key(API Key)가 설정되지 않았습니다.');
+          setIsProcessing(false);
+          return;
+        }
         const tossPayments = (window as any).TossPayments(tossClientKey);
         
         const tempDonationId = `don_${Date.now()}`;
