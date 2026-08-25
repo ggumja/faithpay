@@ -1702,19 +1702,48 @@ export async function getTenantsByPartner(partnerId: string): Promise<any[]> {
 
   const partnerIds = [partnerId, ...((subAgents ?? []).map((a: any) => a.id))];
 
-  // 2. registered_by_partner_id 또는 partner_id에 해당하는 tenants 조회
+  // 2. registered_by_partner_id에 해당하는 tenants 조회
   const { data: tenants, error } = await supabase
     .from('tenants')
     .select('*')
     .in('registered_by_partner_id', partnerIds);
 
   if (error) {
-    // registered_by_partner_id 컬럼이 없을 시 전체 tenants 반환 폴백
     const { data: allTenants } = await supabase.from('tenants').select('*');
     return (allTenants ?? []).map(t => snakeToCamel(t));
   }
 
-  return (tenants ?? []).map(t => snakeToCamel(t));
+  if (!tenants || tenants.length === 0) return [];
+
+  // 3. 각 테넌트별 총 결제액(donation_amount 합산) 조회 — partner_commissions 기반
+  // 영업자인 경우 partner_commissions는 상위 대리점 ID로 저장돼 있으므로 parent_id도 포함
+  const partnerInfo = await supabase
+    .from('partners')
+    .select('id, role, parent_id')
+    .eq('id', partnerId)
+    .maybeSingle();
+
+  const parentId = partnerInfo.data?.parent_id;
+  const lookupIds = [...new Set([...partnerIds, ...(parentId ? [parentId] : [])])];
+
+  const { data: pcRows } = await supabase
+    .from('partner_commissions')
+    .select('tenant_id, donation_amount')
+    .in('partner_id', lookupIds);
+
+  // tenant_id별 합산
+  const volumeByTenant: Record<string, number> = {};
+  for (const r of pcRows ?? []) {
+    if (!r.tenant_id) continue;
+    volumeByTenant[r.tenant_id] = (volumeByTenant[r.tenant_id] ?? 0) + Number(r.donation_amount ?? 0);
+  }
+
+  return tenants.map(t => ({
+    ...snakeToCamel(t),
+    stats: {
+      totalDonations: volumeByTenant[t.id] ?? 0,
+    },
+  }));
 }
 
 // ==================== 관리자 정산 원장 (Admin Ledger) ====================
