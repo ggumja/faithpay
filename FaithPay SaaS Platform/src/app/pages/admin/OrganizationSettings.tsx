@@ -58,7 +58,15 @@ export default function OrganizationSettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
+    const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+    const tenant = tenants.find(
+      (t) =>
+        (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+        (t.id && t.id.toLowerCase() === decodedSlug) ||
+        (t.name && t.name.toLowerCase() === decodedSlug) ||
+        (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+    ) || currentTenant;
+
     if (tenant) {
       setCurrentTenant(tenant);
 
