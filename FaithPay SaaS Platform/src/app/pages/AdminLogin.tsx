@@ -63,7 +63,16 @@ export default function AdminLogin() {
       if (savedStaffStr) {
         const parsed = JSON.parse(savedStaffStr);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          staffList = parsed;
+          staffList = parsed.filter(
+            (s: any) =>
+              s &&
+              s.email &&
+              !s.email.includes('joyful-church') &&
+              !s.email.includes('serenity-temple') &&
+              s.name !== '김목사' &&
+              s.name !== '이집사' &&
+              !s.name?.includes('꿈꾸는교회')
+          );
         }
       }
     } catch (e) {}

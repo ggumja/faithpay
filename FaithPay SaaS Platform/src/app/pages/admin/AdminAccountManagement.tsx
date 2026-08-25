@@ -164,7 +164,20 @@ export default function AdminAccountManagement() {
         try {
           const parsed = JSON.parse(savedStaff);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            list = parsed;
+            // 브라우저 디스크의 구 테스트 더미 계정(김목사, 이집사, joyful-church 등) 정제
+            const cleanList = parsed.filter(
+              (s: any) =>
+                s &&
+                s.email &&
+                !s.email.includes('joyful-church') &&
+                !s.email.includes('serenity-temple') &&
+                s.name !== '김목사' &&
+                s.name !== '이집사' &&
+                !s.name?.includes('꿈꾸는교회')
+            );
+            if (cleanList.length > 0) {
+              list = cleanList;
+            }
           }
         } catch (e) {}
       }
@@ -190,6 +203,12 @@ export default function AdminAccountManagement() {
           ];
         }
       }
+
+      // 정제된 최신 실측 목록으로 localStorage 즉시 갱신
+      localStorage.setItem(`soulpay_staff_${tenant.id}`, JSON.stringify(list));
+      localStorage.setItem(`soulpay_staff_accounts_${tenant.id}`, JSON.stringify(list));
+      localStorage.removeItem(`faithpay_staff_${tenant.id}`);
+      localStorage.removeItem(`faithpay_staff_accounts_${tenant.id}`);
 
       setStaffList(list);
 
