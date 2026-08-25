@@ -9,7 +9,7 @@ export type UserRole = 'system_admin' | 'tenant_admin' | 'finance_manager' | 'me
  * 단체 시스템 DB 고유 PK 아이디를 'fp' + 일련번호 5자리(예: fp00001) 표준 포맷으로 반환하는 헬퍼 함수
  */
 export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string {
-  if (!targetTenant) return 'fp00001';
+  if (!targetTenant) return '—';
 
   // 1. 이미 fp00001 형태로 저장되어 있는 경우
   const rawId = String(targetTenant.id || targetTenant.slug || '').trim();
@@ -17,7 +17,15 @@ export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string 
 
   // 2. 전체 단체 목록이 전달된 경우 등록 순서(생성일 오름차순) 기준 1-based 순번 부여
   if (allTenants && allTenants.length > 0) {
-    const ascTenants = [...allTenants].sort((a, b) => {
+    // 중복 id 제거 후 정렬
+    const seen = new Set<string>();
+    const uniqueTenants = allTenants.filter(t => {
+      const key = t.id || t.slug;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const ascTenants = [...uniqueTenants].sort((a, b) => {
       const timeA = a.appliedAt ? new Date(a.appliedAt).getTime() : (parseInt(String(a.id).replace(/\D/g, ''), 10) || 0);
       const timeB = b.appliedAt ? new Date(b.appliedAt).getTime() : (parseInt(String(b.id).replace(/\D/g, ''), 10) || 0);
       return timeA - timeB;
@@ -28,14 +36,21 @@ export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string 
     }
   }
 
-  // 3. ID 문자열 내 숫자 추출
+  // 3. ID 문자열 내 숫자 추출 — 단체별로 고유한 값이 나오도록 전체 숫자 사용
   const digits = rawId.replace(/\D/g, '');
   if (digits.length > 0) {
-    const num = (parseInt(digits.slice(-5), 10) % 100000) || 1;
+    const num = (parseInt(digits.slice(-5), 10) % 100000) || parseInt(digits.slice(0, 5), 10) || 1;
     return `fp${String(num).padStart(5, '0')}`;
   }
 
-  return 'fp00001';
+  // 4. UUID 등 순수 문자열인 경우 앞 6자 해시
+  if (rawId.length >= 4) {
+    let hash = 0;
+    for (let i = 0; i < rawId.length; i++) hash = (hash * 31 + rawId.charCodeAt(i)) >>> 0;
+    return `fp${String(hash % 100000).padStart(5, '0')}`;
+  }
+
+  return `fp?????`;
 }
 
 export interface Tenant {

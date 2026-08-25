@@ -572,7 +572,8 @@ export default function SystemAdminDashboard() {
                     </TableCell>
                     <TableCell className={`${S.td} font-mono text-[11.5px] font-bold text-purple-700 dark:text-purple-300`}>
                       <span className="bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">
-                        {getTenantPkCode(pt, tenants)}
+                        {/* pending 단체는 승인된 tenants 목록에 없으므로 pendingList와 합쁜 전체 목록 기준으로 순번 계산 */}
+                        {getTenantPkCode(pt, [...tenants, ...pendingList])}
                       </span>
                     </TableCell>
                     <TableCell className={`${S.td} font-medium text-[var(--hm-ink)]`}>
