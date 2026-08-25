@@ -224,7 +224,7 @@ export default function MemberDetailPage() {
                 id: `pr_${d.id || idx}`,
                 date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
                 title: String(d.prayerText),
-                category: d.itemName || currentTenant.terminology?.prayer || '지향/축원',
+                category: d.itemName || currentTenant.terminology?.prayer || '메시지',
                 beneficiaryName: d.donorName || rawMatch.donorName || '신도',
               }));
 
@@ -308,7 +308,7 @@ export default function MemberDetailPage() {
   const currentPath = `/${tenantSlug}/admin/members`;
   const memberTerm = currentTenant.terminology?.member || '회원';
   const donationTerm = currentTenant.terminology?.donation || '봉헌/보시';
-  const prayerTerm = currentTenant.terminology?.prayer || '지향/축원';
+  const prayerTerm = currentTenant.terminology?.prayer || '메시지';
 
   const getTitleLabel = () => {
     if (currentTenant.religionType === 'catholic') return '세례명';
@@ -949,15 +949,15 @@ export default function MemberDetailPage() {
                   )}
                 </TabsContent>
 
-                {/* TAB 3: 지향문 / 축원 신청 이력 */}
+                {/* TAB 3: 메시지 신청 이력 */}
                 <TabsContent value="prayers" className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
-                        {prayerTerm} 및 기부 지향 신청 내역
+                        {prayerTerm} 및 기부 메시지 내역
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        회원이 신청한 사찰 축원발원문, 성당 지향문, 기도 제목 목록입니다.
+                        회원이 후원/신청 시 함께 남긴 메시지 및 전달사항 목록입니다.
                       </p>
                     </div>
                   </div>
@@ -967,7 +967,7 @@ export default function MemberDetailPage() {
                       <TableRow>
                         <TableHead className="font-bold">신청일자</TableHead>
                         <TableHead className="font-bold">구분</TableHead>
-                        <TableHead className="font-bold">축원/지향 내용</TableHead>
+                        <TableHead className="font-bold">메시지 내용</TableHead>
                         <TableHead className="font-bold">대상자 성명</TableHead>
                       </TableRow>
                     </TableHeader>

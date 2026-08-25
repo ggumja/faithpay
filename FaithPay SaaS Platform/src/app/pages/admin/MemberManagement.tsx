@@ -448,7 +448,7 @@ export default function MemberManagement() {
                 {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
               </CardTitle>
               <CardDescription>
-                {memberTerm} 행을 클릭하거나 [🔍 상세] 버튼을 눌러 개별 납부 확인서 및 지향/축원 이력을 확인하세요.
+                {memberTerm} 행을 클릭하거나 [🔍 상세] 버튼을 눌러 개별 납부 확인서 및 메시지 이력을 확인하세요.
               </CardDescription>
             </CardHeader>
 
