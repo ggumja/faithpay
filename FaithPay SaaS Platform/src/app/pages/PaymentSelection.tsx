@@ -303,6 +303,7 @@ export default function PaymentSelection() {
             amount,
             orderName,
             customerName,
+            phone: donationFormData.phone || cleanPhone,   // ← donorPhone 복구에 사용
             customerPhone: cleanPhone,
           },
           tenant: currentTenant,

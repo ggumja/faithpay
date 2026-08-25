@@ -109,6 +109,25 @@ export default function DonationComplete() {
   useEffect(() => {
     if (tenant && formData && !hasRecordedRef.current) {
       hasRecordedRef.current = true;
+
+      // phone 필드가 비어있는 경우 customerPhone 또는 sessionStorage에서 fallback
+      const resolvedPhone = (
+        formData.phone ||
+        (formData as any).customerPhone ||
+        sessionStorage.getItem('soulpay_donor_session') ||
+        sessionStorage.getItem('faithpay_donor_session') ||
+        localStorage.getItem('soulpay_last_donor_phone') ||
+        ''
+      ).replace(/[^0-9]/g, '');
+
+      // 신도 세션 저장 (전화번호가 있을 때)
+      if (resolvedPhone) {
+        sessionStorage.setItem('soulpay_donor_session', resolvedPhone);
+        sessionStorage.setItem('faithpay_donor_session', resolvedPhone);
+        localStorage.setItem('soulpay_last_donor_phone', resolvedPhone);
+        localStorage.setItem('faithpay_last_donor_phone', resolvedPhone);
+      }
+
       donationAPI.create({
         id: receiptId,
         tenantId: tenant.id,
@@ -116,7 +135,7 @@ export default function DonationComplete() {
         itemName: formData.itemName || `${tenant.name} 봉헌금`,
         amount: formData.amount || amountParam || 10000,
         donorName: formData.name || '무기명',
-        donorPhone: formData.phone || '',
+        donorPhone: resolvedPhone,
         prayerText: formData.prayerText || '',
         baptismName: formData.baptismName || '',
         isRecurring: formData.isRecurring || typeParam === 'toss_billing',
@@ -127,6 +146,8 @@ export default function DonationComplete() {
       }).then((res) => {
         if (res.success) {
           console.log('Successfully recorded donation in Supabase DB:', res.data);
+        } else {
+          console.warn('DB recording failed:', res);
         }
       }).catch((err) => {
         console.warn('DB recording notice:', err);

@@ -777,9 +777,13 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
     updated_at: now,
   };
 
-  const { data, error } = await sb.from('donations').insert(row).select('*').single();
+  const { data, error } = await sb
+    .from('donations')
+    .upsert(row, { onConflict: 'id', ignoreDuplicates: false })
+    .select('*')
+    .single();
   if (error) {
-    console.error('createDonation DB insert failed:', error.message);
+    console.error('createDonation DB upsert failed:', error.message);
     // fallback: return in-memory object
     const fallback: Donation = { ...donation, paymentMethod: normalizedMethod, transactionId: finalTransactionId, createdAt: now, updatedAt: now };
     if (!fallback.paymentStatus || fallback.paymentStatus === 'completed') await recordDonationToLedger(fallback);
