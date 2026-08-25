@@ -28,6 +28,7 @@ export default function PartnerDetailPage() {
   const [subAgents, setSubAgents] = useState<Partner[]>([]);
   const [commissions, setCommissions] = useState<PartnerCommission[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [partnerStats, setPartnerStats] = useState<{ totalVolume: number; totalCommission: number; pendingSettlement: number; donationCount: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [tab, setTab] = useState<TabKey>('info');
 
@@ -143,6 +144,16 @@ export default function PartnerDetailPage() {
         setTenants([]);
       }
 
+      // 5. 파트너 통계 — DB 직접 계산
+      try {
+        const statsRes = await partnerAPI.getPartnerStats(id);
+        if (statsRes.success && statsRes.data) {
+          setPartnerStats(statsRes.data);
+        }
+      } catch {
+        // 통계 로드 실패는 무시
+      }
+
     } catch (err) {
       console.error('Error loading partner detail:', err);
       toast.error('파트너 정보를 불러오는 중 오류가 발생했습니다.');
@@ -238,9 +249,9 @@ export default function PartnerDetailPage() {
   }
 
   const isAgency = partner.role === 'master_agency';
-  const totalVolume = tenants.reduce((acc, t) => acc + ((t as any).stats?.totalDonations || 0), 0);
-  const totalCommission = commissions.reduce((acc, c) => acc + c.commissionAmount, 0);
-  const pendingSettlement = commissions.filter(c => c.settlementStatus === 'pending').reduce((acc, c) => acc + c.commissionAmount, 0);
+  const totalVolume = partnerStats?.totalVolume ?? tenants.reduce((acc, t) => acc + ((t as any).stats?.totalDonations || 0), 0);
+  const totalCommission = partnerStats?.totalCommission ?? commissions.reduce((acc, c) => acc + c.commissionAmount, 0);
+  const pendingSettlement = partnerStats?.pendingSettlement ?? commissions.filter(c => (c as any).status === 'pending').reduce((acc, c) => acc + c.commissionAmount, 0);
 
   return (
     <div className="p-6 md:p-8 space-y-6 pb-12">
@@ -354,7 +365,7 @@ export default function PartnerDetailPage() {
             <div>
               <div className="text-[11.5px] font-semibold text-slate-500">누적 발생 수수료</div>
               <div className="text-[22px] font-extrabold text-emerald-700 leading-tight">
-                {(totalCommission || Math.floor(totalVolume * (partner.commissionRate / 100))).toLocaleString()}원
+                {totalCommission.toLocaleString()}원
               </div>
               <div className="text-[10.5px] text-emerald-600 font-medium">정산 지급 완료 대상</div>
             </div>
@@ -369,7 +380,7 @@ export default function PartnerDetailPage() {
             <div>
               <div className="text-[11.5px] font-semibold text-slate-500">당월 정산 예정금</div>
               <div className="text-[22px] font-extrabold text-amber-700 leading-tight">
-                {(pendingSettlement || 350000).toLocaleString()}원
+                {pendingSettlement.toLocaleString()}원
               </div>
               <div className="text-[10.5px] text-slate-400 truncate max-w-[130px]">{partner.bankName} {partner.accountNumber}</div>
             </div>

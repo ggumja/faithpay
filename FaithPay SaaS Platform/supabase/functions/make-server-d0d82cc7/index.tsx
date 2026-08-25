@@ -1555,6 +1555,66 @@ app.get("/make-server-d0d82cc7/partners/:id/tenants", async (c) => {
   }
 });
 
+// 파트너 통계 — DB에서 직접 계산 (총 결제액, 수수료, 당월 정산 예정금)
+app.get("/make-server-d0d82cc7/partners/:id/stats", async (c) => {
+  try {
+    const partnerId = c.req.param('id');
+    const sb = db.pgClient();
+
+    // 파트너 정보 조회 (role, parentId)
+    const { data: partner } = await sb
+      .from('partners')
+      .select('id, role, parent_id')
+      .eq('id', partnerId)
+      .maybeSingle();
+
+    if (!partner) return c.json({ success: false, error: 'Partner not found' }, 404);
+
+    // 영업자는 상위 대리점의 partner_commissions 기준으로 집계
+    const lookupId = partner.role === 'sales_agent' && partner.parent_id
+      ? partner.parent_id
+      : partnerId;
+
+    // 이번 달 기준 (당월 정산 예정금)
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    const { data: rows } = await sb
+      .from('partner_commissions')
+      .select('donation_amount, agent_rate, agency_rate, settlement_status, created_at')
+      .eq('partner_id', lookupId);
+
+    const isAgent = partner.role === 'sales_agent';
+    const rate = isAgent ? 'agent_rate' : 'agency_rate';
+
+    let totalVolume = 0, totalCommission = 0, pendingSettlement = 0, donationCount = 0;
+
+    for (const r of rows ?? []) {
+      const amount = Number(r.donation_amount ?? 0);
+      const commRate = Number(r[rate] ?? 0.5);
+      const comm = Math.round(amount * commRate / 100);
+      totalVolume += amount;
+      totalCommission += comm;
+      donationCount += 1;
+      if ((r.settlement_status ?? 'pending') === 'pending') {
+        // 당월 건만
+        const createdAt = r.created_at ? new Date(r.created_at) : null;
+        if (createdAt && r.created_at >= monthStart) {
+          pendingSettlement += comm;
+        }
+      }
+    }
+
+    return c.json({
+      success: true,
+      data: { totalVolume, totalCommission, pendingSettlement, donationCount }
+    });
+  } catch (error) {
+    console.error('Error fetching partner stats:', error);
+    return c.json({ success: false, error: 'Failed to fetch partner stats' }, 500);
+  }
+});
+
 // ==================== ADMIN SETTLEMENT ROUTES ====================
 
 // 관리자 정산 개요 통계 (종합 현황 KPI)

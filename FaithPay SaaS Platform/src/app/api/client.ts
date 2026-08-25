@@ -704,6 +704,16 @@ export const partnerAPI = {
     return fetchAPI<Tenant[]>(`/partners/${partnerId}/tenants`);
   },
 
+  /** 파트너 통계 — DB에서 직접 계산된 총 결제액, 수수료, 당월 정산 예정금 */
+  async getPartnerStats(partnerId: string): Promise<APIResponse<{
+    totalVolume: number;
+    totalCommission: number;
+    pendingSettlement: number;
+    donationCount: number;
+  }>> {
+    return fetchAPI(`/partners/${partnerId}/stats`);
+  },
+
   /** 전체 4자간 수수료 분구 원장 조회 */
   async getLedger(params?: Record<string, string>): Promise<APIResponse<any[]>> {
     const searchParams = new URLSearchParams(params).toString();
