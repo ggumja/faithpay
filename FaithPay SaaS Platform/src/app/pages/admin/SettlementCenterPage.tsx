@@ -128,7 +128,7 @@ export default function SettlementCenterPage() {
             정산 관리 센터 (Settlement Management Center)
           </h1>
           <p className={S.desc}>
-            원원사(교회/성당/사찰), 페이스페이 플랫폼, 영업 총판 및 에이전트 간 4자간 자동 수수료 분구(Split) 및 지급대행을 관리합니다.
+            가맹단체(교회/성당/사찰), SoulPay 플랫폼, 영업 대리점 및 영업자 간 4자간 자동 수수료 분구(Split) 및 지급대행을 관리합니다.
           </p>
         </div>
       </div>

@@ -139,10 +139,10 @@ export default function SettlementOverviewSection() {
           </div>
         </div>
 
-        {/* 2. 원원사 정산 완료액 */}
+        {/* 2. 가맹단체 정산 완료액 */}
         <div className={S.card}>
           <div className={S.kpiTitle}>
-            <span>원원사 입금 완료액</span>
+            <span>가맹단체 입금 완료액</span>
             <Building2 className="h-4 w-4 text-emerald-600" />
           </div>
           <div className={S.kpiVal}>{stats.tenantPayout.toLocaleString()}원</div>
@@ -161,7 +161,7 @@ export default function SettlementOverviewSection() {
           <div className={S.kpiVal}>{stats.platformFee.toLocaleString()}원</div>
           <div className={S.subText}>
             <span className="font-bold text-purple-600">0.5%</span>
-            <span>페이스페이 수수료 수익</span>
+            <span>SoulPay 수수료 수익</span>
           </div>
         </div>
 
@@ -176,7 +176,7 @@ export default function SettlementOverviewSection() {
             <span className="font-bold text-amber-600">
               {overview.partners.masterAgency + overview.partners.salesAgent}명
             </span>
-            <span>총판·에이전트 배분금</span>
+            <span>대리점·영업자 배분금</span>
           </div>
         </div>
 
@@ -244,7 +244,7 @@ export default function SettlementOverviewSection() {
           {/* Step 3 */}
           <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-2 relative">
             <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
-              <span>3. 원원사 직정산 입금</span>
+              <span>3. 가맹단체 직정산 입금</span>
               <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">
                 {overview.thisMonth.paidCount}건 완료
               </Badge>

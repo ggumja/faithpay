@@ -67,7 +67,7 @@ export default function SettlementRiskAndAuditSection() {
         </div>
 
         <p className="text-xs text-slate-500">
-          이미 정산금이 지급된 이후 환불/취소가 발생한 결제건에 대하여, 다음 정산 회차에서 수수료 및 원원사 입금액을 마이너스(-) 상계 처리합니다.
+          이미 정산금이 지급된 이후 환불/취소가 발생한 결제건에 대하여, 다음 정산 회차에서 수수료 및 가맹단체 입금액을 마이너스(-) 상계 처리합니다.
         </p>
 
         <div className="overflow-x-auto">
@@ -78,7 +78,7 @@ export default function SettlementRiskAndAuditSection() {
                 <th className="py-2.5 px-3">취소 일시</th>
                 <th className="py-2.5 px-3">단체명 / 헌금자</th>
                 <th className="py-2.5 px-3 text-right">취소 원금</th>
-                <th className="py-2.5 px-3 text-right text-red-600">원원사 상계액 (98%)</th>
+                <th className="py-2.5 px-3 text-right text-red-600">가맹단체 상계액 (98%)</th>
                 <th className="py-2.5 px-3 text-right text-purple-600">플랫폼 차감 (0.5%)</th>
                 <th className="py-2.5 px-3 text-center">상계 상태</th>
               </tr>
@@ -206,7 +206,7 @@ export default function SettlementRiskAndAuditSection() {
             <thead>
               <tr className="bg-slate-50 dark:bg-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400">
                 <th className="py-2.5 px-3">검증 그룹 ID</th>
-                <th className="py-2.5 px-3">원원사 (교회/성당/사찰)</th>
+                <th className="py-2.5 px-3">가맹단체 (교회/성당/사찰)</th>
                 <th className="py-2.5 px-3 text-right">기부금 영수증 총액 (100%)</th>
                 <th className="py-2.5 px-3 text-right text-emerald-600">PG 실입금액 (98%)</th>
                 <th className="py-2.5 px-3 text-right text-purple-600">PG/플랫폼 수수료 (2%)</th>

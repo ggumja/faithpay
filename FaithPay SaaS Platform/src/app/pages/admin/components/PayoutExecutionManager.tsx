@@ -167,7 +167,7 @@ export default function PayoutExecutionManager() {
               <thead>
                 <tr className="bg-slate-50 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase">
                   <th className="py-2.5 px-4">관리 ID</th>
-                  <th className="py-2.5 px-4">원원사 (교회/성당/사찰)</th>
+                  <th className="py-2.5 px-4">가맹단체 (교회/성당/사찰)</th>
                   <th className="py-2.5 px-4">등록 계좌 정보</th>
                   <th className="py-2.5 px-4 text-right">정산 보류액</th>
                   <th className="py-2.5 px-4">실패 / 보류 사유</th>

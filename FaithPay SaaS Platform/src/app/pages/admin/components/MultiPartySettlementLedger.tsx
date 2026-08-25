@@ -333,7 +333,7 @@ export default function MultiPartySettlementLedger() {
             <thead>
               <tr className="bg-slate-50 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
                 <th className="py-3 px-4">거래번호 / 일시</th>
-                <th className="py-3 px-4">원원사 (교회/성당/사찰)</th>
+                <th className="py-3 px-4">가맹단체 (교회/성당/사찰)</th>
                 <th className="py-3 px-4 text-center">결제기기</th>
                 <th className="py-3 px-4 text-right">총 결제액</th>
                 <th className="py-3 px-4 text-right bg-slate-100/80 dark:bg-zinc-700/40 text-slate-600 dark:text-zinc-300">
@@ -343,7 +343,7 @@ export default function MultiPartySettlementLedger() {
                   PG 원가 (1.5%)
                 </th>
                 <th className="py-3 px-4 text-right bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700">
-                  원원사 정산금
+                  가맹단체 정산금
                 </th>
                 <th className="py-3 px-4 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800">
                   HQ 대리점
@@ -600,9 +600,9 @@ export default function MultiPartySettlementLedger() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-mono">
-                  {/* 1. 가맹 원원사 */}
+                  {/* 1. 가맹단체 */}
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 font-sans font-bold text-emerald-700">1. 가맹 원원사</td>
+                    <td className="py-2.5 px-3 font-sans font-bold text-emerald-700">1. 가맹단체</td>
                     <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">
                       {selectedDetail.tenantName || selectedDetail.tenantId || '가맹 단체'}
                     </td>

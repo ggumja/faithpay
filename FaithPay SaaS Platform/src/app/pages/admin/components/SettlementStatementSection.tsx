@@ -62,7 +62,7 @@ export default function SettlementStatementSection() {
             }`}
           >
             <Building2 className="h-4 w-4" />
-            원원사(교회/성당/사찰) 입금 명세서
+            가맹단체(교회/성당/사찰) 입금 명세서
           </button>
           <button
             onClick={() => setStatementType('partner')}
@@ -90,7 +90,7 @@ export default function SettlementStatementSection() {
         </div>
       </div>
 
-      {/* ── 1. 원원사 입금 명세서 목록 ── */}
+      {/* ── 1. 가맹단체 입금 명세서 목록 ── */}
       {statementType === 'tenant' ? (
         <div className="space-y-4">
           {!loading && tenantStatements.length === 0 && (
