@@ -230,7 +230,19 @@ app.get("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     if (!config) {
-      return c.json({ success: false, error: 'Payment config not found' }, 404);
+      // 기본 나노PG 결제 설정 반환
+      const defaultConfig = {
+        tenantId,
+        pgProvider: 'nanopay',
+        enableCard: true,
+        enableEasyPayment: false,
+        enableVBank: true,
+        enableKakaoPay: false,
+        enableNaverPay: false,
+        enableTossPay: false,
+        isActive: true,
+      };
+      return c.json({ success: true, data: defaultConfig });
     }
     
     return c.json({ success: true, data: config });

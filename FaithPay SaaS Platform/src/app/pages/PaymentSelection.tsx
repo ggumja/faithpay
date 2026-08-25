@@ -184,6 +184,8 @@ export default function PaymentSelection() {
   };
 
   const handlePayment = async () => {
+    const activePg = pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay';
+
     if (donationFormData.isRecurring && !currentAdmin) {
       toast.error('정기결제는 회원 로그인 후 이용 가능합니다.');
       return;
