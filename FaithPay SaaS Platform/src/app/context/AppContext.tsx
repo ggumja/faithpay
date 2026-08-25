@@ -389,13 +389,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         setCurrentTenant(savedTenant);
         setTenants(prev => prev.map(t => (t.id === tenantId || t.slug === tenant.slug) ? savedTenant : t));
-        toast.success('단체 정보 및 템플릿 설정이 서버 DB에 성공적으로 저장되었습니다.');
+        toast.success('단체 정보 및 설정이 성공적으로 저장되었습니다.', { id: 'tenant-save-toast' });
       } else {
-        toast.success('단체 정보 및 템플릿 설정이 성공적으로 반영되었습니다.');
+        toast.success('단체 정보 및 설정이 성공적으로 저장되었습니다.', { id: 'tenant-save-toast' });
       }
     } catch (error) {
       console.error('Failed to update tenant info on server:', error);
-      toast.error('서버 DB 저장 중 에러가 발생했습니다.');
+      toast.error('서버 DB 저장 중 에러가 발생했습니다.', { id: 'tenant-save-toast' });
     }
   }, []);
 

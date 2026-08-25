@@ -288,14 +288,9 @@ export default function OrganizationSettings() {
       schedule: schedules.filter(s => s.label.trim() && s.time.trim()),
     };
 
-    // Context 업데이트
-    updateTenantInfo(currentTenant.id, updatedTenant);
-    setCurrentTenant(updatedTenant);
-
-    setTimeout(() => {
-      setIsSaving(false);
-      toast.success('단체 기본정보 및 인증 서류가 안전하게 저장되었습니다');
-    }, 500);
+    // Context 및 서버 DB 업데이트
+    await updateTenantInfo(currentTenant.id, updatedTenant);
+    setIsSaving(false);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
