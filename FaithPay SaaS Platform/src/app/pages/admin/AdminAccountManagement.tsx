@@ -156,31 +156,49 @@ export default function AdminAccountManagement() {
       }
 
       // 2. 저장된 스태프 목록 로드
-      const savedStaff = localStorage.getItem(`faithpay_staff_${tenant.id}`) || localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+      const savedStaff =
+        localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
+        localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
+        localStorage.getItem(`faithpay_staff_${tenant.id}`) ||
+        localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+
+      let initialStaff: StaffAdminUser[] = [];
       if (savedStaff) {
         try {
           const parsed = JSON.parse(savedStaff);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setStaffList(parsed);
+            initialStaff = parsed;
           }
         } catch {}
-      } else {
-        setStaffList([
-          {
-            id: `admin-${tenant.id}-1`,
-            name: (tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사')
-              ? tenant.contact.name
-              : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자')),
-            email: tenant.contact?.email || `admin@${tenant.slug}.or.kr`,
-            phone: tenant.contact?.phone || '010-1234-5678',
-            groupId: 'tenant_admin',
-            password: 'admin1234!',
-            status: 'active',
-            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
-            lastLoginAt: '2026-08-13 11:45',
-          },
-        ]);
       }
+
+      // dream 및 단체별 대표 이메일(admin@{slug}.or.kr) 표시 보장
+      const targetAdminEmail = tenant.slug === 'dream' ? 'admin@dream.or.kr' : (tenant.contact?.email || `admin@${tenant.slug}.or.kr`);
+      const hasTargetEmail = initialStaff.some((s) => s.email && s.email.toLowerCase() === targetAdminEmail.toLowerCase());
+
+      if (!hasTargetEmail || initialStaff.length === 0) {
+        const primaryAdmin: StaffAdminUser = {
+          id: `admin-${tenant.id}-1`,
+          name: (tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사')
+            ? tenant.contact.name
+            : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자')),
+          email: targetAdminEmail,
+          phone: tenant.contact?.phone || '010-1234-5678',
+          groupId: 'tenant_admin',
+          password: 'admin1234!',
+          status: 'active',
+          createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
+          lastLoginAt: '2026-08-25 09:30',
+        };
+
+        if (initialStaff.length > 0) {
+          initialStaff = initialStaff.map((s, idx) => (idx === 0 ? { ...s, email: targetAdminEmail } : s));
+        } else {
+          initialStaff = [primaryAdmin];
+        }
+      }
+
+      setStaffList(initialStaff);
 
       // 3. 저장된 권한 매트릭스 로드
       const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
@@ -212,6 +230,8 @@ export default function AdminAccountManagement() {
   // 💾 변경사항 localStorage 영구 보존 동기화
   useEffect(() => {
     if (currentTenant && staffList.length > 0) {
+      localStorage.setItem(`soulpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
+      localStorage.setItem(`soulpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
       localStorage.setItem(`faithpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
       localStorage.setItem(`faithpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
     }
