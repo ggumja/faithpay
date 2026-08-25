@@ -1717,4 +1717,87 @@ const handleUpdateProfile = async (c: any) => {
 app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
 app.post("/members/update-profile", handleUpdateProfile);
 
+// ======================================================================
+// SYSTEM ADMINS API
+// ======================================================================
+
+// GET /system-admins — 전체 목록
+app.get("/make-server-d0d82cc7/system-admins", async (c) => {
+  const { data, error } = await supabase
+    .from("system_admins")
+    .select("id, name, email, role, status, memo, created_at, updated_at, last_login_at")
+    .order("created_at", { ascending: true });
+  if (error) return c.json({ success: false, error: error.message }, 500);
+  return c.json({ success: true, data });
+});
+
+// POST /system-admins/login — DB 인증
+app.post("/make-server-d0d82cc7/system-admins/login", async (c) => {
+  const { email, password } = await c.req.json();
+  if (!email || !password) return c.json({ success: false, error: "이메일과 비밀번호를 입력해 주세요." }, 400);
+
+  const { data, error } = await supabase
+    .from("system_admins")
+    .select("id, name, email, role, status, memo")
+    .eq("email", email.trim().toLowerCase())
+    .eq("password", password)
+    .single();
+
+  if (error || !data) return c.json({ success: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." }, 401);
+  if (data.status !== "active") return c.json({ success: false, error: "비활성화된 계정입니다. 관리자에게 문의하세요." }, 403);
+
+  // last_login_at 갱신
+  await supabase.from("system_admins").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+
+  return c.json({ success: true, data });
+});
+
+// POST /system-admins — 신규 등록
+app.post("/make-server-d0d82cc7/system-admins", async (c) => {
+  const body = await c.req.json();
+  const { name, email, password, role, status, memo } = body;
+  if (!name || !email || !password) return c.json({ success: false, error: "이름, 이메일, 비밀번호는 필수입니다." }, 400);
+
+  const { data, error } = await supabase
+    .from("system_admins")
+    .insert({ name, email: email.toLowerCase(), password, role: role ?? "system_admin", status: status ?? "active", memo })
+    .select("id, name, email, role, status, memo, created_at")
+    .single();
+
+  if (error) return c.json({ success: false, error: error.message }, 500);
+  return c.json({ success: true, data });
+});
+
+// PUT /system-admins/:id — 정보 수정
+app.put("/make-server-d0d82cc7/system-admins/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (body.name     !== undefined) updates.name     = body.name;
+  if (body.email    !== undefined) updates.email    = body.email.toLowerCase();
+  if (body.password !== undefined) updates.password = body.password;
+  if (body.role     !== undefined) updates.role     = body.role;
+  if (body.status   !== undefined) updates.status   = body.status;
+  if (body.memo     !== undefined) updates.memo     = body.memo;
+
+  const { data, error } = await supabase
+    .from("system_admins")
+    .update(updates)
+    .eq("id", id)
+    .select("id, name, email, role, status, memo, updated_at")
+    .single();
+
+  if (error) return c.json({ success: false, error: error.message }, 500);
+  return c.json({ success: true, data });
+});
+
+// DELETE /system-admins/:id — 삭제
+app.delete("/make-server-d0d82cc7/system-admins/:id", async (c) => {
+  const id = c.req.param("id");
+  // 자기 자신 삭제 방지는 클라이언트에서 처리
+  const { error } = await supabase.from("system_admins").delete().eq("id", id);
+  if (error) return c.json({ success: false, error: error.message }, 500);
+  return c.json({ success: true });
+});
+
 Deno.serve(app.fetch);

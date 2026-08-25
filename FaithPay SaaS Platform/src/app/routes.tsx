@@ -40,6 +40,7 @@ import TenantStatisticsPage from "./pages/admin/TenantStatisticsPage";
 import RecurringPendingPage from "./pages/admin/RecurringPendingPage";
 import AdminRedirectGuard from "./pages/admin/AdminRedirectGuard";
 import AdminAccountManagement from "./pages/admin/AdminAccountManagement";
+import SystemAdminAccountPage from "./pages/admin/SystemAdminAccountPage";
 
 
 
@@ -117,6 +118,7 @@ export const router = createBrowserRouter([
 
           { path: "/system/admin/tenant/:id",       Component: TenantDetailPage     },
           { path: "/system/admin/settings",          Component: SystemSettingsPage   },
+          { path: "/system/admin/system-admin-accounts", Component: SystemAdminAccountPage },
 
         ],
       },

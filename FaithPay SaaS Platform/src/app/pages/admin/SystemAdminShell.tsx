@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext';
 
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
-  Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins,
+  Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins, UserCog,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import { tenantAPI } from '../../api/client';
 
 /* ─── active key ─────────────────────────────── */
 function useActiveKey(pathname: string) {
+  if (pathname.includes('/system-admin-accounts')) return 'sysAdmins';
   if (pathname.match(/\/tenants\/pending\/.+/)) return 'pendingDetail';
   if (pathname.includes('/tenants/pending')) return 'pending';
   if (pathname.includes('/settlement-center')) return 'settlementCenter';
@@ -30,6 +31,7 @@ function useActiveKey(pathname: string) {
 
 
 const META: Record<string, { title: string; section: string }> = {
+  sysAdmins:        { title: '시스템 관리자 계정',     section: '시스템 설정' },
   tenants:          { title: '단체 목록',           section: '단체 목록 관리' },
   pending:          { title: '승인요청 목록',        section: '단체 목록 관리' },
   pendingDetail:    { title: '입점 신청 상세 심사',  section: '단체 목록 관리' },
@@ -224,8 +226,16 @@ export default function SystemAdminShell() {
             </div>
           </nav>
 
-          {/* 설정 — nav 영역 하단 고정 */}
-          <div className="px-2 pb-1 border-t border-[var(--hm-border)] pt-2">
+          {/* 시스템 설정 */}
+          <div className="px-2 pb-1 border-t border-[var(--hm-border)] pt-2 space-y-0.5">
+            <p className={S.navSection}>시스템 설정</p>
+            <button
+              onClick={() => navigate('/system/admin/system-admin-accounts')}
+              className={S.navItem(active === 'sysAdmins')}
+            >
+              <UserCog size={13} className={active === 'sysAdmins' ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
+              <span>관리자 계정</span>
+            </button>
             <button
               onClick={() => navigate('/system/admin/settings')}
               className={S.navItem(active === 'settings')}

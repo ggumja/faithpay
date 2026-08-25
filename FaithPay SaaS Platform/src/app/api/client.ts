@@ -788,5 +788,53 @@ export async function checkHealth(): Promise<boolean> {
   }
 }
 
+// ==================== SYSTEM ADMINS API ====================
+
+export interface SystemAdmin {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: 'system_admin' | 'system_viewer';
+  status: 'active' | 'suspended';
+  memo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLoginAt?: string;
+}
+
+export const systemAdminAPI = {
+  async getAll(): Promise<APIResponse<SystemAdmin[]>> {
+    return fetchAPI<SystemAdmin[]>('/system-admins');
+  },
+
+  async login(email: string, password: string): Promise<APIResponse<SystemAdmin>> {
+    return fetchAPI<SystemAdmin>('/system-admins/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  async create(admin: Omit<SystemAdmin, 'id' | 'createdAt' | 'updatedAt' | 'lastLoginAt'>): Promise<APIResponse<SystemAdmin>> {
+    return fetchAPI<SystemAdmin>('/system-admins', {
+      method: 'POST',
+      body: JSON.stringify(admin),
+    });
+  },
+
+  async update(id: string, updates: Partial<SystemAdmin>): Promise<APIResponse<SystemAdmin>> {
+    return fetchAPI<SystemAdmin>(`/system-admins/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async delete(id: string): Promise<APIResponse<void>> {
+    return fetchAPI<void>(`/system-admins/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 // Export all
 export type { Donation, PaymentConfig, MonthlyStats };

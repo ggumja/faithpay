@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { ShieldCheck, Lock, Mail, ArrowLeft, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { systemAdminAPI } from '../../api/client';
 
 export default function SystemAdminLogin() {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export default function SystemAdminLogin() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
 
@@ -26,34 +27,28 @@ export default function SystemAdminLogin() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-
-      // 최고 시스템 관리자 이메일 검증
-      if (
-        cleanEmail === 'admin@soulpay.com' ||
-        cleanEmail === 'admin@soulpay.kr' ||
-        cleanEmail === 'system@soulpay.kr' ||
-        cleanEmail === 'admin@faithpay.com' ||
-        cleanEmail === 'admin@faithpay.kr' ||
-        cleanEmail.startsWith('admin') ||
-        cleanEmail.startsWith('system')
-      ) {
-        const sysAdmin = {
-          id: 'system_admin',
+    try {
+      // DB에서 시스템 관리자 인증
+      const res = await systemAdminAPI.login(cleanEmail, password);
+      if (res.success && res.data) {
+        const admin = res.data;
+        setCurrentAdmin({
+          id: admin.id,
           tenantId: 'system',
-          email: cleanEmail,
-          name: '시스템 최고 관리자',
-          role: 'system_admin' as const,
-        };
-        setCurrentAdmin(sysAdmin);
-        toast.success(`환영합니다, SoulPay 최고 관리자님!`);
+          email: admin.email,
+          name: admin.name,
+          role: 'system_admin',
+        });
+        toast.success(`환영합니다, ${admin.name}님!`);
         navigate('/system/admin');
         return;
       }
-
-      toast.error('등록된 최고 시스템 관리자 계정이 아닙니다.');
-    }, 600);
+      toast.error(res.error ?? '이메일 또는 비밀번호가 올바르지 않습니다.');
+    } catch {
+      toast.error('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
