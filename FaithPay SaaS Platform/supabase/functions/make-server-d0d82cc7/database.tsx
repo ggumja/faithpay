@@ -386,14 +386,25 @@ function getDefaultItems(religionType: string, tenantId: string): DonationItem[]
   ];
 }
 
-export async function setDonationItems(tenantId: string, items: DonationItem[]): Promise<DonationItem[]> {
+async function resolveTenantUUID(idOrSlug: string): Promise<string> {
+  if (!idOrSlug) return idOrSlug;
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+  if (isUUID) return idOrSlug;
   const sb = pgClient();
+  const { data } = await sb.from('tenants').select('id').eq('slug', idOrSlug).maybeSingle();
+  return data?.id || idOrSlug;
+}
+
+export async function setDonationItems(tenantIdOrSlug: string, items: DonationItem[]): Promise<DonationItem[]> {
+  const sb = pgClient();
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
+
   // 기존 전체 삭제 후 새로 영속
-  await sb.from('donation_items').delete().eq('tenant_id', tenantId);
+  await sb.from('donation_items').delete().eq('tenant_id', realTenantId);
   if (items.length > 0) {
     const rows = items.map((it, idx) => ({
-      id: it.id || `${tenantId}-item-${idx}`,
-      tenant_id: tenantId,
+      id: it.id || `${realTenantId}-item-${idx}-${Date.now()}`,
+      tenant_id: realTenantId,
       name: it.name,
       description: it.description ?? '',
       amount_type: it.amountType,
@@ -409,12 +420,14 @@ export async function setDonationItems(tenantId: string, items: DonationItem[]):
   return items;
 }
 
-export async function getDonationItems(tenantId: string): Promise<DonationItem[]> {
+export async function getDonationItems(tenantIdOrSlug: string): Promise<DonationItem[]> {
   const sb = pgClient();
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
+
   const { data } = await sb
     .from('donation_items')
     .select('*')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', realTenantId)
     .order('order_index', { ascending: true });
   if (data && data.length > 0) return data.map(rowToItem);
 
@@ -422,12 +435,13 @@ export async function getDonationItems(tenantId: string): Promise<DonationItem[]
   return [];
 }
 
-export async function addDonationItem(tenantId: string, item: DonationItem): Promise<DonationItem[]> {
+export async function addDonationItem(tenantIdOrSlug: string, item: DonationItem): Promise<DonationItem[]> {
   const sb = pgClient();
-  const { count } = await sb.from('donation_items').select('id', { count: 'exact' }).eq('tenant_id', tenantId);
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
+  const { count } = await sb.from('donation_items').select('id', { count: 'exact' }).eq('tenant_id', realTenantId);
   await sb.from('donation_items').insert({
-    id: item.id || `${tenantId}-item-${Date.now()}`,
-    tenant_id: tenantId,
+    id: item.id || `${realTenantId}-item-${Date.now()}`,
+    tenant_id: realTenantId,
     name: item.name,
     description: item.description ?? '',
     amount_type: item.amountType,
@@ -438,11 +452,12 @@ export async function addDonationItem(tenantId: string, item: DonationItem): Pro
     enabled: item.enabled,
     order_index: count ?? 0,
   });
-  return getDonationItems(tenantId);
+  return getDonationItems(realTenantId);
 }
 
-export async function updateDonationItem(tenantId: string, itemId: string, updates: Partial<DonationItem>): Promise<DonationItem[]> {
+export async function updateDonationItem(tenantIdOrSlug: string, itemId: string, updates: Partial<DonationItem>): Promise<DonationItem[]> {
   const sb = pgClient();
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
   const row: Record<string, any> = { updated_at: new Date().toISOString() };
   if (updates.name             !== undefined) row.name              = updates.name;
   if (updates.description      !== undefined) row.description       = updates.description;
@@ -452,14 +467,15 @@ export async function updateDonationItem(tenantId: string, itemId: string, updat
   if (updates.allowOneTime     !== undefined) row.allow_one_time    = updates.allowOneTime;
   if (updates.enablePrayerField!== undefined) row.enable_prayer_field = updates.enablePrayerField;
   if (updates.enabled          !== undefined) row.enabled           = updates.enabled;
-  await sb.from('donation_items').update(row).eq('id', itemId).eq('tenant_id', tenantId);
-  return getDonationItems(tenantId);
+  await sb.from('donation_items').update(row).eq('id', itemId).eq('tenant_id', realTenantId);
+  return getDonationItems(realTenantId);
 }
 
-export async function deleteDonationItem(tenantId: string, itemId: string): Promise<DonationItem[]> {
+export async function deleteDonationItem(tenantIdOrSlug: string, itemId: string): Promise<DonationItem[]> {
   const sb = pgClient();
-  await sb.from('donation_items').delete().eq('id', itemId).eq('tenant_id', tenantId);
-  return getDonationItems(tenantId);
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
+  await sb.from('donation_items').delete().eq('id', itemId).eq('tenant_id', realTenantId);
+  return getDonationItems(realTenantId);
 }
 
 // ==================== DONATION OPERATIONS ====================

@@ -186,26 +186,29 @@ export default function DonationMenuManagement() {
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
+    const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+    const tenant = tenants.find(
+      (t) =>
+        (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+        (t.id && t.id.toLowerCase() === decodedSlug) ||
+        (t.name && t.name.toLowerCase() === decodedSlug)
+    ) || currentTenant;
+
     if (tenant) {
       setCurrentTenant(tenant);
-    }
-  }, [tenantSlug, tenants, setCurrentTenant]);
-
-  useEffect(() => {
-    if (currentTenant) {
-      donationItemsAPI.getItems(currentTenant.id).then((res) => {
-        if (res.success && res.data && res.data.length > 0) {
+      donationItemsAPI.getItems(tenant.id || tenant.slug).then((res) => {
+        if (res.success && Array.isArray(res.data)) {
           setDbItems(res.data);
         }
       }).catch(() => {});
     }
-  }, [currentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant]);
 
   const refreshItems = () => {
-    if (currentTenant) {
-      donationItemsAPI.getItems(currentTenant.id).then((res) => {
-        if (res.success && res.data) {
+    const targetKey = currentTenant?.id || currentTenant?.slug || tenantSlug;
+    if (targetKey) {
+      donationItemsAPI.getItems(targetKey).then((res) => {
+        if (res.success && Array.isArray(res.data)) {
           setDbItems(res.data);
         }
       }).catch(() => {});
@@ -265,49 +268,46 @@ export default function DonationMenuManagement() {
     }
 
     setDbItems(updatedList);
-    saveDonationItem(currentTenant.slug, currentTenant.religionType, { ...itemData, id: editingItem?.id });
+    saveDonationItem(currentTenant.id || currentTenant.slug, currentTenant.religionType, { ...itemData, id: editingItem?.id });
 
     // 무조건 서버 DB로 100% 저장
     try {
-      await donationItemsAPI.saveItems(currentTenant.id, updatedList);
-      if (currentTenant.slug && currentTenant.slug !== currentTenant.id) {
-        await donationItemsAPI.saveItems(currentTenant.slug, updatedList);
+      const targetId = currentTenant.id || currentTenant.slug || tenantSlug;
+      if (targetId) {
+        await donationItemsAPI.saveItems(targetId, updatedList);
       }
     } catch (e) {
       console.warn('Failed to save items to DB:', e);
     }
 
     if (editingItem) {
-      toast.success('봉헌 항목이 DB에 저장되었습니다');
+      toast.success('봉헌 항목이 저장되었습니다');
     } else {
-      toast.success('새 봉헌 항목이 DB에 저장되었습니다');
+      toast.success('새 봉헌 항목이 저장되었습니다');
     }
     setIsDialogOpen(false);
     setEditingItem(null);
-    setTimeout(() => {
-      refreshItems();
-    }, 100);
+    refreshItems();
   };
 
   const handleDelete = async (itemId: string) => {
     const updatedList = dbItems.filter(item => item.id !== itemId);
 
     setDbItems(updatedList);
-    deleteDonationItem(currentTenant.slug, currentTenant.religionType, itemId);
+    deleteDonationItem(currentTenant.id || currentTenant.slug, currentTenant.religionType, itemId);
+    
     // 무조건 서버 DB에서 100% 삭제 반영
     try {
-      await donationItemsAPI.saveItems(currentTenant.id, updatedList);
-      if (currentTenant.slug && currentTenant.slug !== currentTenant.id) {
-        await donationItemsAPI.saveItems(currentTenant.slug, updatedList);
+      const targetId = currentTenant.id || currentTenant.slug || tenantSlug;
+      if (targetId) {
+        await donationItemsAPI.saveItems(targetId, updatedList);
       }
     } catch (e) {
       console.warn('Failed to delete item from DB:', e);
     }
 
-    toast.success('봉헌 항목이 DB에서 삭제되었습니다');
-    setTimeout(() => {
-      refreshItems();
-    }, 100);
+    toast.success('봉헌 항목이 삭제되었습니다');
+    refreshItems();
   };
 
   const handleAddNew = () => {
