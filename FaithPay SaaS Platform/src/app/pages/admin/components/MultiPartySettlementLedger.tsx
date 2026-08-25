@@ -372,6 +372,14 @@ export default function MultiPartySettlementLedger() {
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-purple-700 dark:text-purple-300 bg-purple-50/30 dark:bg-purple-950/10">
                     -{item.pgFee.toLocaleString()}원
+                    <div className="text-[9px] text-purple-400 font-normal">
+                      PG 1.5%
+                    </div>
+                    {item.contractRate != null && (
+                      <div className="text-[9px] text-slate-500 font-sans font-semibold mt-0.5">
+                        계약 {item.contractRate}%
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">
                     {item.tenantPayout.toLocaleString()}원
