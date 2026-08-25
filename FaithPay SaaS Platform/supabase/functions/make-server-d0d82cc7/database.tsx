@@ -1396,54 +1396,54 @@ export async function getCommissionsByPartner(partnerId: string): Promise<Partne
     }));
   }
 
-  // KV에 저장된 수수료가 없는 경우: 실제 DB의 모든 테넌트 결제 내역(donations)으로부터 수수료 자동 정산 계산
+  // DB stored 없음 → partner_commissions에서 parent_id 기준으로도 조회 (sales_agent인 경우)
   const partner = await getPartnerById(partnerId);
   if (!partner) return [];
 
+  if (partner.role === 'sales_agent' && partner.parentId) {
+    // 영업자는 상위 대리점의 partner_commissions에서 agent_fee 기준 조회
+    const { data: agentRows } = await sb
+      .from('partner_commissions')
+      .select('*')
+      .eq('partner_id', partner.parentId)
+      .order('created_at', { ascending: false });
+
+    if (agentRows && agentRows.length > 0) {
+      return agentRows.map((r: any) => ({
+        id: r.id, partnerId: partnerId, partnerRole: 'sales_agent',
+        tenantId: r.tenant_id, tenantName: r.tenant_name,
+        donationId: r.donation_id, donationAmount: Number(r.donation_amount),
+        commissionAmount: Math.round(Number(r.donation_amount) * (Number(r.agent_rate ?? 0.5) / 100)),
+        commissionRate: Number(r.agent_rate ?? 0.5),
+        contractRate: Number(r.contract_rate ?? 3),
+        agencyRate: Number(r.agency_rate ?? 0.5),
+        agentRate: Number(r.agent_rate ?? 0.5),
+        status: r.settlement_status ?? 'pending',
+        createdAt: r.created_at,
+      }));
+    }
+  }
+
+  // 대리점인 경우에도 tenants 기반 fallback이 없으면 빈 배열 반환 (가짜 데이터 생성 금지)
   const allTenants = await getAllTenants();
   let targetTenants: Tenant[] = [];
 
   if (partner.role === 'sales_agent') {
-    // 영업자 소속 단체
-    targetTenants = allTenants.filter(t => 
-      (t as any).registeredByPartnerId === partnerId ||
-      (t as any).registeredByReferralCode === partner.referralCode ||
-      (t as any).referralCode === partner.referralCode ||
-      (t as any).registeredByPartnerName === partner.name
+    targetTenants = allTenants.filter(t =>
+      (t as any).registeredByPartnerId === partnerId
     );
-    // 데모 기본 지정 (이수진 영업자: 각원사 / 봉원사 / 명성교회 등)
-    if (targetTenants.length === 0) {
-      if (partner.name === '이수진' || partner.referralCode === 'LSJ002') {
-        targetTenants = allTenants.filter(t => ['gakwonsa', 'bongwonsa', 'myungsung-church'].includes(t.slug));
-      } else if (partner.name === '김정수' || partner.referralCode === 'KJS001') {
-        targetTenants = allTenants.filter(t => ['joyful-church', 'serenity-temple'].includes(t.slug));
-      } else if (partner.name === '박민호' || partner.referralCode === 'PMH003') {
-        targetTenants = allTenants.filter(t => ['grace-cathedral', 'myeongdong-cathedral'].includes(t.slug));
-      }
-    }
   } else {
-    // 대리점 관할 단체
-    targetTenants = allTenants.filter(t => 
-      (t as any).registeredByAgencyId === partnerId ||
-      (t as any).registeredByReferralCode === 'BIT2024' ||
-      (t as any).registeredByReferralCode === 'KRS2024'
-    );
-    if (targetTenants.length === 0) {
-      targetTenants = allTenants; // 대리점은 전체 관할 거래에 대리점 마진율(0.5%) 적용
-    }
+    // master_agency: partner_commissions에서 직접 조회됐으므로 여기까지 올 경우 없음
+    return [];
   }
 
   const generated: PartnerCommission[] = [];
 
   for (const t of targetTenants) {
     const donations = await getDonationsByTenant(t.id);
-    const completedList = donations.filter(d => d.paymentStatus === 'completed' || d.paymentStatus === 'pending');
-    
-    // 만약 DB에 거래가 없는 단체라면 DB 데이터 기반 템플릿 거래 생성
-    const activeDonations = completedList.length > 0 ? completedList : [
-      { id: `don_${t.id}_1`, tenantId: t.id, itemId: 'g1', itemName: '일반 헌금/보시금', amount: 500000, donorName: '신도 기부자', donorPhone: '010-1234-5678', paymentStatus: 'completed', paymentMethod: 'card', createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
-      { id: `don_${t.id}_2`, tenantId: t.id, itemId: 'g2', itemName: '정기 봉헌금', amount: 1000000, donorName: '성도 기부자', donorPhone: '010-9876-5432', paymentStatus: 'completed', paymentMethod: 'card', createdAt: new Date(Date.now() - 1 * 86400000).toISOString() },
-    ];
+    const activeDonations = donations.filter(d => d.paymentStatus === 'completed' || d.paymentStatus === 'pending');
+    // 실제 거래가 없으면 해당 단체 건너뜀 (가짜 데이터 생성 금지)
+    if (activeDonations.length === 0) continue;
 
     for (const d of activeDonations) {
       const contractRate = (t as any).contractRate ?? 3.0;

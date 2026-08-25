@@ -238,7 +238,7 @@ export default function PartnerDetailPage() {
   }
 
   const isAgency = partner.role === 'master_agency';
-  const totalVolume = tenants.reduce((acc, t) => acc + ((t as any).stats?.totalDonations || 15000000), 0);
+  const totalVolume = tenants.reduce((acc, t) => acc + ((t as any).stats?.totalDonations || 0), 0);
   const totalCommission = commissions.reduce((acc, c) => acc + c.commissionAmount, 0);
   const pendingSettlement = commissions.filter(c => c.settlementStatus === 'pending').reduce((acc, c) => acc + c.commissionAmount, 0);
 
@@ -681,7 +681,7 @@ export default function PartnerDetailPage() {
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">{t.createdAt}</TableCell>
                     <TableCell className="text-right font-bold text-xs text-slate-900">
-                      {((t as any).stats?.totalDonations || 15000000).toLocaleString()}원
+                      {((t as any).stats?.totalDonations ?? 0).toLocaleString()}원
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">정상 운영</Badge>
