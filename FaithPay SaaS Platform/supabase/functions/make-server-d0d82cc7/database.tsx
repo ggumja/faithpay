@@ -1799,6 +1799,10 @@ export async function getAdminSettlementLedger(opts?: {
       partnerFee,
       agentFee,
       netProfit: Math.max(0, netProfit),
+      // DB 실제 수수료율 (partner_commissions 테이블에서 직접 읽음)
+      contractRate,
+      agencyRate,
+      agentRate,
       status: statusMap[rawStatus] ?? 'SCHEDULED',
       payoutCycle: rawStatus === 'paid' ? 'D+1' : 'MONTHLY',
       partnerName: r.partners?.name ?? '',
