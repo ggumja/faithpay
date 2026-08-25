@@ -674,8 +674,27 @@ export default function SystemAdminDashboard() {
       {selectedForApproval && (
         <TenantApprovalModal
           tenant={selectedForApproval}
-          onApprove={id => { updateTenantInfo(id, { ...selectedForApproval, status:'active' }); setSelectedForApproval(null); }}
-          onReject={() => setSelectedForApproval(null)}
+          onApprove={async (id, tempPassword) => {
+            const res = await tenantAPI.approvePending(id);
+            if (res.success) {
+              toast.success(`${selectedForApproval.name} 입점이 승인되었습니다.`);
+              updateTenantInfo(id, { ...selectedForApproval, status: 'active', tempPassword });
+              setPendingList(prev => prev.filter(p => p.id !== id));
+            } else {
+              toast.error('승인 처리에 실패했습니다.');
+            }
+            setSelectedForApproval(null);
+          }}
+          onReject={async (id) => {
+            const res = await tenantAPI.rejectPending(id);
+            if (res.success) {
+              toast.success(`${selectedForApproval.name} 입점이 거절되었습니다.`);
+              setPendingList(prev => prev.filter(p => p.id !== id));
+            } else {
+              toast.error('거절 처리에 실패했습니다.');
+            }
+            setSelectedForApproval(null);
+          }}
           onClose={() => setSelectedForApproval(null)}
         />
       )}
