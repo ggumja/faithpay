@@ -676,6 +676,13 @@ export const partnerAPI = {
     });
   },
 
+  async update(id: string, updates: Partial<Partner>): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>(`/partners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
   async getCommissions(partnerId: string): Promise<APIResponse<PartnerCommission[]>> {
     return fetchAPI<PartnerCommission[]>(`/partners/${partnerId}/commissions`);
   },

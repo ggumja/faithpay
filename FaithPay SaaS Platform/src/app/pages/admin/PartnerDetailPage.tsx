@@ -249,6 +249,28 @@ export default function PartnerDetailPage() {
     } catch {
       toast.error('파트너 정보 저장 중 오류가 발생했습니다.');
     }
+  };  // 모달 열기 헬퍼
+  const openRateModal = () => {
+    if (partner) setNewRate(partner.commissionRate || 0.5);
+    setIsRateModalOpen(true);
+  };
+
+  const openBankModal = () => {
+    if (partner) {
+      setBankName(partner.bankName || '');
+      setAccountNumber(partner.accountNumber || '');
+      setAccountHolder(partner.accountHolder || '');
+    }
+    setIsBankModalOpen(true);
+  };
+
+  const openEditModal = () => {
+    if (partner) {
+      setEditName(partner.name || '');
+      setEditEmail(partner.email || '');
+      setEditPhone(partner.phone || '');
+    }
+    setIsEditModalOpen(true);
   };
 
   if (isLoading) {
@@ -351,13 +373,13 @@ export default function PartnerDetailPage() {
               <CheckCircle className="h-4 w-4 mr-1.5" /> 재활성화
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setIsRateModalOpen(true)}>
+          <Button variant="outline" size="sm" onClick={openRateModal}>
             <Percent className="h-4 w-4 mr-1.5 text-purple-600" /> 수수료율 수정
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsBankModalOpen(true)}>
+          <Button variant="outline" size="sm" onClick={openBankModal}>
             <Landmark className="h-4 w-4 mr-1.5 text-indigo-600" /> 정산 계좌 수정
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
+          <Button variant="outline" size="sm" onClick={openEditModal}>
             <Edit3 className="h-4 w-4 mr-1.5" /> 정보 수정
           </Button>
         </div>
@@ -692,7 +714,7 @@ export default function PartnerDetailPage() {
                     <div className="font-mono text-slate-600 text-xs mt-0.5">{partner.accountNumber}</div>
                     <div className="text-slate-400 text-[11px] mt-0.5">예금주: {partner.accountHolder}</div>
                   </div>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setIsBankModalOpen(true)}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={openBankModal}>
                     계좌 변경
                   </Button>
                 </div>

@@ -1484,6 +1484,25 @@ app.post("/make-server-d0d82cc7/partners", async (c) => {
   }
 });
 
+// 영업 파트너 정보 수정 (계좌 정보, 수수료율, 기본정보 등)
+const handleUpdatePartner = async (c: any) => {
+  try {
+    const id = c.req.param('id');
+    const updates = await c.req.json();
+    const partner = await db.updatePartner(id, updates);
+    if (!partner) {
+      return c.json({ success: false, error: 'Partner not found or update failed' }, 404);
+    }
+    return c.json({ success: true, data: partner });
+  } catch (error: any) {
+    console.error('Error updating partner:', error);
+    return c.json({ success: false, error: error.message || 'Failed to update partner' }, 500);
+  }
+};
+
+app.put("/make-server-d0d82cc7/partners/:id", handleUpdatePartner);
+app.patch("/make-server-d0d82cc7/partners/:id", handleUpdatePartner);
+
 // 영업 파트너 상태 변경 (승인 / 정지) - PUT / POST / PATCH 지원
 const handleUpdatePartnerStatus = async (c: any) => {
   try {

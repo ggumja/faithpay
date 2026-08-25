@@ -1353,7 +1353,7 @@ export async function updatePartnerStatus(id: string, status: 'active' | 'suspen
   const sb = pgClient();
   const { data, error } = await sb
     .from('partners')
-    .update({ status })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*')
     .maybeSingle();
@@ -1366,6 +1366,52 @@ export async function updatePartnerStatus(id: string, status: 'active' | 'suspen
     referralCode: data.referral_code ?? '',
     bankName: data.bank_name ?? '', accountNumber: data.account_number ?? '', accountHolder: data.account_holder ?? '',
     status: data.status, createdAt: data.created_at,
+  };
+}
+
+export async function updatePartner(id: string, updates: Partial<Partner>): Promise<Partner | null> {
+  const sb = pgClient();
+  const dbUpdates: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updates.name !== undefined) dbUpdates.name = updates.name;
+  if (updates.email !== undefined) dbUpdates.email = updates.email;
+  if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+  if (updates.commissionRate !== undefined) dbUpdates.commission_rate = updates.commissionRate;
+  if (updates.agencyRate !== undefined) dbUpdates.agency_rate = updates.agencyRate;
+  if (updates.bankName !== undefined) dbUpdates.bank_name = updates.bankName;
+  if (updates.accountNumber !== undefined) dbUpdates.account_number = updates.accountNumber;
+  if (updates.accountHolder !== undefined) dbUpdates.account_holder = updates.accountHolder;
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
+
+  const { data, error } = await sb
+    .from('partners')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select('*')
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('updatePartner error:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    role: data.role,
+    parentId: data.parent_id,
+    commissionRate: Number(data.commission_rate ?? 0),
+    agencyRate: Number(data.agency_rate ?? 0),
+    referralCode: data.referral_code ?? '',
+    bankName: data.bank_name ?? '',
+    accountNumber: data.account_number ?? '',
+    accountHolder: data.account_holder ?? '',
+    status: data.status,
+    createdAt: data.created_at,
   };
 }
 
