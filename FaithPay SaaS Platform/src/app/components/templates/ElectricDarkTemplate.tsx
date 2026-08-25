@@ -40,21 +40,25 @@ const ELECTRIC_CSS = `
 /* Neo Modern Electric Dark Responsive Layout */
 .neo-container {
   min-height: 100vh;
-  background-color: ${NEO.lightBg};
-  color: ${NEO.black};
+  background-color: #0E1017;
+  color: #FFFFFF;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   padding-bottom: 120px;
+  position: relative;
+  overflow-x: hidden;
 }
 
 .neo-wrap {
-  max-width: 680px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 28px 18px;
+  position: relative;
+  z-index: 2;
 }
 
 @media (min-width: 768px) {
   .neo-wrap {
-    padding: 36px 24px;
+    padding: 40px 28px;
   }
 }
 
@@ -67,7 +71,7 @@ const ELECTRIC_CSS = `
   border-radius: 9999px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .neo-pill-btn:active {
@@ -75,11 +79,20 @@ const ELECTRIC_CSS = `
 }
 
 .neo-glow-badge {
-  box-shadow: 0 0 24px rgba(199, 255, 46, 0.45);
+  box-shadow: 0 0 28px rgba(199, 255, 46, 0.38);
 }
 
 .neo-card-hover:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
+}
+
+@keyframes neo-pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(199, 255, 46, 0.3); }
+  50% { box-shadow: 0 0 35px rgba(199, 255, 46, 0.55); }
+}
+
+.neo-pulse {
+  animation: neo-pulse-glow 3s infinite ease-in-out;
 }
 `;
 

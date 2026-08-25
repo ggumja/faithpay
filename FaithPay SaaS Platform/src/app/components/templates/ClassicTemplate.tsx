@@ -40,52 +40,52 @@ const itemIcons: Record<string, React.ReactNode> = {
 function fmt(n: number) { return n.toLocaleString('ko-KR'); }
 
 const RESPONSIVE_CSS = `
-.th-body         { display: flex; flex-direction: column; gap: 24px; padding: 28px 16px 72px; max-width: 1120px; margin: 0 auto; }
+.th-body         { display: flex; flex-direction: column; gap: 28px; padding: 32px 16px 80px; max-width: 1140px; margin: 0 auto; }
 .th-hero-grid    { display: flex; flex-direction: column; gap: 24px; }
 .th-hero-stats   { display: flex; flex-direction: row; gap: 12px; overflow-x: auto; padding-bottom: 2px; }
 .th-hero-stat    { flex: 0 0 auto; min-width: 130px; }
 .th-nav-center   { display: none; }
 .th-nav-left     { display: none; }
-.th-controls     { flex-direction: column; gap: 12px; }
+.th-controls     { flex-direction: column; gap: 14px; }
 .th-search-wrap  { width: 100%; }
 .th-search-wrap input { width: 100%; }
 .th-tabs         { width: 100%; }
 .th-tabs button  { flex: 1; }
-.th-sidebar      { display: flex; flex-direction: column; gap: 18px; }
+.th-sidebar      { display: flex; flex-direction: column; gap: 20px; }
 .th-trust-badges { display: none; }
 .th-hero-copy    { max-width: 100%; }
 .th-hero-cta     { flex-wrap: wrap; }
-.th-row-grid     { grid-template-columns: 44px 1fr auto; gap: 16px; padding: 18px 20px; }
+.th-row-grid     { grid-template-columns: 48px 1fr auto; gap: 16px; padding: 20px 22px; }
 .th-row-desc     { display: none; }
-.th-row-icon     { width: 44px; height: 44px; border-radius: 12px; }
+.th-row-icon     { width: 48px; height: 48px; border-radius: 14px; }
 
 @media (min-width: 480px) {
-  .th-body         { padding: 32px 20px 80px; }
+  .th-body         { padding: 36px 20px 88px; }
   .th-nav-left     { display: flex; }
   .th-row-desc     { display: block; }
   .th-trust-badges { display: flex; }
 }
 
 @media (min-width: 720px) {
-  .th-body         { padding: 40px 24px 96px; }
+  .th-body         { padding: 44px 24px 100px; }
   .th-nav-center   { display: flex; }
-  .th-hero-grid    { flex-direction: row; align-items: center; justify-content: space-between; gap: 36px; }
+  .th-hero-grid    { flex-direction: row; align-items: center; justify-content: space-between; gap: 40px; }
   .th-hero-stats   { flex-direction: column; overflow-x: visible; gap: 12px; min-width: 170px; }
   .th-hero-stat    { min-width: unset; }
   .th-controls     { flex-direction: row; }
   .th-search-wrap  { width: auto; }
-  .th-search-wrap input { width: 220px; }
+  .th-search-wrap input { width: 240px; }
   .th-tabs         { width: auto; }
   .th-tabs button  { flex: unset; }
 }
 
 @media (min-width: 1024px) {
-  .th-body         { display: grid; grid-template-columns: 1fr 310px; gap: 32px; align-items: start; padding: 44px 24px 96px; }
-  .th-sidebar      { position: sticky; top: 76px; }
+  .th-body         { display: grid; grid-template-columns: 1fr 320px; gap: 36px; align-items: start; padding: 48px 24px 104px; }
+  .th-sidebar      { position: sticky; top: 80px; }
 }
 
 @keyframes th-fade-up {
-  from { opacity: 0; transform: translateY(18px); }
+  from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .th-animate { animation: th-fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
@@ -94,10 +94,10 @@ const RESPONSIVE_CSS = `
 .th-delay-3 { animation-delay: 270ms; }
 
 .th-btn-spring {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, background-color 0.22s ease, border-color 0.22s ease;
 }
 .th-btn-spring:active {
-  transform: scale(0.97) !important;
+  transform: scale(0.96) !important;
 }
 
 @media (max-width: 479px) {
