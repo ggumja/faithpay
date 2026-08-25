@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
+import { formatTransactionId } from '../../utils/transactionId';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -125,42 +126,7 @@ export function cleanPaymentMethod(method?: string): string {
 }
 
 export function formatDonationId(rawId?: string, createdAtStr?: string): string {
-  if (!rawId || typeof rawId !== 'string') {
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    return `FP-${datePart}-00000001`;
-  }
-
-  const str = rawId.trim();
-  
-  // Already matches FP-YYYYMMDD-XXXXXXXX (8 digit sequence)
-  if (/^FP-\d{8}-\d{8}$/.test(str)) {
-    return str;
-  }
-
-  // Determine date string YYYYMMDD
-  let datePart = '';
-  if (createdAtStr) {
-    const parsed = new Date(createdAtStr);
-    if (!isNaN(parsed.getTime())) {
-      datePart = parsed.toISOString().slice(0, 10).replace(/-/g, '');
-    }
-  }
-  if (!datePart) {
-    datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  }
-
-  // Extract numeric digits from rawId or pad to 8 digits
-  const digits = str.replace(/[^0-9]/g, '');
-  let seqPart = '';
-  if (digits.length >= 8) {
-    seqPart = digits.slice(-8);
-  } else if (digits.length > 0) {
-    seqPart = digits.padStart(8, '0');
-  } else {
-    seqPart = '00000001';
-  }
-
-  return `FP-${datePart}-${seqPart}`;
+  return formatTransactionId(rawId, createdAtStr);
 }
 
 function normalizeDonation(d: any) {
@@ -268,11 +234,14 @@ export function assignSequentialDonationIds(list: any[]): any[] {
         validDate = parsed;
       }
     }
-    const yyyymmdd = validDate.toISOString().slice(0, 10).replace(/-/g, '');
+    // KST 기준 YYYYMMDDHHMM 타임스탬프 추출
+    const kst = new Date(validDate.getTime() + 9 * 60 * 60 * 1000);
+    const yyyymmddhhmm = `${kst.getUTCFullYear()}${String(kst.getUTCMonth()+1).padStart(2,'0')}${String(kst.getUTCDate()).padStart(2,'0')}${String(kst.getUTCHours()).padStart(2,'0')}${String(kst.getUTCMinutes()).padStart(2,'0')}`;
+    const yyyymmdd = yyyymmddhhmm.slice(0, 8);
 
     dateCounters[yyyymmdd] = (dateCounters[yyyymmdd] || 0) + 1;
-    const seqNumStr = String(dateCounters[yyyymmdd]).padStart(8, '0');
-    const formattedId = `FP-${yyyymmdd}-${seqNumStr}`;
+    const seqNumStr = String(dateCounters[yyyymmdd]).padStart(7, '0');
+    const formattedId = `${yyyymmddhhmm}-${seqNumStr}`;
 
     return normalizeDonation({
       ...item,

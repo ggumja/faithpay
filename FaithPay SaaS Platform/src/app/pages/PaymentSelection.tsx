@@ -11,6 +11,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { paymentAPI, donationAPI, kakaoPayAPI } from '../api/client';
+import { generateTransactionId } from '../utils/transactionId';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandLogos';
@@ -289,7 +290,7 @@ export default function PaymentSelection() {
         }
         const tossPayments = (window as any).TossPayments(tossClientKey);
         
-        const tempDonationId = `don_${Date.now()}`;
+        const tempDonationId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
         const orderName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
         const amount = donationFormData.amount || 10000;
         const customerName = donationFormData.name || '무기명';
@@ -389,7 +390,7 @@ export default function PaymentSelection() {
         const now = new Date();
         const pad = (n: number) => n.toString().padStart(2, '0');
         const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-        const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();
+        const tempDonationId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
         const donorName = donationFormData.name || "신도";
         const donorPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
 
@@ -487,7 +488,7 @@ export default function PaymentSelection() {
         const now = new Date();
         const pad = (n: number) => n.toString().padStart(2, '0');
         const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-        const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();
+        const tempDonationId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
         const reqPayAmt = donationFormData.amount.toString();
         const donorName = donationFormData.name || "신도";
         const donorPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');

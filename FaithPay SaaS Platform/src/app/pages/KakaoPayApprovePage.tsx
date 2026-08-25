@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router';
 import { donationAPI } from '../api/client';
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateTransactionId } from '../utils/transactionId';
 
 export default function KakaoPayApprovePage() {
   const [searchParams] = useSearchParams();
@@ -37,10 +38,7 @@ export default function KakaoPayApprovePage() {
       const itemName = pending.itemName || '각원사 봉헌금';
 
       try {
-        // Create completed donation record
-        const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const seqPart = Date.now().toString().slice(-8);
-        const receiptId = `FP-${datePart}-${seqPart}`;
+        const receiptId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
 
         await donationAPI.create({
           id: receiptId,

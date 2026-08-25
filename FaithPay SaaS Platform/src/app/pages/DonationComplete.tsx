@@ -8,6 +8,7 @@ import { donationAPI, tenantAPI } from '../api/client';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Share2, Download, CheckCircle2, Loader2 } from 'lucide-react';
+import { generateTransactionId, formatTransactionId } from '../utils/transactionId';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('ko-KR').format(n || 0);
@@ -24,12 +25,10 @@ export default function DonationComplete() {
   const paymentKeyParam = searchParams.get('paymentKey') || '';
   const typeParam = searchParams.get('type') || '';
 
-  // 영수증 ID 생성 (쿼리 파라미터가 있으면 우선 사용)
+  // 영수증 ID 생성 (쿼리 파라미터가 있으면 우선 사용, 없으면 새 포맷으로 생성)
   const [receiptId] = useState(() => {
-    if (donIdParam) return donIdParam;
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const seqPart = Date.now().toString().slice(-8);
-    return `FP-${datePart}-${seqPart}`;
+    if (donIdParam) return formatTransactionId(donIdParam);  // 구형 포맷도 새 포맷으로 변환
+    return generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
   });
 
   // 1. 테넌트 복구
