@@ -155,32 +155,22 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. 해당 단체에 속해있는 관리자 목록만 DB/저장소에서 그대로 조회하여 설정
+      // 2. 해당 단체(tenant.id)에 속해있는 관리자 목록을 DB/저장소에서 그대로 조회하여 설정
       const savedStaff =
         localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
-        localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
-        localStorage.getItem(`faithpay_staff_${tenant.id}`) ||
-        localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
+        localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`);
 
       let list: StaffAdminUser[] = [];
       if (savedStaff) {
         try {
           const parsed = JSON.parse(savedStaff);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // 브라우저 디스크에 남아있는 이전 버전 구 더미 캐시 항목(info@joyful-church.org 등) 자동 정제
-            list = parsed.filter(
-              (s: any) =>
-                s &&
-                s.email &&
-                !s.email.includes('joyful-church') &&
-                !s.email.includes('serenity-temple') &&
-                !s.name?.includes('꿈꾸는교회')
-            );
+            list = parsed;
           }
         } catch (e) {}
       }
 
-      // DB/저장소에 등록된 목록이 없는 경우 최초 단체 가입 시의 대표 관리자 계정 1개로 구성
+      // DB/저장소에 등록된 목록이 없는 초기 상태인 경우 최초 가입 시의 대표 관리자 계정 1개로 구성
       if (list.length === 0) {
         list = [
           {
