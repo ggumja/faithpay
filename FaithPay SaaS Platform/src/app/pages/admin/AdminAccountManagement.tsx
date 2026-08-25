@@ -249,11 +249,11 @@ export default function AdminAccountManagement() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // 💾 Supabase 백엔드 DB 및 로컬 보존 영구 동기화
+  // 💾 관리자 계정 정보 영구 보존 동기화
   useEffect(() => {
     if (currentTenant && staffList.length > 0) {
-      adminAPI.saveTenantStaff(currentTenant.id, staffList);
       localStorage.setItem(`soulpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
+      localStorage.setItem(`soulpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
     }
   }, [staffList, currentTenant]);
 
