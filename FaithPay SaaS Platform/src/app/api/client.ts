@@ -609,14 +609,15 @@ export const adminAPI = {
   },
 
   async getTenantStaff(tenantId: string): Promise<APIResponse<any[]>> {
-    return fetchAPI<any[]>(`/tenant-staff/${tenantId}`);
+    return fetchAPI<any[]>(`/tenant-staff/${tenantId}`, { silentFail: true } as any);
   },
 
   async saveTenantStaff(tenantId: string, staffList: any[]): Promise<APIResponse<any[]>> {
     return fetchAPI<any[]>(`/tenant-staff/${tenantId}`, {
       method: 'POST',
       body: JSON.stringify({ staffList }),
-    });
+      silentFail: true,
+    } as any);
   },
 };
 
