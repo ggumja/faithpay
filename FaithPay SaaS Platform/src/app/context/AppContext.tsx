@@ -300,6 +300,34 @@ export const defaultTenants: Tenant[] = [
       prayer: '응원메시지',
     },
   },
+  {
+    id: 'fp00005',
+    slug: 'dream',
+    name: '꿈의교회',
+    religionType: 'protestant',
+    templateId: 'classic',
+    primaryColor: '#2563EB',
+    logoUrl: 'https://images.unsplash.com/photo-1548625361-1858a74e99ef?w=200',
+    bannerImages: [
+      'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200',
+    ],
+    description: '꿈과 비전이 넘치는 따뜻한 영적 안식처, 꿈의교회입니다.',
+    address: '서울특별시 마포구 월드컵북로 120',
+    contact: {
+      phone: '02-789-0123',
+      email: 'admin@dream.or.kr',
+      name: '김꿈 목사',
+    },
+    schedule: [
+      { label: '주일 대예배', time: '매주 일요일 오전 11:00' },
+      { label: '금요 철야 기도회', time: '매주 금요일 저녁 09:00' },
+    ],
+    terminology: {
+      donation: '헌금',
+      member: '성도',
+      prayer: '기도제목',
+    },
+  },
 ];
 
 // Legacy export compatibility
