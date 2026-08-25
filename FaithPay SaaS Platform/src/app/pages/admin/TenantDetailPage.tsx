@@ -718,7 +718,7 @@ export default function TenantDetailPage() {
                     <Phone className="h-3.5 w-3.5 text-blue-600" />
                     담당자 연락처 (전화번호)
                   </Label>
-                  <Input value={tenant.contact?.phone || '010-1234-5678'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold text-indigo-600 dark:text-indigo-400" />
+                  <Input value={tenant.contact?.phone || ''} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold text-indigo-600 dark:text-indigo-400" />
                 </div>
                 
                 {/* 관리자 로그인 계정 아이디 & 임시 비밀번호 */}
@@ -727,7 +727,7 @@ export default function TenantDetailPage() {
                     <Mail className="h-3.5 w-3.5 text-emerald-600" />
                     관리자 로그인 아이디 (이메일)
                   </Label>
-                  <Input value={(tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `info@${tenant.slug}.or.kr`} disabled className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-emerald-700 dark:text-emerald-400" />
+                  <Input value={tenant.contact?.email || ''} disabled className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-emerald-700 dark:text-emerald-400" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1">
@@ -737,7 +737,7 @@ export default function TenantDetailPage() {
                   <div className="relative">
                     <Input 
                       type={showSecretKey ? "text" : "password"}
-                      value={tenant.tempPassword || "fp348320"} 
+                      value={tenant.tempPassword || "admin1234!"} 
                       disabled 
                       className="bg-amber-50/60 dark:bg-amber-950/30 text-sm font-extrabold font-mono text-amber-900 dark:text-amber-300 border-amber-200" 
                     />
@@ -768,7 +768,7 @@ export default function TenantDetailPage() {
                         isOpen: true,
                         title: '고유번호증 서류 확인',
                         docType: 'unique',
-                        number: tenant?.uniqueNumber || tenant?.businessInfo?.uniqueNumber || '240-82-12345',
+                        number: tenant?.uniqueNumber || tenant?.businessInfo?.uniqueNumber || '미등록',
                         fileUrl: tenant?.uniqueNumberFile || tenant?.businessInfo?.uniqueNumberFile,
                       })}
                     >
@@ -777,7 +777,7 @@ export default function TenantDetailPage() {
                     </Button>
                   </div>
                   <Input 
-                    value={tenant?.uniqueNumber || tenant?.businessInfo?.uniqueNumber || '240-82-12345'} 
+                    value={tenant?.uniqueNumber || tenant?.businessInfo?.uniqueNumber || '미등록'} 
                     disabled 
                     className="bg-white dark:bg-zinc-900 text-sm font-bold font-mono text-purple-700 dark:text-purple-300" 
                   />
@@ -815,7 +815,7 @@ export default function TenantDetailPage() {
 
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">단체 소재지 주소</Label>
-                  <Input value={tenant.businessInfo?.address || '충청남도 천안시 동남구 각원사길 245'} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
+                  <Input value={tenant.businessInfo?.address || tenant.address || ''} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
                 </div>
               </div>
             </div>
@@ -831,17 +831,9 @@ export default function TenantDetailPage() {
 
               <div className="space-y-2">
                 {(() => {
-                  const defaultLeaderTitle = tenant.terminology?.leaderTitle || (
-                    tenant.religionType === 'buddhist' ? '주지스님' :
-                    tenant.religionType === 'catholic' ? '주임신부' :
-                    tenant.religionType === 'protestant' ? '담임목사' : '대표자'
-                  );
-                  const adminDisplayName = (tenant.contact?.name && tenant.contact.name !== '주지스님 / 담임목사' && tenant.contact.name !== '담임목사 / 주지스님')
-                    ? tenant.contact.name
-                    : defaultLeaderTitle;
-
+                  const adminDisplayName = tenant.contact?.name || `${tenant.name} 대표 관리자`;
                   return [
-                    { id: `admin-${tenant.id}`, name: adminDisplayName, email: (tenant.contact?.email && !tenant.contact.email.includes('serenity-temple')) ? tenant.contact.email : `admin@${tenant.slug}.or.kr`, role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15' }
+                    { id: `admin-${tenant.id}`, name: adminDisplayName, email: tenant.contact?.email || '', role: 'tenant_admin', createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '' }
                   ];
                 })().map((adminUser) => (
                   <div
