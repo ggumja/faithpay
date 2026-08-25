@@ -418,11 +418,8 @@ export async function getDonationItems(tenantId: string): Promise<DonationItem[]
     .order('order_index', { ascending: true });
   if (data && data.length > 0) return data.map(rowToItem);
 
-  // 항목이 없으면 종교유형별 기본 템플릿으로 시딩
-  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
-  const defaults = getDefaultItems(tenant?.religionType ?? 'protestant', tenantId);
-  await setDonationItems(tenantId, defaults);
-  return defaults;
+  // 항목이 없으면 빈 배열 반환 (사용자가 직접 등록)
+  return [];
 }
 
 export async function addDonationItem(tenantId: string, item: DonationItem): Promise<DonationItem[]> {

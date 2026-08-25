@@ -379,74 +379,94 @@ export default function DonationMenuManagement() {
           </div>
 
           {/* Menu Items */}
-          <div className="grid grid-cols-1 gap-6">
-            {donationItems.map((item) => (
-              <Card key={item.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-xl">{item.name}</CardTitle>
-                        <Badge variant={item.enabled ? 'default' : 'secondary'}>
-                          {item.enabled ? '노출' : '숨김'}
+          {donationItems.length === 0 ? (
+            <Card className="border-dashed border-2 border-slate-300 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-900/50">
+              <CardContent className="py-16 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
+                  <DollarSign className="h-8 w-8" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-zinc-200 mb-1">
+                  등록된 {currentTenant.terminology.donation} 항목이 없습니다
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mb-6">
+                  신도들이 온라인에서 선택하여 헌금/보시를 진행할 수 있도록 상단의 [새 항목 추가] 버튼을 눌러 항목을 등록해주세요.
+                </p>
+                <Button onClick={handleAddNew} className="cursor-pointer">
+                  <Plus className="h-4 w-4 mr-2" />
+                  첫 번째 {currentTenant.terminology.donation} 항목 추가하기
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {donationItems.map((item) => (
+                <Card key={item.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <CardTitle className="text-xl">{item.name}</CardTitle>
+                          <Badge variant={item.enabled ? 'default' : 'secondary'}>
+                            {item.enabled ? '노출' : '숨김'}
+                          </Badge>
+                        </div>
+                        <CardDescription className="text-base">
+                          {item.description}
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">결제 타입</p>
+                        <div className="flex gap-2">
+                          {item.allowOneTime && <Badge variant="outline">단발</Badge>}
+                          {item.allowRecurring && <Badge variant="outline">정기</Badge>}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">금액 설정</p>
+                        <Badge variant="outline">
+                          {item.amountType === 'fixed'
+                            ? `고정: ${item.fixedAmount?.toLocaleString()}원`
+                            : '자율 금액'}
                         </Badge>
                       </div>
-                      <CardDescription className="text-base">
-                        {item.description}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">결제 타입</p>
-                      <div className="flex gap-2">
-                        {item.allowOneTime && <Badge variant="outline">단발</Badge>}
-                        {item.allowRecurring && <Badge variant="outline">정기</Badge>}
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">기도문 입력</p>
+                        <Badge variant="outline">
+                          {item.enablePrayerField ? '활성화' : '비활성화'}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">상태</p>
+                        <Badge variant={item.enabled ? 'default' : 'secondary'}>
+                          {item.enabled ? '사용 중' : '사용 안 함'}
+                        </Badge>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">금액 설정</p>
-                      <Badge variant="outline">
-                        {item.amountType === 'fixed'
-                          ? `고정: ${item.fixedAmount?.toLocaleString()}원`
-                          : '자율 금액'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">기도문 입력</p>
-                      <Badge variant="outline">
-                        {item.enablePrayerField ? '활성화' : '비활성화'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">상태</p>
-                      <Badge variant={item.enabled ? 'default' : 'secondary'}>
-                        {item.enabled ? '사용 중' : '사용 안 함'}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
           {/* Info */}
           <Card className="mt-8 bg-blue-50 border-blue-200">

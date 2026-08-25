@@ -440,12 +440,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getTenantDonationItems = useCallback((tenant: Tenant): DonationItem[] => {
     if (allDonationItems[tenant.id]) return allDonationItems[tenant.id];
     if (allDonationItems[tenant.slug]) return allDonationItems[tenant.slug];
-    return allDonationItems[tenant.religionType] || mockDonationItems[tenant.religionType] || [];
+    return [];
   }, [allDonationItems]);
 
   const saveDonationItem = useCallback((tenantIdOrSlug: string, religionType: string, itemData: Partial<DonationItem>) => {
     setAllDonationItems(prev => {
-      const currentList = prev[tenantIdOrSlug] || prev[religionType] || mockDonationItems[religionType] || [];
+      const currentList = prev[tenantIdOrSlug] || prev[religionType] || [];
       let updatedList: DonationItem[];
 
       if (itemData.id) {
@@ -471,8 +471,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         [religionType]: updatedList,
       };
 
-      mockDonationItems[religionType] = updatedList;
-
       // 무조건 서버 DB로 직접 저장
       donationItemsAPI.saveItems(tenantIdOrSlug, updatedList).catch((err) => {
         console.warn('Supabase DB saveItems failed:', err);
@@ -484,7 +482,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteDonationItem = useCallback((tenantIdOrSlug: string, religionType: string, itemId: string) => {
     setAllDonationItems(prev => {
-      const currentList = prev[tenantIdOrSlug] || prev[religionType] || mockDonationItems[religionType] || [];
+      const currentList = prev[tenantIdOrSlug] || prev[religionType] || [];
       const updatedList = currentList.filter(item => item.id !== itemId);
 
       const nextState = {
@@ -492,8 +490,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         [tenantIdOrSlug]: updatedList,
         [religionType]: updatedList,
       };
-
-      mockDonationItems[religionType] = updatedList;
 
       // 무조건 서버 DB로 직접 저장
       donationItemsAPI.saveItems(tenantIdOrSlug, updatedList).catch((err) => {
