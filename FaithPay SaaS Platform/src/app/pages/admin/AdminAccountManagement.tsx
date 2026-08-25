@@ -175,7 +175,7 @@ export default function AdminAccountManagement() {
         } catch {}
       }
 
-      // 단체 대표 이메일 및 대표자 성명 결정 (DB 동기화 및 플리커 방지)
+      // 단체 대표 이메일 결정 (DB/저장소 동기화)
       const primaryEmail = (
         tenant.contact?.email &&
         !tenant.contact.email.includes('joyful-church') &&
@@ -184,24 +184,19 @@ export default function AdminAccountManagement() {
         ? tenant.contact.email.trim().toLowerCase()
         : `admin@${(tenant.slug || 'soulpay').toLowerCase()}.or.kr`;
 
-      const primaryName =
-        tenant.contact?.name &&
-        tenant.contact.name !== '담임목사 / 주지스님' &&
-        tenant.contact.name !== '주지스님 / 담임목사' &&
-        tenant.contact.name !== '담임목사' &&
-        tenant.contact.name !== '주지스님' &&
-        tenant.contact.name !== '주임신부'
-          ? tenant.contact.name
-          : tenant.slug === 'dream'
-          ? '김꿈 목사'
-          : tenant.contact?.name || tenant.name + ' 대표 관리자';
-
       const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.toLowerCase() === primaryEmail);
 
       if (!hasPrimaryAccount || loadedStaff.length === 0) {
+        const defaultAdminName =
+          tenant.contact?.name &&
+          tenant.contact.name !== '담임목사 / 주지스님' &&
+          tenant.contact.name !== '주지스님 / 담임목사'
+            ? tenant.contact.name
+            : `${tenant.name} 대표 관리자`;
+
         const primaryAdmin: StaffAdminUser = {
           id: `admin-${tenant.id}-primary`,
-          name: primaryName,
+          name: defaultAdminName,
           email: primaryEmail,
           phone: tenant.contact?.phone || '',
           groupId: 'tenant_admin',
@@ -216,15 +211,6 @@ export default function AdminAccountManagement() {
         } else {
           loadedStaff = [primaryAdmin];
         }
-      } else {
-        // 이미 구체적인 성명이 설정되어 있다면 유지, 일반 직함으로 교체되는 비동기 플리커 방지
-        loadedStaff = loadedStaff.map((s) => {
-          if (s.email.toLowerCase() === primaryEmail) {
-            const isGenericTitle = !s.name || s.name === '담임목사' || s.name === '주지스님' || s.name === '주임신부' || s.name === '대표자';
-            return isGenericTitle ? { ...s, name: primaryName } : s;
-          }
-          return s;
-        });
       }
 
       setStaffList(loadedStaff);
