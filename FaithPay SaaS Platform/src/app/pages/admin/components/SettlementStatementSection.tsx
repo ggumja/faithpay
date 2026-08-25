@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Printer, Download, Building2, User, CheckCircle2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { partnerAPI } from '../../../api/client';
+import { adminAPI } from '../../../api/client';
 
 export default function SettlementStatementSection() {
   const [statementType, setStatementType] = useState<'tenant' | 'partner'>('tenant');
@@ -16,7 +16,7 @@ export default function SettlementStatementSection() {
       setLoading(true);
       setError(null);
       try {
-        const res = await partnerAPI.getStatements(selectedMonth);
+        const res = await adminAPI.getStatements(selectedMonth);
         if (res.success && res.data) {
           setTenantStatements(res.data.tenantStatements || []);
           setPartnerStatements(res.data.partnerStatements || []);
