@@ -5,8 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
-import { Motif, MotifLarge } from '../components/Motif';
-import { Building2, MapPin, Phone, Mail, Palette, Globe, Check, ArrowRight, ArrowLeft, Search, Lock, Eye, EyeOff } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Palette, Globe, Check, ArrowRight, ArrowLeft, Search, Lock, Eye, EyeOff, FileText, Upload, Trash2, ShieldCheck, ChevronDown, ChevronUp, AlertCircle, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { convertKoreanToQwerty } from '../utils/koreanConverter';
 import { openDaumPostcode } from '../utils/daumPostcode';
@@ -29,6 +28,8 @@ export default function OnboardingFlow() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showDocsSection, setShowDocsSection] = useState(false);
+
   const [formData, setFormData] = useState({
     religion: 'protestant' as ReligionId,
     name: '',
@@ -41,7 +42,57 @@ export default function OnboardingFlow() {
     passwordConfirm: '',
     primaryColor: '#1976d2',
     description: '',
+    // 서류 및 정산 정보 (선택사항)
+    uniqueNumber: '',
+    uniqueNumberFile: '',
+    uniqueNumberFileName: '',
+    bylawsFile: '',
+    bylawsFileName: '',
+    bankbookFile: '',
+    bankbookFileName: '',
+    bankName: '',
+    accountNumber: '',
+    accountHolder: '',
+    representativeName: '',
+    representativeCertFile: '',
+    representativeCertFileName: '',
+    representativeIdFile: '',
+    representativeIdFileName: '',
+    // 대리인 신청 정보 (선택사항)
+    isDelegated: false,
+    delegateName: '',
+    delegatePhone: '',
+    delegationLetterFile: '',
+    delegationLetterFileName: '',
+    delegateIdFile: '',
+    delegateIdFileName: '',
   });
+
+  const handleFileUpload = (
+    fieldKey: 'uniqueNumberFile' | 'bylawsFile' | 'bankbookFile' | 'representativeCertFile' | 'representativeIdFile' | 'delegationLetterFile' | 'delegateIdFile',
+    fileNameKey: 'uniqueNumberFileName' | 'bylawsFileName' | 'bankbookFileName' | 'representativeCertFileName' | 'representativeIdFileName' | 'delegationLetterFileName' | 'delegateIdFileName',
+    file: File | null
+  ) => {
+    if (!file) {
+      setFormData(prev => ({ ...prev, [fieldKey]: '', [fileNameKey]: '' }));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('파일 크기는 최대 10MB까지 등록 가능합니다.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setFormData(prev => ({
+        ...prev,
+        [fieldKey]: base64,
+        [fileNameKey]: file.name,
+      }));
+      toast.success(`${file.name} 파일이 첨부되었습니다.`);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSlugChange = (val: string) => {
     const { converted, hasKorean } = convertKoreanToQwerty(val);
@@ -151,8 +202,35 @@ export default function OnboardingFlow() {
           contact: {
             phone: formData.phone || '',
             email: formData.email || '',
+            name: formData.representativeName || undefined,
           },
           adminPassword: formData.password,
+          uniqueNumber: formData.uniqueNumber || undefined,
+          uniqueNumberFile: formData.uniqueNumberFile || undefined,
+          businessInfo: {
+            uniqueNumber: formData.uniqueNumber || undefined,
+            uniqueNumberFile: formData.uniqueNumberFile || undefined,
+            uniqueNumberFileName: formData.uniqueNumberFileName || undefined,
+            bylawsFile: formData.bylawsFile || undefined,
+            bylawsFileName: formData.bylawsFileName || undefined,
+            bankbookFile: formData.bankbookFile || undefined,
+            bankbookFileName: formData.bankbookFileName || undefined,
+            bankName: formData.bankName || undefined,
+            accountNumber: formData.accountNumber || undefined,
+            accountHolder: formData.accountHolder || undefined,
+            representativeName: formData.representativeName || undefined,
+            representativeCertFile: formData.representativeCertFile || undefined,
+            representativeCertFileName: formData.representativeCertFileName || undefined,
+            representativeIdFile: formData.representativeIdFile || undefined,
+            representativeIdFileName: formData.representativeIdFileName || undefined,
+            isDelegated: formData.isDelegated,
+            delegateName: formData.delegateName || undefined,
+            delegatePhone: formData.delegatePhone || undefined,
+            delegationLetterFile: formData.delegationLetterFile || undefined,
+            delegationLetterFileName: formData.delegationLetterFileName || undefined,
+            delegateIdFile: formData.delegateIdFile || undefined,
+            delegateIdFileName: formData.delegateIdFileName || undefined,
+          },
           schedule: [],
           terminology: {
             donation: formData.religion === 'buddhist' ? '보시' : formData.religion === 'charity' ? '후원금' : formData.religion === 'general' ? '기부금' : '헌금',
@@ -530,6 +608,282 @@ export default function OnboardingFlow() {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* ── 단체 인증 및 정산 서류 첨부 (선택사항) ── */}
+                <div className="border border-indigo-150 dark:border-zinc-800 rounded-2xl p-5 bg-gradient-to-b from-indigo-50/40 to-white dark:from-zinc-850/50 dark:to-zinc-900 mt-2">
+                  <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDocsSection(!showDocsSection)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <FileCheck size={18} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                            단체 인증 및 정산 서류 첨부
+                          </h4>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                            선택사항
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          미리 서류를 등록하시면 개설 심사가 더욱 빨라집니다. (가입 후 관리자 설정에서도 등록 가능)
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                    >
+                      {showDocsSection ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                  </div>
+
+                  {showDocsSection && (
+                    <div className="mt-5 pt-4 border-t border-indigo-100 dark:border-zinc-800 space-y-4">
+                      
+                      {/* 1. 고유번호증 */}
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <Label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                            <FileText size={14} className="text-indigo-500" />
+                            고유번호증 번호 및 사본
+                          </Label>
+                          {formData.uniqueNumberFileName && (
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              <Check size={12} /> {formData.uniqueNumberFileName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Input
+                            placeholder="고유번호 (예: 240-82-12345)"
+                            className="h-10 text-xs font-mono font-medium"
+                            value={formData.uniqueNumber}
+                            onChange={(e) => setFormData({ ...formData, uniqueNumber: e.target.value })}
+                          />
+                          <div className="flex items-center gap-2">
+                            <label className="flex-1 h-10 px-3 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors truncate">
+                              <Upload size={13} />
+                              <span className="truncate">{formData.uniqueNumberFileName || '고유번호증 파일 첨부'}</span>
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                className="sr-only"
+                                onChange={(e) => handleFileUpload('uniqueNumberFile', 'uniqueNumberFileName', e.target.files?.[0] || null)}
+                              />
+                            </label>
+                            {formData.uniqueNumberFile && (
+                              <button
+                                type="button"
+                                onClick={() => handleFileUpload('uniqueNumberFile', 'uniqueNumberFileName', null)}
+                                className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                                title="삭제"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. 정관 또는 회칙 */}
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                            <FileText size={14} className="text-indigo-500" />
+                            정관 또는 회칙 사본
+                          </Label>
+                          {formData.bylawsFileName && (
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              <Check size={12} /> {formData.bylawsFileName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="flex-1 h-10 px-3 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors truncate">
+                            <Upload size={13} />
+                            <span className="truncate">{formData.bylawsFileName || '정관/회칙 사본 첨부 (PDF, 이미지)'}</span>
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              className="sr-only"
+                              onChange={(e) => handleFileUpload('bylawsFile', 'bylawsFileName', e.target.files?.[0] || null)}
+                            />
+                          </label>
+                          {formData.bylawsFile && (
+                            <button
+                              type="button"
+                              onClick={() => handleFileUpload('bylawsFile', 'bylawsFileName', null)}
+                              className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 3. 단체명의 정산 통장 사본 */}
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                          <Label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                            <FileText size={14} className="text-indigo-500" />
+                            단체명의 정산 통장 사본 및 계좌 정보
+                          </Label>
+                          {formData.bankbookFileName && (
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              <Check size={12} /> {formData.bankbookFileName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                          <Input
+                            placeholder="은행명 (예: 국민은행)"
+                            className="h-10 text-xs"
+                            value={formData.bankName}
+                            onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                          />
+                          <Input
+                            placeholder="계좌번호 (- 제외)"
+                            className="h-10 text-xs font-mono"
+                            value={formData.accountNumber}
+                            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                          />
+                          <Input
+                            placeholder="예금주명 (단체명과 동일)"
+                            className="h-10 text-xs"
+                            value={formData.accountHolder}
+                            onChange={(e) => setFormData({ ...formData, accountHolder: e.target.value })}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="flex-1 h-10 px-3 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors truncate">
+                            <Upload size={13} />
+                            <span className="truncate">{formData.bankbookFileName || '통장 사본 파일 첨부'}</span>
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              className="sr-only"
+                              onChange={(e) => handleFileUpload('bankbookFile', 'bankbookFileName', e.target.files?.[0] || null)}
+                            />
+                          </label>
+                          {formData.bankbookFile && (
+                            <button
+                              type="button"
+                              onClick={() => handleFileUpload('bankbookFile', 'bankbookFileName', null)}
+                              className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 4. 대표자(관리인) 확인서류 & 5. 대표자 신분증 사본 */}
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-between mb-1.5">
+                              <span>대표자(관리인) 확인서류</span>
+                              {formData.representativeCertFileName && <span className="text-[10px] text-emerald-600 font-semibold truncate max-w-[100px]">첨부됨</span>}
+                            </Label>
+                            <p className="text-[10.5px] text-zinc-400 mb-1.5">재직/임명장 또는 소속증명서</p>
+                            <label className="h-10 px-3 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-400 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors truncate">
+                              <Upload size={13} />
+                              <span className="truncate">{formData.representativeCertFileName || '확인서류 첨부'}</span>
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                className="sr-only"
+                                onChange={(e) => handleFileUpload('representativeCertFile', 'representativeCertFileName', e.target.files?.[0] || null)}
+                              />
+                            </label>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-between mb-1.5">
+                              <span>대표자 신분증 사본</span>
+                              {formData.representativeIdFileName && <span className="text-[10px] text-emerald-600 font-semibold truncate max-w-[100px]">첨부됨</span>}
+                            </Label>
+                            <p className="text-[10.5px] text-zinc-400 mb-1.5">주민등록증, 운전면허증 등</p>
+                            <label className="h-10 px-3 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-400 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer transition-colors truncate">
+                              <Upload size={13} />
+                              <span className="truncate">{formData.representativeIdFileName || '신분증 사본 첨부'}</span>
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                className="sr-only"
+                                onChange={(e) => handleFileUpload('representativeIdFile', 'representativeIdFileName', e.target.files?.[0] || null)}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 6. 대리인 신청 옵션 */}
+                      <div className="p-3.5 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/50">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={formData.isDelegated}
+                            onChange={(e) => setFormData({ ...formData, isDelegated: e.target.checked })}
+                            className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-zinc-300"
+                          />
+                          <span className="text-xs font-extrabold text-amber-900 dark:text-amber-200">
+                            대표자 본인이 아닌 대리인이 신청하는 경우 체크해 주세요
+                          </span>
+                        </label>
+
+                        {formData.isDelegated && (
+                          <div className="mt-3 pt-3 border-t border-amber-200/60 dark:border-amber-900/40 space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <Input
+                                placeholder="대리인 성명"
+                                className="h-10 text-xs bg-white dark:bg-zinc-900"
+                                value={formData.delegateName}
+                                onChange={(e) => setFormData({ ...formData, delegateName: e.target.value })}
+                              />
+                              <Input
+                                placeholder="대리인 연락처"
+                                className="h-10 text-xs bg-white dark:bg-zinc-900"
+                                value={formData.delegatePhone}
+                                onChange={(e) => setFormData({ ...formData, delegatePhone: e.target.value })}
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">대리인 위임장 사본</Label>
+                                <label className="h-10 px-3 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer truncate">
+                                  <Upload size={13} />
+                                  <span className="truncate">{formData.delegationLetterFileName || '위임장 첨부'}</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    className="sr-only"
+                                    onChange={(e) => handleFileUpload('delegationLetterFile', 'delegationLetterFileName', e.target.files?.[0] || null)}
+                                  />
+                                </label>
+                              </div>
+                              <div>
+                                <Label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">대리인 신분증 사본</Label>
+                                <label className="h-10 px-3 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900 flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer truncate">
+                                  <Upload size={13} />
+                                  <span className="truncate">{formData.delegateIdFileName || '대리인 신분증 첨부'}</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    className="sr-only"
+                                    onChange={(e) => handleFileUpload('delegateIdFile', 'delegateIdFileName', e.target.files?.[0] || null)}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  )}
                 </div>
               </div>
 

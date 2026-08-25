@@ -77,16 +77,36 @@ export interface Tenant {
   address: string;
   uniqueNumber?: string;              // 종교/비영리 단체 고유번호증 번호 (예: 240-82-12345)
   uniqueNumberFile?: string;          // 고유번호증 사본 파일 첨부 (선택)
-  businessRegistrationNumber?: string; // 수익사업용 사업자등록번호 (선택사항, 바자회/물품 판매용)
-  businessRegistrationFile?: string;   // 사업자등록증 사본 파일 첨부 (선택)
   businessInfo?: {
     uniqueNumber?: string;
     uniqueNumberFile?: string;
+    uniqueNumberFileName?: string;
     registrationNumber?: string;
     registrationFile?: string;
+    registrationFileName?: string;
     address?: string;
     representativeName?: string;
     taxInvoiceEmail?: string;
+    // 종교/비영리 단체 확인 서류
+    bylawsFile?: string;             // 정관 또는 회칙 사본
+    bylawsFileName?: string;
+    bankbookFile?: string;           // 단체명의 정산 통장 사본
+    bankbookFileName?: string;
+    bankName?: string;               // 정산 은행명
+    accountNumber?: string;          // 정산 계좌번호
+    accountHolder?: string;          // 예금주명
+    representativeCertFile?: string; // 대표자(관리인) 확인서류
+    representativeCertFileName?: string;
+    representativeIdFile?: string;   // 대표자 신분증 사본
+    representativeIdFileName?: string;
+    // 대리인 신청 정보
+    isDelegated?: boolean;           // 대리인 신청 여부
+    delegateName?: string;           // 대리인 성명
+    delegatePhone?: string;          // 대리인 연락처
+    delegationLetterFile?: string;   // 대리인 위임장
+    delegationLetterFileName?: string;
+    delegateIdFile?: string;         // 대리인 신분증 사본
+    delegateIdFileName?: string;
   };
   contact: {
     phone: string;

@@ -802,6 +802,160 @@ export default function TenantDetailPage() {
                   <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">단체 소재지 주소</Label>
                   <Input value={tenant.businessInfo?.address || tenant.address || ''} disabled className="bg-white dark:bg-zinc-900 text-sm font-semibold" />
                 </div>
+
+                {/* 추가 인증 서류들 (정관, 통장사본, 대표자확인서류, 대표자신분증, 대리인서류) */}
+                <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2.5">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300 block mb-1">
+                    종교/비영리 단체 인증 서류 확인
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {/* 정관/회칙 */}
+                    <div className="p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 truncate">정관 또는 회칙</p>
+                        <p className="text-[10px] text-slate-400 truncate">{tenant.businessInfo?.bylawsFile ? '사본 등록됨' : '미등록'}</p>
+                      </div>
+                      {tenant.businessInfo?.bylawsFile && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-indigo-600 font-bold"
+                          onClick={() => setDocModal({
+                            isOpen: true,
+                            title: '정관 / 회칙 사본 확인',
+                            docType: 'unique',
+                            number: '정관/회칙 사본',
+                            fileUrl: tenant.businessInfo?.bylawsFile,
+                          })}
+                        >
+                          보기
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* 정산 통장사본 */}
+                    <div className="p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 truncate">정산 통장 사본</p>
+                        <p className="text-[10px] text-slate-400 truncate">{tenant.businessInfo?.bankbookFile ? `${tenant.businessInfo.bankName || '통장'} 사본 등록됨` : '미등록'}</p>
+                      </div>
+                      {tenant.businessInfo?.bankbookFile && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-indigo-600 font-bold"
+                          onClick={() => setDocModal({
+                            isOpen: true,
+                            title: '정산 통장 사본 확인',
+                            docType: 'unique',
+                            number: tenant.businessInfo?.accountNumber ? `${tenant.businessInfo.bankName || ''} ${tenant.businessInfo.accountNumber}` : '통장 사본',
+                            fileUrl: tenant.businessInfo?.bankbookFile,
+                          })}
+                        >
+                          보기
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* 대표자 확인서류 */}
+                    <div className="p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 truncate">대표자 확인서류</p>
+                        <p className="text-[10px] text-slate-400 truncate">{tenant.businessInfo?.representativeCertFile ? '확인서류 등록됨' : '미등록'}</p>
+                      </div>
+                      {tenant.businessInfo?.representativeCertFile && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-indigo-600 font-bold"
+                          onClick={() => setDocModal({
+                            isOpen: true,
+                            title: '대표자(관리인) 확인서류',
+                            docType: 'unique',
+                            number: tenant.businessInfo?.representativeName || '대표자 확인서류',
+                            fileUrl: tenant.businessInfo?.representativeCertFile,
+                          })}
+                        >
+                          보기
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* 대표자 신분증 */}
+                    <div className="p-2.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 truncate">대표자 신분증</p>
+                        <p className="text-[10px] text-slate-400 truncate">{tenant.businessInfo?.representativeIdFile ? '신분증 사본 등록됨' : '미등록'}</p>
+                      </div>
+                      {tenant.businessInfo?.representativeIdFile && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-indigo-600 font-bold"
+                          onClick={() => setDocModal({
+                            isOpen: true,
+                            title: '대표자 신분증 사본 확인',
+                            docType: 'unique',
+                            number: '신분증 사본',
+                            fileUrl: tenant.businessInfo?.representativeIdFile,
+                          })}
+                        >
+                          보기
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* 대리인 서류 */}
+                    {tenant.businessInfo?.isDelegated && (
+                      <div className="p-2.5 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 truncate">대리인 위임장/신분증</p>
+                          <p className="text-[10px] text-amber-600 truncate">{tenant.businessInfo.delegateName ? `${tenant.businessInfo.delegateName} 대리인` : '위임 정보 등록됨'}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          {tenant.businessInfo.delegationLetterFile && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-[11px] px-1.5 text-amber-700 font-bold"
+                              onClick={() => setDocModal({
+                                isOpen: true,
+                                title: '대리인 위임장 확인',
+                                docType: 'unique',
+                                number: tenant.businessInfo?.delegateName || '대리인 위임장',
+                                fileUrl: tenant.businessInfo?.delegationLetterFile,
+                              })}
+                            >
+                              위임장
+                            </Button>
+                          )}
+                          {tenant.businessInfo.delegateIdFile && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-[11px] px-1.5 text-amber-700 font-bold"
+                              onClick={() => setDocModal({
+                                isOpen: true,
+                                title: '대리인 신분증 확인',
+                                docType: 'unique',
+                                number: '대리인 신분증',
+                                fileUrl: tenant.businessInfo?.delegateIdFile,
+                              })}
+                            >
+                              신분증
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -8,7 +8,7 @@ import { useNavigate, useParams } from 'react-router';
 import {
   ArrowLeft, Building2, Phone, Mail, User, MapPin,
   Clock, CheckCircle, XCircle, AlertCircle, Key,
-  RefreshCw, Globe, Shield,
+  RefreshCw, Globe, Shield, FileText, Eye, Download, FileCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { tenantAPI } from '../../api/client';
@@ -84,6 +84,7 @@ export default function PendingTenantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState<'approve' | 'reject' | null>(null);
   const [acting, setActing] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<{ title: string; fileUrl: string; fileName?: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -298,7 +299,7 @@ export default function PendingTenantDetailPage() {
         </div>
       </div>
 
-      {/* ── 카드 3: 브랜딩 (primaryColor만 — 신청폼 수집 항목) ── */}
+      {/* ── 카드 3: 브랜딩 (primaryColor) ── */}
       {tenant.primaryColor && (
         <div className={`${S.card} mb-4`}>
           <SectionHead icon={Globe} title="브랜딩" />
@@ -316,6 +317,191 @@ export default function PendingTenantDetailPage() {
         </div>
       )}
 
+      {/* ── 카드 4: 제출 서류 및 인증 정보 ── */}
+      {(() => {
+        const bInfo = tenant.businessInfo || {};
+        const uNum = tenant.uniqueNumber || bInfo.uniqueNumber;
+        const uFile = tenant.uniqueNumberFile || bInfo.uniqueNumberFile;
+        const uFileName = bInfo.uniqueNumberFileName;
+
+        const bFile = bInfo.bylawsFile;
+        const bFileName = bInfo.bylawsFileName;
+
+        const bkFile = bInfo.bankbookFile;
+        const bkFileName = bInfo.bankbookFileName;
+        const bankName = bInfo.bankName;
+        const accNum = bInfo.accountNumber;
+        const accHolder = bInfo.accountHolder;
+
+        const repCertFile = bInfo.representativeCertFile;
+        const repCertFileName = bInfo.representativeCertFileName;
+        const repIdFile = bInfo.representativeIdFile;
+        const repIdFileName = bInfo.representativeIdFileName;
+
+        const isDel = bInfo.isDelegated;
+        const delName = bInfo.delegateName;
+        const delPhone = bInfo.delegatePhone;
+        const delLetterFile = bInfo.delegationLetterFile;
+        const delIdFile = bInfo.delegateIdFile;
+
+        const hasAnyDocs = uNum || uFile || bFile || bkFile || repCertFile || repIdFile || isDel;
+
+        return (
+          <div className={`${S.card} mb-4`}>
+            <SectionHead icon={FileText} title="제출 서류 및 인증 검토" />
+            <div className={S.body}>
+              {!hasAnyDocs ? (
+                <div className="p-4 rounded-[8px] bg-slate-50 border border-slate-200 text-center">
+                  <p className="text-[12.5px] text-[var(--hm-ink-2)] font-medium">
+                    가입 신청 시 제출된 별도 서류가 없습니다. (승인 후 관리자 설정에서 제출 가능)
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* 고유번호증 */}
+                  <div className="flex items-center justify-between p-3 rounded-[8px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)]">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[var(--hm-ink-3)]">1. 종교/비영리 단체 고유번호증</p>
+                      <p className="text-[13px] font-mono font-bold text-[var(--hm-ink)] mt-0.5">
+                        {uNum || '번호 미입력'}
+                      </p>
+                    </div>
+                    <div>
+                      {uFile ? (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc({ title: '고유번호증 사본', fileUrl: uFile, fileName: uFileName })}
+                          className={S.btnGhost}
+                        >
+                          <Eye size={12} /> 서류 열람
+                        </button>
+                      ) : (
+                        <span className="text-[11.5px] text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded">사본 미첨부</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 정관 / 회칙 */}
+                  <div className="flex items-center justify-between p-3 rounded-[8px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)]">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[var(--hm-ink-3)]">2. 정관 또는 회칙</p>
+                      <p className="text-[12.5px] text-[var(--hm-ink)] mt-0.5">
+                        {bFileName || (bFile ? '정관/회칙 사본 첨부됨' : '미제출')}
+                      </p>
+                    </div>
+                    <div>
+                      {bFile ? (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc({ title: '정관/회칙 사본', fileUrl: bFile, fileName: bFileName })}
+                          className={S.btnGhost}
+                        >
+                          <Eye size={12} /> 서류 열람
+                        </button>
+                      ) : (
+                        <span className="text-[11.5px] text-slate-400">미제출</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 단체 정산 통장 사본 */}
+                  <div className="flex items-center justify-between p-3 rounded-[8px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)]">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[var(--hm-ink-3)]">3. 단체명의 정산 통장 사본</p>
+                      <p className="text-[12.5px] text-[var(--hm-ink)] mt-0.5">
+                        {bankName ? `${bankName} ${accNum || ''} (예금주: ${accHolder || '미입력'})` : (bkFileName || (bkFile ? '통장 사본 첨부됨' : '미제출'))}
+                      </p>
+                    </div>
+                    <div>
+                      {bkFile ? (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc({ title: '정산 통장 사본', fileUrl: bkFile, fileName: bkFileName })}
+                          className={S.btnGhost}
+                        >
+                          <Eye size={12} /> 서류 열람
+                        </button>
+                      ) : (
+                        <span className="text-[11.5px] text-slate-400">미제출</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 대표자 확인 서류 & 신분증 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex items-center justify-between p-3 rounded-[8px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)]">
+                      <div>
+                        <p className="text-[11px] font-semibold text-[var(--hm-ink-3)]">4. 대표자(관리인) 확인서류</p>
+                        <p className="text-[12px] text-[var(--hm-ink)] mt-0.5">{repCertFileName || (repCertFile ? '확인서류 첨부됨' : '미제출')}</p>
+                      </div>
+                      {repCertFile && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc({ title: '대표자 확인서류', fileUrl: repCertFile, fileName: repCertFileName })}
+                          className={S.btnGhost}
+                        >
+                          <Eye size={12} /> 열람
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-[8px] border border-[var(--hm-border)] bg-[var(--hm-paper-2)]">
+                      <div>
+                        <p className="text-[11px] font-semibold text-[var(--hm-ink-3)]">5. 대표자 신분증 사본</p>
+                        <p className="text-[12px] text-[var(--hm-ink)] mt-0.5">{repIdFileName || (repIdFile ? '신분증 사본 첨부됨' : '미제출')}</p>
+                      </div>
+                      {repIdFile && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc({ title: '대표자 신분증 사본', fileUrl: repIdFile, fileName: repIdFileName })}
+                          className={S.btnGhost}
+                        >
+                          <Eye size={12} /> 열람
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 대리인 신청 정보 */}
+                  {isDel && (
+                    <div className="p-3.5 rounded-[8px] border border-amber-200 bg-amber-50/50">
+                      <p className="text-[11px] font-bold text-amber-800 mb-2">대리인 위임 신청 서류</p>
+                      <div className={S.row2}>
+                        <Field label="대리인 성명 / 연락처">
+                          <p className={S.value}>{delName || '—'} {delPhone ? `(${delPhone})` : ''}</p>
+                        </Field>
+                        <Field label="대리인 위임장 / 신분증">
+                          <div className="flex gap-2">
+                            {delLetterFile && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDoc({ title: '대리인 위임장', fileUrl: delLetterFile })}
+                                className={S.btnGhost}
+                              >
+                                위임장 열람
+                              </button>
+                            )}
+                            {delIdFile && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDoc({ title: '대리인 신분증', fileUrl: delIdFile })}
+                                className={S.btnGhost}
+                              >
+                                신분증 열람
+                              </button>
+                            )}
+                          </div>
+                        </Field>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── 하단 액션 바 ── */}
       <div className="flex items-center justify-between mt-2 pt-4 border-t border-[var(--hm-border)]">
         <button onClick={() => navigate('/system/admin/tenants/pending')} className={S.btnGhost}>
@@ -323,6 +509,55 @@ export default function PendingTenantDetailPage() {
         </button>
         {actions}
       </div>
+
+      {/* 서류 미리보기 모달 */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-[16px] max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FileText className="text-blue-600 h-4 w-4" />
+                <h3 className="text-[13.5px] font-bold text-slate-900">{previewDoc.title}</h3>
+              </div>
+              <button
+                type="button"
+                className={S.btnGhost}
+                onClick={() => setPreviewDoc(null)}
+              >
+                닫기
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-slate-100 min-h-[300px]">
+              {previewDoc.fileUrl.startsWith('data:image/') || (previewDoc.fileUrl.startsWith('http') && (previewDoc.fileUrl.endsWith('.png') || previewDoc.fileUrl.endsWith('.jpg') || previewDoc.fileUrl.endsWith('.jpeg'))) ? (
+                <img
+                  src={previewDoc.fileUrl}
+                  alt={previewDoc.title}
+                  className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-sm"
+                />
+              ) : previewDoc.fileUrl.startsWith('data:application/pdf') ? (
+                <iframe
+                  src={previewDoc.fileUrl}
+                  title={previewDoc.title}
+                  className="w-full h-[60vh] rounded-lg border"
+                />
+              ) : (
+                <div className="text-center p-8">
+                  <FileCheck size={44} className="mx-auto text-blue-600 mb-3" />
+                  <p className="text-[13px] font-bold text-slate-800">서류 파일이 등록되어 있습니다</p>
+                  <p className="text-[11.5px] text-slate-500 mt-1 font-mono">{previewDoc.fileName || '서류 파일'}</p>
+                  <a
+                    href={previewDoc.fileUrl}
+                    download={previewDoc.fileName || 'document'}
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-[12px] font-semibold shadow hover:bg-blue-700"
+                  >
+                    <Download size={13} /> 다운로드하여 확인
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
