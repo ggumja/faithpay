@@ -428,6 +428,7 @@ export default function AdminAccountManagement() {
     setEditName(staff.name);
     setEditEmail(staff.email);
     setEditPhone(formatPhoneNumber(staff.phone));
+    setEditGroupId(staff.groupId || 'tenant_admin');
     setIsEditStaffModalOpen(true);
   };
 
