@@ -148,20 +148,6 @@ export const tenantAPI = {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-    if (!res.success) {
-      const local = localStorage.getItem('tenants');
-      if (local) {
-        try {
-          const list: Tenant[] = JSON.parse(local);
-          const idx = list.findIndex((t) => t.id === id || t.slug === id);
-          if (idx !== -1) {
-            list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
-            localStorage.setItem('tenants', JSON.stringify(list));
-            return { success: true, data: list[idx] };
-          }
-        } catch {}
-      }
-    }
     return res;
   },
 
@@ -239,20 +225,8 @@ export const tenantAPI = {
 
 export const paymentAPI = {
   async getConfig(tenantId: string): Promise<APIResponse<PaymentConfig>> {
-    try {
-      const res = await fetchAPI<PaymentConfig>(`/payment/${tenantId}`);
-      if (res.success && res.data) {
-        return res;
-      }
-      throw new Error(res.error || 'Config not found');
-    } catch (e) {
-      console.warn('getConfig failed, falling back to localStorage:', e);
-      const local = localStorage.getItem(`paymentConfig_${tenantId}`);
-      if (local) {
-        return { success: true, data: JSON.parse(local) };
-      }
-      return { success: false, error: 'Config not found' };
-    }
+    // DB 에서만 조회 — localStorage 폴백 삭제
+    return fetchAPI<PaymentConfig>(`/payment/${tenantId}`);
   },
 
   async saveConfig(
@@ -767,15 +741,10 @@ export const partnerAPI = {
       if (res.success) return res;
     } catch {}
 
-    // 로컬 스토리지에 파트너 상태 저장 (폴백)
-    try {
-      localStorage.setItem(`soulpay:partner_status:${id}`, status);
-      localStorage.setItem(`faithpay:partner_status:${id}`, status);
-    } catch {}
-
+    // localStorage 폴백 삭제 — API 실패 시 DB 미저장로 에러 반환
     return {
-      success: true,
-      data: { id, status } as any,
+      success: false,
+      error: '파트너 상태 DB 변경에 실패했습니다.',
     };
   },
 

@@ -100,14 +100,10 @@ export default function PartnerDetailPage() {
           if (subRes.success && Array.isArray(subRes.data)) {
             setSubAgents(subRes.data);
           } else {
-            // 폴백 하위 영업자
-            setSubAgents([
-              MOCK_FALLBACK_PARTNERS['partner-004'],
-              MOCK_FALLBACK_PARTNERS['partner-002'],
-            ].filter(Boolean));
+            setSubAgents([]);
           }
         } catch {
-          setSubAgents([MOCK_FALLBACK_PARTNERS['partner-004']]);
+          setSubAgents([]);
         }
       } else if (targetPartner.parentId) {
         // 영업자일 경우 상위 대리점 조회
@@ -115,9 +111,11 @@ export default function PartnerDetailPage() {
           const parentRes = await partnerAPI.getById(targetPartner.parentId);
           if (parentRes.success && parentRes.data) {
             setParentAgency(parentRes.data);
+          } else {
+            setParentAgency(null);
           }
         } catch {
-          setParentAgency(MOCK_FALLBACK_PARTNERS[targetPartner.parentId] || MOCK_FALLBACK_PARTNERS['partner-001']);
+          setParentAgency(null);
         }
       }
 
@@ -127,10 +125,10 @@ export default function PartnerDetailPage() {
         if (commRes.success && Array.isArray(commRes.data)) {
           setCommissions(commRes.data);
         } else {
-          setCommissions(generateMockCommissions(targetPartner));
+          setCommissions([]);
         }
       } catch {
-        setCommissions(generateMockCommissions(targetPartner));
+        setCommissions([]);
       }
 
       // 4. 유치 단체 목록 조회
@@ -159,48 +157,71 @@ export default function PartnerDetailPage() {
     }
   };
 
-
-  // 상태 관리 핸들러
-  const handleStatusChange = (newStatus: 'active' | 'suspended' | 'pending') => {
+  // 상태 관리 핸들러 — DB API 연동
+  const handleStatusChange = async (newStatus: 'active' | 'suspended' | 'pending') => {
     if (!partner) return;
-    setPartner({ ...partner, status: newStatus });
-    toast.success(`파트너 상태가 [${newStatus === 'active' ? '활성' : newStatus === 'suspended' ? '정지' : '대기'}]로 변경되었습니다.`);
-    setHistory(prev => [
-      { id: `h-${Date.now()}`, date: new Date().toLocaleString(), type: '상태 변경', detail: `계정 상태가 ${newStatus}로 변경됨`, by: '시스템 관리자' },
-      ...prev,
-    ]);
+    try {
+      const res = await partnerAPI.updateStatus(partner.id, newStatus as 'active' | 'suspended');
+      if (res.success) {
+        setPartner({ ...partner, status: newStatus });
+        toast.success(`파트너 상태가 [${newStatus === 'active' ? '활성' : newStatus === 'suspended' ? '정지' : '대기'}]로 DB 변경되었습니다.`);
+      } else {
+        toast.error(res.error || '상태 변경에 실패했습니다.');
+      }
+    } catch {
+      toast.error('상태 변경 중 오류가 발생했습니다.');
+    }
   };
 
-  // 수수료율 변경 처리
-  const handleSaveRate = () => {
+  // 수수료율 변경 — DB API 연동
+  const handleSaveRate = async () => {
     if (!partner) return;
-    setPartner({ ...partner, commissionRate: newRate });
-    setIsRateModalOpen(false);
-    toast.success(`수수료율이 ${newRate}%로 수정되었습니다.`);
-    setHistory(prev => [
-      { id: `h-${Date.now()}`, date: new Date().toLocaleString(), type: '수수료 변경', detail: `수수료율이 ${newRate}%로 수정됨`, by: '시스템 최고관리자' },
-      ...prev,
-    ]);
+    try {
+      const res = await partnerAPI.update(partner.id, { commissionRate: newRate });
+      if (res.success) {
+        setPartner({ ...partner, commissionRate: newRate });
+        setIsRateModalOpen(false);
+        toast.success(`수수료율이 ${newRate}%로 DB에 저장되었습니다.`);
+      } else {
+        toast.error(res.error || '수수료율 수정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('수수료율 저장 중 오류가 발생했습니다.');
+    }
   };
 
-  // 정산 계좌 변경 처리
-  const handleSaveBank = () => {
+  // 정산 계좌 변경 — DB API 연동
+  const handleSaveBank = async () => {
     if (!partner) return;
-    setPartner({ ...partner, bankName, accountNumber, accountHolder });
-    setIsBankModalOpen(false);
-    toast.success('정산 계좌 정보가 수정되었습니다.');
-    setHistory(prev => [
-      { id: `h-${Date.now()}`, date: new Date().toLocaleString(), type: '계좌 변경', detail: `${bankName} ${accountNumber} (${accountHolder}) 수정됨`, by: '시스템 관리자' },
-      ...prev,
-    ]);
+    try {
+      const res = await partnerAPI.update(partner.id, { bankName, accountNumber, accountHolder });
+      if (res.success) {
+        setPartner({ ...partner, bankName, accountNumber, accountHolder });
+        setIsBankModalOpen(false);
+        toast.success('정산 계좌 정보가 DB에 저장되었습니다.');
+      } else {
+        toast.error(res.error || '계좌 정보 수정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('계좌 정보 저장 중 오류가 발생했습니다.');
+    }
   };
 
-  // 파트너 기본 정보 수정 처리
-  const handleSaveEditInfo = () => {
+  // 파트너 기본 정보 수정 — DB API 연동
+  const handleSaveEditInfo = async () => {
     if (!partner) return;
-    setPartner({ ...partner, name: editName, email: editEmail, phone: editPhone });
-    setIsEditModalOpen(false);
-    toast.success('파트너 기본 정보가 수정되었습니다.');
+    try {
+      const res = await partnerAPI.update(partner.id, { name: editName, email: editEmail, phone: editPhone });
+      if (res.success) {
+        setPartner({ ...partner, name: editName, email: editEmail, phone: editPhone });
+        setIsEditModalOpen(false);
+        toast.success('파트너 기본 정보가 DB에 저장되었습니다.');
+      } else {
+        toast.error(res.error || '정보 수정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('파트너 정보 저장 중 오류가 발생했습니다.');
+    }
   };
 
   if (isLoading) {

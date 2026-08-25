@@ -42,8 +42,8 @@ export default function PartnerLogin() {
       if (res.success && Array.isArray(res.data)) {
         const found = res.data.find(a => a.email?.toLowerCase() === email.toLowerCase());
         if (found) {
-          localStorage.setItem('soulpay_partner_session', JSON.stringify(found));
-          localStorage.setItem('faithpay_partner_session', JSON.stringify(found));
+          // sessionStorage 사용 — 탭 닫힘 시 자동 파기
+          sessionStorage.setItem('faithpay_partner_session', JSON.stringify(found));
           toast.success(`${found.name}님, 환영합니다!`);
           if (found.role === 'sales_agent') {
             navigate('/agent/dashboard');

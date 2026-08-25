@@ -158,11 +158,8 @@ export default function AdminAccountManagement() {
     if (tenant) {
       setCurrentTenant(tenant);
 
-      // 1. 저장된 관리자 그룹 로드
-      const savedGroups = localStorage.getItem(`faithpay_groups_${tenant.id}`);
-      if (savedGroups) {
-        try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
-      }
+      // 관리자 그룹 — TODO: DB API 연동 시 tenantAPI.getGroups(tenant.id) 로 교체
+      // 현재는 DB 미지원으로 초기화 상태 유지 (localStorage 미사용)
 
       // 로컬 스토리지 잔재 계정 키 완전 파기 및 DB 실시간 직접 수신
       Object.keys(localStorage).forEach((key) => {
@@ -193,46 +190,28 @@ export default function AdminAccountManagement() {
         setStaffList([]);
       }
 
-      // 3. 저장된 권한 매트릭스 로드
-      const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
-      if (savedPerms) {
-        try {
-          const parsed = JSON.parse(savedPerms);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setPermissionMatrix(parsed);
-          }
-        } catch {}
-      } else {
-        setPermissionMatrix([
-          { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
-          { id: 'donations', menuName: '수납/보시 내역', path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
-          { id: 'recurring_pending', menuName: '정기결제 마감', path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-          { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-          { id: 'prayers', menuName: '지향문/축원', path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
-          { id: 'menu', menuName: '수납 항목 관리', path: '/admin/menu', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'none' } },
-          { id: 'members', menuName: '회원 관리', path: '/admin/members', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'read' } },
-          { id: 'settlement', menuName: '정산', path: '/admin/settlement', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-          { id: 'banners', menuName: '배너 관리', path: '/admin/banners', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-          { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-          { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
-        ]);
-      }
+      // 권한 매트릭스 — TODO: DB API 연동 시 tenantAPI.getPermissions(tenant.id) 로 교체
+      // 현재는 시스템 기본값 사용 (localStorage 미사용)
+      setPermissionMatrix([
+        { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
+        { id: 'donations', menuName: '수납/보시 내역', path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
+        { id: 'recurring_pending', menuName: '정기결제 마감', path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+        { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+        { id: 'prayers', menuName: '지향문/축원', path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
+        { id: 'menu', menuName: '수납 항목 관리', path: '/admin/menu', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'none' } },
+        { id: 'members', menuName: '회원 관리', path: '/admin/members', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'read' } },
+        { id: 'settlement', menuName: '정산', path: '/admin/settlement', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
+        { id: 'banners', menuName: '배너 관리', path: '/admin/banners', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+        { id: 'accounts', menuName: '관리자 계정 관리', path: '/admin/accounts', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+        { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
+      ]);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
 
 
-  useEffect(() => {
-    if (currentTenant && adminGroups.length > 0) {
-      localStorage.setItem(`faithpay_groups_${currentTenant.id}`, JSON.stringify(adminGroups));
-    }
-  }, [adminGroups, currentTenant]);
-
-  useEffect(() => {
-    if (currentTenant && permissionMatrix.length > 0) {
-      localStorage.setItem(`faithpay_permissions_${currentTenant.id}`, JSON.stringify(permissionMatrix));
-    }
-  }, [permissionMatrix, currentTenant]);
+  // TODO: 그룹/권한 변경 시 DB API (tenantAPI.updateGroups / updatePermissions) 연동 예정
+  // localStorage 저장 완전 제거됨
   if (!currentTenant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">

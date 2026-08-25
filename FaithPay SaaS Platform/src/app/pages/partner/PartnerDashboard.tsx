@@ -105,7 +105,7 @@ export default function PartnerDashboard() {
           phone: '010-1234-5678',
         };
         try {
-          const raw = localStorage.getItem('soulpay_partner_session') || localStorage.getItem('faithpay_partner_session');
+          const raw = sessionStorage.getItem('faithpay_partner_session');
           if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed && parsed.id) sessionPartner = parsed;
@@ -314,8 +314,7 @@ export default function PartnerDashboard() {
           <div className={S.sidefoot}>
             <button
               onClick={() => {
-                localStorage.removeItem('soulpay_partner_session');
-                localStorage.removeItem('faithpay_partner_session');
+                sessionStorage.removeItem('faithpay_partner_session');
                 toast.success('파트너 포털에서 로그아웃 되었습니다.');
                 navigate('/partner/login');
               }}

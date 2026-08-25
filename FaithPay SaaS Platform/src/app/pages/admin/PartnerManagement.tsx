@@ -155,34 +155,46 @@ export default function PartnerManagement() {
   };
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !phone) { toast.error('필수 정보를 입력해 주세요.'); return; }
     if (!businessNumber.trim()) { toast.error('사업자등록번호(또는 주민번호 앞 6자리)를 입력해 주세요.'); return; }
 
-    const newPartner: Partner = {
-      id: `partner-${Date.now()}`,
+    const newPartnerData = {
       name, email, phone, role,
       parentId: role === 'sales_agent' ? parentId || undefined : undefined,
       commissionRate,
       referralCode: referralCode || `${role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Math.floor(100 + Math.random() * 900)}`,
       bankName,
-      accountNumber: accountNumber || '110-000-000000',
+      accountNumber: accountNumber || '',
       accountHolder: accountHolder || name,
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
-      // 사업자 유형 정보
+      status: 'active' as const,
       businessType,
       businessNumber,
       taxEmail: businessType !== 'freelancer' ? taxEmail : undefined,
       representativeName: businessType === 'corporation' ? representativeName : undefined,
-    } as any;
+    };
 
-    setPartners([newPartner, ...partners]);
-    setIsModalOpen(false);
-    toast.success(`[${name}] ${role === 'master_agency' ? '영업 대리점' : '영업자'} 등록 완료!`);
-    setName(''); setEmail(''); setPhone(''); setReferralCode(''); setAccountNumber(''); setAccountHolder('');
-    setBusinessNumber(''); setTaxEmail(''); setRepresentativeName(''); setBusinessType('corporation');
+    try {
+      const res = await partnerAPI.create(newPartnerData as any);
+      if (res.success && res.data) {
+        // DB에서 받은 ID로 목록 갱신
+        const freshRes = await partnerAPI.getAll();
+        if (freshRes.success && Array.isArray(freshRes.data)) {
+          setPartners(freshRes.data);
+        } else {
+          setPartners(prev => [res.data as Partner, ...prev]);
+        }
+        setIsModalOpen(false);
+        toast.success(`[${name}] ${role === 'master_agency' ? '영업 대리점' : '영업자'} DB 등록 완료!`);
+        setName(''); setEmail(''); setPhone(''); setReferralCode(''); setAccountNumber(''); setAccountHolder('');
+        setBusinessNumber(''); setTaxEmail(''); setRepresentativeName(''); setBusinessType('corporation');
+      } else {
+        toast.error(res.error || '파트너 등록에 실패했습니다.');
+      }
+    } catch {
+      toast.error('파트너 등록 중 오류가 발생했습니다.');
+    }
   };
 
 

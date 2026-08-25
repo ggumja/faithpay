@@ -258,17 +258,12 @@ export default function TenantDetailPage() {
   };
 
   const handleSendPasswordReset = (adminName: string, adminEmail: string) => {
-    const dummyToken = `rst_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36)}`;
-    const resetUrl = `https://soulpay.info/${tenant?.slug || 'demo'}/reset-password?token=${dummyToken}`;
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(resetUrl).catch(() => {});
-    }
-
+    // TODO: 실제 비밀번호 재설정 이메일 발송은 서버 API 호출로 처리해야 합니다.
+    // 현재는 UI 알림만 표시합니다.
     toast.success(
-      `🔑 ${adminName} (${adminEmail}) 님께 비밀번호 재설정 전송 완료!`,
+      `🔑 ${adminName} (${adminEmail}) 님께 비밀번호 재설정 요청이 접수되었습니다.`,
       {
-        description: `재설정 링크가 이메일/알림톡으로 발송되었으며, 클립보드에도 복사되었습니다.`,
+        description: `서버 API 연동 후 실제 이메일/알림톡으로 발송됩니다.`,
         duration: 5000,
       }
     );
