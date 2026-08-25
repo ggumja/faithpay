@@ -669,6 +669,13 @@ export const partnerAPI = {
     return fetchAPI<Partner>(`/partners/${id}`);
   },
 
+  async create(partner: Omit<Partner, 'id' | 'createdAt'>): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>('/partners', {
+      method: 'POST',
+      body: JSON.stringify(partner),
+    });
+  },
+
   async createPartner(partner: Omit<Partner, 'id' | 'createdAt'>): Promise<APIResponse<Partner>> {
     return fetchAPI<Partner>('/partners', {
       method: 'POST',

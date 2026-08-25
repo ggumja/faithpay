@@ -1322,30 +1322,53 @@ export async function getPartnerById(id: string): Promise<Partner | null> {
   };
 }
 
-export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'>): Promise<Partner> {
+export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> & Record<string, any>): Promise<Partner> {
   const sb = pgClient();
+  const parentId = (partner.parentId && typeof partner.parentId === 'string' && partner.parentId.trim())
+    ? partner.parentId.trim()
+    : null;
+
+  const referralCode = partner.referralCode || `${partner.role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Math.floor(100 + Math.random() * 900)}`;
+
   const { data, error } = await sb
     .from('partners')
     .insert({
-      name: partner.name, email: partner.email, phone: partner.phone,
-      role: partner.role, parent_id: partner.parentId ?? null,
-      commission_rate: partner.commissionRate ?? 0,
-      agency_rate: partner.agencyRate ?? 0,
-      referral_code: partner.referralCode ?? '',
-      bank_name: partner.bankName ?? '', account_number: partner.accountNumber ?? '', account_holder: partner.accountHolder ?? '',
+      name: partner.name,
+      email: partner.email,
+      phone: partner.phone,
+      role: partner.role,
+      parent_id: parentId,
+      commission_rate: Number(partner.commissionRate ?? 0),
+      agency_rate: Number(partner.agencyRate ?? 0),
+      referral_code: referralCode,
+      bank_name: partner.bankName ?? '',
+      account_number: partner.accountNumber ?? '',
+      account_holder: partner.accountHolder ?? '',
       status: partner.status ?? 'active',
     })
     .select('*')
     .single();
-  if (error) throw new Error(`createPartner failed: ${error.message}`);
+
+  if (error) {
+    console.error('createPartner failed:', error);
+    throw new Error(`createPartner failed: ${error.message}`);
+  }
+
   return {
-    id: data.id, name: data.name, email: data.email, phone: data.phone,
-    role: data.role, parentId: data.parent_id,
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    role: data.role,
+    parentId: data.parent_id,
     commissionRate: Number(data.commission_rate ?? 0),
     agencyRate: Number(data.agency_rate ?? 0),
     referralCode: data.referral_code ?? '',
-    bankName: data.bank_name ?? '', accountNumber: data.account_number ?? '', accountHolder: data.account_holder ?? '',
-    status: data.status, createdAt: data.created_at,
+    bankName: data.bank_name ?? '',
+    accountNumber: data.account_number ?? '',
+    accountHolder: data.account_holder ?? '',
+    status: data.status,
+    createdAt: data.created_at,
   };
 }
 
