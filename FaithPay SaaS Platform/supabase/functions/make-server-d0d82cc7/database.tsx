@@ -233,6 +233,12 @@ function rowToTenant(r: any, paymentCfg?: any): Tenant {
     status: r.status ?? 'pending',
     appliedAt: r.applied_at,
     approvedAt: r.approved_at,
+    contractRate: Number(r.contract_rate ?? 3.0),
+    registrationSource: r.registration_source ?? undefined,
+    registeredByPartnerId: r.registered_by_partner_id ?? undefined,
+    registeredByReferralCode: r.registered_by_referral_code ?? undefined,
+    referralCode: r.registered_by_referral_code ?? undefined,
+    businessRegistrationNumber: r.business_registration_number ?? undefined,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     paymentConfig,
@@ -259,6 +265,19 @@ function tenantToRow(t: Partial<Tenant>): Record<string, any> {
   if (t.status        !== undefined) row.status         = t.status;
   if (t.appliedAt     !== undefined) row.applied_at     = t.appliedAt;
   if (t.approvedAt    !== undefined) row.approved_at    = t.approvedAt;
+  if (t.contractRate  !== undefined) row.contract_rate  = Number(t.contractRate);
+  if (t.registrationSource !== undefined) row.registration_source = t.registrationSource;
+  if (t.registeredByPartnerId !== undefined) {
+    row.registered_by_partner_id = (t.registeredByPartnerId && typeof t.registeredByPartnerId === 'string' && t.registeredByPartnerId.trim())
+      ? t.registeredByPartnerId.trim()
+      : null;
+  }
+  if (t.registeredByReferralCode !== undefined || t.referralCode !== undefined) {
+    row.registered_by_referral_code = t.registeredByReferralCode || t.referralCode || null;
+  }
+  if (t.businessRegistrationNumber !== undefined) {
+    row.business_registration_number = t.businessRegistrationNumber;
+  }
   return row;
 }
 

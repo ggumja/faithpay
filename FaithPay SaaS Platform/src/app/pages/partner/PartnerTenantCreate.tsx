@@ -69,16 +69,18 @@ export default function PartnerTenantCreate() {
   };
 
   useEffect(() => {
-    const sessionRaw = localStorage.getItem('soulpay_partner_session') || localStorage.getItem('faithpay_partner_session');
-    let sessionPartnerId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
     let sessionPartner: any = null;
-
-    if (sessionRaw) {
-      try {
+    try {
+      const sessionRaw =
+        sessionStorage.getItem('faithpay_partner_session') ||
+        localStorage.getItem('faithpay_partner_session') ||
+        localStorage.getItem('soulpay_partner_session');
+      if (sessionRaw) {
         sessionPartner = JSON.parse(sessionRaw);
-        if (sessionPartner?.id) sessionPartnerId = sessionPartner.id;
-      } catch { /* ignore */ }
-    }
+      }
+    } catch {}
+
+    const sessionPartnerId = sessionPartner?.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
     partnerAPI.getById(sessionPartnerId).then(res => {
       if (res.success && res.data) {
@@ -87,23 +89,21 @@ export default function PartnerTenantCreate() {
           role: sessionPartner?.role ?? res.data.role,
           name: sessionPartner?.name ?? res.data.name,
         });
+      } else if (sessionPartner) {
+        setMyPartner(sessionPartner);
       } else {
         partnerAPI.getAll().then(allRes => {
           const all = allRes.success && Array.isArray(allRes.data) ? allRes.data : [];
-          const found = all.find(x => x.id === sessionPartnerId || x.email === sessionPartner?.email);
-          if (found) {
-            setMyPartner({ ...found, role: sessionPartner?.role ?? found.role });
+          if (all.length > 0) {
+            setMyPartner(all[0]);
           }
         });
       }
     });
   }, []);
 
-
   // ── Guardrail 계산 ──────────────────────────────
-  let savedRatesTC: Record<string, number> = {};
-  try { savedRatesTC = JSON.parse(localStorage.getItem('soulpay:agent_rates') || localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
-  const agencyRate = (myPartner?.id && savedRatesTC[myPartner.id]) ?? (myPartner as any)?.agencyRate ?? 0.5;
+  const agencyRate = (myPartner?.commissionRate || (myPartner as any)?.agencyRate || 0.5);
   const floorRate  = +(feeConfig.pgCost + feeConfig.platformMargin + agencyRate).toFixed(2);
   const spread     = +(Math.max(0, contractRate - floorRate)).toFixed(2);
   const isValid    = contractRate >= floorRate;
@@ -112,7 +112,9 @@ export default function PartnerTenantCreate() {
   const handleSlugChange = (val: string) =>
     setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, ''));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const backUrl = myPartner?.role === 'sales_agent' ? '/agent/dashboard' : '/partner/dashboard';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !slug || !adminName || !adminPhone) {
       toast.error('필수 정보를 모두 입력해 주세요.');
@@ -174,14 +176,17 @@ export default function PartnerTenantCreate() {
       referralCode: myPartner?.referralCode,
     };
 
-    setTimeout(() => {
-      addTenant(newTenant);
+    try {
+      await addTenant(newTenant);
       setIsSubmitting(false);
       toast.success(
-        `[${name}] 계정 개설 신청 완료!\n계약율 ${contractRate}% · 영업자 스프레드 ${spread}%`
+        `[${name}] 계정 개설 신청 완료!\n계약율 ${contractRate}% · 영업 순마진 ${spread}%`
       );
-      navigate('/partner/dashboard');
-    }, 600);
+      navigate(backUrl);
+    } catch {
+      setIsSubmitting(false);
+      toast.error('단체 등록 중 오류가 발생했습니다.');
+    }
   };
 
   return (
@@ -189,11 +194,11 @@ export default function PartnerTenantCreate() {
       <div className="w-full max-w-2xl">
 
         <div className="mb-6 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/partner/dashboard')}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> 파트너 대시보드로 돌아가기
+          <Button variant="ghost" size="sm" onClick={() => navigate(backUrl)}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> {myPartner?.role === 'sales_agent' ? '영업자 대시보드로 돌아가기' : '대리점 대시보드로 돌아가기'}
           </Button>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-            영업자 전용 빠른 개설 모듈
+            {myPartner?.role === 'master_agency' ? '대리점 직접 개설 모듈' : '영업자 전용 빠른 개설 모듈'}
           </span>
         </div>
 
@@ -433,7 +438,7 @@ export default function PartnerTenantCreate() {
             </CardContent>
 
             <CardFooter className="bg-slate-50 p-6 border-t flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate('/partner/dashboard')}>취소</Button>
+              <Button type="button" variant="outline" onClick={() => navigate(backUrl)}>취소</Button>
               <Button type="submit" disabled={isSubmitting || !isValid}
                 className={`font-bold px-6 ${isValid ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}>
                 <CheckCircle2 className="w-4 h-4 mr-2" /> 1초 계정 즉시 생성 완료
