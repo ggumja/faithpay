@@ -175,7 +175,7 @@ export default function AdminAccountManagement() {
         } catch {}
       }
 
-      // 단체 대표 이메일 결정 (DB 동기화 또는 단체 slug 기반 공식 이메일)
+      // 단체 대표 이메일 및 대표자 성명 결정 (DB 동기화 및 플리커 방지)
       const primaryEmail = (
         tenant.contact?.email &&
         !tenant.contact.email.includes('joyful-church') &&
@@ -184,14 +184,17 @@ export default function AdminAccountManagement() {
         ? tenant.contact.email.trim().toLowerCase()
         : `admin@${(tenant.slug || 'soulpay').toLowerCase()}.or.kr`;
 
+      const primaryName =
+        tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사'
+          ? tenant.contact.name
+          : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자'));
+
       const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.toLowerCase() === primaryEmail);
 
       if (!hasPrimaryAccount || loadedStaff.length === 0) {
         const primaryAdmin: StaffAdminUser = {
           id: `admin-${tenant.id}-primary`,
-          name: (tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사')
-            ? tenant.contact.name
-            : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자')),
+          name: primaryName,
           email: primaryEmail,
           phone: tenant.contact?.phone || '',
           groupId: 'tenant_admin',
@@ -206,6 +209,11 @@ export default function AdminAccountManagement() {
         } else {
           loadedStaff = [primaryAdmin];
         }
+      } else {
+        // 새로고침 시 캐시와 단체 대표자 성명이 어긋나 깜빡이는 현상(Flicker) 방지
+        loadedStaff = loadedStaff.map((s) =>
+          s.email.toLowerCase() === primaryEmail ? { ...s, name: primaryName } : s
+        );
       }
 
       setStaffList(loadedStaff);
