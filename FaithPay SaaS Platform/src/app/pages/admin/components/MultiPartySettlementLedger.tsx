@@ -15,16 +15,26 @@ import { formatPhoneNumber } from '../../../utils/phoneUtils';
 import { toast } from 'sonner';
 import { partnerAPI } from '../../../api/client';
 
-/** ISO 날짜 문자열 → 'YYYY-MM-DD HH:mm' (KST) */
+/** ISO 날짜 문자열 → 'YYYY-MM-DD HH:mm:ss' (KST) */
 const fmtDate = (iso?: string | null): string => {
   if (!iso) return '-';
   try {
-    return new Date(iso).toLocaleString('ko-KR', {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Seoul',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hour12: false,
-    }).replace(/\. /g, '-').replace('.', '').replace(',', '');
-  } catch { return iso.slice(0, 16); }
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(d);
+    const m: Record<string, string> = {};
+    for (const p of parts) m[p.type] = p.value;
+    return `${m.year}-${m.month}-${m.day} ${m.hour}:${m.minute}:${m.second}`;
+  } catch { return iso.slice(0, 19).replace('T', ' '); }
 };
 
 interface LedgerItem {

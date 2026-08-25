@@ -38,8 +38,23 @@ const StatusBadge = ({ status }: { status: PartnerSettlement['status'] }) => {
 
 const fmt     = (n: number) => new Intl.NumberFormat('ko-KR').format(Math.round(n)) + '원';
 const fmtDate = (s: string) => {
-  try { return new Date(s).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
-  catch { return s; }
+  try {
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(d);
+    const m: Record<string, string> = {};
+    for (const p of parts) m[p.type] = p.value;
+    return `${m.year}-${m.month}-${m.day} ${m.hour}:${m.minute}:${m.second}`;
+  } catch { return s; }
 };
 
 /* ── 기간 필터 타입 ── */
