@@ -24,15 +24,43 @@ const S = {
   subText: 'text-[11px] text-slate-500 dark:text-zinc-400 mt-1.5 flex items-center gap-1',
 };
 
+interface OverviewMetrics {
+  grossAmount: number;
+  commissionTotal: number;
+  tenantPayout: number;
+  pgFeeTotal: number;
+  platformFeeTotal: number;
+  partnerFeeTotal: number;
+  feeDepositTotal: number;
+  partnerRateTotal: number;
+  paidCount: number;
+  pendingCount: number;
+  pendingAmount: number;
+}
+
 interface Overview {
-  thisMonth: { grossAmount: number; commissionTotal: number; paidCount: number; pendingCount: number; pendingAmount: number };
-  allTime:   { grossAmount: number; commissionTotal: number; paidCount: number };
+  thisMonth: OverviewMetrics;
+  allTime:   OverviewMetrics;
   partners:  { masterAgency: number; salesAgent: number };
 }
 
+const EMPTY_METRICS: OverviewMetrics = {
+  grossAmount: 0,
+  commissionTotal: 0,
+  tenantPayout: 0,
+  pgFeeTotal: 0,
+  platformFeeTotal: 0,
+  partnerFeeTotal: 0,
+  feeDepositTotal: 0,
+  partnerRateTotal: 1.0,
+  paidCount: 0,
+  pendingCount: 0,
+  pendingAmount: 0,
+};
+
 const EMPTY: Overview = {
-  thisMonth: { grossAmount: 0, commissionTotal: 0, paidCount: 0, pendingCount: 0, pendingAmount: 0 },
-  allTime:   { grossAmount: 0, commissionTotal: 0, paidCount: 0 },
+  thisMonth: EMPTY_METRICS,
+  allTime:   EMPTY_METRICS,
   partners:  { masterAgency: 0, salesAgent: 0 },
 };
 
@@ -43,9 +71,9 @@ export default function SettlementOverviewSection() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchOverview = async () => {
-    setLoading(true);
-    setError(null);
     try {
+      setLoading(true);
+      setError(null);
       const res = await fetch(`${API_BASE_URL}/admin/settlements/overview`);
 
       if (!res.ok) {
@@ -76,10 +104,13 @@ export default function SettlementOverviewSection() {
   const raw = timeRange === 'total' ? overview.allTime : overview.thisMonth;
   const stats = {
     grossAmount:   raw.grossAmount,
-    tenantPayout:  Math.round(raw.grossAmount * 0.97),   // 97% (PG 1.5% + 플랫폼 0.5% + 파트너 1%)
-    platformFee:   Math.round(raw.grossAmount * 0.005),
-    partnerFee:    overview.thisMonth.commissionTotal,
-    netProfit:     Math.round(raw.grossAmount * 0.003),
+    tenantPayout:  raw.tenantPayout ?? Math.round(raw.grossAmount * 0.97),
+    pgFee:         raw.pgFeeTotal ?? Math.round(raw.grossAmount * 0.015),
+    platformFee:   raw.platformFeeTotal ?? Math.round(raw.grossAmount * 0.005),
+    partnerFee:    raw.partnerFeeTotal ?? Math.round(raw.grossAmount * 0.01),
+    feeDeposit:    raw.feeDepositTotal ?? ((raw.platformFeeTotal ?? 0) + (raw.partnerFeeTotal ?? 0)),
+    partnerRate:   raw.partnerRateTotal ?? 1.0,
+    netProfit:     raw.platformFeeTotal ?? Math.round(raw.grossAmount * 0.005),
     pendingCount:  overview.thisMonth.pendingCount,
     pendingAmount: overview.thisMonth.pendingAmount,
   };
@@ -174,24 +205,24 @@ export default function SettlementOverviewSection() {
           <div className={S.kpiVal}>{stats.partnerFee.toLocaleString()}원</div>
           <div className={S.subText}>
             <span className="font-bold text-amber-600">
-              {overview.partners.masterAgency + overview.partners.salesAgent}명
+              {stats.partnerRate.toFixed(1)}%
             </span>
-            <span>대리점·영업자 배분금</span>
+            <span>대리점·영업자 배분금 ({overview.partners.masterAgency + overview.partners.salesAgent}명)</span>
           </div>
         </div>
 
-        {/* 5. 플랫폼 최종 순수익 */}
+        {/* 5. 수수료 계좌 정산 풀 */}
         <div className={S.card}>
           <div className={S.kpiTitle}>
-            <span>플랫폼 순수익 (Net)</span>
+            <span>수수료 계좌 정산 풀</span>
             <ShieldCheck className="h-4 w-4 text-indigo-600" />
           </div>
           <div className="text-2xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
-            {stats.netProfit.toLocaleString()}원
+            {stats.feeDeposit.toLocaleString()}원
           </div>
           <div className={S.subText}>
-            <span className="font-bold text-indigo-600">0.3%</span>
-            <span>최종 순이익금</span>
+            <span className="font-bold text-indigo-600">{(0.5 + stats.partnerRate).toFixed(1)}%</span>
+            <span>플랫폼(0.5%) + 파트너({stats.partnerRate.toFixed(1)}%)</span>
           </div>
         </div>
       </div>
@@ -233,7 +264,7 @@ export default function SettlementOverviewSection() {
               <span className="text-[11px] font-mono text-purple-700">1.5% 공제</span>
             </div>
             <div className="text-lg font-bold font-mono text-purple-950 dark:text-purple-100">
-              -{Math.round(stats.grossAmount * 0.015).toLocaleString()}원
+              -{stats.pgFee.toLocaleString()}원
             </div>
             <p className="text-[11px] text-purple-700 dark:text-purple-300">
               PG 원가 1.5% 자동 차감
@@ -246,7 +277,7 @@ export default function SettlementOverviewSection() {
             <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
               <span>3. 가맹단체 직정산 입금</span>
               <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">
-                {overview.thisMonth.paidCount}건 완료
+                {overview.thisMonth.paidCount + overview.thisMonth.pendingCount}건
               </Badge>
             </div>
             <div className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-100">
@@ -262,13 +293,15 @@ export default function SettlementOverviewSection() {
           <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
               <span>4. 수수료 계좌 입금</span>
-              <span className="text-[11px] font-mono text-amber-700">0.5% 분배</span>
+              <span className="text-[11px] font-mono text-amber-700">
+                플랫폼(0.5%) + 파트너({stats.partnerRate.toFixed(1)}%)
+              </span>
             </div>
             <div className="text-lg font-bold font-mono text-amber-950 dark:text-amber-100">
-              {stats.platformFee.toLocaleString()}원
+              {stats.feeDeposit.toLocaleString()}원
             </div>
             <p className="text-[11px] text-amber-700 dark:text-amber-300">
-              플랫폼(0.3%) + 파트너(0.2%)
+              플랫폼(0.5%: {stats.platformFee.toLocaleString()}원) + 파트너({stats.partnerRate.toFixed(1)}%: {stats.partnerFee.toLocaleString()}원)
             </p>
           </div>
         </div>

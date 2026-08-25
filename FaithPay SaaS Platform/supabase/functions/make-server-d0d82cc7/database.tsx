@@ -1866,50 +1866,118 @@ export async function getAdminSettlementLedger(opts?: {
 /**
  * 관리자 정산 개요 통계 — partner_commissions + partner_settlements 집계
  */
+/**
+ * 관리자 정산 개요 통계 — partner_commissions + partners 집계
+ */
 export async function getAdminSettlementOverview(): Promise<{
-  thisMonth: { grossAmount: number; commissionTotal: number; paidCount: number; pendingCount: number; pendingAmount: number };
-  allTime:   { grossAmount: number; commissionTotal: number; paidCount: number };
-  partners:  { masterAgency: number; salesAgent: number };
+  thisMonth: {
+    grossAmount: number;
+    commissionTotal: number;
+    tenantPayout: number;
+    pgFeeTotal: number;
+    platformFeeTotal: number;
+    partnerFeeTotal: number;
+    feeDepositTotal: number;
+    partnerRateTotal: number;
+    paidCount: number;
+    pendingCount: number;
+    pendingAmount: number;
+  };
+  allTime: {
+    grossAmount: number;
+    commissionTotal: number;
+    tenantPayout: number;
+    pgFeeTotal: number;
+    platformFeeTotal: number;
+    partnerFeeTotal: number;
+    feeDepositTotal: number;
+    partnerRateTotal: number;
+    paidCount: number;
+  };
+  partners: { masterAgency: number; salesAgent: number };
 }> {
   const supabase = pgClient();
   const now = new Date();
-  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
-  const [{ data: monthData }, { data: allData }, { data: partnerData }] = await Promise.all([
-    supabase.from('partner_commissions').select('donation_amount, commission_amount, settlement_status'),
-    supabase.from('partner_commissions').select('donation_amount, commission_amount, settlement_status'),
+  const [{ data: allRows }, { data: partnerData }] = await Promise.all([
+    supabase.from('partner_commissions').select('*'),
     supabase.from('partners').select('role').eq('status', 'active'),
   ]);
 
-  const rows = (allData ?? []);
-  const grossAmount = rows.reduce((s: number, r: any) => s + Number(r.donation_amount || 0), 0);
-  const commissionTotal = rows.reduce((s: number, r: any) => s + Number(r.commission_amount || 0), 0);
-  const count = rows.length;
+  const calcMetrics = (rows: any[]) => {
+    let grossAmount = 0;
+    let commissionTotal = 0;
+    let tenantPayout = 0;
+    let pgFeeTotal = 0;
+    let platformFeeTotal = 0;
+    let partnerFeeTotal = 0;
+    let feeDepositTotal = 0;
+    let paidCount = 0;
+    let pendingCount = 0;
+    let pendingAmount = 0;
+
+    for (const r of rows) {
+      const gross = Number(r.donation_amount || 0);
+      const contractRate = Number(r.contract_rate ?? 3.0);
+      const agencyRate = Number(r.agency_rate ?? 0.5);
+      const agentRate = Number(r.agent_rate ?? 0.5);
+
+      const commPool = Math.round(gross * (contractRate / 100));
+      const pg = Math.round(gross * 0.015);
+      const tenantPay = gross - commPool;
+      const platform = Math.round(gross * 0.005);
+      const partner = Math.round(gross * (agencyRate / 100)) + Math.round(gross * (agentRate / 100));
+      const feeDep = platform + partner;
+
+      grossAmount += gross;
+      commissionTotal += commPool;
+      tenantPayout += tenantPay;
+      pgFeeTotal += pg;
+      platformFeeTotal += platform;
+      partnerFeeTotal += partner;
+      feeDepositTotal += feeDep;
+
+      if (r.settlement_status === 'paid') {
+        paidCount++;
+      } else {
+        pendingCount++;
+        pendingAmount += commPool;
+      }
+    }
+
+    const partnerRateTotal = grossAmount > 0 ? (partnerFeeTotal / grossAmount) * 100 : 1.0;
+
+    return {
+      grossAmount,
+      commissionTotal,
+      tenantPayout,
+      pgFeeTotal,
+      platformFeeTotal,
+      partnerFeeTotal,
+      feeDepositTotal,
+      partnerRateTotal,
+      paidCount,
+      pendingCount,
+      pendingAmount,
+    };
+  };
+
+  const allMetrics = calcMetrics(allRows ?? []);
+  const monthRows = (allRows ?? []).filter((r: any) => !r.created_at || r.created_at >= monthStart);
+  const monthMetrics = calcMetrics(monthRows);
 
   const masterAgencyCount = (partnerData ?? []).filter((p: any) => p.role === 'master_agency').length;
   const salesAgentCount   = (partnerData ?? []).filter((p: any) => p.role === 'sales_agent').length;
 
   return {
-    thisMonth: {
-      grossAmount,
-      commissionTotal,
-      paidCount: 0,
-      pendingCount: count,
-      pendingAmount: commissionTotal,
-    },
-    allTime: {
-      grossAmount,
-      commissionTotal,
-      paidCount: 0,
-    },
+    thisMonth: monthMetrics,
+    allTime: allMetrics,
     partners: {
       masterAgency: masterAgencyCount || 1,
       salesAgent: salesAgentCount || 1,
     },
   };
-
-
-
 }
 
 /**
