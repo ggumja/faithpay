@@ -297,7 +297,7 @@ export default function TenantDetailPage() {
     if (!pgProvider || pgProvider === 'none') {
       setIsSaving(true);
       try {
-        await fetch(
+        const delRes = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-d0d82cc7/payment/${targetId}`,
           {
             method: 'DELETE',
@@ -306,10 +306,11 @@ export default function TenantDetailPage() {
             },
           }
         );
-        localStorage.removeItem(`paymentConfig_${targetId}`);
-        if (targetTenant?.slug) {
-          localStorage.removeItem(`paymentConfig_${targetTenant.slug}`);
+        if (!delRes.ok) {
+          const errBody = await delRes.text();
+          throw new Error(`DB 삭제 실패 (${delRes.status}): ${errBody}`);
         }
+        // localStorage 미사용 — DB만 신뢰
         if (targetTenant) {
           delete targetTenant.paymentConfig;
         }
@@ -319,11 +320,11 @@ export default function TenantDetailPage() {
         setApiKey('');
         setSecretKey('');
         setIsActive(false);
-        toast.success('PG 결제 설정이 미지정(해제) 상태로 저장되었습니다');
+        toast.success('PG 결제 설정이 DB에서 해제되었습니다');
         await fetchTenants();
-      } catch (e) {
+      } catch (e: any) {
         console.error('Error clearing payment config:', e);
-        toast.error('PG 설정 해제 중 오류가 발생했습니다');
+        toast.error(`PG 설정 해제 중 오류가 발생했습니다: ${e?.message ?? ''}`);
       } finally {
         setIsSaving(false);
       }
@@ -463,23 +464,23 @@ export default function TenantDetailPage() {
         updatedAt: new Date().toISOString(),
       };
 
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`DB 저장 실패 (${response.status}): ${errBody}`);
+      }
+
+      // localStorage 미사용 — DB 응답값만 신뢰
       if (targetTenant) {
         targetTenant.paymentConfig = newConfig;
         updateTenantInfo(targetTenant.id, { ...targetTenant, paymentConfig: newConfig });
       }
       setPaymentConfig(newConfig);
-      try {
-        localStorage.setItem(`paymentConfig_${targetId}`, JSON.stringify(newConfig));
-        if (targetTenant?.slug) {
-          localStorage.setItem(`paymentConfig_${targetTenant.slug}`, JSON.stringify(newConfig));
-        }
-      } catch {}
 
-      toast.success('결제 설정이 성공적으로 저장되었습니다');
+      toast.success('결제 설정이 DB에 성공적으로 저장되었습니다');
       await fetchTenants();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving payment config:', error);
-      toast.error('결제 설정 저장에 실패했습니다');
+      toast.error(`결제 설정 저장에 실패했습니다: ${error?.message ?? ''}`);
     } finally {
       setIsSaving(false);
     }
