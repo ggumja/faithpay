@@ -16,13 +16,6 @@ export default function SystemAdminLogin() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 이메일 패턴 fallback (DB 테이블 미생성 또는 서버 오류 시 임시 허용)
-  const legacyEmailFallback = (cleanEmail: string, pw: string): boolean => {
-    const ALLOWED = ['admin@soulpay.kr', 'system@soulpay.kr', 'admin@soulpay.com', 'admin@faithpay.kr'];
-    const isPat = ALLOWED.includes(cleanEmail) || cleanEmail.startsWith('admin') || cleanEmail.startsWith('system');
-    return isPat && pw.length >= 4;
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
@@ -35,7 +28,7 @@ export default function SystemAdminLogin() {
     setIsLoading(true);
 
     try {
-      // DB에서 시스템 관리자 인증
+      // DB에서 시스템 관리자 인증 (이메일 패턴 우회 없음)
       const res = await systemAdminAPI.login(cleanEmail, password);
       if (res.success && res.data) {
         const admin = res.data;
@@ -50,28 +43,14 @@ export default function SystemAdminLogin() {
         navigate('/system/admin');
         return;
       }
-      // DB에서 명시적으로 인증 실패(401/403) → 에러 메시지 표시
       toast.error(res.error ?? '이메일 또는 비밀번호가 올바르지 않습니다.');
-    } catch (err: any) {
-      // 서버 오류(500 등 — 예: system_admins 테이블 미생성) → 이메일 패턴 fallback
-      const isServerError = err?.status >= 500 || String(err).includes('500') || String(err).includes('Internal');
-      if (isServerError && legacyEmailFallback(cleanEmail, password)) {
-        setCurrentAdmin({
-          id: 'system_admin',
-          tenantId: 'system',
-          email: cleanEmail,
-          name: '시스템 최고 관리자',
-          role: 'system_admin',
-        });
-        toast.success('환영합니다! (DB 설정 후 비밀번호를 변경해 주세요)');
-        navigate('/system/admin');
-        return;
-      }
-      toast.error('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } catch {
+      toast.error('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-purple-500 selection:text-white relative overflow-hidden">
