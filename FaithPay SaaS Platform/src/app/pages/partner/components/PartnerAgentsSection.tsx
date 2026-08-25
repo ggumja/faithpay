@@ -39,10 +39,18 @@ export function PartnerAgentsSection({
 }: PartnerAgentsSectionProps) {
   const [agentSubTab, setAgentSubTab] = useState<'list' | 'overriding'>('list');
   const [showRegDialog, setShowRegDialog] = useState(false);
-  const [newAgentName,  setNewAgentName]  = useState('');
-  const [newAgentEmail, setNewAgentEmail] = useState('');
-  const [newAgentPhone, setNewAgentPhone] = useState('');
-  const [newAgentRate,  setNewAgentRate]  = useState(editAgencyRate);
+  const [newAgentName,           setNewAgentName]           = useState('');
+  const [newAgentEmail,          setNewAgentEmail]          = useState('');
+  const [newAgentPhone,          setNewAgentPhone]          = useState('');
+  const [newAgentReferralCode,   setNewAgentReferralCode]   = useState('');
+  const [newAgentRate,           setNewAgentRate]           = useState(editAgencyRate);
+  const [newAgentBusinessType,   setNewAgentBusinessType]   = useState<'corporation' | 'individual_business' | 'freelancer'>('freelancer');
+  const [newAgentBusinessNumber, setNewAgentBusinessNumber] = useState('');
+  const [newAgentRepresentative, setNewAgentRepresentative] = useState('');
+  const [newAgentTaxEmail,       setNewAgentTaxEmail]       = useState('');
+  const [newAgentBankName,       setNewAgentBankName]       = useState('신한은행');
+  const [newAgentAccountNumber,  setNewAgentAccountNumber]  = useState('');
+  const [newAgentAccountHolder,  setNewAgentAccountHolder]  = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
   // 영업자별 수수료 합산 (실제 DB commissions 원장 기반)
@@ -53,27 +61,62 @@ export function PartnerAgentsSection({
   };
 
 
-  const handleRegisterAgent = async () => {
-    if (!newAgentName.trim() || !newAgentEmail.trim()) {
-      toast.error('이름과 이메일은 필수입니다.');
+  const handleRegisterAgent = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newAgentName.trim() || !newAgentEmail.trim() || !newAgentPhone.trim()) {
+      toast.error('이름, 이메일, 연락처는 필수 항목입니다.');
       return;
     }
+    if (!newAgentBusinessNumber.trim()) {
+      toast.error(newAgentBusinessType === 'freelancer' ? '주민등록번호 앞 6자리를 입력해 주세요.' : '사업자등록번호를 입력해 주세요.');
+      return;
+    }
+
     setIsRegistering(true);
     try {
       const res = await partnerAPI.create({
-        name: newAgentName, email: newAgentEmail, phone: newAgentPhone,
-        role: 'sales_agent', parentId: partner.id, agencyRate: newAgentRate,
-        commissionRate: newAgentRate, referralCode: '',
+        name: newAgentName.trim(),
+        email: newAgentEmail.trim(),
+        phone: newAgentPhone.trim(),
+        role: 'sales_agent',
+        parentId: partner.id,
+        commissionRate: newAgentRate,
+        agencyRate: newAgentRate,
+        referralCode: newAgentReferralCode.trim() || `AGENT_${Math.floor(100 + Math.random() * 900)}`,
+        bankName: newAgentBankName,
+        accountNumber: newAgentAccountNumber.trim(),
+        accountHolder: newAgentAccountHolder.trim() || newAgentName.trim(),
+        status: 'active',
+        businessType: newAgentBusinessType,
+        businessNumber: newAgentBusinessNumber.trim(),
+        taxEmail: newAgentBusinessType !== 'freelancer' ? newAgentTaxEmail.trim() : undefined,
+        representativeName: newAgentBusinessType === 'corporation' ? newAgentRepresentative.trim() : undefined,
       } as any);
-      if (res.success) {
-        toast.success(`영업자 ${newAgentName}님이 등록되었습니다.`);
+
+      if (res.success && res.data) {
+        toast.success(`🎉 영업자 [${newAgentName}]님이 성공적으로 DB에 등록되었습니다.`);
         setShowRegDialog(false);
-        setNewAgentName(''); setNewAgentEmail(''); setNewAgentPhone('');
+        setNewAgentName('');
+        setNewAgentEmail('');
+        setNewAgentPhone('');
+        setNewAgentReferralCode('');
+        setNewAgentBusinessNumber('');
+        setNewAgentRepresentative('');
+        setNewAgentTaxEmail('');
+        setNewAgentAccountNumber('');
+        setNewAgentAccountHolder('');
+        setNewAgentBusinessType('freelancer');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
-        toast.error(res.error || '등록에 실패했습니다.');
+        toast.error(res.error || '영업자 등록에 실패했습니다.');
       }
-    } catch { toast.error('등록 중 오류가 발생했습니다.'); }
-    finally { setIsRegistering(false); }
+    } catch (err: any) {
+      toast.error(err.message || '영업자 등록 중 오류가 발생했습니다.');
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   // 대리점 본사 직접 유치 항목 생성 (영업자 목록 및 집계에 포함)
@@ -392,53 +435,236 @@ export function PartnerAgentsSection({
       )}
     </div>
 
-      {/* ── 신규 영업자 직접 등록 Dialog ── */}
+      {/* ── 신규 영업자 직접 등록 Modal ── */}
       {showRegDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-[var(--hm-paper)] rounded-2xl shadow-2xl border border-[var(--hm-border)] overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--hm-border)] bg-purple-50/60">
-              <div>
-                <h2 className="text-[14px] font-bold text-purple-950">영업자 직접 등록</h2>
-                <p className="text-[11px] text-purple-700 mt-0.5">신규 영업자를 대리점에서 직접 등록합니다</p>
-              </div>
-              <button onClick={() => setShowRegDialog(false)} className="p-1.5 rounded-lg hover:bg-purple-100 text-purple-400 cursor-pointer border-none bg-transparent">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">이름 <span className="text-red-500">*</span></Label>
-                <Input value={newAgentName} onChange={e => setNewAgentName(e.target.value)} placeholder="홍길동" className="text-xs h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">이메일 <span className="text-red-500">*</span></Label>
-                <Input type="email" value={newAgentEmail} onChange={e => setNewAgentEmail(e.target.value)} placeholder="agent@email.com" className="text-xs h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">연락처</Label>
-                <Input value={newAgentPhone} onChange={e => setNewAgentPhone(e.target.value)} placeholder="010-0000-0000" className="text-xs h-9" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">부여 수수료율 (%)</Label>
-                <div className="flex items-center gap-2">
-                  <Input type="number" step="0.1" min="0" max="3"
-                    value={newAgentRate} onChange={e => setNewAgentRate(parseFloat(e.target.value) || 0)}
-                    className="text-xs h-9 w-24 text-right font-mono font-bold" />
-                  <span className="text-sm font-bold text-slate-600">%</span>
-                  <span className="text-[10.5px] text-slate-400 flex-1">← 대리점 마진율 ({editAgencyRate}%) 이하 설정 권장</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-zinc-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-bold text-slate-900 dark:text-zinc-100">신규 영업자(Tier-2) 직접 등록</h2>
+                  <p className="text-[11.5px] text-purple-700 dark:text-purple-300 mt-0.5">
+                    🏢 소속 대리점: <strong>{partner.name}</strong> ({partner.referralCode})
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" className="flex-1 text-xs h-9" onClick={() => setShowRegDialog(false)}>취소</Button>
+              <button
+                onClick={() => setShowRegDialog(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-zinc-800 text-slate-400 cursor-pointer border-none bg-transparent"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleRegisterAgent} className="p-6 space-y-4 overflow-y-auto">
+              {/* 기본 정보 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">이름 / 법인명 *</Label>
+                  <Input
+                    placeholder="홍길동 / (주)에이전트"
+                    value={newAgentName}
+                    onChange={e => setNewAgentName(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">연락처 *</Label>
+                  <Input
+                    placeholder="010-1234-5678"
+                    value={newAgentPhone}
+                    onChange={e => setNewAgentPhone(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">로그인 이메일 (아이디) *</Label>
+                  <Input
+                    type="email"
+                    placeholder="agent@soulpay.kr"
+                    value={newAgentEmail}
+                    onChange={e => setNewAgentEmail(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">추천 코드 (미입력 시 자동)</Label>
+                  <Input
+                    placeholder="AGENT_001"
+                    value={newAgentReferralCode}
+                    onChange={e => setNewAgentReferralCode(e.target.value.toUpperCase())}
+                    className="h-8 text-xs font-mono uppercase bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* 사업자 유형 및 세무 정보 */}
+              <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
+                <div className="text-[11.5px] font-bold text-amber-900 flex items-center gap-1.5">
+                  🧾 사업자 유형 &amp; 세무 증빙 정보
+                </div>
+                {/* 사업자 유형 선택 버튼 */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { key: 'corporation',         label: '🏢 법인사업자',   desc: '전자세금계산서', color: 'border-blue-500 bg-blue-50 text-blue-900' },
+                    { key: 'individual_business', label: '🏬 일반과세자',   desc: '전자세금계산서', color: 'border-green-500 bg-green-50 text-green-900' },
+                    { key: 'freelancer',          label: '👤 프리랜서',     desc: '3.3% 원천징수',  color: 'border-orange-500 bg-orange-50 text-orange-900' },
+                  ].map(({ key, label, desc, color }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setNewAgentBusinessType(key as any)}
+                      className={`py-2 px-2 rounded-lg border text-[10.5px] font-bold text-center cursor-pointer transition-all flex flex-col items-center gap-0.5
+                        ${newAgentBusinessType === key ? color : 'bg-white border-slate-200 text-slate-500'}`}
+                    >
+                      {label}
+                      <span className="font-normal text-[9px] opacity-75">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* 사업자등록번호 / 주민번호 앞 6자리 */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10.5px] font-bold text-slate-700">
+                      {newAgentBusinessType === 'freelancer' ? '주민등록번호 앞 6자리 *' : '사업자등록번호 *'}
+                    </Label>
+                    <Input
+                      placeholder={newAgentBusinessType === 'freelancer' ? '920110' : '107-88-39201'}
+                      value={newAgentBusinessNumber}
+                      onChange={e => setNewAgentBusinessNumber(e.target.value)}
+                      className="h-7 text-xs bg-white font-mono"
+                      required
+                    />
+                  </div>
+                  {newAgentBusinessType === 'corporation' && (
+                    <div className="space-y-1">
+                      <Label className="text-[10.5px] font-bold text-slate-700">대표자명</Label>
+                      <Input
+                        placeholder="홍길동"
+                        value={newAgentRepresentative}
+                        onChange={e => setNewAgentRepresentative(e.target.value)}
+                        className="h-7 text-xs bg-white"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 세금계산서 수신 이메일 */}
+                {newAgentBusinessType !== 'freelancer' && (
+                  <div className="space-y-1">
+                    <Label className="text-[10.5px] font-bold text-slate-700">전자세금계산서 수신 이메일</Label>
+                    <Input
+                      type="email"
+                      placeholder="tax@partner.co.kr"
+                      value={newAgentTaxEmail}
+                      onChange={e => setNewAgentTaxEmail(e.target.value)}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                )}
+
+                <div className={`text-[10.5px] px-2.5 py-1.5 rounded-lg font-medium ${
+                  newAgentBusinessType === 'freelancer' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {newAgentBusinessType === 'freelancer'
+                    ? '⚡ 3.3% 사업소득세 원천징수 후 지급 → 원천징수 영수증 발행'
+                    : '⚡ 부가가치세 포함 전자세금계산서 발행 → 세금계산서 합계액 지급'}
+                </div>
+              </div>
+
+              {/* 수수료율 + 정산 계좌 정보 */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-bold text-slate-800">영업자 지급 수수료율 (%) *</Label>
+                    <p className="text-[10.5px] text-slate-400">대리점 마진율({editAgencyRate}%) 이하 설정을 권장합니다.</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="3"
+                      value={newAgentRate}
+                      onChange={e => setNewAgentRate(parseFloat(e.target.value) || 0)}
+                      className="w-20 h-7 text-right font-bold text-xs bg-white text-purple-900"
+                    />
+                    <span className="text-xs font-bold text-slate-600">%</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-200">
+                  <div className="space-y-1">
+                    <Label className="text-[10.5px] font-bold text-slate-600">은행명</Label>
+                    <Input
+                      placeholder="신한은행"
+                      value={newAgentBankName}
+                      onChange={e => setNewAgentBankName(e.target.value)}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10.5px] font-bold text-slate-600">계좌번호</Label>
+                    <Input
+                      placeholder="110-000-000000"
+                      value={newAgentAccountNumber}
+                      onChange={e => setNewAgentAccountNumber(e.target.value)}
+                      className="h-7 text-xs bg-white font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10.5px] font-bold text-slate-600">예금주</Label>
+                    <Input
+                      placeholder={newAgentName || '예금주'}
+                      value={newAgentAccountHolder}
+                      onChange={e => setNewAgentAccountHolder(e.target.value)}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 초기 임시 비밀번호 안내 */}
+              <div className="p-2.5 bg-purple-50/70 border border-purple-200 rounded-lg flex items-center justify-between text-xs text-purple-900">
+                <span className="font-semibold">초기 로그인 비밀번호:</span>
+                <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border border-purple-200">admin1234!</span>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
                 <Button
-                  className="flex-1 text-xs h-9 bg-purple-600 hover:bg-purple-700 text-white font-bold"
-                  disabled={isRegistering}
-                  onClick={handleRegisterAgent}
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-xs h-9"
+                  onClick={() => setShowRegDialog(false)}
                 >
-                  {isRegistering ? '등록 중...' : '영업자 등록'}
+                  취소
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 text-xs h-9 bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md"
+                  disabled={isRegistering}
+                >
+                  {isRegistering ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>DB 등록 중...</span>
+                    </div>
+                  ) : (
+                    '영업자 등록 완료'
+                  )}
                 </Button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
