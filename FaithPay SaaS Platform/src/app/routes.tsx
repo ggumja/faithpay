@@ -69,11 +69,19 @@ export const router = createBrowserRouter([
         Component: PartnerLogin,
       },
       {
+        path: "/agency/login",
+        Component: PartnerLogin,
+      },
+      {
         path: "/partner/apply",
         Component: PartnerApply,
       },
       {
         path: "/partner/dashboard",
+        Component: PartnerDashboard,
+      },
+      {
+        path: "/agency/dashboard",
         Component: PartnerDashboard,
       },
       {
