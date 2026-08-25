@@ -203,7 +203,7 @@ export const defaultTenants: Tenant[] = [
     address: '서울특별시 강남구 테헤란로 123',
     contact: {
       phone: '02-1234-5678',
-      email: 'contact@gracechurch.or.kr',
+      email: 'admin@grace.or.kr',
       name: '홍길동 목사',
     },
     schedule: [
@@ -232,7 +232,7 @@ export const defaultTenants: Tenant[] = [
     address: '충청남도 천안시 동남구 각원사길 245',
     contact: {
       phone: '041-561-3545',
-      email: 'info@gakwonsa.or.kr',
+      email: 'admin@gakwonsa.or.kr',
       name: '대웅 스님',
     },
     schedule: [
@@ -260,7 +260,7 @@ export const defaultTenants: Tenant[] = [
     address: '서울특별시 중구 명동길 74',
     contact: {
       phone: '02-774-1784',
-      email: 'md@catholic.or.kr',
+      email: 'admin@myeongdong.or.kr',
       name: '김성당 신부',
     },
     schedule: [
@@ -288,7 +288,7 @@ export const defaultTenants: Tenant[] = [
     address: '서울특별시 서초구 반포대로 45',
     contact: {
       phone: '02-555-1004',
-      email: 'help@hope.org',
+      email: 'admin@sample.org',
       name: '이희망 이사장',
     },
     schedule: [
