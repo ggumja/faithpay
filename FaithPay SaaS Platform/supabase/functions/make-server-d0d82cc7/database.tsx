@@ -313,37 +313,47 @@ export async function deleteTenant(id: string): Promise<boolean> {
 
 export async function setPaymentConfig(config: Omit<PaymentConfig, 'updatedAt'>): Promise<PaymentConfig> {
   const sb = pgClient();
+  const realTenantId = await resolveTenantUUID(config.tenantId);
   const now = new Date().toISOString();
+  const fullConfig = { ...config, tenantId: realTenantId, updatedAt: now };
   const row = {
-    tenant_id:      config.tenantId,
-    config_json:    JSON.stringify({ ...config, updatedAt: now }),
+    tenant_id:      realTenantId,
+    provider_code:  'legacy',
+    config_json:    JSON.stringify(fullConfig),
+    is_enabled:     config.isActive ?? true,
     updated_at:     now,
   };
-  // tenant_payment_providers에 JSONB 콼럼으로 저장 (upsert by tenant_id)
+  // tenant_payment_providers에 upsert
   await sb
     .from('tenant_payment_providers')
-    .upsert({ tenant_id: config.tenantId, provider_code: 'legacy', config_json: row.config_json, is_enabled: config.isActive ?? true, updated_at: now })
-    .eq('tenant_id', config.tenantId);
-  return { ...config, updatedAt: now };
+    .upsert(row, { onConflict: 'tenant_id,provider_code' });
+  return fullConfig;
 }
 
-export async function getPaymentConfig(tenantId: string): Promise<PaymentConfig | null> {
+export async function getPaymentConfig(tenantIdOrSlug: string): Promise<PaymentConfig | null> {
   const sb = pgClient();
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
   const { data } = await sb
     .from('tenant_payment_providers')
     .select('*')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', realTenantId)
     .maybeSingle();
-  if (!data) return null;
+  if (!data) {
+    // 테넌트 테이블 자체에 paymentConfig가 있으면 확인
+    const tenant = await getTenantById(realTenantId);
+    if (tenant?.paymentConfig) return tenant.paymentConfig;
+    return null;
+  }
   try {
     const parsed = typeof data.config_json === 'string' ? JSON.parse(data.config_json) : data.config_json;
     return parsed as PaymentConfig;
   } catch { return null; }
 }
 
-export async function deletePaymentConfig(tenantId: string): Promise<boolean> {
+export async function deletePaymentConfig(tenantIdOrSlug: string): Promise<boolean> {
   const sb = pgClient();
-  await sb.from('tenant_payment_providers').delete().eq('tenant_id', tenantId);
+  const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
+  await sb.from('tenant_payment_providers').delete().eq('tenant_id', realTenantId);
   return true;
 }
 

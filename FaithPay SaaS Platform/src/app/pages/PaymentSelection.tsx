@@ -76,10 +76,12 @@ export default function PaymentSelection() {
   }, [tenantSlug, tenants, setCurrentTenant]);
 
   useEffect(() => {
-    if (currentTenant?.id) {
-      paymentAPI.getConfig(currentTenant.id).then(res => {
+    const targetKey = currentTenant?.id || currentTenant?.slug || tenantSlug;
+    if (targetKey) {
+      paymentAPI.getConfig(targetKey).then(res => {
         if (res.success && res.data) {
-          setPgProvider(res.data.pgProvider || '');
+          const activePg = res.data.pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay';
+          setPgProvider(activePg);
           setEnableCard(res.data.enableCard !== undefined ? res.data.enableCard : true);
           setEnableVBank(res.data.enableVBank !== undefined ? res.data.enableVBank : true);
 
@@ -107,10 +109,17 @@ export default function PaymentSelection() {
           } else if (res.data.enableVBank !== false) {
             setPaymentMethod('bank');
           }
+        } else {
+          // fallback 기본 나노PG
+          const fallbackPg = currentTenant?.paymentConfig?.pgProvider || 'nanopay';
+          setPgProvider(fallbackPg);
         }
+      }).catch(() => {
+        const fallbackPg = currentTenant?.paymentConfig?.pgProvider || 'nanopay';
+        setPgProvider(fallbackPg);
       });
     }
-  }, [currentTenant]);
+  }, [currentTenant, tenantSlug]);
 
   if (!currentTenant) {
     return (
@@ -244,7 +253,7 @@ export default function PaymentSelection() {
     }
 
     // 토스페이먼츠(TossPayments) 결제 처리 (단발성 및 정기결제 빌링키 지원)
-    if (pgProvider === 'toss') {
+    if (activePg === 'toss') {
       setIsProcessing(true);
       toast.info('토스페이먼츠(TossPayments) 결제 모듈을 연결하고 있습니다...');
       
@@ -299,23 +308,23 @@ export default function PaymentSelection() {
           if (err.code === 'USER_CANCEL') {
             toast.info('결제가 취소되었습니다.');
           } else {
-            toast.success('토스페이먼츠 결제가 성공적으로 완료되었습니다.');
-            navigate(`/${tenantSlug}/complete`);
+            console.error('Toss payment error:', err);
+            toast.error(`결제 실패: ${err.message || '오류가 발생했습니다.'}`);
           }
           setIsProcessing(false);
         });
       } catch (err) {
-        console.error('Toss Payments Error:', err);
-        toast.success('토스페이먼츠 정기 결제 처리가 완료되었습니다.');
-        setTimeout(() => navigate(`/${tenantSlug}/complete`), 1000);
+        console.error('Toss payment init error:', err);
+        toast.error('토스페이먼츠 모듈 로드에 실패했습니다.');
+        setIsProcessing(false);
       }
       return;
     }
 
-    // 나노 PG 정기결제(빌키 발급) 처리 - 자급식 100% 독립 전송
-    if (pgProvider === 'nanopay' && donationFormData.isRecurring) {
+    // 나노 PG 정기결제 빌링키 자동 발급 (창 호출 방식)
+    if (donationFormData.isRecurring && activePg === 'nanopay') {
       setIsProcessing(true);
-      toast.info('정기결제 카드 등록 창을 요청하고 있습니다...');
+      toast.info('정기결제 카드 등록창을 연결하고 있습니다...');
       
       try {
         const paymentWindow = window.open('about:blank', 'NanopayBillKey', 'width=650,height=700,scrollbars=yes,resizable=yes');
@@ -325,57 +334,62 @@ export default function PaymentSelection() {
           return;
         }
 
-        paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제 안전 카드 등록창으로 연결 중입니다...</p>');
+        paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제(빌링키) 등록창으로 연결 중입니다...</p>');
 
-        // 1. 빌키 발급 파라미터 준비 (나노페이 v2.2.1 규격)
-        const ver = "240000005";
-        const loginId = "smbtestshop";
         const shopcode = "240000006";
+        const loginId = "smbtestshop";
+        const ver = "smbtest";
         const apiKey = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-        const cleanPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
-        const userId = `${currentTenant.id}_${cleanPhone}`;
-        const timestamp = Date.now().toString();
-        const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
+        
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();
+        const donorName = donationFormData.name || "신도";
+        const donorPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
 
-        // 2. Web Crypto API를 사용한 hashValue 대문자 연산: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO")
-        const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${apiKey}NANO`;
-        const msgBuffer = new TextEncoder().encode(hashRaw);
+        const isMobile = window.innerWidth <= 768;
+        const nanoUrl = isMobile 
+          ? 'https://dev3.nanopay.co.kr/api/billkey/mobile/request.io'
+          : 'https://dev3.nanopay.co.kr/api/billkey/pc/request.io';
+
+        const hashRawString = `${shopcode}${ediDate}${loginId}${apiKey}`;
+        const msgBuffer = new TextEncoder().encode(hashRawString);
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashValue = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 
-        const tempSubId = `sub_${Date.now()}`;
         const compData = JSON.stringify({
-          tempSubId,
           tenantId: currentTenant.id,
-          donorName: donationFormData.name,
-          donorPhone: cleanPhone,
-          donorEmail: donationFormData.email || "",
-          itemId: donationFormData.itemId || "recurring",
-          itemName: donationFormData.itemName || "정기 봉헌금",
-          amount: donationFormData.amount,
-          recurringInterval: recurringInterval,
-          recurringDayOfWeek: recurringDayOfWeek,
-          recurringDay: recurringDay,
+          donationData: {
+            ...donationFormData,
+            recurringInterval,
+            recurringDayOfWeek: recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
+            recurringDay: recurringInterval === 'monthly' ? recurringDay : undefined,
+          }
         });
 
-
-        const reqUrl = 'https://dev3.nanopay.co.kr/api/payment/recure/reqkey.io';
-
-        // 3. 나노페이 빌키 발급 팝업창 폼 주입
         const payFormHtml = `
           <!DOCTYPE html>
           <html>
-          <head><meta charset="utf-8"><title>Nanopay Recurring Setup</title></head>
+          <head><meta charset="utf-8"><title>Nanopay BillKey Registration</title></head>
           <body>
-            <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 정기결제 카드 등록창으로 이동 중입니다...</p>
-            <form id="nanoBillKeyForm" method="POST" action="${reqUrl}">
+            <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 정기결제 등록창으로 이동 중입니다...</p>
+            <form id="nanoBillKeyForm" method="POST" action="${nanoUrl}">
               <input type="hidden" name="ver" value="${ver}" />
               <input type="hidden" name="loginId" value="${loginId}" />
               <input type="hidden" name="shopcode" value="${shopcode}" />
-              <input type="hidden" name="userId" value="${userId}" />
-              <input type="hidden" name="receiveUrl" value="${receiveUrl}" />
-              <input type="hidden" name="timestamp" value="${timestamp}" />
+              <input type="hidden" name="apiKey" value="${apiKey}" />
+              <input type="hidden" name="API_KEY" value="${apiKey}" />
+              <input type="hidden" name="orderName" value="${donorName}" />
+              <input type="hidden" name="orderTel" value="${donorPhone}" />
+              <input type="hidden" name="orderEmail" value="donator@faithpay.kr" />
+              <input type="hidden" name="payWay" value="card" />
+              <input type="hidden" name="goodsName" value="${donationFormData.itemName || 'FaithPay 정기 봉헌금'}" />
+              <input type="hidden" name="receiveUrl" value="https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/billkey/cert/callback" />
+              <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
+              <input type="hidden" name="compOrderMem" value="${donorName}" />
+              <input type="hidden" name="ediDate" value="${ediDate}" />
               <input type="hidden" name="hashValue" value="${hashValue}" />
               <input type="hidden" name="compData" value='${compData}' />
             </form>
@@ -404,8 +418,8 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 나노 PG 일반 인증결제 처리
-    if (pgProvider === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
+    // 나노 PG 일반 인증결제 처리 (일반 결제창 모드)
+    if (activePg === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
       setIsProcessing(true);
       toast.info('결제창을 요청하고 있습니다...');
       
@@ -445,7 +459,7 @@ export default function PaymentSelection() {
           ? 'https://dev3.nanopay.co.kr/api/payment/cert/mobile/request.io'
           : 'https://dev3.nanopay.co.kr/api/payment/cert/pc/request';
 
-        // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입 (기존 방식 유지)
+        // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입
         const payFormHtml = `
           <!DOCTYPE html>
           <html>
@@ -496,7 +510,7 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 수기결제 카드 입력값 검증
+    // 수기결제 카드 입력값 검증 (cardPaymentType === 'manual' 모드일 때만 실행)
     if (!cardNumber || !expiry || !password || !birth) {
       toast.error('카드 정보를 모두 입력해주세요.');
       return;
