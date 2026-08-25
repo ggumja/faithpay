@@ -176,7 +176,45 @@ export interface AdminUser {
 // ==================== TENANT OPERATIONS ====================
 
 /** DB row → Tenant 인터페이스 변환 */
-function rowToTenant(r: any): Tenant {
+function rowToTenant(r: any, paymentCfg?: any): Tenant {
+  let paymentConfig = r.payment_config;
+  if (paymentCfg) {
+    paymentConfig = {
+      tenantId: paymentCfg.tenant_id,
+      pgProvider: paymentCfg.pg_provider || 'nanopay',
+      apiKey: paymentCfg.api_key || '',
+      secretKey: paymentCfg.secret_key || '',
+      mid: paymentCfg.mid || '',
+      loginId: paymentCfg.login_id || '',
+      iv: paymentCfg.iv || '',
+      ver: paymentCfg.ver || '',
+      enableCard: paymentCfg.enable_card ?? true,
+      enableEasyPayment: paymentCfg.enable_easy_payment ?? true,
+      enableVBank: paymentCfg.enable_vbank ?? true,
+      isActive: paymentCfg.is_active ?? true,
+      kakaoCid: paymentCfg.kakao_cid || '',
+      kakaoSecretKey: paymentCfg.kakao_secret_key || '',
+      kakaoMode: paymentCfg.kakao_mode || 'test',
+      enableKakaoPay: paymentCfg.enable_kakao_pay ?? false,
+      naverPartnerId: paymentCfg.naver_partner_id || '',
+      naverClientId: paymentCfg.naver_client_id || '',
+      naverClientSecret: paymentCfg.naver_client_secret || '',
+      naverMode: paymentCfg.naver_mode || 'test',
+      enableNaverPay: paymentCfg.enable_naver_pay ?? false,
+      tossPayMid: paymentCfg.toss_pay_mid || '',
+      tossPayApiKey: paymentCfg.toss_pay_api_key || '',
+      tossPaySecretKey: paymentCfg.toss_pay_secret_key || '',
+      tossPayMode: paymentCfg.toss_pay_mode || 'test',
+      enableTossPay: paymentCfg.enable_toss_pay ?? false,
+      providerConfigs: paymentCfg.provider_configs || {},
+      updatedAt: paymentCfg.updated_at,
+    };
+  }
+
+  const isLive = paymentConfig
+    ? (paymentConfig.isActive !== false && !!(paymentConfig.mid || paymentConfig.apiKey))
+    : false;
+
   return {
     id: String(r.id),
     slug: r.slug,
@@ -197,6 +235,8 @@ function rowToTenant(r: any): Tenant {
     approvedAt: r.approved_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    paymentConfig,
+    live: isLive,
   };
 }
 
@@ -237,13 +277,17 @@ export async function createTenant(tenant: Omit<Tenant, 'createdAt' | 'updatedAt
 export async function getTenantById(id: string): Promise<Tenant | null> {
   const sb = pgClient();
   const { data } = await sb.from('tenants').select('*').eq('id', id).maybeSingle();
-  return data ? rowToTenant(data) : null;
+  if (!data) return null;
+  const { data: cfg } = await sb.from('payment_configs').select('*').eq('tenant_id', id).maybeSingle();
+  return rowToTenant(data, cfg);
 }
 
 export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   const sb = pgClient();
   const { data } = await sb.from('tenants').select('*').eq('slug', slug).maybeSingle();
-  return data ? rowToTenant(data) : null;
+  if (!data) return null;
+  const { data: cfg } = await sb.from('payment_configs').select('*').eq('tenant_id', data.id).maybeSingle();
+  return rowToTenant(data, cfg);
 }
 
 export async function getAllTenants(status?: 'pending' | 'active' | 'suspended'): Promise<Tenant[]> {
@@ -256,7 +300,17 @@ export async function getAllTenants(status?: 'pending' | 'active' | 'suspended')
   }
   const { data, error } = await q;
   if (error) throw new Error(`getAllTenants failed: ${error.message}`);
-  return (data ?? []).map(rowToTenant);
+
+  // payment_configs 전체 조회 후 매핑
+  const { data: configs } = await sb.from('payment_configs').select('*');
+  const configMap = new Map<string, any>();
+  if (configs) {
+    configs.forEach(c => {
+      configMap.set(c.tenant_id, c);
+    });
+  }
+
+  return (data ?? []).map(r => rowToTenant(r, configMap.get(r.id) || configMap.get(r.slug)));
 }
 
 export async function getPendingTenants(): Promise<Tenant[]> {
