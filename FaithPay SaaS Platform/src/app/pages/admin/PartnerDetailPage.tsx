@@ -271,6 +271,20 @@ export default function PartnerDetailPage() {
   }
 
   const isAgency = partner.role === 'master_agency';
+  const isAgent = partner.role === 'sales_agent';
+
+  // 요율 기준
+  const tossPgRate = 1.5;     // 토스 PG 계약 원가
+  const platformRate = 0.5;   // 플랫폼 수익
+  const agencyRate = isAgent ? ((partner as any).agencyRate ?? 0.5) : partner.commissionRate;
+  const agentRate = isAgent ? partner.commissionRate : ((partner as any).agentRate ?? 0.5);
+
+  // 영업자/대리점 관점의 베이스 PG 원가
+  // - 영업자: 토스(1.5%) + 플랫폼(0.5%) + 대리점(0.5%) = 2.5%
+  // - 대리점: 토스(1.5%) + 플랫폼(0.5%) = 2.0%
+  const basePgCostRate = isAgent ? (tossPgRate + platformRate + agencyRate) : (tossPgRate + platformRate);
+  const contractBenchmarkRate = isAgent ? (basePgCostRate + partner.commissionRate) : (basePgCostRate + partner.commissionRate + agentRate);
+
   const totalVolume = partnerStats?.totalVolume ?? tenants.reduce((acc, t) => acc + ((t as any).stats?.totalDonations || 0), 0);
   const totalCommission = partnerStats?.totalCommission ?? commissions.reduce((acc, c) => acc + c.commissionAmount, 0);
   const pendingSettlement = partnerStats?.pendingSettlement ?? commissions.filter(c => (c as any).status === 'pending').reduce((acc, c) => acc + c.commissionAmount, 0);
@@ -583,20 +597,89 @@ export default function PartnerDetailPage() {
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               {/* 수수료율 분배 시각화 */}
-              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2">
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-700">적용 파트너 수수료율</span>
+                  <span className="text-slate-700">
+                    {isAgent ? '적용 영업자 수수료율 (본인 몫)' : '적용 대리점 수수료율 (본인 몫)'}
+                  </span>
                   <span className="text-purple-700 text-sm font-black">{partner.commissionRate}%</span>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
-                  <div className="bg-slate-400 h-full" style={{ width: '45%' }} title={`PG원가 (${pgCostRate}%)`} />
-                  <div className="bg-slate-600 h-full" style={{ width: '15%' }} title="플랫폼 (0.5%)" />
-                  <div className="bg-purple-600 h-full" style={{ width: '40%' }} title={`파트너 (${partner.commissionRate}%)`} />
+
+                {/* 프로그레스 바: 베이스 PG 원가 vs 본인 몫 */}
+                <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden flex shadow-inner">
+                  {/* 1. 토스 PG 원가 */}
+                  <div
+                    className="bg-slate-400 h-full border-r border-white/20 transition-all"
+                    style={{ width: `${(tossPgRate / (contractBenchmarkRate || 3.0)) * 100}%` }}
+                    title={`토스 PG 원가 (${tossPgRate}%)`}
+                  />
+                  {/* 2. 플랫폼 기본 마진 */}
+                  <div
+                    className="bg-indigo-500 h-full border-r border-white/20 transition-all"
+                    style={{ width: `${(platformRate / (contractBenchmarkRate || 3.0)) * 100}%` }}
+                    title={`플랫폼 (${platformRate}%)`}
+                  />
+                  {/* 3. 대리점 (영업자인 경우 베이스 원가에 포함) */}
+                  {isAgent && (
+                    <div
+                      className="bg-slate-600 h-full border-r border-white/20 transition-all"
+                      style={{ width: `${(agencyRate / (contractBenchmarkRate || 3.0)) * 100}%` }}
+                      title={`소속 대리점 (${agencyRate}%)`}
+                    />
+                  )}
+                  {/* 4. 본인 수수료율 */}
+                  <div
+                    className="bg-purple-600 h-full border-r border-white/20 transition-all"
+                    style={{ width: `${(partner.commissionRate / (contractBenchmarkRate || 3.0)) * 100}%` }}
+                    title={`본인 몫 (${partner.commissionRate}%)`}
+                  />
+                  {/* 5. 대리점일 때 하위 영업자 배분 */}
+                  {isAgency && (
+                    <div
+                      className="bg-amber-500 h-full transition-all"
+                      style={{ width: `${(agentRate / (contractBenchmarkRate || 3.0)) * 100}%` }}
+                      title={`하위 영업자 (${agentRate}%)`}
+                    />
+                  )}
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
-                  <span>PG 원가: {pgCostRate}%</span>
-                  <span>플랫폼: 0.5%</span>
-                  <span className="text-purple-700 font-bold">파트너 몫: {partner.commissionRate}%</span>
+
+                {/* 요율 세부 가이드 */}
+                <div className="space-y-1.5 pt-1 text-[11px]">
+                  <div className="flex items-center justify-between text-slate-600 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-500 inline-block" />
+                      베이스 PG 원가:
+                    </span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {basePgCostRate.toFixed(1)}%
+                      <span className="text-[10px] text-slate-400 font-normal ml-1">
+                        {isAgent ? `(토스 ${tossPgRate}% + 플랫폼 ${platformRate}% + 대리점 ${agencyRate}%)` : `(토스 ${tossPgRate}% + 플랫폼 ${platformRate}%)`}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-purple-700 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-600 inline-block" />
+                      {isAgent ? '영업자 수수료 (본인 몫):' : '대리점 수수료 (본인 몫):'}
+                    </span>
+                    <span className="font-mono">{partner.commissionRate}%</span>
+                  </div>
+
+                  {isAgency && (
+                    <div className="flex items-center justify-between text-amber-700 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                        하위 영업자 배분:
+                      </span>
+                      <span className="font-mono font-bold">{agentRate}%</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                    <span>가맹단체 계약 기준 총 수수료:</span>
+                    <span className="font-mono font-bold text-slate-900">{contractBenchmarkRate.toFixed(1)}%</span>
+                  </div>
                 </div>
               </div>
 
