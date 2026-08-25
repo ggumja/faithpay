@@ -155,7 +155,7 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. 해당 단체의 관리자 계정 목록 구하기 (DB/실제 데이터 기반, 목업 이메일 배제)
+      // 2. 해당 단체의 관리자 계정 목록 구하기 (저장소/DB 실측 데이터 기반)
       const savedStaff =
         localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
         localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
@@ -167,36 +167,20 @@ export default function AdminAccountManagement() {
         try {
           const parsed = JSON.parse(savedStaff);
           if (Array.isArray(parsed)) {
-            // 구 목업 이메일(joyful-church.org 등) 캐시 데이터 배제
-            loadedStaff = parsed.filter(
-              (s: any) => s.email && !s.email.includes('joyful-church.org') && !s.email.includes('serenity-temple')
-            );
+            loadedStaff = parsed;
           }
         } catch {}
       }
 
-      // 단체 대표 이메일 결정 (DB/저장소 동기화)
-      const primaryEmail = (
-        tenant.contact?.email &&
-        !tenant.contact.email.includes('joyful-church') &&
-        !tenant.contact.email.includes('serenity-temple')
-      )
-        ? tenant.contact.email.trim().toLowerCase()
-        : `admin@${(tenant.slug || 'soulpay').toLowerCase()}.or.kr`;
+      // 단체 대표 이메일
+      const primaryEmail = (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase();
 
-      const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.toLowerCase() === primaryEmail);
+      const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.trim().toLowerCase() === primaryEmail);
 
       if (!hasPrimaryAccount || loadedStaff.length === 0) {
-        const defaultAdminName =
-          tenant.contact?.name &&
-          tenant.contact.name !== '담임목사 / 주지스님' &&
-          tenant.contact.name !== '주지스님 / 담임목사'
-            ? tenant.contact.name
-            : `${tenant.name} 대표 관리자`;
-
         const primaryAdmin: StaffAdminUser = {
           id: `admin-${tenant.id}-primary`,
-          name: defaultAdminName,
+          name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
           email: primaryEmail,
           phone: tenant.contact?.phone || '',
           groupId: 'tenant_admin',

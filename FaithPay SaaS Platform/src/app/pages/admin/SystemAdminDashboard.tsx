@@ -130,24 +130,10 @@ export default function SystemAdminDashboard() {
       }
     } catch (e) {}
 
-    if ((!paymentConfig || !paymentConfig.pgProvider) && (t.slug === 'gakwonsa' || t.id === 'gakwonsa' || t.name?.includes('각원사'))) {
-      paymentConfig = {
-        tenantId: t.id,
-        pgProvider: 'toss',
-        mid: 'toss_mid_gakwonsa',
-        apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
-        secretKey: 'test_sk_zXLk50y4qe0912',
-        contractRate: 3.0,
-        payoutCycle: 'D+1',
-        kakaoCid: 'TC0ONETIME',
-        isActive: true,
-      };
-    }
-
     return {
       ...t,
       paymentConfig,
-      live: Boolean(paymentConfig?.isActive || t.status === 'active' || t.slug === 'gakwonsa'),
+      live: Boolean(paymentConfig?.isActive || t.status === 'active'),
     };
   });
 

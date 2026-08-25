@@ -67,10 +67,8 @@ export default function SettlementReports() {
     settlementDateStr: `익월 5일 (토스 입금)`
   });
 
-  // PG 계약 수수료율 (각원사의 경우 3.0%, 단체별 설정값 반영)
-  const contractRate = currentTenant?.paymentConfig?.contractRate ?? (
-    currentTenant?.slug === 'gakwonsa' || currentTenant?.name?.includes('각원사') ? 3.0 : 3.0
-  );
+  // PG 계약 수수료율 (단체별 설정값 반영, 기본 3.0%)
+  const contractRate = currentTenant?.paymentConfig?.contractRate ?? 3.0;
 
   // Quick period presets
   const setQuickPeriod = (type: 'today' | 'this_week' | 'this_month' | 'all') => {

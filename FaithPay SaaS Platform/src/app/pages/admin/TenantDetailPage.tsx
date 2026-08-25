@@ -179,25 +179,7 @@ export default function TenantDetailPage() {
         } catch (e) {
           console.warn('Failed to parse localStorage paymentConfig:', e);
         }
-        // 각원사 기본값 보장
-        if (!cfg && (foundTenant.slug === 'gakwonsa' || foundTenant.id === 'gakwonsa' || foundTenant.id === 'tenant-gakwonsa')) {
-          cfg = {
-            tenantId: foundTenant.id,
-            pgProvider: 'toss',
-            mid: 'toss_mid_gakwonsa',
-            apiKey: 'test_ck_D5Ge233da91z4961zP0g3N7kE1a3',
-            secretKey: 'test_sk_zXLk50y4qe0912',
-            contractRate: 3.0,
-            payoutCycle: 'D+1',
-            kakaoCid: 'TC0ONETIME',
-            kakaoSecretKey: 'DEV_SECRET_KEY',
-            kakaoMode: 'test',
-            enableCard: true,
-            enableEasyPayment: true,
-            enableVBank: true,
-            isActive: true,
-          };
-        }
+
 
         if (cfg && (cfg.pgProvider || cfg.kakaoCid)) {
           setPaymentConfig(cfg);
