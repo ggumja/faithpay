@@ -1047,6 +1047,33 @@ export default function TenantDetailPage() {
                         placeholder={pgProvider === 'nanopay' ? "예: 240000006" : "예: toss_mid_12345"}
                         autoComplete="off"
                       />
+                      {/* ── 테스트 가맹점코드 채우기 버튼 ── */}
+                      {pgProvider === 'nanopay' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMid('240000006');
+                            setApiKey('test_api_key_nanopay_sandbox');
+                            setSecretKey('test_secret_key_nanopay_sandbox');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
+                        >
+                          🟣 나노PG 테스트 가맹점코드 채우기
+                        </button>
+                      )}
+                      {(pgProvider === 'tosspayments' || pgProvider === 'toss') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMid('tosspayments_test_mid');
+                            setApiKey('test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq');
+                            setSecretKey('test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+                        >
+                          🔵 토스페이먼츠 테스트 가맹점코드 채우기
+                        </button>
+                      )}
                     </div>
 
                     <div className="space-y-2">
