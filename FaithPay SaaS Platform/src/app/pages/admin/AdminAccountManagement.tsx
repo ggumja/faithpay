@@ -100,7 +100,7 @@ export const formatPhoneNumber = (phone: string): string => {
 export default function AdminAccountManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo } = useApp();
   const terms = useTenantTerms(currentTenant?.orgType);
 
   const [activeTab, setActiveTab] = useState<'accounts' | 'groups' | 'permissions'>('accounts');
@@ -439,8 +439,22 @@ export default function AdminAccountManagement() {
       )
     );
 
+    // 💾 Supabase 백엔드 데이터베이스 영구 반영 (PUT /tenants/:id)
+    if (currentTenant) {
+      const updatedTenant = {
+        ...currentTenant,
+        contact: {
+          ...currentTenant.contact,
+          name: editName.trim(),
+          email: cleanEmail,
+          phone: stripPhoneDigits(editPhone) || currentTenant.contact?.phone || '',
+        },
+      };
+      updateTenantInfo(currentTenant.id, updatedTenant);
+    }
+
     setIsEditStaffModalOpen(false);
-    toast.success(`[${editName.trim()}] 관리자 계정 정보가 성공적으로 수정되었습니다.`);
+    toast.success(`[${editName.trim()}] 관리자 계정 정보가 DB에 반영되었습니다.`);
   };
 
   const handleToggleStatus = (id: string) => {
