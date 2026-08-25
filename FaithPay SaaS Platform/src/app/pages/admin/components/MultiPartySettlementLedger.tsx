@@ -36,17 +36,18 @@ interface LedgerItem {
   paymentType?: 'BILLING' | 'AUTH';
   deviceType?: 'KIOSK' | 'WEB_MOBILE';
   settlementMonth?: string;
-  // 4자간 수수료율 (DB 실제값)
+  // DB 실제 수수료율
   contractRate?: number;   // 가맹 계약 수수료율 (%)
   agencyRate?: number;     // 대리점 수수료율 (%)
   agentRate?: number;      // 영업자 수수료율 (%)
+  commissionPool?: number; // 총 수수료 풀 (gross × contractRate%)
   // 금액
   grossAmount: number;
   pgFee: number;
   tenantPayout: number;
-  platformFee: number;
-  partnerFee: number;
-  agentFee: number;
+  platformFee: number;   // SoulPay 순수익 (0.5%)
+  partnerFee: number;    // HQ 대리점 (0.5%)
+  agentFee: number;      // HQ 영업자 (0.5%)
   netProfit: number;
   // 정산 상태 (DB settlement_status 기반)
   status: 'COMPLETED' | 'SCHEDULED' | 'FAILED' | 'HOLD';
@@ -317,16 +318,13 @@ export default function MultiPartySettlementLedger() {
                   PG 원가 (1.5%)
                 </th>
                 <th className="py-3 px-4 text-right bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700">
-                  원원사 정산금 (계약수수료·PG 제외)
-                </th>
-                <th className="py-3 px-4 text-right bg-blue-50/50 dark:bg-blue-950/20 text-blue-700">
-                  플랫폼 총 커미션 (계약수수료)
+                  원원사 정산금
                 </th>
                 <th className="py-3 px-4 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800">
-                  총판 / 대리점
+                  HQ 대리점
                 </th>
                 <th className="py-3 px-4 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800">
-                  영업자
+                  HQ 영업자
                 </th>
                 <th className="py-3 px-4 text-right bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700">
                   플랫폼 순수익
@@ -578,7 +576,6 @@ export default function MultiPartySettlementLedger() {
                       {selectedDetail.tenantName || selectedDetail.tenantId || '가맹 단체'}
                     </td>
                     <td className="py-2.5 px-3 text-right font-bold text-emerald-600">
-                      {/* DB contractRate 기준: 가맹 정산 = 100 - contractRate */}
                       {selectedDetail.contractRate != null
                         ? `${(100 - selectedDetail.contractRate).toFixed(1)}%`
                         : `${((selectedDetail.tenantPayout / (selectedDetail.grossAmount || 1)) * 100).toFixed(1)}%`
@@ -596,51 +593,63 @@ export default function MultiPartySettlementLedger() {
                       }
                     </td>
                   </tr>
-                  {/* 2. SoulPay 본사 */}
+                  {/* 2. PG사 */}
                   <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 font-sans font-bold text-purple-700">2. SoulPay 본사</td>
-                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">플랫폼 운영사</td>
+                    <td className="py-2.5 px-3 font-sans font-bold text-slate-500">2. PG사 ({selectedDetail.pgProvider?.toUpperCase()})</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-600">카드/전자결제 원가 (플랫폼이 지출)</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-500">1.5%</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 font-bold">{selectedDetail.pgFee.toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">원가 정산</span>
+                    </td>
+                  </tr>
+                  {/* 3. HQ 대리점 */}
+                  <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                    <td className="py-2.5 px-3 font-sans font-bold text-indigo-700">3. HQ 대리점</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">
+                      {selectedDetail.agencyName || 'SoulPay HQ (본사)'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold text-indigo-600">
+                      {selectedDetail.agencyRate != null ? `${selectedDetail.agencyRate}%` : '0.5%'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-indigo-600 font-bold">{selectedDetail.partnerFee.toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      {selectedDetail.status === 'COMPLETED'
+                        ? <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">지급 완료</span>
+                        : <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">정산 대기</span>
+                      }
+                    </td>
+                  </tr>
+                  {/* 4. HQ 영업자 */}
+                  <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                    <td className="py-2.5 px-3 font-sans font-bold text-amber-700">4. HQ 영업자</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">
+                      {selectedDetail.agentName || 'SoulPay HQ 직속 영업자'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold text-amber-600">
+                      {selectedDetail.agentRate != null ? `${selectedDetail.agentRate}%` : '0.5%'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-amber-600 font-bold">{selectedDetail.agentFee.toLocaleString()}원</td>
+                    <td className="py-2.5 px-3 text-center font-sans">
+                      {selectedDetail.status === 'COMPLETED'
+                        ? <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">지급 완료</span>
+                        : <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">정산 대기</span>
+                      }
+                    </td>
+                  </tr>
+                  {/* 5. SoulPay 플랫폼 순수익 */}
+                  <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                    <td className="py-2.5 px-3 font-sans font-bold text-purple-700">5. SoulPay 플랫폼</td>
+                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">플랫폼 순수익 (커미션 풀 잔액)</td>
                     <td className="py-2.5 px-3 text-right font-bold text-purple-600">
-                      {selectedDetail.contractRate != null
-                        ? `${(selectedDetail.contractRate - (selectedDetail.agencyRate ?? 0) - (selectedDetail.agentRate ?? 0)).toFixed(2)}%`
+                      {selectedDetail.contractRate != null && selectedDetail.agencyRate != null && selectedDetail.agentRate != null
+                        ? `${(selectedDetail.contractRate - 1.5 - selectedDetail.agencyRate - selectedDetail.agentRate).toFixed(1)}%`
                         : '0.5%'
                       }
                     </td>
                     <td className="py-2.5 px-3 text-right text-purple-600 font-bold">{selectedDetail.platformFee.toLocaleString()}원</td>
                     <td className="py-2.5 px-3 text-center font-sans">
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">플랫폼 귀속</span>
-                    </td>
-                  </tr>
-                  {/* 3. 영업 파트너 (대리점 + 영업자) */}
-                  <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 font-sans font-bold text-indigo-700">3. 영업 파트너</td>
-                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-800 dark:text-zinc-200">
-                      {selectedDetail.agencyName || selectedDetail.partnerName || '총판 / 영업자'}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-bold text-indigo-600">
-                      {selectedDetail.agencyRate != null || selectedDetail.agentRate != null
-                        ? `${((selectedDetail.agencyRate ?? 0) + (selectedDetail.agentRate ?? 0)).toFixed(2)}%`
-                        : `${(((selectedDetail.partnerFee + selectedDetail.agentFee) / (selectedDetail.grossAmount || 1)) * 100).toFixed(1)}%`
-                      }
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-indigo-600 font-bold">
-                      {(selectedDetail.partnerFee + selectedDetail.agentFee).toLocaleString()}원
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-sans">
-                      {selectedDetail.status === 'COMPLETED'
-                        ? <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">정산 완료</span>
-                        : <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">정산 대기</span>
-                      }
-                    </td>
-                  </tr>
-                  {/* 4. PG사 */}
-                  <tr className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
-                    <td className="py-2.5 px-3 font-sans font-bold text-slate-600">4. 결제 대행사 (PG)</td>
-                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-600">카드/전자결제원가 (PG사)</td>
-                    <td className="py-2.5 px-3 text-right font-bold text-slate-500">1.5%</td>
-                    <td className="py-2.5 px-3 text-right text-slate-600 font-bold">{selectedDetail.pgFee.toLocaleString()}원</td>
-                    <td className="py-2.5 px-3 text-center font-sans">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">원가 정산</span>
                     </td>
                   </tr>
                 </tbody>

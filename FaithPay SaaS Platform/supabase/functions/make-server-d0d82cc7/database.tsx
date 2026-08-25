@@ -1753,25 +1753,31 @@ export async function getAdminSettlementLedger(opts?: {
     const gross         = Number(r.donation_amount);
     const contractRate  = Number(r.contract_rate  ?? 3.0);
     const agencyRate    = Number(r.agency_rate    ?? 0.5);
-    const agentRate     = Number(r.agent_rate     ?? 0.0);
+    const agentRate     = Number(r.agent_rate     ?? 0.5);
 
-    // ── 4자간 분구 공식 ─────────────────────────────────────────────────────
-    // pgFee        = gross × 1.5%           → PG 대행사
-    // commission   = gross × contractRate%  → 플랫폼이 수집하는 총 수수료 풀
-    // tenantPayout = gross - pgFee - commission  → 가맹 실지급액
-    // agencyFee    = gross × agencyRate%    → 대리점(총판) 수수료
-    // agentFee     = gross × agentRate%     → 영업자 수수료
-    // netProfit    = commission - agencyFee - agentFee  → 플랫폼 순수익
+    // ═══════════════════════════════════════════════════════════════════
+    //  4자간 수수료 분구 공식 (SoulPay 표준)
     //
-    // 검증: tenantPayout + pgFee + commission = gross ✅
-    // ─────────────────────────────────────────────────────────────────────────
-    const pgFeeCalc      = Math.round(gross * 0.015);
-    const pgFee          = Number(r.pg_fee_amount  || pgFeeCalc);
-    const commissionTotal= Number(r.commission_amount || Math.round(gross * (contractRate / 100)));
-    const tenantPayout   = gross - pgFee - commissionTotal;   // ← 핵심 수정
-    const agencyFee      = Math.round(gross * (agencyRate / 100));
-    const agentFee       = Math.round(gross * (agentRate  / 100));
-    const netProfit      = commissionTotal - agencyFee - agentFee;  // 플랫폼 순수익
+    //  계약수수료(contractRate%) = 플랫폼이 가맹에서 수집하는 총 수수료 풀
+    //  ┌────────────────────────────────────────────────────────────────┐
+    //  │ gross × contractRate% ──→ 수수료 풀                           │
+    //  │   ├─ pgFee     (1.5%)  → PG사 (토스 등) 원가                  │
+    //  │   ├─ agencyFee (0.5%)  → 대리점 (HQ or 총판)                  │
+    //  │   ├─ agentFee  (0.5%)  → 영업자                               │
+    //  │   └─ platformNet(0.5%) → SoulPay 순수익                       │
+    //  └────────────────────────────────────────────────────────────────┘
+    //  tenantPayout = gross - commissionPool = gross × (100-contractRate)%
+    //  (교회에서 PG 수수료 별도 차감 없음 - 풀에서 처리)
+    //
+    //  검증: tenantPayout + commissionPool = gross ✅
+    // ═══════════════════════════════════════════════════════════════════
+    const commissionTotal  = Number(r.commission_amount  || Math.round(gross * (contractRate / 100)));
+    const pgFee            = Math.round(gross * 0.015);           // PG 원가 1.5% (풀에서 지출)
+    const agencyFee        = Math.round(gross * (agencyRate / 100));   // 대리점
+    const agentFee         = Math.round(gross * (agentRate  / 100));   // 영업자
+    const tenantPayout     = gross - commissionTotal;             // 가맹 실지급 97%
+    const netProfit        = commissionTotal - pgFee - agencyFee - agentFee; // 플랫폼 순수익 0.5%
+
 
 
     // status 매핑: settlement_status → LedgerItem status
@@ -1798,20 +1804,22 @@ export async function getAdminSettlementLedger(opts?: {
       donorName: r.donor_name || '',
       donorPhone: r.donor_phone || '',
       baptismName: r.baptism_name || '',
-      agencyName: r.agency_name || r.partners?.name || 'HQ (본사)',
-      agentName: r.agent_name || r.partners?.name || '직접 영업',
+      agencyName: r.agency_name || r.partners?.name || 'SoulPay HQ (본사)',
+      agentName:  r.agent_name  || 'SoulPay HQ 직속 영업자',
       isRecurring: r.is_recurring ?? false,
       paymentType: (r.payment_type || (r.is_recurring ? 'BILLING' : 'AUTH')) as 'BILLING' | 'AUTH',
       deviceType: (r.device_type || ((r.payment_method || '').includes('OffPG') ? 'KIOSK' : 'WEB_MOBILE')) as 'KIOSK' | 'WEB_MOBILE',
 
-      grossAmount: gross,
-      pgFee,
-      tenantPayout,
-      platformFee: commissionTotal,  // 플랫폼이 수집하는 총 커미션 (contractRate%)
-      partnerFee:  agencyFee,        // 대리점(총판) 수수료
-      agentFee,
-      netProfit:   Math.max(0, netProfit),  // 플랫폼 순수익
-      // DB 실제 수수료율 (partner_commissions 테이블에서 직접 읽음)
+      grossAmount:    gross,
+      pgFee,                                        // PG 원가 1.5% (풀에서 지출)
+      tenantPayout,                                  // 가맹 실지급 = gross × (100-contractRate)%
+      platformFee:    Math.max(0, netProfit),         // SoulPay 순수익 0.5% (commissionPool - pgFee - agency - agent)
+      partnerFee:     agencyFee,                     // HQ 대리점 0.5%
+      agentFee,                                      // HQ 영업자 0.5%
+      netProfit:      Math.max(0, netProfit),         // = platformFee (동일, 유지)
+      // 전체 수수료 풀 (커미션) - UI 표시용
+      commissionPool: commissionTotal,               // gross × contractRate%
+      // DB 실제 수수료율
       contractRate,
       agencyRate,
       agentRate,
