@@ -1821,8 +1821,10 @@ export async function getAdminSettlementLedger(opts?: {
     const tenantName = r.tenant_name || r.tenant_id || '가맹 단체';
 
     return {
-      id: r.id,
-      txDate: r.created_at,
+      id: r.donation_id || r.id,          // 거래번호: donation_id 우선 (표준 YYYYMMDDHHMM-NNNNNNN)
+      donationId: r.donation_id || r.id,   // 명시적 필드
+      commissionId: r.id,                  // partner_commissions 내부 ID
+      txDate: r.created_at,                // ISO → UI에서 포맷
       tenantName: tenantName,
       tenantId: r.tenant_id,
 

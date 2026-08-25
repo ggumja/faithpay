@@ -15,6 +15,18 @@ import { formatPhoneNumber } from '../../../utils/phoneUtils';
 import { toast } from 'sonner';
 import { partnerAPI } from '../../../api/client';
 
+/** ISO 날짜 문자열 → 'YYYY-MM-DD HH:mm' (KST) */
+const fmtDate = (iso?: string | null): string => {
+  if (!iso) return '-';
+  try {
+    return new Date(iso).toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).replace(/\. /g, '-').replace('.', '').replace(',', '');
+  } catch { return iso.slice(0, 16); }
+};
+
 interface LedgerItem {
   id: string;
   txDate: string;
@@ -349,7 +361,7 @@ export default function MultiPartySettlementLedger() {
                         상세보기 🔍
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-400 font-mono">{item.txDate}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">{fmtDate(item.txDate)}</div>
                   </td>
                   <td className="py-3 px-4 font-bold text-slate-800 dark:text-zinc-200">
                     <div>
@@ -557,7 +569,7 @@ export default function MultiPartySettlementLedger() {
                 </div>
                 <div>
                   <span className="text-slate-400 text-[10.5px] block">승인 일시</span>
-                  <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400">{selectedDetail.txDate}</span>
+                  <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400">{fmtDate(selectedDetail.txDate)}</span>
                 </div>
               </div>
             </div>
