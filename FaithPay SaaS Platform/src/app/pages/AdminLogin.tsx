@@ -45,53 +45,22 @@ export default function AdminLogin() {
 
   // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기 (Strict Initial Registration Lookup Only)
   const getTenantStaffAccounts = (tenant: any): any[] => {
-    if (!tenant) return [];
+    if (!tenant || !tenant.contact?.email) return [];
 
-    const primaryEmail = (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase();
-    const primaryPw =
-      localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) ||
-      localStorage.getItem(`faithpay_tenant_password_${tenant.id}`) ||
-      'admin1234!';
+    const primaryEmail = tenant.contact.email.trim().toLowerCase();
+    const primaryName = tenant.contact.name || tenant.name;
+    const primaryPw = tenant.tempPassword || 'admin1234!';
 
-    let staffList: any[] = [];
-    try {
-      const savedStaffStr =
-        localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
-        localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
-        localStorage.getItem(`faithpay_staff_${tenant.id}`) ||
-        localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
-      if (savedStaffStr) {
-        const parsed = JSON.parse(savedStaffStr);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          staffList = parsed.filter(
-            (s: any) =>
-              s &&
-              s.email &&
-              !s.email.includes('joyful-church') &&
-              !s.email.includes('serenity-temple') &&
-              s.name !== '김목사' &&
-              s.name !== '이집사' &&
-              !s.name?.includes('꿈꾸는교회')
-          );
-        }
-      }
-    } catch (e) {}
-
-    // 가입 시 입력된 이메일 계정이 목록에 없을 경우 해당 단일 계정만 기본 반환 (slug 기반 자동 추가 금지)
-    const hasPrimary = staffList.some((s: any) => s.email && s.email.trim().toLowerCase() === primaryEmail);
-
-    if (!hasPrimary || staffList.length === 0) {
-      staffList.unshift({
-        id: `admin-${tenant.id}-1`,
-        name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
+    return [
+      {
+        id: `admin-${tenant.id}`,
+        name: primaryName,
         email: primaryEmail,
         password: primaryPw,
         groupId: 'tenant_admin',
         status: 'active',
-      });
-    }
-
-    return staffList;
+      },
+    ];
   };
 
   // 🔐 특정 단체에 대해 이메일 및 비밀번호 엄격 검증

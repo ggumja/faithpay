@@ -156,61 +156,34 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. 해당 단체(tenant.id)에 속한 실측 관리자 계정 로드
-      const savedStaff = localStorage.getItem(`soulpay_staff_${tenant.id}`);
-      let list: StaffAdminUser[] = [];
-
-      if (savedStaff) {
-        try {
-          const parsed = JSON.parse(savedStaff);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // 브라우저 디스크의 구 테스트 더미 계정(김목사, 이집사, joyful-church 등) 정제
-            const cleanList = parsed.filter(
-              (s: any) =>
-                s &&
-                s.email &&
-                !s.email.includes('joyful-church') &&
-                !s.email.includes('serenity-temple') &&
-                s.name !== '김목사' &&
-                s.name !== '이집사' &&
-                !s.name?.includes('꿈꾸는교회')
-            );
-            if (cleanList.length > 0) {
-              list = cleanList;
-            }
-          }
-        } catch (e) {}
-      }
-
-      // 저장된 관리자 목록이 없으면 해당 단체의 DB 가입 담당자 정보(tenant.contact)만 표출
-      if (list.length === 0) {
-        const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
-        const registeredName = tenant.contact?.name;
-
-        if (registeredEmail && registeredName) {
-          list = [
-            {
-              id: `admin-${tenant.id}`,
-              name: registeredName,
-              email: registeredEmail,
-              phone: tenant.contact?.phone || '',
-              groupId: 'tenant_admin',
-              password: tenant.tempPassword || 'admin1234!',
-              status: 'active',
-              createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-              lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-            },
-          ];
+      // 로컬 스토리지 잔재 계정 키 완전 파기 및 DB 실시간 직접 수신
+      Object.keys(localStorage).forEach((key) => {
+        if (key.includes('staff') || key.includes('soulpay_staff')) {
+          localStorage.removeItem(key);
         }
+      });
+
+      // DB /tenants 에 저장된 가맹점 실측 담당자 정보만 표출 (100% DB 직결)
+      const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
+      const registeredName = tenant.contact?.name;
+
+      if (registeredEmail && registeredName) {
+        setStaffList([
+          {
+            id: `admin-${tenant.id}`,
+            name: registeredName,
+            email: registeredEmail,
+            phone: tenant.contact?.phone || '',
+            groupId: 'tenant_admin',
+            password: tenant.tempPassword || 'admin1234!',
+            status: 'active',
+            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+            lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+          },
+        ]);
+      } else {
+        setStaffList([]);
       }
-
-      // 정제된 최신 실측 목록으로 localStorage 즉시 갱신
-      localStorage.setItem(`soulpay_staff_${tenant.id}`, JSON.stringify(list));
-      localStorage.setItem(`soulpay_staff_accounts_${tenant.id}`, JSON.stringify(list));
-      localStorage.removeItem(`faithpay_staff_${tenant.id}`);
-      localStorage.removeItem(`faithpay_staff_accounts_${tenant.id}`);
-
-      setStaffList(list);
 
       // 3. 저장된 권한 매트릭스 로드
       const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
@@ -239,13 +212,7 @@ export default function AdminAccountManagement() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // 💾 관리자 계정 정보 영구 보존 동기화
-  useEffect(() => {
-    if (currentTenant && staffList.length > 0) {
-      localStorage.setItem(`soulpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
-      localStorage.setItem(`soulpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
-    }
-  }, [staffList, currentTenant]);
+
 
   useEffect(() => {
     if (currentTenant && adminGroups.length > 0) {
