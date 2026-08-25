@@ -1053,16 +1053,16 @@ export default function TenantDetailPage() {
                           type="button"
                           onClick={() => {
                             setMid('240000006');
-                            setApiKey('test_api_key_nanopay_sandbox');
-                            setSecretKey('test_secret_key_nanopay_sandbox');
+                            setApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
+                            setSecretKey('UfS2tccZNyz3HYxXJDhZH52Ujorqp5km');
                             setLoginId('smbtestshop');
-                            setIv('nanotest_iv_1234');
+                            setIv('');
                             setVer('smbtest');
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
                         >
                           🟣 나노PG 테스트 가맹점코드 채우기
-                          <span className="text-[10px] font-normal text-purple-500">(MID · API Key · Secret · loginId · IV · ver)</span>
+                          <span className="text-[10px] font-normal text-purple-500">(MID · API Key · Secret · loginId · ver)</span>
                         </button>
                       )}
                       {(pgProvider === 'tosspayments' || pgProvider === 'toss') && (
