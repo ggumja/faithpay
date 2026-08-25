@@ -272,13 +272,7 @@ export default function OnboardingFlow() {
                         background: isSelected ? t.primary : 'var(--card)',
                       }}
                     >
-                      {/* Decorative Motif */}
-                      <div 
-                        className="absolute -top-4 -right-4 w-24 h-24 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none"
-                        style={{ color: isSelected ? '#fff' : t.primary }}
-                      >
-                        <MotifLarge kind={t.motif} color="currentColor" opacity={1} />
-                      </div>
+
 
                       <div 
                         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
@@ -648,7 +642,7 @@ export default function OnboardingFlow() {
             </div>
           )}
 
-          {/* ── Step 4: 개설 완료 ── */}
+          {/* ── Step 4: 개설 신청 완료 ── */}
           {step === 'complete' && (
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center gap-6 shadow-sm">
               <div 
@@ -660,10 +654,10 @@ export default function OnboardingFlow() {
 
               <div>
                 <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
-                  헌금함 개설이 완료되었습니다!
+                  개설신청이 완료되었습니다.
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium max-w-sm mx-auto">
-                  이제 하단 배포 주소를 통해 신도들로부터 쉽고 간편한 모바일 온라인 봉헌 수납을 받으실 수 있습니다.
+                  서류검토 후 개설이 완료됩니다. 운영팀의 확인 및 승인이 완료되면 등록하신 연락처/이메일로 안내 드리며 서비스가 즉시 활성화됩니다.
                 </p>
               </div>
 
@@ -673,7 +667,7 @@ export default function OnboardingFlow() {
                 style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
               >
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-450 block mb-2" style={{ color: ft.primaryDark }}>
-                  대표 배포용 URL 주소
+                  신청된 전용 URL 주소 (승인 후 활성화)
                 </span>
                 <h3 
                   className="font-display text-lg sm:text-xl font-extrabold tracking-tight break-all mb-4"
@@ -695,17 +689,17 @@ export default function OnboardingFlow() {
 
               <div className="flex flex-col gap-2.5 w-full mt-2">
                 <button
-                  onClick={() => navigate(`/${formData.slug || 'church-name'}/admin`)}
+                  onClick={() => navigate('/')}
                   className="w-full h-13 rounded-xl text-white font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer shadow-md"
                   style={{ background: ft.heroGradient }}
                 >
-                  관리자 대시보드 바로가기
+                  메인 홈 페이지로 가기
                 </button>
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate(`/${formData.slug || 'church-name'}/admin/login`)}
                   className="w-full h-12 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
-                  메인 홈 페이지로 가기
+                  단체 관리자 로그인 페이지 확인
                 </button>
               </div>
             </div>

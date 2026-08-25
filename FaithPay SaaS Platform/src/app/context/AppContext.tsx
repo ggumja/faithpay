@@ -206,6 +206,7 @@ interface AppContextType {
   updateTenantBanners: (tenantId: string, bannerImages: string[]) => Promise<void>;
   updateTenantInfo: (tenantId: string, tenant: Tenant) => Promise<void>;
   addTenant: (tenant: Omit<Tenant, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  isTenantsLoaded: boolean;
   getTenantDonationItems: (tenant: Tenant) => DonationItem[];
   saveDonationItem: (tenantId: string, religionType: string, itemData: Partial<DonationItem>) => void;
   deleteDonationItem: (tenantId: string, religionType: string, itemId: string) => void;
@@ -253,6 +254,7 @@ function saveStoredTemplate(key: string, templateId: string) {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [isTenantsLoaded, setIsTenantsLoaded] = useState<boolean>(false);
 
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
 
@@ -286,7 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchTenants = useCallback(async () => {
     try {
       const response = await tenantAPI.getTenants();
-      if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+      if (response.success && Array.isArray(response.data)) {
         const templateMap = getStoredTemplateMap();
         const dbTenants = response.data.map(t => {
           const dbTemplate = t.templateId || (t as any).template_id;
@@ -315,6 +317,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
+    } finally {
+      setIsTenantsLoaded(true);
     }
   }, []);
 
@@ -494,6 +498,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateTenantBanners,
         updateTenantInfo,
         addTenant,
+        isTenantsLoaded,
         getTenantDonationItems,
         saveDonationItem,
         deleteDonationItem,
@@ -516,6 +521,7 @@ const defaultContextValue: AppContextType = {
   updateTenantBanners: async () => {},
   updateTenantInfo: async () => {},
   addTenant: async () => {},
+  isTenantsLoaded: false,
   getTenantDonationItems: () => [],
   saveDonationItem: () => {},
   deleteDonationItem: () => {},
