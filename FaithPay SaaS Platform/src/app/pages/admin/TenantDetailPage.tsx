@@ -1231,7 +1231,7 @@ export default function TenantDetailPage() {
                           type="button"
                           onClick={() => {
                             setMid('tosspayments');
-                            setApiKey('test_ck_OEP5eLpqWEMqYNm7JaEr3779KMlW');
+                            setApiKey('test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq');
                             setSecretKey('test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R');
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"

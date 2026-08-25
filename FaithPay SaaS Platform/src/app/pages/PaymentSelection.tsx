@@ -276,7 +276,7 @@ export default function PaymentSelection() {
 
       try {
         await loadTossScript();
-        const tossClientKey = pgApiKey || currentTenant?.paymentConfig?.apiKey || 'test_ck_OEP5eLpqWEMqYNm7JaEr3779KMlW';
+        const tossClientKey = pgApiKey || currentTenant?.paymentConfig?.apiKey || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
         if (!tossClientKey) {
           toast.error('토스페이먼츠 Client Key(API Key)가 설정되지 않았습니다.');
           setIsProcessing(false);
