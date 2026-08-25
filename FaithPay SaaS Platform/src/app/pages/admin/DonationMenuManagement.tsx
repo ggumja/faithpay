@@ -33,9 +33,10 @@ interface MenuItemFormProps {
   onSave: (item: Partial<DonationItem>) => void;
   onClose: () => void;
   terminology: string;
+  religionType?: string;
 }
 
-function MenuItemForm({ item, onSave, onClose, terminology }: MenuItemFormProps) {
+function MenuItemForm({ item, onSave, onClose, terminology, religionType }: MenuItemFormProps) {
   const [formData, setFormData] = useState<Partial<DonationItem>>(
     item || {
       name: '',
@@ -47,6 +48,8 @@ function MenuItemForm({ item, onSave, onClose, terminology }: MenuItemFormProps)
       enabled: true,
     }
   );
+
+  const prayerLabel = religionType === 'buddhist' ? '발원문' : '기도제목';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +70,7 @@ function MenuItemForm({ item, onSave, onClose, terminology }: MenuItemFormProps)
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="십일조"
+              placeholder={religionType === 'buddhist' ? '인등 / 특별보시' : '주일헌금'}
             />
           </div>
           <div className="space-y-2">
@@ -88,7 +91,11 @@ function MenuItemForm({ item, onSave, onClose, terminology }: MenuItemFormProps)
             id="description"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="수입의 1/10을 드리는 정기 헌금입니다."
+            placeholder={
+              religionType === 'buddhist'
+                ? '가족의 건강과 안녕을 기원하는 정기 보시입니다.'
+                : '수입의 1/10을 드리는 정기 헌금입니다.'
+            }
             rows={3}
           />
         </div>
@@ -155,7 +162,7 @@ function MenuItemForm({ item, onSave, onClose, terminology }: MenuItemFormProps)
                 setFormData({ ...formData, enablePrayerField: checked as boolean })
               }
             />
-            <Label>기도제목/발원문 입력 활성화</Label>
+            <Label>{prayerLabel} 입력 활성화</Label>
           </div>
         </div>
       </div>
@@ -372,6 +379,7 @@ export default function DonationMenuManagement() {
                       setEditingItem(null);
                     }}
                     terminology={currentTenant.terminology.donation}
+                    religionType={currentTenant.religionType}
                   />
                 </DialogContent>
               </Dialog>
@@ -450,7 +458,9 @@ export default function DonationMenuManagement() {
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">기도문 입력</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          {currentTenant.religionType === 'buddhist' ? '발원문' : '기도제목'} 입력
+                        </p>
                         <Badge variant="outline">
                           {item.enablePrayerField ? '활성화' : '비활성화'}
                         </Badge>
