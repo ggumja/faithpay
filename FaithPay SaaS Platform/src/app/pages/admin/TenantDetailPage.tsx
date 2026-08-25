@@ -667,7 +667,7 @@ export default function TenantDetailPage() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground font-mono">
-                  신도/기부자용 접속 URL: soulpay.info/{slug}
+                  신도/기부자용 접속 URL: soulpay.kr/{slug}
                 </p>
               </div>
 
