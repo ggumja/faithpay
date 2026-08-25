@@ -317,19 +317,19 @@ export default function MultiPartySettlementLedger() {
                   PG 원가 (1.5%)
                 </th>
                 <th className="py-3 px-4 text-right bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700">
-                  원원사 정산금 (98.0%)
+                  원원사 정산금 (계약수수료·PG 제외)
                 </th>
                 <th className="py-3 px-4 text-right bg-blue-50/50 dark:bg-blue-950/20 text-blue-700">
-                  플랫폼 총수수료 (0.5%)
+                  플랫폼 총 커미션 (계약수수료)
                 </th>
                 <th className="py-3 px-4 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800">
-                  총판 (0.15%)
+                  총판 / 대리점
                 </th>
                 <th className="py-3 px-4 text-right bg-amber-50/50 dark:bg-amber-950/20 text-amber-800">
-                  에이전트 (0.05%)
+                  영업자
                 </th>
                 <th className="py-3 px-4 text-right bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700">
-                  플랫폼 순수익 (0.3%)
+                  플랫폼 순수익
                 </th>
                 <th className="py-3 px-4 text-center">정산 상태</th>
               </tr>
@@ -377,18 +377,35 @@ export default function MultiPartySettlementLedger() {
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">
                     {item.tenantPayout.toLocaleString()}원
+                    <div className="text-[9px] text-emerald-400 font-normal">
+                      {((item.tenantPayout / item.grossAmount) * 100).toFixed(1)}%
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/10">
                     {item.platformFee.toLocaleString()}원
+                    <div className="text-[9px] text-blue-400 font-normal">
+                      {item.contractRate != null ? `${item.contractRate}%` : ''}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-amber-700 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10">
                     {item.partnerFee.toLocaleString()}원
+                    <div className="text-[9px] text-amber-400 font-normal">
+                      {item.agencyRate != null ? `${item.agencyRate}%` : ''}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-amber-700 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10">
                     {item.agentFee.toLocaleString()}원
+                    <div className="text-[9px] text-amber-400 font-normal">
+                      {item.agentRate != null ? `${item.agentRate}%` : ''}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10">
                     {item.netProfit.toLocaleString()}원
+                    <div className="text-[9px] text-indigo-400 font-normal">
+                      {item.contractRate != null && item.agencyRate != null && item.agentRate != null
+                        ? `${(item.contractRate - item.agencyRate - item.agentRate).toFixed(2)}%`
+                        : ''}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-center space-y-1">
                     {item.status === 'COMPLETED' && (
