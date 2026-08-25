@@ -379,29 +379,26 @@ export default function MultiPartySettlementLedger() {
                       {((item.tenantPayout / item.grossAmount) * 100).toFixed(1)}%
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/10">
-                    {item.platformFee.toLocaleString()}원
-                    <div className="text-[9px] text-blue-400 font-normal">
-                      {item.contractRate != null ? `${item.contractRate}%` : ''}
-                    </div>
-                  </td>
+                  {/* HQ 대리점 */}
                   <td className="py-3 px-4 text-right font-mono text-amber-700 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10">
                     {item.partnerFee.toLocaleString()}원
                     <div className="text-[9px] text-amber-400 font-normal">
                       {item.agencyRate != null ? `${item.agencyRate}%` : ''}
                     </div>
                   </td>
+                  {/* HQ 영업자 */}
                   <td className="py-3 px-4 text-right font-mono text-amber-700 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10">
                     {item.agentFee.toLocaleString()}원
                     <div className="text-[9px] text-amber-400 font-normal">
                       {item.agentRate != null ? `${item.agentRate}%` : ''}
                     </div>
                   </td>
+                  {/* 플랫폼 순수익 (= contractRate - 1.5% PG - agencyRate - agentRate) */}
                   <td className="py-3 px-4 text-right font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10">
                     {item.netProfit.toLocaleString()}원
                     <div className="text-[9px] text-indigo-400 font-normal">
                       {item.contractRate != null && item.agencyRate != null && item.agentRate != null
-                        ? `${(item.contractRate - item.agencyRate - item.agentRate).toFixed(2)}%`
+                        ? `${(item.contractRate - 1.5 - item.agencyRate - item.agentRate).toFixed(1)}%`
                         : ''}
                     </div>
                   </td>
