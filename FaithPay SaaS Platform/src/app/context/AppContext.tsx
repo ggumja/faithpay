@@ -316,7 +316,7 @@ export const defaultTenants: Tenant[] = [
     contact: {
       phone: '02-789-0123',
       email: 'admin@dream.or.kr',
-      name: '김꿈 목사',
+      name: '',
     },
     schedule: [
       { label: '주일 대예배', time: '매주 일요일 오전 11:00' },
@@ -442,7 +442,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const preservedTemplate = (existing?.templateId && existing.templateId !== 'classic')
               ? existing.templateId
               : (t.templateId || 'classic');
-            return existing ? { ...t, ...existing, templateId: preservedTemplate } : t;
+            // DB 실측 데이터(t)가 초기 메모리 state(existing)를 엄격히 오버라이드
+            return existing ? { ...existing, ...t, templateId: preservedTemplate } : t;
           });
         }
         return finalTenants;
