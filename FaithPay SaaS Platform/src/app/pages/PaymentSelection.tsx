@@ -42,6 +42,7 @@ export default function PaymentSelection() {
   );
 
   const [pgProvider, setPgProvider] = useState<string>('');
+  const [pgApiKey, setPgApiKey] = useState<string>('');
   const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
   const [enableCard, setEnableCard] = useState<boolean>(true);
   const [enableEasyPayment, setEnableEasyPayment] = useState<boolean>(true);
@@ -82,6 +83,7 @@ export default function PaymentSelection() {
         if (res.success && res.data) {
           const activePg = res.data.pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay';
           setPgProvider(activePg);
+          setPgApiKey(res.data.apiKey || res.data.tossPayApiKey || currentTenant?.paymentConfig?.apiKey || '');
           setEnableCard(res.data.enableCard !== undefined ? res.data.enableCard : true);
           setEnableVBank(res.data.enableVBank !== undefined ? res.data.enableVBank : true);
 
@@ -113,10 +115,12 @@ export default function PaymentSelection() {
           // fallback 기본 나노PG
           const fallbackPg = currentTenant?.paymentConfig?.pgProvider || 'nanopay';
           setPgProvider(fallbackPg);
+          setPgApiKey(currentTenant?.paymentConfig?.apiKey || '');
         }
       }).catch(() => {
         const fallbackPg = currentTenant?.paymentConfig?.pgProvider || 'nanopay';
         setPgProvider(fallbackPg);
+        setPgApiKey(currentTenant?.paymentConfig?.apiKey || '');
       });
     }
   }, [currentTenant, tenantSlug]);
@@ -272,7 +276,10 @@ export default function PaymentSelection() {
 
       try {
         await loadTossScript();
-        const tossPayments = (window as any).TossPayments('test_ck_D5Ge233da91z4961zP0g3N7kE1a3');
+        const tossClientKey = (pgApiKey && pgApiKey.startsWith('test_ck_'))
+          ? pgApiKey
+          : (pgApiKey || 'test_ck_OEP5eLpqWEMqYNm7JaEr3779KMlW');
+        const tossPayments = (window as any).TossPayments(tossClientKey);
         
         const tempDonationId = `don_${Date.now()}`;
         const orderName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
