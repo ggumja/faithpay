@@ -43,12 +43,11 @@ export default function AdminLogin() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기 (Strict Registration Lookup with Fallback Guarantee)
+  // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기 (Strict Initial Registration Lookup Only)
   const getTenantStaffAccounts = (tenant: any): any[] => {
     if (!tenant) return [];
 
     const primaryEmail = (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase();
-    const slugAdminEmail = `admin@${(tenant.slug || '').toLowerCase()}.or.kr`;
     const primaryPw =
       localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) ||
       localStorage.getItem(`faithpay_tenant_password_${tenant.id}`) ||
@@ -63,15 +62,14 @@ export default function AdminLogin() {
         localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
       if (savedStaffStr) {
         const parsed = JSON.parse(savedStaffStr);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           staffList = parsed;
         }
       }
     } catch (e) {}
 
-    // 대표 관리자 계정 이메일 보장
-    const defaultEmails = [primaryEmail, slugAdminEmail, `admin@${tenant.slug}.org`, `admin@${tenant.slug}.com`].map((e) => e.toLowerCase());
-    const hasPrimary = staffList.some((s: any) => s.email && defaultEmails.includes(s.email.trim().toLowerCase()));
+    // 가입 시 입력된 이메일 계정이 목록에 없을 경우 해당 단일 계정만 기본 반환 (slug 기반 자동 추가 금지)
+    const hasPrimary = staffList.some((s: any) => s.email && s.email.trim().toLowerCase() === primaryEmail);
 
     if (!hasPrimary || staffList.length === 0) {
       staffList.unshift({
@@ -82,16 +80,6 @@ export default function AdminLogin() {
         groupId: 'tenant_admin',
         status: 'active',
       });
-      if (primaryEmail !== slugAdminEmail) {
-        staffList.push({
-          id: `admin-${tenant.id}-2`,
-          name: `${tenant.name} 대표 관리자`,
-          email: slugAdminEmail,
-          password: primaryPw,
-          groupId: 'tenant_admin',
-          status: 'active',
-        });
-      }
     }
 
     return staffList;
@@ -107,22 +95,7 @@ export default function AdminLogin() {
     const cleanPassword = passwordVal.trim();
 
     const staffAccounts = getTenantStaffAccounts(tenant);
-    let matchedAccount = staffAccounts.find((s) => s.email && s.email.trim().toLowerCase() === cleanEmail);
-
-    // 이메일이 매칭되지 않으면 슬러그 기반 대표 계정 확인
-    if (!matchedAccount) {
-      const slug = (tenant.slug || '').toLowerCase();
-      if (cleanEmail === `admin@${slug}.or.kr` || cleanEmail === `admin@${slug}.org` || cleanEmail === (tenant.contact?.email || '').trim().toLowerCase()) {
-        matchedAccount = {
-          id: `admin-${tenant.id}-fallback`,
-          name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
-          email: cleanEmail,
-          password: localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) || 'admin1234!',
-          groupId: 'tenant_admin',
-          status: 'active',
-        };
-      }
-    }
+    const matchedAccount = staffAccounts.find((s) => s.email && s.email.trim().toLowerCase() === cleanEmail);
 
     if (!matchedAccount) {
       return { success: false, reason: 'unregistered' };
@@ -138,7 +111,7 @@ export default function AdminLogin() {
       localStorage.getItem(`faithpay_tenant_password_${tenant.id}`) ||
       'admin1234!';
 
-    // 비밀번호 검증 (설정된 비밀번호 또는 기본 패스워드 호환)
+    // 비밀번호 검증 (등록된 비밀번호 또는 기본 패스워드 호환)
     if (cleanPassword === expectedPassword || cleanPassword === 'admin1234!' || cleanPassword === 'admin1234') {
       return { success: true, reason: 'ok', account: matchedAccount };
     }
