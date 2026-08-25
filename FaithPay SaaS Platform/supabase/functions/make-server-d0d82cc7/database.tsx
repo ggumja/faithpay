@@ -1525,6 +1525,9 @@ export async function getAdminSettlementLedger(opts?: {
       settlementMonth: r.settlement_month,
     };
   });
+}
+
+/**
  * 관리자 정산 개요 통계 — partner_commissions + partner_settlements 집계
  */
 export async function getAdminSettlementOverview(): Promise<{
@@ -1630,8 +1633,6 @@ export async function getAdminSettlementStatements(month: string): Promise<{
 }
 
 
-
-}
 
 /**
  * 관리자 지급 실행 예외 목록 및 예치금 잔액 조회 — partner_settlements / partner_commissions DB 쿼리
