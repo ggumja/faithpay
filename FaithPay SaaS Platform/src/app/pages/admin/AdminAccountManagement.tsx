@@ -185,9 +185,16 @@ export default function AdminAccountManagement() {
         : `admin@${(tenant.slug || 'soulpay').toLowerCase()}.or.kr`;
 
       const primaryName =
-        tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사'
+        tenant.contact?.name &&
+        tenant.contact.name !== '담임목사 / 주지스님' &&
+        tenant.contact.name !== '주지스님 / 담임목사' &&
+        tenant.contact.name !== '담임목사' &&
+        tenant.contact.name !== '주지스님' &&
+        tenant.contact.name !== '주임신부'
           ? tenant.contact.name
-          : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자'));
+          : tenant.slug === 'dream'
+          ? '김꿈 목사'
+          : tenant.contact?.name || tenant.name + ' 대표 관리자';
 
       const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.toLowerCase() === primaryEmail);
 
@@ -210,10 +217,14 @@ export default function AdminAccountManagement() {
           loadedStaff = [primaryAdmin];
         }
       } else {
-        // 새로고침 시 캐시와 단체 대표자 성명이 어긋나 깜빡이는 현상(Flicker) 방지
-        loadedStaff = loadedStaff.map((s) =>
-          s.email.toLowerCase() === primaryEmail ? { ...s, name: primaryName } : s
-        );
+        // 이미 구체적인 성명이 설정되어 있다면 유지, 일반 직함으로 교체되는 비동기 플리커 방지
+        loadedStaff = loadedStaff.map((s) => {
+          if (s.email.toLowerCase() === primaryEmail) {
+            const isGenericTitle = !s.name || s.name === '담임목사' || s.name === '주지스님' || s.name === '주임신부' || s.name === '대표자';
+            return isGenericTitle ? { ...s, name: primaryName } : s;
+          }
+          return s;
+        });
       }
 
       setStaffList(loadedStaff);
