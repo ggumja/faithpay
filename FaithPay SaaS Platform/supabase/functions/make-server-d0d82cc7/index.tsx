@@ -72,6 +72,67 @@ app.get("/make-server-d0d82cc7/tenants/slug/:slug", async (c) => {
   }
 });
 
+// 📌 가맹 단체별 관리자 계정 목록 조회 및 저장 (by tenantId) ← /tenants/:id 와일드카드보다 반드시 앞!
+const handleGetTenantStaff = async (c: any) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    const staffList = await kv.get(`tenant_staff_${tenantId}`);
+    
+    if (staffList && Array.isArray(staffList) && staffList.length > 0) {
+      return c.json({ success: true, data: staffList });
+    }
+
+    // DB에 등록된 스태프 목록이 없으면 해당 단체 가입 대표자 1개 계정 로드
+    const tenants = await db.getAllTenants();
+    const tenant = tenants.find((t: any) => t.id === tenantId || t.slug === tenantId);
+    
+    const primaryEmail = (tenant?.contact?.email || `admin@${tenant?.slug || 'soulpay'}.or.kr`).trim().toLowerCase();
+    const primaryAdmin = {
+      id: `admin-${tenantId}`,
+      name: tenant?.contact?.name || `${tenant?.name || '가맹점'} 대표 관리자`,
+      email: primaryEmail,
+      phone: tenant?.contact?.phone || '',
+      groupId: 'tenant_admin',
+      password: 'admin1234!',
+      status: 'active',
+      createdAt: tenant?.appliedAt ? tenant.appliedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    };
+
+    return c.json({ success: true, data: [primaryAdmin] });
+  } catch (error) {
+    console.error('Error fetching tenant staff:', error);
+    return c.json({ success: false, error: 'Failed to fetch tenant staff' }, 500);
+  }
+};
+
+const handleSaveTenantStaff = async (c: any) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    const { staffList } = await c.req.json();
+    
+    if (!Array.isArray(staffList)) {
+      return c.json({ success: false, error: 'staffList must be an array' }, 400);
+    }
+    
+    await kv.set(`tenant_staff_${tenantId}`, staffList);
+    return c.json({ success: true, data: staffList });
+  } catch (error) {
+    console.error('Error saving tenant staff:', error);
+    return c.json({ success: false, error: 'Failed to save tenant staff' }, 500);
+  }
+};
+
+app.get("/make-server-d0d82cc7/tenant-staff/:tenantId", handleGetTenantStaff);
+app.get("/tenant-staff/:tenantId", handleGetTenantStaff);
+app.get("/make-server-d0d82cc7/tenants/:tenantId/staff", handleGetTenantStaff);
+app.get("/tenants/:tenantId/staff", handleGetTenantStaff);
+
+app.post("/make-server-d0d82cc7/tenant-staff/:tenantId", handleSaveTenantStaff);
+app.post("/tenant-staff/:tenantId", handleSaveTenantStaff);
+app.post("/make-server-d0d82cc7/tenants/:tenantId/staff", handleSaveTenantStaff);
+app.post("/tenants/:tenantId/staff", handleSaveTenantStaff);
+
 // 특정 단체 조회 (by ID)  ← 와일드카드이므로 static 경로 뒤에 등록
 app.get("/make-server-d0d82cc7/tenants/:id", async (c) => {
   try {
@@ -1177,57 +1238,7 @@ app.get("/make-server-d0d82cc7/admin", async (c) => {
   }
 });
 
-// 📌 가맹 단체별 관리자 계정 목록 조회 (실제 DB 연동)
-app.get("/make-server-d0d82cc7/tenants/:tenantId/staff", async (c) => {
-  try {
-    const tenantId = c.req.param('tenantId');
-    const staffList = await kv.get(`tenant_staff_${tenantId}`);
-    
-    if (staffList && Array.isArray(staffList) && staffList.length > 0) {
-      return c.json({ success: true, data: staffList });
-    }
 
-    // DB에 등록된 스태프 목록이 없으면 해당 단체 가입 대표자 1개 계정 로드
-    const tenants = await db.getAllTenants();
-    const tenant = tenants.find(t => t.id === tenantId || t.slug === tenantId);
-    
-    const primaryEmail = (tenant?.contact?.email || `admin@${tenant?.slug || 'soulpay'}.or.kr`).trim().toLowerCase();
-    const primaryAdmin = {
-      id: `admin-${tenantId}`,
-      name: tenant?.contact?.name || `${tenant?.name || '가맹점'} 대표 관리자`,
-      email: primaryEmail,
-      phone: tenant?.contact?.phone || '',
-      groupId: 'tenant_admin',
-      password: 'admin1234!',
-      status: 'active',
-      createdAt: tenant?.appliedAt ? tenant.appliedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
-      lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    };
-
-    return c.json({ success: true, data: [primaryAdmin] });
-  } catch (error) {
-    console.error('Error fetching tenant staff:', error);
-    return c.json({ success: false, error: 'Failed to fetch tenant staff' }, 500);
-  }
-});
-
-// 📌 가맹 단체별 관리자 계정 목록 저장 (실제 DB 연동)
-app.post("/make-server-d0d82cc7/tenants/:tenantId/staff", async (c) => {
-  try {
-    const tenantId = c.req.param('tenantId');
-    const { staffList } = await c.req.json();
-    
-    if (!Array.isArray(staffList)) {
-      return c.json({ success: false, error: 'staffList must be an array' }, 400);
-    }
-    
-    await kv.set(`tenant_staff_${tenantId}`, staffList);
-    return c.json({ success: true, data: staffList });
-  } catch (error) {
-    console.error('Error saving tenant staff:', error);
-    return c.json({ success: false, error: 'Failed to save tenant staff' }, 500);
-  }
-});
 
 // DB 80만원 (4건: 10만원 3건 + 50만원 1건) 정밀 재정립
 app.post("/make-server-d0d82cc7/admin/seed-800k", async (c) => {

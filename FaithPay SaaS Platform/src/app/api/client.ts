@@ -609,11 +609,11 @@ export const adminAPI = {
   },
 
   async getTenantStaff(tenantId: string): Promise<APIResponse<any[]>> {
-    return fetchAPI<any[]>(`/tenants/${tenantId}/staff`);
+    return fetchAPI<any[]>(`/tenant-staff/${tenantId}`);
   },
 
   async saveTenantStaff(tenantId: string, staffList: any[]): Promise<APIResponse<any[]>> {
-    return fetchAPI<any[]>(`/tenants/${tenantId}/staff`, {
+    return fetchAPI<any[]>(`/tenant-staff/${tenantId}`, {
       method: 'POST',
       body: JSON.stringify({ staffList }),
     });
