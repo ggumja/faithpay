@@ -20,62 +20,19 @@ interface PlatformAccount {
 }
 
 const DEFAULT_PGS: PGEntry[] = [
-  { id: 'nanopay', name: '나노페이 (NanoPay)', rate: 1.5, margin: 0.5 },
-  { id: 'toss', name: '토스페이먼츠 (TossPayments)', rate: 1.5, margin: 0.5 },
+  { id: 'nanopay', name: '나노페이 (NanoPay)', rate: 0, margin: 0 },
+  { id: 'toss', name: '토스페이먼츠 (TossPayments)', rate: 0, margin: 0 },
 ];
 
-const STORAGE_KEY        = 'soulpay:pg_rates';
-const STORAGE_KEY_MARGIN = 'soulpay:platform_margin';
-const STORAGE_KEY_ACCOUNT = 'soulpay:platform_payout_account';
-
-const DEFAULT_ACCOUNT: PlatformAccount = {
-  bank: '088', // 신한은행
-  accountNumber: '110-482-992014',
-  holderName: '주식회사 소울페이 (SoulPay)',
-  businessNumber: '128-86-94021',
+const EMPTY_ACCOUNT: PlatformAccount = {
+  bank: '',
+  accountNumber: '',
+  holderName: '',
+  businessNumber: '',
   payoutCycle: 'D+1',
 };
 
-function loadRates(): PGEntry[] {
-  try {
-    const r = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('faithpay:pg_rates');
-    if (r) {
-      const parsed = JSON.parse(r);
-      return DEFAULT_PGS.map(d => {
-        const found = parsed.find((p: any) => p.id === d.id);
-        return {
-          ...d,
-          rate: found?.rate !== undefined ? Number(found.rate) : d.rate,
-          margin: found?.margin !== undefined ? Number(found.margin) : d.margin,
-        };
-      });
-    }
-  } catch {}
-  return DEFAULT_PGS.map(p => ({ ...p }));
-}
-
-function saveRates(list: PGEntry[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  if (list.length > 0) {
-    localStorage.setItem(STORAGE_KEY_MARGIN, String(list[0].margin));
-  }
-}
-
-function loadAccount(): PlatformAccount {
-  try {
-    const a = localStorage.getItem(STORAGE_KEY_ACCOUNT) || localStorage.getItem('faithpay:platform_payout_account');
-    if (a) {
-      return { ...DEFAULT_ACCOUNT, ...JSON.parse(a) };
-    }
-  } catch {}
-  return { ...DEFAULT_ACCOUNT };
-}
-
-function saveAccount(acc: PlatformAccount) {
-  const updated = { ...acc, updatedAt: new Date().toISOString() };
-  localStorage.setItem(STORAGE_KEY_ACCOUNT, JSON.stringify(updated));
-  return updated;
-}
+// 참고: PG 수수료 및 계좌 설정은 DB 백엔드 API 연동 예정—현재는 빈 초기값으로 시작합니다.
 
 /* ── style atoms ── */
 const S = {
@@ -96,11 +53,12 @@ type TabKey = typeof TABS[number]['key'];
 
 /* ── 수수료 설정 탭 ── */
 function FeeSettingsTab() {
-  const [pgs, setPgs]       = useState<PGEntry[]>([]);
+  const [pgs, setPgs]       = useState<PGEntry[]>(DEFAULT_PGS.map(p => ({ ...p })));
   const [dirty, setDirty]   = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setPgs(loadRates()); }, []);
+  // TODO: DB API 연동 시 useEffect(() => { fetchPgRates().then(setPgs); }, []); 시행
+  // 현재는 빈 0값 표시 — 역마진 방지 Guardrail 위한 수동 입력만 지원
 
   const updatePgRate = (id: string, val: string) => {
     const n = parseFloat(val);
@@ -116,8 +74,8 @@ function FeeSettingsTab() {
 
   const handleSaveAll = () => {
     setSaving(true);
+    // TODO: DB API 저장으로 대체 필요 (현재 메모리 state만 유지)
     setTimeout(() => {
-      saveRates(pgs);
       setDirty(false);
       setSaving(false);
       toast.success('PG별 수수료 원가 및 플랫폼 마진율 설정이 저장되었습니다.');
@@ -224,13 +182,11 @@ function FeeSettingsTab() {
 
 /* ── 수수료 입금 계좌 설정 탭 ── */
 function AccountSettingsTab() {
-  const [account, setAccount] = useState<PlatformAccount>(DEFAULT_ACCOUNT);
+  const [account, setAccount] = useState<PlatformAccount>(EMPTY_ACCOUNT);
   const [dirty, setDirty]     = useState(false);
   const [saving, setSaving]   = useState(false);
 
-  useEffect(() => {
-    setAccount(loadAccount());
-  }, []);
+  // TODO: DB API 연동 시 useEffect(() => { fetchPlatformAccount().then(setAccount); }, []); 시행
 
   const handleChange = (field: keyof PlatformAccount, val: string) => {
     setAccount(prev => ({ ...prev, [field]: val }));
@@ -244,8 +200,9 @@ function AccountSettingsTab() {
     }
 
     setSaving(true);
+    // TODO: DB API 저장으로 대체 필요 (현재 메모리 state만 유지)
     setTimeout(() => {
-      const saved = saveAccount(account);
+      const saved = { ...account, updatedAt: new Date().toISOString() };
       setAccount(saved);
       setDirty(false);
       setSaving(false);

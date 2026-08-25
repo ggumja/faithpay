@@ -56,8 +56,6 @@ const S = {
   btnOutline:'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[11.5px] font-medium bg-transparent text-[var(--hm-accent)] border border-[var(--hm-accent-border)] cursor-pointer hover:bg-[var(--hm-accent-bg)] transition-colors',
 };
 
-const PENDING_MOCK: Tenant[] = []; // API 로드 전 빈 배열
-
 export default function SystemAdminDashboard() {
   const navigate  = useNavigate();
   const location  = useLocation();
@@ -118,64 +116,64 @@ export default function SystemAdminDashboard() {
     return timeB - timeA;
   });
 
-  const tList = sortedTenants.map(t => {
-    let paymentConfig = t.paymentConfig;
-    try {
-      const savedConfigStr = localStorage.getItem(`paymentConfig_${t.id}`) || localStorage.getItem(`paymentConfig_${t.slug}`);
-      if (savedConfigStr) {
-        const parsedConfig = JSON.parse(savedConfigStr);
-        if (parsedConfig && (parsedConfig.pgProvider || parsedConfig.mid)) {
-          paymentConfig = { ...(paymentConfig || {}), ...parsedConfig };
-        }
-      }
-    } catch (e) {}
-
-    return {
-      ...t,
-      paymentConfig,
-      live: Boolean(paymentConfig?.isActive || t.status === 'active'),
-    };
-  });
+  // paymentConfig 는 DB 저장값만 사용 (localStorage 완전 배제)
+  const tList = sortedTenants.map(t => ({
+    ...t,
+    live: Boolean(t.paymentConfig?.isActive || t.status === 'active'),
+  }));
 
   const liveCnt = tList.filter(t => t.live).length;
 
-  // ── 대리점별 단체 묶음 그룹 생성 ──────────────────────────────────
-  const agencyGroups = [
-    {
-      id: 'agency-bit',
-      name: '불교정보화협의회',
-      code: 'BIT2024',
-      rate: 0.5,
-      agentNames: ['이수진', '박지훈'],
-      items: tList.filter(t => {
-        const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
-        const name = (t as any).registeredByPartnerName;
-        return ref === 'BIT2024' || ref === 'LSJ002' || name === '이수진' || name === '불교정보화협의회';
-      }).map(t => ({
-        ...t,
-        agentName: (t as any).registrationSource === 'agent' ? `${(t as any).registeredByPartnerName || '영업자'} (영업자)` : '대리점 본사 직접',
-        contractRate: (t as any).contractRate ?? 3.0,
-      })),
-    },
-    {
-      id: 'agency-krs',
-      name: '한국종교솔루션(주)',
-      code: 'KRS2024',
-      rate: 0.5,
-      agentNames: ['김정수', '박민호'],
-      items: tList.filter(t => {
-        const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
-        const name = (t as any).registeredByPartnerName;
-        return ref === 'KRS2024' || ref === 'KJS001' || ref === 'PMH003' || name === '한국종교솔루션(주)' || name === '김정수' || name === '박민호';
-      }).map(t => ({
-        ...t,
-        agentName: (t as any).registrationSource === 'agent' ? `${(t as any).registeredByPartnerName || '영업자'} (영업자)` : '대리점 본사 직접',
-        contractRate: (t as any).contractRate ?? 3.0,
-      })),
-    },
-  ];
+  // ── 대리점별 단체 묶음 그룹 생성 (DB 파트너 정보 기반, 하드코딩 완전 배제) ──
+  // 각 단체의 registeredByReferralCode / registeredByPartnerName 필드를 기반으로
+  // DB 파트너 목록과 교차 매칭하여 동적으로 그룹을 생성합니다.
+  const agencyGroups: {
+    id: string;
+    name: string;
+    code: string;
+    rate: number;
+    agentNames: string[];
+    items: (typeof tList[number] & { agentName: string; contractRate: number })[];
+  }[] = [];
 
-  // 기타 대리점 미지정 단체
+  // DB 파트너 목록 기준 그룹 구성 (dbPartners 가 있을 경우)
+  // 현재 파트너 데이터는 PartnerManagement/CommissionStatsPage 에서 별도 로드하므로
+  // 여기서는 단체가 가진 referralCode 속성으로 그룹핑합니다.
+  const partnerCodeMap = new Map<string, { name: string; code: string; agents: string[] }>();
+  tList.forEach(t => {
+    const code = (t as any).registeredByReferralCode || (t as any).referralCode || '';
+    const partnerName = (t as any).registeredByPartnerName || '';
+    if (code && code !== 'SYSTEM' && partnerName) {
+      if (!partnerCodeMap.has(code)) {
+        partnerCodeMap.set(code, { name: partnerName, code, agents: [] });
+      }
+    }
+  });
+
+  partnerCodeMap.forEach((partner, code) => {
+    const items = tList
+      .filter(t => {
+        const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
+        return ref === code;
+      })
+      .map(t => ({
+        ...t,
+        agentName: (t as any).registrationSource === 'agent'
+          ? `${(t as any).registeredByPartnerName || '영업자'} (영업자)`
+          : '대리점 본사 직접',
+        contractRate: (t as any).contractRate ?? 3.0,
+      }));
+    agencyGroups.push({
+      id: `agency-${code.toLowerCase()}`,
+      name: partner.name,
+      code: partner.code,
+      rate: (tList.find(t => ((t as any).registeredByReferralCode || (t as any).referralCode) === code) as any)?.agencyRate ?? 0.5,
+      agentNames: partner.agents.length > 0 ? partner.agents : [partner.name],
+      items,
+    });
+  });
+
+  // 기타 대리점 미지정 단체 (referralCode 없는 단체)
   const agencyAssignedSlugs = new Set(agencyGroups.flatMap(g => g.items.map(i => i.slug)));
   const directItems = tList.filter(t => !agencyAssignedSlugs.has(t.slug)).map(t => ({
     ...t,
@@ -189,7 +187,7 @@ export default function SystemAdminDashboard() {
       name: '플랫폼 본사 직접 유치 관리',
       code: 'SYSTEM',
       rate: 0.0,
-      agentNames: ['시스템 관리자'],
+      agentNames: [],
       items: directItems,
     });
   }

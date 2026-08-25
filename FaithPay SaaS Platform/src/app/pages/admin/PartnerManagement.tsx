@@ -58,11 +58,8 @@ export default function PartnerManagement() {
       try {
         const res = await partnerAPI.getAll();
         if (res.success && Array.isArray(res.data)) {
-          const mapped = res.data.map(p => {
-            const savedStatus = localStorage.getItem(`soulpay:partner_status:${p.id}`) || localStorage.getItem(`faithpay:partner_status:${p.id}`);
-            return savedStatus ? { ...p, status: savedStatus as any } : p;
-          });
-          setPartners(mapped);
+          // DB API 응답 데이터만 사용 (localStorage 덮어읽기 완전 제거)
+          setPartners(res.data);
         } else {
           setPartners([]);
         }

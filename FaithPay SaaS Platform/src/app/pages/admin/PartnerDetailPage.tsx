@@ -50,26 +50,11 @@ export default function PartnerDetailPage() {
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
 
-  // 이력 데이터
-  const [history, setHistory] = useState([
-    { id: 'h-1', date: '2026-08-01 14:20', type: '수수료 변경', detail: '수수료율 0.5% → 0.7% 수정', by: '시스템 최고관리자' },
-    { id: 'h-2', date: '2026-07-25 10:15', type: '단체 유치', detail: '신규 단체 [봉원사] 영업 등록 완료', by: '파트너 본인' },
-    { id: 'h-3', date: '2026-07-05 11:00', type: '정산 완료', detail: '2026년 6월분 정산금 845,000원 입금 완료', by: '재무팀' },
-    { id: 'h-4', date: '2026-02-10 09:30', type: '계정 승인', detail: '영업 파트너 자격 승인 및 추천코드 부여', by: '승인담당자' },
-  ]);
+  // 이력 데이터: DB API 연동 예정 — 현재 빈 배열로 시작 (하드코딩 목 이력 완전 제거)
+  const [history, setHistory] = useState<{ id: string; date: string; type: string; detail: string; by: string }[]>([]);
 
-  // PG 원가율 로드 (SystemSettings localStorage)
-  const pgCostRate: number = (() => {
-    try {
-      const raw = localStorage.getItem('soulpay:pg_rates') || localStorage.getItem('faithpay:pg_rates');
-      if (raw) {
-        const parsed: { id: string; rate: number }[] = JSON.parse(raw);
-        const first = parsed[0];
-        if (first?.rate != null) return Number(first.rate);
-      }
-    } catch {}
-    return 1.5;
-  })();
+  // PG 원가율: DB API 연동 예정 — 현재 0 기본값 (하드코딩 localStorage 완전 제거)
+  const pgCostRate: number = 0;
 
   useEffect(() => {
     loadPartnerData();
