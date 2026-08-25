@@ -149,11 +149,19 @@ export default function PartnerManagement() {
     }
   };
 
-  const handleUpdateRate = (id: string, newRate: number) => {
-    setPartners(prev => prev.map(p => p.id === id ? { ...p, commissionRate: newRate } : p));
-    toast.success('수수료율이 수정되었습니다.');
+  const handleUpdateRate = async (id: string, newRate: number) => {
+    setPartners(prev => prev.map(p => p.id === id ? { ...p, commissionRate: newRate, agencyRate: newRate } : p));
+    try {
+      const res = await partnerAPI.update(id, { commissionRate: newRate, agencyRate: newRate });
+      if (res.success) {
+        toast.success('수수료율이 DB에 저장되었습니다.');
+      } else {
+        toast.error(res.error || '수수료율 수정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('수수료율 수정 중 오류가 발생했습니다.');
+    }
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +172,7 @@ export default function PartnerManagement() {
       name, email, phone, role,
       parentId: role === 'sales_agent' ? parentId || undefined : undefined,
       commissionRate,
+      agencyRate: role === 'master_agency' ? commissionRate : undefined,
       referralCode: referralCode || `${role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Math.floor(100 + Math.random() * 900)}`,
       bankName,
       accountNumber: accountNumber || '',
@@ -344,7 +353,7 @@ export default function PartnerManagement() {
                         <div className="flex items-center justify-end gap-1">
                           <Input
                             type="number" step="0.1" min="0" max="3"
-                            value={(p as any).agencyRate ?? p.commissionRate}
+                            value={p.commissionRate ?? (p as any).agencyRate ?? 0}
                             onChange={e => handleUpdateRate(p.id, parseFloat(e.target.value) || 0)}
                             className="w-16 h-7 text-right font-bold text-xs"
                           />
