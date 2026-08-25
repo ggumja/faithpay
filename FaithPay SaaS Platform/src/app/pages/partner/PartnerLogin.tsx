@@ -236,8 +236,8 @@ export default function PartnerLogin() {
               제휴 신청하기 →
             </button>
           </p>
-          <p className="text-[11px] text-slate-700">
-            데모 비밀번호: <span className="font-mono text-slate-500">fp1234</span>
+          <p className="text-[11px] text-slate-600">
+            초기 비밀번호: <span className="font-mono text-emerald-400 font-bold">admin1234!</span>
           </p>
         </div>
       </div>
