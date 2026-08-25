@@ -156,14 +156,14 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. Supabase 백엔드 DB에서 해당 단체(tenant.id) 관리자 목록 실측 조회 (실패 시 오프라인/최초 계정 연동)
+      // 2. Supabase 백엔드 DB에서 해당 단체(tenant.id) 관리자 목록 실측 조회
       adminAPI.getTenantStaff(tenant.id).then((res) => {
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
           setStaffList(res.data);
           return;
         }
 
-        // 로컬 오프라인 보존 데이터 확인
+        // 로컬 오프라인 데이터 확인
         const saved = localStorage.getItem(`soulpay_staff_${tenant.id}`);
         if (saved) {
           try {
@@ -175,19 +175,26 @@ export default function AdminAccountManagement() {
           } catch {}
         }
 
-        // 최초 단체 가입 시 등록된 대표 관리자 계정 1개로 구성
-        const primaryAdmin: StaffAdminUser = {
-          id: `admin-${tenant.id}`,
-          name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
-          email: (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase(),
-          phone: tenant.contact?.phone || '',
-          groupId: 'tenant_admin',
-          password: 'admin1234!',
-          status: 'active',
-          createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
-          lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        };
-        setStaffList([primaryAdmin]);
+        // 최초 단체 가입 시 DB에 저장된 실제 등록 담당자 정보(tenant.contact)만 표출 (가상 계정 생성 금지)
+        const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
+        const registeredName = tenant.contact?.name;
+
+        if (registeredEmail && registeredName) {
+          const primaryAccount: StaffAdminUser = {
+            id: `admin-${tenant.id}`,
+            name: registeredName,
+            email: registeredEmail,
+            phone: tenant.contact?.phone || '',
+            groupId: 'tenant_admin',
+            password: tenant.tempPassword || 'admin1234!',
+            status: 'active',
+            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+            lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+          };
+          setStaffList([primaryAccount]);
+        } else {
+          setStaffList([]);
+        }
       }).catch(() => {
         const saved = localStorage.getItem(`soulpay_staff_${tenant.id}`);
         if (saved) {
@@ -200,18 +207,25 @@ export default function AdminAccountManagement() {
           } catch {}
         }
 
-        const primaryAdmin: StaffAdminUser = {
-          id: `admin-${tenant.id}`,
-          name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
-          email: (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase(),
-          phone: tenant.contact?.phone || '',
-          groupId: 'tenant_admin',
-          password: 'admin1234!',
-          status: 'active',
-          createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
-          lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        };
-        setStaffList([primaryAdmin]);
+        const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
+        const registeredName = tenant.contact?.name;
+
+        if (registeredEmail && registeredName) {
+          const primaryAccount: StaffAdminUser = {
+            id: `admin-${tenant.id}`,
+            name: registeredName,
+            email: registeredEmail,
+            phone: tenant.contact?.phone || '',
+            groupId: 'tenant_admin',
+            password: tenant.tempPassword || 'admin1234!',
+            status: 'active',
+            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+            lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+          };
+          setStaffList([primaryAccount]);
+        } else {
+          setStaffList([]);
+        }
       });
 
       // 3. 저장된 권한 매트릭스 로드
