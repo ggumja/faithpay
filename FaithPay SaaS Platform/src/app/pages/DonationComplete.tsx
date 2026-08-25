@@ -38,7 +38,12 @@ export default function DonationComplete() {
     const fromList = tenants.find(t => t.slug === tenantSlug || t.id === tenantSlug);
     if (fromList) return fromList;
     try {
-      const snapStr = sessionStorage.getItem(`pending_donation_${donIdParam}`) || sessionStorage.getItem('pending_donation_latest');
+      // sessionStorage 우선, full-redirect 시 소멸 대비해 localStorage fallback
+      const snapStr =
+        sessionStorage.getItem(`pending_donation_${donIdParam}`) ||
+        localStorage.getItem(`pending_donation_${donIdParam}`) ||
+        sessionStorage.getItem('pending_donation_latest') ||
+        localStorage.getItem('pending_donation_latest');
       if (snapStr) {
         const snap = JSON.parse(snapStr);
         if (snap.tenant) return snap.tenant;
@@ -51,7 +56,12 @@ export default function DonationComplete() {
   const [formData, setFormData] = useState<DonationFormData>(() => {
     if (appFormData && appFormData.amount) return appFormData;
     try {
-      const snapStr = sessionStorage.getItem(`pending_donation_${donIdParam}`) || sessionStorage.getItem('pending_donation_latest');
+      // sessionStorage 우선, full-redirect 시 소멸 대비해 localStorage fallback
+      const snapStr =
+        sessionStorage.getItem(`pending_donation_${donIdParam}`) ||
+        localStorage.getItem(`pending_donation_${donIdParam}`) ||
+        sessionStorage.getItem('pending_donation_latest') ||
+        localStorage.getItem('pending_donation_latest');
       if (snapStr) {
         const snap = JSON.parse(snapStr);
         if (snap.formData) return snap.formData;

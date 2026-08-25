@@ -296,7 +296,9 @@ export default function PaymentSelection() {
         const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
         const customerKey = `customer_${currentTenant.id}_${cleanPhone || Date.now()}`;
 
-        // 💾 리다이렉트 후 복구를 위한 세션 스냅샷 저장
+        // 💾 리다이렉트 후 복구를 위한 스냅샷 저장
+        // ⚠️ 토스 v1 SDK는 현재 페이지를 토스 도메인으로 full redirect함
+        //    → sessionStorage는 origin이 달라지면 사라지모로 localStorage에도 이중 저장
         const snapshot = {
           formData: {
             ...donationFormData,
@@ -310,8 +312,12 @@ export default function PaymentSelection() {
           timestamp: Date.now(),
         };
         try {
-          sessionStorage.setItem(`pending_donation_${tempDonationId}`, JSON.stringify(snapshot));
-          sessionStorage.setItem('pending_donation_latest', JSON.stringify(snapshot));
+          const snapStr = JSON.stringify(snapshot);
+          sessionStorage.setItem(`pending_donation_${tempDonationId}`, snapStr);
+          sessionStorage.setItem('pending_donation_latest', snapStr);
+          // localStorage에도 저장 (full-redirect 시 sessionStorage 소멸 방지)
+          localStorage.setItem(`pending_donation_${tempDonationId}`, snapStr);
+          localStorage.setItem('pending_donation_latest', snapStr);
         } catch (e) {
           console.warn('Failed to save donation session snapshot:', e);
         }
