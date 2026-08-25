@@ -17,19 +17,30 @@ export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string 
 
   // 2. 전체 단체 목록이 전달된 경우 등록 순서(생성일 오름차순) 기준 1-based 순번 부여
   if (allTenants && allTenants.length > 0) {
-    // 중복 id 제거 후 정렬
+    // 중복 id 제거
     const seen = new Set<string>();
     const uniqueTenants = allTenants.filter(t => {
-      const key = t.id || t.slug;
+      const key = String(t.id || t.slug || '');
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    // appliedAt 기준 오름차순 정렬 + ID를 보조키(tiebreaker)로 사용 → 항상 안정적·결정론적 순서 보장
     const ascTenants = [...uniqueTenants].sort((a, b) => {
-      const timeA = a.appliedAt ? new Date(a.appliedAt).getTime() : (parseInt(String(a.id).replace(/\D/g, ''), 10) || 0);
-      const timeB = b.appliedAt ? new Date(b.appliedAt).getTime() : (parseInt(String(b.id).replace(/\D/g, ''), 10) || 0);
-      return timeA - timeB;
+      const getTime = (t: any) => {
+        if (t.appliedAt) return new Date(t.appliedAt).getTime();
+        // appliedAt 없을 때 createdAt 확인
+        if (t.createdAt) return new Date(t.createdAt).getTime();
+        return 0;
+      };
+      const ta = getTime(a);
+      const tb = getTime(b);
+      if (ta !== tb) return ta - tb;
+      // 동일 시각이면 ID 문자열 사전순으로 안정 정렬 (항상 동일 결과)
+      return String(a.id || a.slug || '').localeCompare(String(b.id || b.slug || ''));
     });
+
     const foundIdx = ascTenants.findIndex(t => t.id === targetTenant.id || t.slug === targetTenant.slug);
     if (foundIdx !== -1) {
       return `fp${String(foundIdx + 1).padStart(5, '0')}`;
