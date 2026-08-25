@@ -18,6 +18,18 @@ import { Partner, PartnerCommission, partnerAPI, tenantAPI, Tenant } from '../..
 
 type TabKey = 'info' | 'subagents' | 'tenants' | 'commissions' | 'history';
 
+/** ISO 날짜 문자열 → 'YYYY-MM-DD HH:mm' (KST) */
+const fmtDate = (iso?: string | null): string => {
+  if (!iso) return '-';
+  try {
+    return new Date(iso).toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).replace(/\. /g, '-').replace('.', '').replace(',', '');
+  } catch { return iso.slice(0, 16); }
+};
+
 export default function PartnerDetailPage() {
 
   const { id } = useParams<{ id: string }>();
@@ -293,7 +305,7 @@ export default function PartnerDetailPage() {
                 <Copy className="h-3 w-3 inline" />
               </button>
               <span className="font-mono text-[10.5px] text-slate-400">· ID: {partner.referralCode || partner.id.slice(0, 12)}</span>
-              <span>· 가입일: {partner.createdAt}</span>
+              <span>· 가입일: {fmtDate(partner.createdAt)}</span>
             </div>
           </div>
         </div>
@@ -490,7 +502,7 @@ export default function PartnerDetailPage() {
 
               <div className="grid grid-cols-3 gap-2 py-1 border-b border-slate-50">
                 <span className="text-slate-400">등록/승인 일자</span>
-                <span className="col-span-2 text-slate-700">{partner.createdAt}</span>
+                <span className="col-span-2 text-slate-700">{fmtDate(partner.createdAt)}</span>
               </div>
 
               {/* 사업자 유형 세무 정보 */}
@@ -690,7 +702,7 @@ export default function PartnerDetailPage() {
                       <div>{t.managerName}</div>
                       <div className="text-[10px] text-slate-400">{t.managerPhone}</div>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">{t.createdAt}</TableCell>
+                    <TableCell className="text-xs text-slate-600">{fmtDate(t.createdAt)}</TableCell>
                     <TableCell className="text-right font-bold text-xs text-slate-900">
                       {((t as any).stats?.totalDonations ?? 0).toLocaleString()}원
                     </TableCell>
@@ -738,7 +750,7 @@ export default function PartnerDetailPage() {
               <TableBody>
                 {commissions.map(c => (
                   <TableRow key={c.id} className="hover:bg-slate-50/50">
-                    <TableCell className="font-mono text-xs text-slate-600">{c.createdAt}</TableCell>
+                    <TableCell className="font-mono text-xs text-slate-600">{fmtDate(c.createdAt)}</TableCell>
                     <TableCell className="font-semibold text-xs text-slate-800">{c.tenantName}</TableCell>
                     <TableCell className="text-right font-mono text-xs text-slate-700">{c.donationAmount.toLocaleString()}원</TableCell>
                     <TableCell className="text-right font-bold text-xs text-purple-700">{c.commissionAmount.toLocaleString()}원</TableCell>
