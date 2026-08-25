@@ -155,57 +155,41 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. 해당 단체의 관리자 계정 목록 구하기 (저장소/DB 실측 데이터 기반)
+      // 2. 해당 단체에 속해있는 관리자 목록만 DB/저장소에서 그대로 조회하여 설정
       const savedStaff =
         localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
         localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
         localStorage.getItem(`faithpay_staff_${tenant.id}`) ||
         localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
 
-      let loadedStaff: StaffAdminUser[] = [];
+      let list: StaffAdminUser[] = [];
       if (savedStaff) {
         try {
           const parsed = JSON.parse(savedStaff);
-          if (Array.isArray(parsed)) {
-            // 이전 버전 브라우저 캐시(joyful-church, serenity-temple 등 더미 항목) 자동 정제
-            loadedStaff = parsed.filter(
-              (s: any) =>
-                s &&
-                s.email &&
-                !s.email.includes('joyful-church') &&
-                !s.email.includes('serenity-temple') &&
-                !s.name?.includes('꿈꾸는교회')
-            );
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            list = parsed;
           }
-        } catch {}
+        } catch (e) {}
       }
 
-      // 단체 대표 이메일
-      const primaryEmail = (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase();
-
-      const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.trim().toLowerCase() === primaryEmail);
-
-      if (!hasPrimaryAccount || loadedStaff.length === 0) {
-        const primaryAdmin: StaffAdminUser = {
-          id: `admin-${tenant.id}-primary`,
-          name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
-          email: primaryEmail,
-          phone: tenant.contact?.phone || '',
-          groupId: 'tenant_admin',
-          password: 'admin1234!',
-          status: 'active',
-          createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
-          lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        };
-
-        if (loadedStaff.length > 0) {
-          loadedStaff = [primaryAdmin, ...loadedStaff];
-        } else {
-          loadedStaff = [primaryAdmin];
-        }
+      // DB/저장소에 등록된 목록이 없는 경우 최초 단체 가입 시의 대표 관리자 계정 1개로 구성
+      if (list.length === 0) {
+        list = [
+          {
+            id: `admin-${tenant.id}`,
+            name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
+            email: (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase(),
+            phone: tenant.contact?.phone || '',
+            groupId: 'tenant_admin',
+            password: 'admin1234!',
+            status: 'active',
+            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
+            lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          },
+        ];
       }
 
-      setStaffList(loadedStaff);
+      setStaffList(list);
 
       // 3. 저장된 권한 매트릭스 로드
       const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
