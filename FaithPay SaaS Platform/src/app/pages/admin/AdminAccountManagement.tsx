@@ -165,7 +165,7 @@ export default function AdminAccountManagement() {
 
       // DB /tenants 에 저장된 가맹점 실측 담당자 정보만 표출 (100% DB 직결)
       const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
-      const registeredName = tenant.contact?.name || tenant.name;
+      const registeredName = tenant.contact?.name && tenant.contact.name.trim() ? tenant.contact.name.trim() : '대표 관리자';
 
       if (registeredEmail) {
         setStaffList([
