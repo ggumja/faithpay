@@ -401,21 +401,25 @@ export async function setDonationItems(tenantIdOrSlug: string, items: DonationIt
 
   // 기존 전체 삭제 후 새로 영속
   await sb.from('donation_items').delete().eq('tenant_id', realTenantId);
-  if (items.length > 0) {
+  if (items && items.length > 0) {
     const rows = items.map((it, idx) => ({
       id: it.id || `${realTenantId}-item-${idx}-${Date.now()}`,
       tenant_id: realTenantId,
       name: it.name,
       description: it.description ?? '',
-      amount_type: it.amountType,
-      fixed_amount: it.fixedAmount ?? null,
-      allow_recurring: it.allowRecurring,
-      allow_one_time: it.allowOneTime,
-      enable_prayer_field: it.enablePrayerField,
-      enabled: it.enabled,
+      amount_type: it.amountType || (it as any).amount_type || 'flexible',
+      fixed_amount: it.fixedAmount ?? (it as any).fixed_amount ?? null,
+      allow_recurring: it.allowRecurring ?? (it as any).allow_recurring ?? true,
+      allow_one_time: it.allowOneTime ?? (it as any).allow_one_time ?? true,
+      enable_prayer_field: it.enablePrayerField ?? (it as any).enable_prayer_field ?? false,
+      enabled: it.enabled ?? true,
       order_index: idx,
     }));
-    await sb.from('donation_items').insert(rows);
+    const { error } = await sb.from('donation_items').insert(rows);
+    if (error) {
+      console.error('insert donation_items failed:', error);
+      throw new Error(`Failed to insert donation_items: ${error.message}`);
+    }
   }
   return items;
 }

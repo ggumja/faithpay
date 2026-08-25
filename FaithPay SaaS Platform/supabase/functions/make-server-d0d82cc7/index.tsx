@@ -973,12 +973,13 @@ app.post("/make-server-d0d82cc7/donation-items/:tenantId", async (c) => {
   try {
     const tenantId = c.req.param('tenantId');
     const body = await c.req.json();
-    const items = await db.setDonationItems(tenantId, body);
+    const rawItems: any[] = Array.isArray(body) ? body : (body?.items && Array.isArray(body.items) ? body.items : []);
+    const items = await db.setDonationItems(tenantId, rawItems);
     
     return c.json({ success: true, data: items });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving donation items:', error);
-    return c.json({ success: false, error: 'Failed to save donation items' }, 500);
+    return c.json({ success: false, error: error?.message || 'Failed to save donation items' }, 500);
   }
 });
 
