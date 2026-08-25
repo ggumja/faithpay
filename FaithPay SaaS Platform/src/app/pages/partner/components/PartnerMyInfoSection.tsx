@@ -146,7 +146,10 @@ export function PartnerMyInfoSection({
                 onClick={async () => {
                   try {
                     // DB API 호출 (Single Source of Truth)
-                    const res = await partnerAPI.updateAgentRate(partner.id, editAgencyRate);
+                    const res = await partnerAPI.update(partner.id, {
+                      agencyRate: editAgencyRate,
+                      commissionRate: editAgencyRate,
+                    });
                     if (res.success) {
                       setAgentRates(prev => {
                         const next = { ...prev };
@@ -155,6 +158,19 @@ export function PartnerMyInfoSection({
                         });
                         return next;
                       });
+
+                      // 세션 업데이트
+                      try {
+                        const raw = sessionStorage.getItem('faithpay_partner_session');
+                        if (raw) {
+                          const parsed = JSON.parse(raw);
+                          sessionStorage.setItem('faithpay_partner_session', JSON.stringify({
+                            ...parsed,
+                            agencyRate: editAgencyRate,
+                            commissionRate: editAgencyRate,
+                          }));
+                        }
+                      } catch {}
 
                       // 이력 기록
                       const newEntry: MyInfoHistoryEntry = {
@@ -173,8 +189,8 @@ export function PartnerMyInfoSection({
                     } else {
                       toast.error(res.error || '수수료율 DB 저장에 실패했습니다.');
                     }
-                  } catch {
-                    toast.error('수수료율 저장 중 오류가 발생했습니다.');
+                  } catch (e: any) {
+                    toast.error(e.message || '수수료율 저장 중 오류가 발생했습니다.');
                   }
                 }}
               >
@@ -380,6 +396,23 @@ export function PartnerMyInfoSection({
                     ...taxFields,
                   });
                   if (res.success) {
+                    // 세션 동기화
+                    try {
+                      const raw = sessionStorage.getItem('faithpay_partner_session');
+                      if (raw) {
+                        const parsed = JSON.parse(raw);
+                        sessionStorage.setItem('faithpay_partner_session', JSON.stringify({
+                          ...parsed,
+                          phone: editPhone,
+                          email: editEmail,
+                          bankName: editBank,
+                          accountNumber: editAccount,
+                          accountHolder: editHolder,
+                          ...taxFields,
+                        }));
+                      }
+                    } catch {}
+
                     // 정보 수정 이력 기록
                     const newEntry: MyInfoHistoryEntry = {
                       id: `mh-${Date.now()}`,
@@ -393,12 +426,12 @@ export function PartnerMyInfoSection({
                     setHistory(updated);
                     localStorage.setItem(historyStorageKey, JSON.stringify(updated));
 
-                    toast.success('정산 계좌 및 연락처 정보가 업데이트되었으며 수정 이력이 기록되었습니다.');
+                    toast.success('정산 계좌 및 프로필 정보가 DB에 성공적으로 저장되었습니다.');
                   } else {
-                    toast.error('저장에 실패했습니다.');
+                    toast.error(res.error || '저장에 실패했습니다.');
                   }
-                } catch {
-                  toast.error('오류가 발생했습니다.');
+                } catch (e: any) {
+                  toast.error(e.message || '오류가 발생했습니다.');
                 } finally {
                   setIsSaving(false);
                 }
