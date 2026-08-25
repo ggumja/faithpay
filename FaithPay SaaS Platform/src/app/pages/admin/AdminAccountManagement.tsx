@@ -156,71 +156,42 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. Supabase 백엔드 DB에서 실제 관리자 계정 목록 실측 조회 (GET /admin)
-      adminAPI.getAll().then((res) => {
-        let dbStaff: StaffAdminUser[] = [];
+      // 2. 해당 단체(tenant.id)에 속한 실측 관리자 계정 로드
+      const savedStaff = localStorage.getItem(`soulpay_staff_${tenant.id}`);
+      let list: StaffAdminUser[] = [];
 
-        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          dbStaff = res.data
-            .filter((a: any) => a && (a.tenantId === tenant.id || (a.email && tenant.contact?.email && a.email.toLowerCase() === tenant.contact.email.toLowerCase())))
-            .map((a: any) => ({
-              id: a.id || `admin-${tenant.id}`,
-              name: a.name || tenant.contact?.name || tenant.name,
-              email: a.email,
-              phone: a.phone || tenant.contact?.phone || '',
-              groupId: a.groupId || 'tenant_admin',
-              status: (a.status as any) || 'active',
-              createdAt: a.createdAt ? a.createdAt.slice(0, 10) : (tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : ''),
-              lastLoginAt: a.lastLoginAt ? a.lastLoginAt.slice(0, 10) : '',
-            }));
-        }
+      if (savedStaff) {
+        try {
+          const parsed = JSON.parse(savedStaff);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            list = parsed;
+          }
+        } catch (e) {}
+      }
 
-        if (dbStaff.length > 0) {
-          setStaffList(dbStaff);
-          return;
-        }
-
-        // DB /tenants 테이블에 실재하는 등록 담당자 정보만 렌더링 (가상/더미 계정 0%)
+      // 저장된 관리자 목록이 없으면 해당 단체의 DB 가입 담당자 정보(tenant.contact)만 표출
+      if (list.length === 0) {
         const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
         const registeredName = tenant.contact?.name;
 
         if (registeredEmail && registeredName) {
-          const primaryAccount: StaffAdminUser = {
-            id: `admin-${tenant.id}`,
-            name: registeredName,
-            email: registeredEmail,
-            phone: tenant.contact?.phone || '',
-            groupId: 'tenant_admin',
-            password: tenant.tempPassword || 'admin1234!',
-            status: 'active',
-            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-            lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-          };
-          setStaffList([primaryAccount]);
-        } else {
-          setStaffList([]);
+          list = [
+            {
+              id: `admin-${tenant.id}`,
+              name: registeredName,
+              email: registeredEmail,
+              phone: tenant.contact?.phone || '',
+              groupId: 'tenant_admin',
+              password: tenant.tempPassword || 'admin1234!',
+              status: 'active',
+              createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+              lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
+            },
+          ];
         }
-      }).catch(() => {
-        const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
-        const registeredName = tenant.contact?.name;
+      }
 
-        if (registeredEmail && registeredName) {
-          const primaryAccount: StaffAdminUser = {
-            id: `admin-${tenant.id}`,
-            name: registeredName,
-            email: registeredEmail,
-            phone: tenant.contact?.phone || '',
-            groupId: 'tenant_admin',
-            password: tenant.tempPassword || 'admin1234!',
-            status: 'active',
-            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-            lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-          };
-          setStaffList([primaryAccount]);
-        } else {
-          setStaffList([]);
-        }
-      });
+      setStaffList(list);
 
       // 3. 저장된 권한 매트릭스 로드
       const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
