@@ -282,10 +282,13 @@ export default function PendingTenantDetailPage() {
                       </Field>
                     </div>
                   )}
-                  {(tenant.adminName || tenant.adminPhone) && (
-                    <div className={`${S.row2} ${hasPartner ? 'mt-3' : ''}`}>
+                  {(tenant.adminName || (tenant as any).adminEmail || tenant.adminPhone) && (
+                    <div className={`${S.row3} ${hasPartner ? 'mt-3' : ''}`}>
                       <Field label="대표 관리자 성함">
                         <p className={S.value}>{tenant.adminName || '—'}</p>
+                      </Field>
+                      <Field label="로그인 이메일 (아이디)">
+                        <p className={S.value}>{(tenant as any).adminEmail || tenant.contact?.email || '—'}</p>
                       </Field>
                       <Field label="대표 관리자 휴대폰">
                         <p className={S.value}>{tenant.adminPhone || '—'}</p>

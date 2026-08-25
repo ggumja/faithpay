@@ -163,9 +163,10 @@ export interface Tenant {
   status?: 'pending' | 'active' | 'suspended';
   appliedAt?: string;    // 입점 신청일
   approvedAt?: string;   // 승인일
-  // 파트너 신청 시 추가 필드
   adminName?: string;    // 대표 관리자 성함
+  adminEmail?: string;   // 대표 관리자 로그인 이메일
   adminPhone?: string;   // 대표 관리자 휴대폰
+  adminPassword?: string; // 초기 관리자 비밀번호
   referralCode?: string; // 연결된 파트너 코드
   // 신청 경로 구분
   registrationSource?: 'self' | 'agency' | 'agent'; // self=직접신청, agency=대리점등록, agent=영업자등록

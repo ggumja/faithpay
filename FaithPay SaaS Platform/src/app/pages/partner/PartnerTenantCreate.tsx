@@ -73,6 +73,7 @@ export default function PartnerTenantCreate() {
 
   // 2. 관리자 계정 정보
   const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [initialTempPassword, setInitialTempPassword] = useState(() => `fp${Math.floor(100000 + Math.random() * 900000)}`);
 
@@ -238,6 +239,7 @@ export default function PartnerTenantCreate() {
     if (!name.trim()) { toast.error('단체 명칭을 입력해 주세요.'); return; }
     if (!slug.trim()) { toast.error('고유 단축 주소(URL)를 입력해 주세요.'); return; }
     if (!adminName.trim()) { toast.error('대표 관리자 성함을 입력해 주세요.'); return; }
+    if (!adminEmail.trim()) { toast.error('로그인에 사용할 관리자 이메일을 입력해 주세요.'); return; }
     if (!adminPhone.trim()) { toast.error('대표 관리자 휴대폰 번호를 입력해 주세요.'); return; }
 
     const isDup = tenants.some(t => t.slug?.toLowerCase() === slug.trim().toLowerCase());
@@ -283,10 +285,11 @@ export default function PartnerTenantCreate() {
       bannerImages: [],
       contact: {
         phone: phone.trim() || adminPhone.trim(),
-        email: email.trim(),
+        email: adminEmail.trim() || email.trim(),
         name: representativeName.trim() || adminName.trim(),
       },
       adminName: adminName.trim(),
+      adminEmail: adminEmail.trim(),
       adminPhone: adminPhone.trim(),
       adminPassword: initialTempPassword,
       contractRate,
@@ -877,7 +880,7 @@ export default function PartnerTenantCreate() {
                   <Key className="w-4 h-4 text-amber-600" />
                   <span className="text-emerald-600 font-black">5.</span> 사찰 주지스님 / 교회 담임목사님 관리자 계정 생성 *
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">대표 관리자 성함 *</Label>
                     <Input
@@ -885,28 +888,62 @@ export default function PartnerTenantCreate() {
                       value={adminName}
                       onChange={e => setAdminName(e.target.value)}
                       required
-                      className="bg-white"
+                      className="bg-white text-xs"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">대표 휴대폰 번호 *</Label>
+                    <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Mail className="h-3 w-3 text-amber-600" />
+                      <span>로그인 이메일 (아이디) *</span>
+                    </Label>
+                    <Input
+                      type="email"
+                      placeholder="admin@gakwonsa.kr"
+                      value={adminEmail}
+                      onChange={e => setAdminEmail(e.target.value)}
+                      required
+                      className="bg-white text-xs font-medium"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Phone className="h-3 w-3 text-amber-600" />
+                      <span>대표 휴대폰 번호 *</span>
+                    </Label>
                     <Input
                       placeholder="010-1234-5678"
                       value={adminPhone}
                       onChange={e => setAdminPhone(e.target.value)}
                       required
-                      className="bg-white"
+                      className="bg-white text-xs"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700">초기 임시 비밀번호</Label>
-                  <Input
-                    value={initialTempPassword}
-                    onChange={e => setInitialTempPassword(e.target.value)}
-                    className="font-mono bg-white text-center font-bold text-amber-900"
-                  />
-                  <p className="text-[11px] text-amber-800 mt-1">* 승인 즉시 주지스님/목사님께 해당 임시 비밀번호로 로그인 안내가 발송됩니다.</p>
+                  <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <Lock className="h-3 w-3 text-amber-600" />
+                    <span>초기 로그인 임시 비밀번호 *</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={initialTempPassword}
+                      onChange={e => setInitialTempPassword(e.target.value)}
+                      className="font-mono bg-white font-bold text-amber-900 text-xs"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInitialTempPassword(`fp${Math.floor(100000 + Math.random() * 900000)}`)}
+                      className="shrink-0 text-xs bg-white"
+                    >
+                      새 난수 생성
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-amber-800 mt-1">
+                    * 입점 승인 완료 즉시 주지스님/목사님 로그인 이메일(<strong>{adminEmail || '입력하신 이메일'}</strong>)과 휴대폰으로 로그인 접속 안내가 발송됩니다.
+                  </p>
                 </div>
               </div>
 
