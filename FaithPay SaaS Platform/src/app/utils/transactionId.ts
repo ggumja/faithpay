@@ -30,28 +30,17 @@ function getKSTTimestamp(): string {
   return `${y}${mo}${d}${h}${mi}`;         // 202608260923
 }
 
-/**
- * 오늘 날짜(KST, YYYYMMDD) 문자열 반환
- */
-function getKSTDateKey(): string {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const y  = kst.getUTCFullYear();
-  const mo = String(kst.getUTCMonth() + 1).padStart(2, '0');
-  const d  = String(kst.getUTCDate()).padStart(2, '0');
-  return `${y}${mo}${d}`;
-}
 
 /**
- * 일자별 일련번호를 localStorage에서 가져오고 +1 증가
- * (이 기기·이 브라우저 세션 기준)
+ * 분 단위 일련번호를 localStorage에서 가져오고 +1 증가
+ * - 키: YYYYMMDDHHMM (분이 바뀌면 새 키 → 자동으로 0000001 재시작)
+ * - 같은 분 안에서는 1, 2, 3 ... 증가
  */
-function nextDailySequence(): number {
+function nextMinuteSequence(minuteKey: string): number {
   try {
-    const dateKey = getKSTDateKey();
-    const storageKey = `${COUNTER_KEY_PREFIX}${dateKey}`;
+    const storageKey = `${COUNTER_KEY_PREFIX}${minuteKey}`;
 
-    // 어제 이전 키 정리 (최근 3일치만 보존)
+    // 2분 이상 지난 키 정리
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -79,9 +68,9 @@ function nextDailySequence(): number {
  * 예: 202608260923-0000001
  */
 export function generateTransactionId(): string {
-  const ts  = getKSTTimestamp();       // 202608260923
-  const seq = nextDailySequence();     // 1, 2, 3 ...
-  const seqStr = String(seq).padStart(7, '0');  // 0000001
+  const ts  = getKSTTimestamp();              // 202608260923 (YYYYMMDDHHMM)
+  const seq = nextMinuteSequence(ts);         // 분이 바뀌면 0000001 재시작
+  const seqStr = String(seq).padStart(7, '0');
   return `${ts}-${seqStr}`;
 }
 
