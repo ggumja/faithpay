@@ -314,6 +314,9 @@ export default function MultiPartySettlementLedger() {
                 <th className="py-3 px-4">원원사 (교회/성당/사찰)</th>
                 <th className="py-3 px-4 text-center">결제기기</th>
                 <th className="py-3 px-4 text-right">총 결제액</th>
+                <th className="py-3 px-4 text-right bg-slate-100/80 dark:bg-zinc-700/40 text-slate-600 dark:text-zinc-300">
+                  계약수수료
+                </th>
                 <th className="py-3 px-4 text-right bg-purple-50/50 dark:bg-purple-950/20 text-purple-700">
                   PG 원가 (1.5%)
                 </th>
@@ -370,16 +373,17 @@ export default function MultiPartySettlementLedger() {
                   <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-zinc-100">
                     {item.grossAmount.toLocaleString()}원
                   </td>
+                  {/* 계약수수료 컬럼 (gross × contractRate%) */}
+                  <td className="py-3 px-4 text-right font-mono text-slate-700 dark:text-zinc-300 bg-slate-50/60 dark:bg-zinc-800/30">
+                    {(item.commissionPool ?? Math.round(item.grossAmount * ((item.contractRate ?? 3) / 100))).toLocaleString()}원
+                    <div className="text-[9px] text-slate-400 font-normal">
+                      {item.contractRate != null ? `${item.contractRate}%` : ''}
+                    </div>
+                  </td>
+                  {/* PG 원가 */}
                   <td className="py-3 px-4 text-right font-mono text-purple-700 dark:text-purple-300 bg-purple-50/30 dark:bg-purple-950/10">
                     -{item.pgFee.toLocaleString()}원
-                    <div className="text-[9px] text-purple-400 font-normal">
-                      PG 1.5%
-                    </div>
-                    {item.contractRate != null && (
-                      <div className="text-[9px] text-slate-500 font-sans font-semibold mt-0.5">
-                        계약 {item.contractRate}%
-                      </div>
-                    )}
+                    <div className="text-[9px] text-purple-400 font-normal">1.5%</div>
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">
                     {item.tenantPayout.toLocaleString()}원
