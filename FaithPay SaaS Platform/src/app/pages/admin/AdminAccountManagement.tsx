@@ -167,7 +167,15 @@ export default function AdminAccountManagement() {
         try {
           const parsed = JSON.parse(savedStaff);
           if (Array.isArray(parsed)) {
-            loadedStaff = parsed;
+            // 이전 버전 브라우저 캐시(joyful-church, serenity-temple 등 더미 항목) 자동 정제
+            loadedStaff = parsed.filter(
+              (s: any) =>
+                s &&
+                s.email &&
+                !s.email.includes('joyful-church') &&
+                !s.email.includes('serenity-temple') &&
+                !s.name?.includes('꿈꾸는교회')
+            );
           }
         } catch {}
       }
