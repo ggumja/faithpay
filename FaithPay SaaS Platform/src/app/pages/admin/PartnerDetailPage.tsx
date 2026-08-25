@@ -131,17 +131,11 @@ export default function PartnerDetailPage() {
         setCommissions([]);
       }
 
-      // 4. 유치 단체 목록 조회
+      // 4. 유치 단체 목록 조회 — 서버에서 registered_by_partner_id 기준으로 반환
       try {
-        const tenantRes = await tenantAPI.getAll();
+        const tenantRes = await partnerAPI.getPartnerTenants(id);
         if (tenantRes.success && Array.isArray(tenantRes.data)) {
-          const matched = tenantRes.data.filter(t =>
-            (t as any).registeredByPartnerId === targetPartner?.id ||
-            (t as any).registeredByReferralCode === targetPartner?.referralCode ||
-            (t as any).referralCode === targetPartner?.referralCode ||
-            (targetPartner?.role === 'master_agency' && (t as any).registeredByAgencyId === targetPartner?.id)
-          );
-          setTenants(matched);
+          setTenants(tenantRes.data);
         } else {
           setTenants([]);
         }
