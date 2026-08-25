@@ -164,22 +164,8 @@ export default function TenantDetailPage() {
         setReligionType(foundTenant.religionType);
         setSlug(foundTenant.slug);
 
-        // 해당 단체의 실제 paymentConfig를 최우선 바인딩 (DB 정보 및 localStorage 저장 보존 데이터)
+        // DB paymentConfig 만 신뢰 (localStorage 완전 배제)
         let cfg = foundTenant.paymentConfig;
-        try {
-          const savedCfgStr =
-            localStorage.getItem(`paymentConfig_${foundTenant.id}`) ||
-            localStorage.getItem(`paymentConfig_${foundTenant.slug}`);
-          if (savedCfgStr) {
-            const parsed = JSON.parse(savedCfgStr);
-            if (parsed && (parsed.pgProvider || parsed.kakaoCid)) {
-              cfg = { ...(cfg || {}), ...parsed };
-            }
-          }
-        } catch (e) {
-          console.warn('Failed to parse localStorage paymentConfig:', e);
-        }
-
 
         if (cfg && (cfg.pgProvider || cfg.kakaoCid)) {
           setPaymentConfig(cfg);
@@ -192,22 +178,22 @@ export default function TenantDetailPage() {
           setLoginId(cfg.loginId || '');
           setIv(cfg.iv || '');
           setVer(cfg.ver || '');
-          setKakaoCid(cfg.kakaoCid || 'TC0ONETIME');
-          setKakaoSecretKey(cfg.kakaoSecretKey || 'DEV_SECRET_KEY');
+          setKakaoCid(cfg.kakaoCid || '');
+          setKakaoSecretKey(cfg.kakaoSecretKey || '');
           setKakaoMode(cfg.kakaoMode || 'test');
-          setEnableKakaoPay(cfg.enableKakaoPay !== undefined ? cfg.enableKakaoPay : (cfg.providerConfigs?.kakaopay?.isEnabled !== undefined ? cfg.providerConfigs.kakaopay.isEnabled : true));
-          
-          setNaverPartnerId(cfg.naverPartnerId || cfg.providerConfigs?.naverpay?.merchantId || 'NAV_PARTNER_999');
-          setNaverClientId(cfg.naverClientId || cfg.providerConfigs?.naverpay?.clientKey || 'CLIENT_ID_123');
-          setNaverClientSecret(cfg.naverClientSecret || cfg.providerConfigs?.naverpay?.secretKey || 'CLIENT_SECRET_456');
-          setNaverMode(cfg.naverMode || cfg.providerConfigs?.naverpay?.mode || 'test');
-          setEnableNaverPay(cfg.enableNaverPay !== undefined ? cfg.enableNaverPay : (cfg.providerConfigs?.naverpay?.isEnabled !== undefined ? cfg.providerConfigs.naverpay.isEnabled : true));
+          setEnableKakaoPay(cfg.enableKakaoPay !== undefined ? cfg.enableKakaoPay : (cfg.providerConfigs?.kakaopay?.isEnabled ?? false));
 
-          setTossPayMid(cfg.tossPayMid || cfg.providerConfigs?.tosspay?.merchantId || 'tosspay_mid_1234');
-          setTossPayApiKey(cfg.tossPayApiKey || cfg.providerConfigs?.tosspay?.clientKey || 'test_ck_tosspay_123');
-          setTossPaySecretKey(cfg.tossPaySecretKey || cfg.providerConfigs?.tosspay?.secretKey || 'test_sk_tosspay_456');
+          setNaverPartnerId(cfg.naverPartnerId || cfg.providerConfigs?.naverpay?.merchantId || '');
+          setNaverClientId(cfg.naverClientId || cfg.providerConfigs?.naverpay?.clientKey || '');
+          setNaverClientSecret(cfg.naverClientSecret || cfg.providerConfigs?.naverpay?.secretKey || '');
+          setNaverMode(cfg.naverMode || cfg.providerConfigs?.naverpay?.mode || 'test');
+          setEnableNaverPay(cfg.enableNaverPay !== undefined ? cfg.enableNaverPay : (cfg.providerConfigs?.naverpay?.isEnabled ?? false));
+
+          setTossPayMid(cfg.tossPayMid || cfg.providerConfigs?.tosspay?.merchantId || '');
+          setTossPayApiKey(cfg.tossPayApiKey || cfg.providerConfigs?.tosspay?.clientKey || '');
+          setTossPaySecretKey(cfg.tossPaySecretKey || cfg.providerConfigs?.tosspay?.secretKey || '');
           setTossPayMode(cfg.tossPayMode || cfg.providerConfigs?.tosspay?.mode || 'test');
-          setEnableTossPay(cfg.enableTossPay !== undefined ? cfg.enableTossPay : (cfg.providerConfigs?.tosspay?.isEnabled !== undefined ? cfg.providerConfigs.tosspay.isEnabled : true));
+          setEnableTossPay(cfg.enableTossPay !== undefined ? cfg.enableTossPay : (cfg.providerConfigs?.tosspay?.isEnabled ?? false));
 
           setEnableCard(cfg.enableCard !== undefined ? cfg.enableCard : true);
           setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? cfg.enableEasyPayment : true);
