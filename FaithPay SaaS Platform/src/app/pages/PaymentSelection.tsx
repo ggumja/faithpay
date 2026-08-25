@@ -276,7 +276,12 @@ export default function PaymentSelection() {
 
       try {
         await loadTossScript();
-        const tossClientKey = pgApiKey || currentTenant?.paymentConfig?.apiKey || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+        const rawKey = (pgApiKey || currentTenant?.paymentConfig?.apiKey || '').trim();
+        // v1 일반 결제창에서 401을 유발하는 v2 위젯 전용 키(test_ck_OEP5...) 및 빈값은 v1 공식 테스트 키로 자동 보정
+        const tossClientKey = (!rawKey || rawKey.includes('OEP5eLpqWEMqYNm7JaEr3779KMlW'))
+          ? 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'
+          : rawKey;
+
         if (!tossClientKey) {
           toast.error('토스페이먼츠 Client Key(API Key)가 설정되지 않았습니다.');
           setIsProcessing(false);
