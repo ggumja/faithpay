@@ -106,7 +106,7 @@ export default function TenantDetailPage() {
   const [kakaoSecretKey, setKakaoSecretKey] = useState('DEV_SECRET_KEY');
   const [kakaoMode, setKakaoMode] = useState<'test' | 'live'>('test');
   const [showKakaoSecretKey, setShowKakaoSecretKey] = useState(false);
-  const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(true);
+  const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(false);
 
   // Naver Pay Direct Config State
   const [naverPartnerId, setNaverPartnerId] = useState('NAV_PARTNER_999');
@@ -114,7 +114,7 @@ export default function TenantDetailPage() {
   const [naverClientSecret, setNaverClientSecret] = useState('CLIENT_SECRET_456');
   const [naverMode, setNaverMode] = useState<'test' | 'live'>('test');
   const [showNaverSecret, setShowNaverSecret] = useState(false);
-  const [enableNaverPay, setEnableNaverPay] = useState<boolean>(true);
+  const [enableNaverPay, setEnableNaverPay] = useState<boolean>(false);
 
   // Toss Pay Direct Config State
   const [tossPayMid, setTossPayMid] = useState('tosspay_mid_1234');
@@ -122,7 +122,7 @@ export default function TenantDetailPage() {
   const [tossPaySecretKey, setTossPaySecretKey] = useState('test_sk_tosspay_456');
   const [tossPayMode, setTossPayMode] = useState<'test' | 'live'>('test');
   const [showTossPaySecret, setShowTossPaySecret] = useState(false);
-  const [enableTossPay, setEnableTossPay] = useState<boolean>(true);
+  const [enableTossPay, setEnableTossPay] = useState<boolean>(false);
   
   // Billing Key (Recurring Payment) State
   const [billMid, setBillMid] = useState('');
@@ -181,26 +181,26 @@ export default function TenantDetailPage() {
           setKakaoCid(cfg.kakaoCid || '');
           setKakaoSecretKey(cfg.kakaoSecretKey || '');
           setKakaoMode(cfg.kakaoMode || 'test');
-          setEnableKakaoPay(cfg.enableKakaoPay !== undefined ? cfg.enableKakaoPay : (cfg.providerConfigs?.kakaopay?.isEnabled ?? false));
+          setEnableKakaoPay(cfg.enableKakaoPay === true || cfg.providerConfigs?.kakaopay?.isEnabled === true);
 
           setNaverPartnerId(cfg.naverPartnerId || cfg.providerConfigs?.naverpay?.merchantId || '');
           setNaverClientId(cfg.naverClientId || cfg.providerConfigs?.naverpay?.clientKey || '');
           setNaverClientSecret(cfg.naverClientSecret || cfg.providerConfigs?.naverpay?.secretKey || '');
           setNaverMode(cfg.naverMode || cfg.providerConfigs?.naverpay?.mode || 'test');
-          setEnableNaverPay(cfg.enableNaverPay !== undefined ? cfg.enableNaverPay : (cfg.providerConfigs?.naverpay?.isEnabled ?? false));
+          setEnableNaverPay(cfg.enableNaverPay === true || cfg.providerConfigs?.naverpay?.isEnabled === true);
 
           setTossPayMid(cfg.tossPayMid || cfg.providerConfigs?.tosspay?.merchantId || '');
           setTossPayApiKey(cfg.tossPayApiKey || cfg.providerConfigs?.tosspay?.clientKey || '');
           setTossPaySecretKey(cfg.tossPaySecretKey || cfg.providerConfigs?.tosspay?.secretKey || '');
           setTossPayMode(cfg.tossPayMode || cfg.providerConfigs?.tosspay?.mode || 'test');
-          setEnableTossPay(cfg.enableTossPay !== undefined ? cfg.enableTossPay : (cfg.providerConfigs?.tosspay?.isEnabled ?? false));
+          setEnableTossPay(cfg.enableTossPay === true || cfg.providerConfigs?.tosspay?.isEnabled === true);
 
           setEnableCard(cfg.enableCard !== undefined ? cfg.enableCard : true);
           setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? cfg.enableEasyPayment : true);
           setEnableVBank(cfg.enableVBank !== undefined ? cfg.enableVBank : true);
           setIsActive(cfg.isActive !== undefined ? cfg.isActive : true);
         } else {
-          // 결제 미설정/미지정 단체인 경우 깨끗하게 공란으로 유지
+          // 결제 미설정/미지정 단체인 경우 깨끗하게 공란 및 비활성화로 유지
           setPaymentConfig(null);
           setPgProvider('');
           setMid('');
@@ -211,6 +211,9 @@ export default function TenantDetailPage() {
           setLoginId('');
           setIv('');
           setVer('');
+          setEnableKakaoPay(false);
+          setEnableNaverPay(false);
+          setEnableTossPay(false);
           setIsActive(false);
         }
       } else {

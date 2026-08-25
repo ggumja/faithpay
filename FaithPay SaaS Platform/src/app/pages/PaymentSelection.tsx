@@ -47,10 +47,10 @@ export default function PaymentSelection() {
   const [enableEasyPayment, setEnableEasyPayment] = useState<boolean>(true);
   const [enableVBank, setEnableVBank] = useState<boolean>(true);
 
-  // 간편결제 서비스별 수납 허용 상태
-  const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(true);
-  const [enableNaverPay, setEnableNaverPay] = useState<boolean>(true);
-  const [enableTossPay, setEnableTossPay] = useState<boolean>(true);
+  // 간편결제 서비스별 수납 허용 상태 (기본값: 비활성)
+  const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(false);
+  const [enableNaverPay, setEnableNaverPay] = useState<boolean>(false);
+  const [enableTossPay, setEnableTossPay] = useState<boolean>(false);
 
   useEffect(() => {
     if (donationFormData) {
@@ -83,7 +83,7 @@ export default function PaymentSelection() {
           setEnableCard(res.data.enableCard !== undefined ? res.data.enableCard : true);
           setEnableVBank(res.data.enableVBank !== undefined ? res.data.enableVBank : true);
 
-          const kOk = res.data.enableKakaoPay !== false && res.data.providerConfigs?.kakaopay?.isEnabled !== false;
+          const kOk = res.data.enableKakaoPay === true || res.data.providerConfigs?.kakaopay?.isEnabled === true;
           const nOk = res.data.enableNaverPay === true || res.data.providerConfigs?.naverpay?.isEnabled === true;
           const tOk = res.data.enableTossPay === true || res.data.providerConfigs?.tosspay?.isEnabled === true;
 
