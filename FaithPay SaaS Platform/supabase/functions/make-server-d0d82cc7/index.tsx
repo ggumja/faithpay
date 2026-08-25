@@ -1723,7 +1723,8 @@ app.post("/members/update-profile", handleUpdateProfile);
 
 // GET /system-admins — 전체 목록
 app.get("/make-server-d0d82cc7/system-admins", async (c) => {
-  const { data, error } = await supabase
+  const sb = db.pgClient();
+  const { data, error } = await sb
     .from("system_admins")
     .select("id, name, email, role, status, memo, created_at, updated_at, last_login_at")
     .order("created_at", { ascending: true });
@@ -1731,12 +1732,13 @@ app.get("/make-server-d0d82cc7/system-admins", async (c) => {
   return c.json({ success: true, data });
 });
 
-// POST /system-admins/login — DB 인증
+// POST /system-admins/login — DB 인증 (이메일 패턴 우회 없음)
 app.post("/make-server-d0d82cc7/system-admins/login", async (c) => {
   const { email, password } = await c.req.json();
   if (!email || !password) return c.json({ success: false, error: "이메일과 비밀번호를 입력해 주세요." }, 400);
 
-  const { data, error } = await supabase
+  const sb = db.pgClient();
+  const { data, error } = await sb
     .from("system_admins")
     .select("id, name, email, role, status, memo")
     .eq("email", email.trim().toLowerCase())
@@ -1747,7 +1749,7 @@ app.post("/make-server-d0d82cc7/system-admins/login", async (c) => {
   if (data.status !== "active") return c.json({ success: false, error: "비활성화된 계정입니다. 관리자에게 문의하세요." }, 403);
 
   // last_login_at 갱신
-  await supabase.from("system_admins").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+  await sb.from("system_admins").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
 
   return c.json({ success: true, data });
 });
@@ -1758,7 +1760,8 @@ app.post("/make-server-d0d82cc7/system-admins", async (c) => {
   const { name, email, password, role, status, memo } = body;
   if (!name || !email || !password) return c.json({ success: false, error: "이름, 이메일, 비밀번호는 필수입니다." }, 400);
 
-  const { data, error } = await supabase
+  const sb = db.pgClient();
+  const { data, error } = await sb
     .from("system_admins")
     .insert({ name, email: email.toLowerCase(), password, role: role ?? "system_admin", status: status ?? "active", memo })
     .select("id, name, email, role, status, memo, created_at")
@@ -1780,7 +1783,8 @@ app.put("/make-server-d0d82cc7/system-admins/:id", async (c) => {
   if (body.status   !== undefined) updates.status   = body.status;
   if (body.memo     !== undefined) updates.memo     = body.memo;
 
-  const { data, error } = await supabase
+  const sb = db.pgClient();
+  const { data, error } = await sb
     .from("system_admins")
     .update(updates)
     .eq("id", id)
@@ -1794,8 +1798,8 @@ app.put("/make-server-d0d82cc7/system-admins/:id", async (c) => {
 // DELETE /system-admins/:id — 삭제
 app.delete("/make-server-d0d82cc7/system-admins/:id", async (c) => {
   const id = c.req.param("id");
-  // 자기 자신 삭제 방지는 클라이언트에서 처리
-  const { error } = await supabase.from("system_admins").delete().eq("id", id);
+  const sb = db.pgClient();
+  const { error } = await sb.from("system_admins").delete().eq("id", id);
   if (error) return c.json({ success: false, error: error.message }, 500);
   return c.json({ success: true });
 });

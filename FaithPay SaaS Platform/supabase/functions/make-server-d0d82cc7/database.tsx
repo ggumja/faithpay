@@ -1204,7 +1204,7 @@ export async function getCommissionsByPartner(partnerId: string): Promise<Partne
 
 import { createClient as createSupabaseClient } from "jsr:@supabase/supabase-js@2.49.8";
 
-function pgClient() {
+export function pgClient() {
   return createSupabaseClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
