@@ -227,20 +227,20 @@ export default function SettlementOverviewSection() {
         </div>
       </div>
 
-      {/* ── 4자간 정산 파이프라인 ── */}
+      {/* ── 5단계 실시간 정산 파이프라인 ── */}
       <div className="bg-white dark:bg-zinc-900 rounded-[12px] border border-slate-200 dark:border-zinc-800 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500" />
             <h3 className="font-bold text-slate-800 dark:text-zinc-100 text-sm">
-              4자간 자동 분구(Split) 정산 처리 파이프라인 현황
+              5단계 실시간 정산 처리 파이프라인 현황
             </h3>
           </div>
           <span className="text-xs text-slate-500 font-medium">자동 배치 주기: D+1 09:00</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1">
-          {/* Step 1 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+          {/* Step 1: 수수료 원장 */}
           <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 space-y-2 relative">
             <div className="flex items-center justify-between text-xs font-bold text-blue-900 dark:text-blue-200">
               <span>1. 수수료 원장</span>
@@ -252,12 +252,12 @@ export default function SettlementOverviewSection() {
               {stats.grossAmount.toLocaleString()}원
             </div>
             <p className="text-[11px] text-blue-700 dark:text-blue-300">
-              partner_commissions 집계
+              결제 승인 원금 집계
             </p>
-            <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-400 z-10" />
+            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-400 z-10" />
           </div>
 
-          {/* Step 2 */}
+          {/* Step 2: PG 수수료 공제 */}
           <div className="p-4 bg-purple-50/70 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900/50 space-y-2 relative">
             <div className="flex items-center justify-between text-xs font-bold text-purple-900 dark:text-purple-200">
               <span>2. PG 수수료 공제</span>
@@ -267,18 +267,16 @@ export default function SettlementOverviewSection() {
               -{stats.pgFee.toLocaleString()}원
             </div>
             <p className="text-[11px] text-purple-700 dark:text-purple-300">
-              PG 원가 1.5% 자동 차감
+              토스 PG 원가 차감
             </p>
-            <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-400 z-10" />
+            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-400 z-10" />
           </div>
 
-          {/* Step 3 */}
+          {/* Step 3: 가맹단체 직정산 입금 */}
           <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-2 relative">
             <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
               <span>3. 가맹단체 직정산 입금</span>
-              <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">
-                {overview.thisMonth.paidCount + overview.thisMonth.pendingCount}건
-              </Badge>
+              <span className="text-[11px] font-mono text-emerald-700">97.0% 지급</span>
             </div>
             <div className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-100">
               {stats.tenantPayout.toLocaleString()}원
@@ -286,22 +284,37 @@ export default function SettlementOverviewSection() {
             <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
               교회/성당/사찰 계좌 입금
             </p>
-            <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400 z-10" />
+            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400 z-10" />
           </div>
 
-          {/* Step 4 */}
+          {/* Step 4: 플랫폼 수수료 입금 */}
+          <div className="p-4 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50 space-y-2 relative">
+            <div className="flex items-center justify-between text-xs font-bold text-indigo-900 dark:text-indigo-200">
+              <span>4. 플랫폼 수수료 입금</span>
+              <span className="text-[11px] font-mono text-indigo-700">0.5% 입금</span>
+            </div>
+            <div className="text-lg font-bold font-mono text-indigo-950 dark:text-indigo-100">
+              {stats.platformFee.toLocaleString()}원
+            </div>
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
+              SoulPay 플랫폼 순수익
+            </p>
+            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 z-10" />
+          </div>
+
+          {/* Step 5: 파트너 수수료 입금 */}
           <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
-              <span>4. 수수료 계좌 입금</span>
+              <span>5. 파트너 수수료 입금</span>
               <span className="text-[11px] font-mono text-amber-700">
-                플랫폼(0.5%) + 파트너({stats.partnerRate.toFixed(1)}%)
+                {stats.partnerRate.toFixed(1)}% 배분
               </span>
             </div>
             <div className="text-lg font-bold font-mono text-amber-950 dark:text-amber-100">
-              {stats.feeDeposit.toLocaleString()}원
+              {stats.partnerFee.toLocaleString()}원
             </div>
             <p className="text-[11px] text-amber-700 dark:text-amber-300">
-              플랫폼(0.5%: {stats.platformFee.toLocaleString()}원) + 파트너({stats.partnerRate.toFixed(1)}%: {stats.partnerFee.toLocaleString()}원)
+              대리점(0.5%) + 영업자(0.5%)
             </p>
           </div>
         </div>
