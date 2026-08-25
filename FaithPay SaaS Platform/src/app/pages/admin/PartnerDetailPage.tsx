@@ -281,7 +281,7 @@ export default function PartnerDetailPage() {
               >
                 <Copy className="h-3 w-3 inline" />
               </button>
-              <span>· ID: {partner.id}</span>
+              <span className="font-mono text-[10.5px] text-slate-400">· ID: {partner.referralCode || partner.id.slice(0, 12)}</span>
               <span>· 가입일: {partner.createdAt}</span>
             </div>
           </div>
