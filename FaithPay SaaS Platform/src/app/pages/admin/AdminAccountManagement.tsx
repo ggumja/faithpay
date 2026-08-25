@@ -156,26 +156,31 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. Supabase 백엔드 DB에서 해당 단체(tenant.id) 관리자 목록 실측 조회
-      adminAPI.getTenantStaff(tenant.id).then((res) => {
+      // 2. Supabase 백엔드 DB에서 실제 관리자 계정 목록 실측 조회 (GET /admin)
+      adminAPI.getAll().then((res) => {
+        let dbStaff: StaffAdminUser[] = [];
+
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          setStaffList(res.data);
+          dbStaff = res.data
+            .filter((a: any) => a && (a.tenantId === tenant.id || (a.email && tenant.contact?.email && a.email.toLowerCase() === tenant.contact.email.toLowerCase())))
+            .map((a: any) => ({
+              id: a.id || `admin-${tenant.id}`,
+              name: a.name || tenant.contact?.name || tenant.name,
+              email: a.email,
+              phone: a.phone || tenant.contact?.phone || '',
+              groupId: a.groupId || 'tenant_admin',
+              status: (a.status as any) || 'active',
+              createdAt: a.createdAt ? a.createdAt.slice(0, 10) : (tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : ''),
+              lastLoginAt: a.lastLoginAt ? a.lastLoginAt.slice(0, 10) : '',
+            }));
+        }
+
+        if (dbStaff.length > 0) {
+          setStaffList(dbStaff);
           return;
         }
 
-        // 로컬 오프라인 데이터 확인
-        const saved = localStorage.getItem(`soulpay_staff_${tenant.id}`);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setStaffList(parsed);
-              return;
-            }
-          } catch {}
-        }
-
-        // 최초 단체 가입 시 DB에 저장된 실제 등록 담당자 정보(tenant.contact)만 표출 (가상 계정 생성 금지)
+        // DB /tenants 테이블에 실재하는 등록 담당자 정보만 렌더링 (가상/더미 계정 0%)
         const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
         const registeredName = tenant.contact?.name;
 
@@ -196,17 +201,6 @@ export default function AdminAccountManagement() {
           setStaffList([]);
         }
       }).catch(() => {
-        const saved = localStorage.getItem(`soulpay_staff_${tenant.id}`);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setStaffList(parsed);
-              return;
-            }
-          } catch {}
-        }
-
         const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
         const registeredName = tenant.contact?.name;
 
