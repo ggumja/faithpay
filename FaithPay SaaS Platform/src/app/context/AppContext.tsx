@@ -187,148 +187,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const defaultTenants: Tenant[] = [
-  {
-    id: 'fp00001',
-    slug: 'grace',
-    name: '기쁨의교회',
-    religionType: 'protestant',
-    templateId: 'classic',
-    primaryColor: '#3D47B8',
-    logoUrl: 'https://images.unsplash.com/photo-1548625361-1858a74e99ef?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200',
-    ],
-    description: '하나님의 사랑과 은혜가 충만한 믿음의 공동체, 기쁨의교회입니다.',
-    address: '서울특별시 강남구 테헤란로 123',
-    contact: {
-      phone: '02-1234-5678',
-      email: 'admin@grace.or.kr',
-      name: '홍길동 목사',
-    },
-    schedule: [
-      { label: '주일 1부 예배', time: '매주 일요일 오전 09:00' },
-      { label: '주일 2부 예배', time: '매주 일요일 오전 11:00' },
-      { label: '수요 기도회', time: '매주 수요일 저녁 07:30' },
-    ],
-    terminology: {
-      donation: '헌금',
-      member: '성도',
-      prayer: '기도제목',
-    },
-  },
-  {
-    id: 'fp00002',
-    slug: 'gakwonsa',
-    name: '태조산 각원사',
-    religionType: 'buddhist',
-    templateId: 'classic',
-    primaryColor: '#C16314',
-    logoUrl: 'https://images.unsplash.com/photo-1590076175571-4b5459efb08c?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=1200',
-    ],
-    description: '자비와 평화가 함께하는 아늑한 산사, 태조산 각원사입니다.',
-    address: '충청남도 천안시 동남구 각원사길 245',
-    contact: {
-      phone: '041-561-3545',
-      email: 'admin@gakwonsa.or.kr',
-      name: '대웅 스님',
-    },
-    schedule: [
-      { label: '초하루 정기법회', time: '매월 음력 1일 오전 10:00' },
-      { label: '보름 법회', time: '매월 음력 15일 오전 10:00' },
-    ],
-    terminology: {
-      donation: '보시',
-      member: '불자',
-      prayer: '발원문',
-    },
-  },
-  {
-    id: 'fp00003',
-    slug: 'myeongdong',
-    name: '명동대성당',
-    religionType: 'catholic',
-    templateId: 'classic',
-    primaryColor: '#345785',
-    logoUrl: 'https://images.unsplash.com/photo-1548625361-1858a74e99ef?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=1200',
-    ],
-    description: '한국 천주교의 상징이자 주님 사랑의 장소, 명동대성당입니다.',
-    address: '서울특별시 중구 명동길 74',
-    contact: {
-      phone: '02-774-1784',
-      email: 'admin@myeongdong.or.kr',
-      name: '김성당 신부',
-    },
-    schedule: [
-      { label: '주일 교중 미사', time: '매주 일요일 오전 11:00' },
-      { label: '청년 미사', time: '매주 일요일 오후 06:00' },
-    ],
-    terminology: {
-      donation: '봉헌',
-      member: '교우',
-      prayer: '미사지향',
-    },
-  },
-  {
-    id: 'fp00004',
-    slug: 'sample',
-    name: '희망나눔 재단',
-    religionType: 'charity',
-    templateId: 'classic',
-    primaryColor: '#E53E3E',
-    logoUrl: 'https://images.unsplash.com/photo-1532629345422-7515fe9d1633?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1200',
-    ],
-    description: '어려운 이웃에게 따뜻한 손길을 내미는 희망나눔 재단입니다.',
-    address: '서울특별시 서초구 반포대로 45',
-    contact: {
-      phone: '02-555-1004',
-      email: 'admin@sample.org',
-      name: '이희망 이사장',
-    },
-    schedule: [
-      { label: '정기 후원의 날', time: '매월 25일' },
-    ],
-    terminology: {
-      donation: '후원',
-      member: '후원자',
-      prayer: '응원메시지',
-    },
-  },
-  {
-    id: 'fp00005',
-    slug: 'dream',
-    name: '꿈의교회',
-    religionType: 'protestant',
-    templateId: 'classic',
-    primaryColor: '#2563EB',
-    logoUrl: 'https://images.unsplash.com/photo-1548625361-1858a74e99ef?w=200',
-    bannerImages: [
-      'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200',
-    ],
-    description: '꿈과 비전이 넘치는 따뜻한 영적 안식처, 꿈의교회입니다.',
-    address: '서울특별시 마포구 월드컵북로 120',
-    contact: {
-      phone: '02-789-0123',
-      email: 'admin@dream.or.kr',
-      name: '',
-    },
-    schedule: [
-      { label: '주일 대예배', time: '매주 일요일 오전 11:00' },
-      { label: '금요 철야 기도회', time: '매주 금요일 저녁 09:00' },
-    ],
-    terminology: {
-      donation: '헌금',
-      member: '성도',
-      prayer: '기도제목',
-    },
-  },
-];
+export const defaultTenants: Tenant[] = [];
 
 // Legacy export compatibility
 export const mockTenants: Tenant[] = defaultTenants;
@@ -367,15 +226,9 @@ function saveStoredTemplate(key: string, templateId: string) {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [tenants, setTenants] = useState<Tenant[]>(() => {
-    const templateMap = getStoredTemplateMap();
-    return defaultTenants.map(t => ({
-      ...t,
-      templateId: templateMap[t.slug] || templateMap[t.id] || t.templateId || 'classic',
-    }));
-  });
+  const [tenants, setTenants] = useState<Tenant[]>([]);
 
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => tenants[0] || null);
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
 
   const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(() => {
     if (typeof window !== 'undefined') {
@@ -407,13 +260,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchTenants = useCallback(async () => {
     try {
       const response = await tenantAPI.getTenants();
-      const templateMap = getStoredTemplateMap();
-      let finalTenants: Tenant[] = defaultTenants.map(t => ({
-        ...t,
-        templateId: templateMap[t.slug] || templateMap[t.id] || t.templateId || 'classic',
-      }));
-
       if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+        const templateMap = getStoredTemplateMap();
         const dbTenants = response.data.map(t => {
           const dbTemplate = t.templateId || (t as any).template_id;
           const cachedTemplate = templateMap[t.slug] || templateMap[t.id];
@@ -429,25 +277,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
             templateId: resolvedTemplate,
           };
         });
-        const existingSlugs = new Set(dbTenants.map(t => t.slug));
-        const missingDefaults = finalTenants.filter(d => !existingSlugs.has(d.slug));
-        finalTenants = [...dbTenants, ...missingDefaults];
-      }
 
-      setTenants(prev => {
-        if (prev && prev.length > 0) {
-          const prevMap = new Map(prev.map(p => [p.id || p.slug, p]));
-          return finalTenants.map(t => {
-            const existing = prevMap.get(t.id) || prevMap.get(t.slug);
-            const preservedTemplate = (existing?.templateId && existing.templateId !== 'classic')
-              ? existing.templateId
-              : (t.templateId || 'classic');
-            // DB 실측 데이터(t)가 초기 메모리 state(existing)를 엄격히 오버라이드
-            return existing ? { ...existing, ...t, templateId: preservedTemplate } : t;
-          });
-        }
-        return finalTenants;
-      });
+        setTenants(dbTenants);
+        setCurrentTenant(prev => {
+          if (prev) {
+            const found = dbTenants.find(t => t.id === prev.id || t.slug === prev.slug);
+            return found || dbTenants[0] || null;
+          }
+          return dbTenants[0] || null;
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }
