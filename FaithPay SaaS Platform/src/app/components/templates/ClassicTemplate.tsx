@@ -242,9 +242,6 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
           </div>
         )}
 
-        <div style={{ position: 'absolute', right: -40, top: -20, width: '40%', height: '130%', opacity: 0.12, pointerEvents: 'none', zIndex: 1 }}>
-          <MotifLarge kind={ft.motif} color="white" opacity={1} />
-        </div>
 
         <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(52px, 8vw, 84px) clamp(20px, 4vw, 24px) clamp(44px, 6vw, 72px)', position: 'relative', zIndex: 2 }}>
           <div className="th-hero-grid">
