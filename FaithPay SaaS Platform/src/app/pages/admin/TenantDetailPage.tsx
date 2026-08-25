@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp, Tenant, getTenantPkCode } from '../../context/AppContext';
-import { tenantAPI } from '../../api/client';
+import { tenantAPI, paymentAPI } from '../../api/client';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../../components/PayBrandLogos';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
