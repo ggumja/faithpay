@@ -607,6 +607,17 @@ export const adminAPI = {
   async getAll(): Promise<APIResponse<AdminUser[]>> {
     return fetchAPI<AdminUser[]>('/admin');
   },
+
+  async getTenantStaff(tenantId: string): Promise<APIResponse<any[]>> {
+    return fetchAPI<any[]>(`/tenants/${tenantId}/staff`);
+  },
+
+  async saveTenantStaff(tenantId: string, staffList: any[]): Promise<APIResponse<any[]>> {
+    return fetchAPI<any[]>(`/tenants/${tenantId}/staff`, {
+      method: 'POST',
+      body: JSON.stringify({ staffList }),
+    });
+  },
 };
 
 // ==================== PARTNER API ====================

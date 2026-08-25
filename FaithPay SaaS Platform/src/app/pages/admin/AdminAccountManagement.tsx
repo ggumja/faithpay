@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { RBACRouteGuard } from '../../components/RBACRouteGuard';
+import { adminAPI } from '../../api/client';
 
 export interface AdminGroup {
   id: string;
@@ -155,25 +156,13 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. 해당 단체(tenant.id)에 속해있는 관리자 목록을 DB/저장소에서 그대로 조회하여 설정
-      const savedStaff =
-        localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
-        localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`);
-
-      let list: StaffAdminUser[] = [];
-      if (savedStaff) {
-        try {
-          const parsed = JSON.parse(savedStaff);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            list = parsed;
-          }
-        } catch (e) {}
-      }
-
-      // DB/저장소에 등록된 목록이 없는 초기 상태인 경우 최초 가입 시의 대표 관리자 계정 1개로 구성
-      if (list.length === 0) {
-        list = [
-          {
+      // 2. Supabase 백엔드 DB에서 해당 단체(tenant.id) 관리자 목록 실측 조회
+      adminAPI.getTenantStaff(tenant.id).then((res) => {
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setStaffList(res.data);
+        } else {
+          // 백엔드 DB 응답이 없을 경우 최초 가입 대표 관리자 계정 1개로 초기화 및 DB 저장
+          const primaryAdmin: StaffAdminUser = {
             id: `admin-${tenant.id}`,
             name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
             email: (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase(),
@@ -183,11 +172,24 @@ export default function AdminAccountManagement() {
             status: 'active',
             createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
             lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-          },
-        ];
-      }
-
-      setStaffList(list);
+          };
+          setStaffList([primaryAdmin]);
+          adminAPI.saveTenantStaff(tenant.id, [primaryAdmin]);
+        }
+      }).catch(() => {
+        const primaryAdmin: StaffAdminUser = {
+          id: `admin-${tenant.id}`,
+          name: tenant.contact?.name || `${tenant.name} 대표 관리자`,
+          email: (tenant.contact?.email || `admin@${tenant.slug}.or.kr`).trim().toLowerCase(),
+          phone: tenant.contact?.phone || '',
+          groupId: 'tenant_admin',
+          password: 'admin1234!',
+          status: 'active',
+          createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
+          lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        };
+        setStaffList([primaryAdmin]);
+      });
 
       // 3. 저장된 권한 매트릭스 로드
       const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
@@ -216,13 +218,10 @@ export default function AdminAccountManagement() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // 💾 변경사항 localStorage 영구 보존 동기화
+  // 💾 Supabase 백엔드 DB 영구 보존 동기화
   useEffect(() => {
     if (currentTenant && staffList.length > 0) {
-      localStorage.setItem(`soulpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
-      localStorage.setItem(`soulpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
-      localStorage.setItem(`faithpay_staff_${currentTenant.id}`, JSON.stringify(staffList));
-      localStorage.setItem(`faithpay_staff_accounts_${currentTenant.id}`, JSON.stringify(staffList));
+      adminAPI.saveTenantStaff(currentTenant.id, staffList);
     }
   }, [staffList, currentTenant]);
 
