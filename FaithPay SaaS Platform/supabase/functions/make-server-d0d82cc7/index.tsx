@@ -31,6 +31,85 @@ app.get("/make-server-d0d82cc7/health", (c) => {
   return c.json({ status: "ok" });
 });
 
+// 🔧 일회성 패치: donations 테이블 누락 컬럼 추가
+app.post("/make-server-d0d82cc7/admin/patch-donations-schema", async (c) => {
+  try {
+    const sb = db.pgClient();
+    // Supabase JS client는 raw SQL을 직접 지원하지 않으므로
+    // 컬럼 존재 여부를 체크 후 없으면 insert 방식 우회
+    // → 실제로는 Supabase dashboard SQL editor에서 실행 필요
+    // 여기서는 현재 컬럼 목록만 반환
+    const { data, error } = await sb
+      .from('donations')
+      .select('*')
+      .limit(1);
+    
+    if (error) {
+      return c.json({ success: false, error: error.message });
+    }
+    
+    // 컬럼 확인: data가 있으면 컬럼 키 목록 반환, 없으면 빈 배열
+    const columns = data && data.length > 0 ? Object.keys(data[0]) : [];
+    const hasItemId = columns.includes('item_id');
+    
+    return c.json({
+      success: true,
+      columns,
+      hasItemId,
+      message: hasItemId ? 'item_id 컬럼 존재함 - 정상' : 'item_id 컬럼 없음 - Supabase SQL Editor에서 마이그레이션 수동 실행 필요',
+      sql: `ALTER TABLE donations ADD COLUMN IF NOT EXISTS item_id TEXT NOT NULL DEFAULT '', ADD COLUMN IF NOT EXISTS item_name TEXT NOT NULL DEFAULT '', ADD COLUMN IF NOT EXISTS approve_no TEXT, ADD COLUMN IF NOT EXISTS device_type TEXT, ADD COLUMN IF NOT EXISTS pg_provider TEXT;`,
+    });
+  } catch (e: any) {
+    return c.json({ success: false, error: e.message });
+  }
+});
+
+// 🔧 임시 디버그: donations 테이블 스키마 확인
+app.get("/make-server-d0d82cc7/debug/schema", async (c) => {
+  try {
+    const sb = db.pgClient();
+
+    // 1. 테이블 select 시도 (존재 여부 + 에러 확인)
+    const { data: tableCheck, error: tableErr } = await sb
+      .from('donations')
+      .select('*')
+      .limit(1);
+
+    // 2. 직접 insert 시도 (에러 메시지 캡처)
+    const testId = `schema-test-${Date.now()}`;
+    const testRow = {
+      id: testId,
+      tenant_id: '9370d6bf-13e6-430c-a39d-35e4a8a9967b',
+      item_id: 'default',
+      item_name: '스키마테스트',
+      amount: 1,
+      donor_name: '테스트',
+      donor_phone: '01000000000',
+      payment_status: 'completed',
+      payment_method: '테스트',
+      transaction_id: 'test',
+      is_recurring: false,
+    };
+    const { data: ins, error: insErr } = await sb.from('donations').insert(testRow).select('id').single();
+
+    // 3. 다시 조회해서 실제로 insert됐는지 확인
+    const { data: verify, error: verErr } = await sb.from('donations').select('id').eq('id', testId).maybeSingle();
+
+    return c.json({
+      tableExists: !tableErr,
+      tableError: tableErr?.message ?? null,
+      selectRowCount: tableCheck?.length ?? 0,
+      insertSuccess: !insErr,
+      insertError: insErr?.message ?? null,
+      verifyFound: !!verify,
+      verifyError: verErr?.message ?? null,
+    });
+  } catch (e: any) {
+    return c.json({ fatalError: e.message });
+  }
+});
+
+
 // ==================== TENANT ROUTES ====================
 
 // 모든 단체 조회
