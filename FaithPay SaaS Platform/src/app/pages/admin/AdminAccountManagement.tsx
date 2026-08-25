@@ -155,50 +155,60 @@ export default function AdminAccountManagement() {
         try { setAdminGroups(JSON.parse(savedGroups)); } catch {}
       }
 
-      // 2. 저장된 스태프 목록 로드
+      // 2. 해당 단체의 관리자 계정 목록 구하기 (DB/실제 데이터 기반, 목업 이메일 배제)
       const savedStaff =
         localStorage.getItem(`soulpay_staff_${tenant.id}`) ||
         localStorage.getItem(`soulpay_staff_accounts_${tenant.id}`) ||
         localStorage.getItem(`faithpay_staff_${tenant.id}`) ||
         localStorage.getItem(`faithpay_staff_accounts_${tenant.id}`);
 
-      let initialStaff: StaffAdminUser[] = [];
+      let loadedStaff: StaffAdminUser[] = [];
       if (savedStaff) {
         try {
           const parsed = JSON.parse(savedStaff);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            initialStaff = parsed;
+          if (Array.isArray(parsed)) {
+            // 구 목업 이메일(joyful-church.org 등) 캐시 데이터 배제
+            loadedStaff = parsed.filter(
+              (s: any) => s.email && !s.email.includes('joyful-church.org') && !s.email.includes('serenity-temple')
+            );
           }
         } catch {}
       }
 
-      // dream 및 단체별 대표 이메일(admin@{slug}.or.kr) 표시 보장
-      const targetAdminEmail = tenant.slug === 'dream' ? 'admin@dream.or.kr' : (tenant.contact?.email || `admin@${tenant.slug}.or.kr`);
-      const hasTargetEmail = initialStaff.some((s) => s.email && s.email.toLowerCase() === targetAdminEmail.toLowerCase());
+      // 단체 대표 이메일 결정 (DB 동기화 또는 단체 slug 기반 공식 이메일)
+      const primaryEmail = (
+        tenant.contact?.email &&
+        !tenant.contact.email.includes('joyful-church') &&
+        !tenant.contact.email.includes('serenity-temple')
+      )
+        ? tenant.contact.email.trim().toLowerCase()
+        : `admin@${(tenant.slug || 'soulpay').toLowerCase()}.or.kr`;
 
-      if (!hasTargetEmail || initialStaff.length === 0) {
+      const hasPrimaryAccount = loadedStaff.some((s) => s.email && s.email.toLowerCase() === primaryEmail);
+
+      if (!hasPrimaryAccount || loadedStaff.length === 0) {
         const primaryAdmin: StaffAdminUser = {
-          id: `admin-${tenant.id}-1`,
+          id: `admin-${tenant.id}-primary`,
           name: (tenant.contact?.name && tenant.contact.name !== '담임목사 / 주지스님' && tenant.contact.name !== '주지스님 / 담임목사')
             ? tenant.contact.name
             : (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자')),
-          email: targetAdminEmail,
-          phone: tenant.contact?.phone || '010-1234-5678',
+          email: primaryEmail,
+          phone: tenant.contact?.phone || '',
           groupId: 'tenant_admin',
           password: 'admin1234!',
           status: 'active',
           createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '2026-01-15',
-          lastLoginAt: '2026-08-25 09:30',
+          lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
         };
 
-        if (initialStaff.length > 0) {
-          initialStaff = initialStaff.map((s, idx) => (idx === 0 ? { ...s, email: targetAdminEmail } : s));
+        if (loadedStaff.length > 0) {
+          loadedStaff = [primaryAdmin, ...loadedStaff];
         } else {
-          initialStaff = [primaryAdmin];
+          loadedStaff = [primaryAdmin];
         }
       }
 
-      setStaffList(initialStaff);
+      setStaffList(loadedStaff);
 
       // 3. 저장된 권한 매트릭스 로드
       const savedPerms = localStorage.getItem(`faithpay_permissions_${tenant.id}`);
