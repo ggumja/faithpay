@@ -184,7 +184,9 @@ export default function PaymentSelection() {
   };
 
   const handlePayment = async () => {
-    const activePg = pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay';
+    const activePg = (pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay').toLowerCase();
+    const isToss = activePg.includes('toss');
+    const isNanopay = !isToss;
 
     if (donationFormData.isRecurring && !currentAdmin) {
       toast.error('정기결제는 회원 로그인 후 이용 가능합니다.');
@@ -255,7 +257,7 @@ export default function PaymentSelection() {
     }
 
     // 토스페이먼츠(TossPayments) 결제 처리 (단발성 및 정기결제 빌링키 지원)
-    if (activePg === 'toss') {
+    if (isToss) {
       setIsProcessing(true);
       toast.info('토스페이먼츠(TossPayments) 결제 모듈을 연결하고 있습니다...');
       
@@ -324,7 +326,7 @@ export default function PaymentSelection() {
     }
 
     // 나노 PG 정기결제 빌링키 자동 발급 (창 호출 방식)
-    if (donationFormData.isRecurring && activePg === 'nanopay') {
+    if (donationFormData.isRecurring && isNanopay) {
       setIsProcessing(true);
       toast.info('정기결제 카드 등록창을 연결하고 있습니다...');
       
@@ -421,7 +423,7 @@ export default function PaymentSelection() {
     }
 
     // 나노 PG 일반 인증결제 처리 (일반 결제창 모드)
-    if (activePg === 'nanopay' && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
+    if (isNanopay && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
       setIsProcessing(true);
       toast.info('결제창을 요청하고 있습니다...');
       
@@ -911,10 +913,10 @@ export default function PaymentSelection() {
                         <div className="bg-zinc-50 dark:bg-zinc-900/60 p-5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 text-center text-xs text-zinc-650 dark:text-zinc-400 flex flex-col gap-2.5 justify-center items-center">
                           <CreditCard className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-pulse" />
                           <p className="font-bold">
-                            {pgProvider === 'toss' ? '토스페이먼츠(TossPayments) 공식 안전 결제창이 호출됩니다' : '안전한 카드 결제창이 호출됩니다'}
+                            {(pgProvider || '').toLowerCase().includes('toss') ? '토스페이먼츠(TossPayments) 공식 안전 결제창이 호출됩니다' : '안전한 카드 결제창이 호출됩니다'}
                           </p>
                           <p className="text-[10px] text-zinc-500 leading-relaxed max-w-sm">
-                            결제 완료 버튼을 누르시면 {pgProvider === 'toss' ? '토스페이먼츠 결제 모듈' : '카드사별 안심클릭 및 모바일 App카드'} 공식 결제창이 호출됩니다.
+                            결제 완료 버튼을 누르시면 {(pgProvider || '').toLowerCase().includes('toss') ? '토스페이먼츠 결제 모듈' : '카드사별 안심클릭 및 모바일 App카드'} 공식 결제창이 호출됩니다.
                           </p>
                         </div>
                       )}

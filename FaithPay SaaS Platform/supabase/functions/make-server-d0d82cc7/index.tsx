@@ -260,9 +260,9 @@ app.post("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
     const config = await db.setPaymentConfig({ ...body, tenantId });
     
     return c.json({ success: true, data: config });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving payment config:', error);
-    return c.json({ success: false, error: 'Failed to save payment config' }, 500);
+    return c.json({ success: false, error: error?.message || 'Failed to save payment config' }, 500);
   }
 });
 

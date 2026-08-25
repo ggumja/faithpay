@@ -315,45 +315,89 @@ export async function setPaymentConfig(config: Omit<PaymentConfig, 'updatedAt'>)
   const sb = pgClient();
   const realTenantId = await resolveTenantUUID(config.tenantId);
   const now = new Date().toISOString();
-  const fullConfig = { ...config, tenantId: realTenantId, updatedAt: now };
-  const row = {
-    tenant_id:      realTenantId,
-    provider_code:  'legacy',
-    config_json:    JSON.stringify(fullConfig),
-    is_enabled:     config.isActive ?? true,
-    updated_at:     now,
+  const fullConfig: PaymentConfig = { ...config, tenantId: realTenantId, updatedAt: now };
+
+  const row: Record<string, any> = {
+    tenant_id:            realTenantId,
+    pg_provider:          config.pgProvider || 'nanopay',
+    api_key:              config.apiKey ?? null,
+    secret_key:           config.secretKey ?? null,
+    mid:                  config.mid ?? null,
+    login_id:             config.loginId ?? null,
+    iv:                   config.iv ?? null,
+    ver:                  config.ver ?? null,
+    enable_card:          config.enableCard ?? true,
+    enable_easy_payment:  config.enableEasyPayment ?? true,
+    enable_vbank:         config.enableVBank ?? true,
+    is_active:            config.isActive ?? true,
+    updated_at:           now,
   };
-  // tenant_payment_providers에 upsert
-  await sb
-    .from('tenant_payment_providers')
-    .upsert(row, { onConflict: 'tenant_id,provider_code' });
+
+  const { error } = await sb
+    .from('payment_configs')
+    .upsert(row, { onConflict: 'tenant_id' });
+
+  if (error) {
+    console.error('setPaymentConfig error:', error);
+    throw new Error(`Failed to save payment config: ${error.message}`);
+  }
+
   return fullConfig;
 }
 
 export async function getPaymentConfig(tenantIdOrSlug: string): Promise<PaymentConfig | null> {
   const sb = pgClient();
   const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
-  const { data } = await sb
-    .from('tenant_payment_providers')
+
+  const { data, error } = await sb
+    .from('payment_configs')
     .select('*')
     .eq('tenant_id', realTenantId)
     .maybeSingle();
-  if (!data) {
-    // 테넌트 테이블 자체에 paymentConfig가 있으면 확인
-    const tenant = await getTenantById(realTenantId);
-    if (tenant?.paymentConfig) return tenant.paymentConfig;
-    return null;
+
+  if (data) {
+    return {
+      tenantId: data.tenant_id,
+      pgProvider: data.pg_provider || 'nanopay',
+      apiKey: data.api_key || '',
+      secretKey: data.secret_key || '',
+      mid: data.mid || '',
+      loginId: data.login_id || '',
+      iv: data.iv || '',
+      ver: data.ver || '',
+      enableCard: data.enable_card ?? true,
+      enableEasyPayment: data.enable_easy_payment ?? true,
+      enableVBank: data.enable_vbank ?? true,
+      isActive: data.is_active ?? true,
+      kakaoCid: data.kakao_cid || '',
+      kakaoSecretKey: data.kakao_secret_key || '',
+      kakaoMode: data.kakao_mode || 'test',
+      enableKakaoPay: data.enable_kakao_pay ?? false,
+      naverPartnerId: data.naver_partner_id || '',
+      naverClientId: data.naver_client_id || '',
+      naverClientSecret: data.naver_client_secret || '',
+      naverMode: data.naver_mode || 'test',
+      enableNaverPay: data.enable_naver_pay ?? false,
+      tossPayMid: data.toss_pay_mid || '',
+      tossPayApiKey: data.toss_pay_api_key || '',
+      tossPaySecretKey: data.toss_pay_secret_key || '',
+      tossPayMode: data.toss_pay_mode || 'test',
+      enableTossPay: data.enable_toss_pay ?? false,
+      providerConfigs: data.provider_configs || {},
+      updatedAt: data.updated_at,
+    };
   }
-  try {
-    const parsed = typeof data.config_json === 'string' ? JSON.parse(data.config_json) : data.config_json;
-    return parsed as PaymentConfig;
-  } catch { return null; }
+
+  // 테넌트 테이블 자체에 paymentConfig가 있으면 확인
+  const tenant = await getTenantById(realTenantId);
+  if (tenant?.paymentConfig) return tenant.paymentConfig;
+  return null;
 }
 
 export async function deletePaymentConfig(tenantIdOrSlug: string): Promise<boolean> {
   const sb = pgClient();
   const realTenantId = await resolveTenantUUID(tenantIdOrSlug);
-  await sb.from('tenant_payment_providers').delete().eq('tenant_id', realTenantId);
+  await sb.from('payment_configs').delete().eq('tenant_id', realTenantId);
   return true;
 }
 
