@@ -339,10 +339,10 @@ export default function SystemAdminShell() {
 
             <div className="flex items-center gap-2 pl-2.5 border-l border-[var(--hm-border)]">
               <div className="w-7 h-7 rounded-full bg-[var(--hm-accent)] flex items-center justify-center text-white text-[11px] font-semibold shrink-0">
-                {(currentAdmin.name ?? 'A')[0]}
+                {(currentAdmin?.name ?? 'A')[0]}
               </div>
               <div className="hidden sm:block">
-                <div className="text-[12px] font-medium text-[var(--hm-ink)] leading-none">{currentAdmin.name}</div>
+                <div className="text-[12px] font-medium text-[var(--hm-ink)] leading-none">{currentAdmin?.name ?? '시스템 관리자'}</div>
                 <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">시스템 관리자</div>
               </div>
             </div>
