@@ -164,10 +164,18 @@ export default function TenantDetailPage() {
         setReligionType(foundTenant.religionType);
         setSlug(foundTenant.slug);
 
-        // DB paymentConfig 만 신뢰 (localStorage 완전 배제)
+        // DB payment_configs 테이블에서 최신 결제 설정 직접 조회
         let cfg = foundTenant.paymentConfig;
+        try {
+          const cfgRes = await paymentAPI.getConfig(foundTenant.id || foundTenant.slug || id);
+          if (cfgRes.success && cfgRes.data && (cfgRes.data.pgProvider || cfgRes.data.apiKey || cfgRes.data.kakaoCid)) {
+            cfg = cfgRes.data;
+          }
+        } catch (e) {
+          console.warn('Failed to fetch payment config directly:', e);
+        }
 
-        if (cfg && (cfg.pgProvider || cfg.kakaoCid)) {
+        if (cfg && (cfg.pgProvider || cfg.kakaoCid || cfg.apiKey || cfg.mid)) {
           setPaymentConfig(cfg);
           setPgProvider(cfg.pgProvider || 'toss');
           setMid(cfg.mid || '');
@@ -376,6 +384,20 @@ export default function TenantDetailPage() {
             loginId,
             iv,
             ver,
+            kakaoCid,
+            kakaoSecretKey,
+            kakaoMode,
+            enableKakaoPay,
+            naverPartnerId,
+            naverClientId,
+            naverClientSecret,
+            naverMode,
+            enableNaverPay,
+            tossPayMid,
+            tossPayApiKey,
+            tossPaySecretKey,
+            tossPayMode,
+            enableTossPay,
             enableCard,
             enableEasyPayment,
             enableVBank,
@@ -453,7 +475,6 @@ export default function TenantDetailPage() {
         throw new Error(`DB 저장 실패 (${response.status}): ${errBody}`);
       }
 
-      // localStorage 미사용 — DB 응답값만 신뢰
       if (targetTenant) {
         targetTenant.paymentConfig = newConfig;
         updateTenantInfo(targetTenant.id, { ...targetTenant, paymentConfig: newConfig });
@@ -462,6 +483,7 @@ export default function TenantDetailPage() {
 
       toast.success('결제 설정이 DB에 성공적으로 저장되었습니다');
       await fetchTenants();
+      await loadTenantData();
     } catch (error: any) {
       console.error('Error saving payment config:', error);
       toast.error(`결제 설정 저장에 실패했습니다: ${error?.message ?? ''}`);
