@@ -227,15 +227,20 @@ export default function TenantStatisticsPage() {
   }, [snapshotDonations, periodUnit]);
 
   // 2. 결제 수단별 통계 (Method)
+  const getMethodCategory = (rawMethod?: string): string => {
+    if (!rawMethod) return '신용카드';
+    const m = String(rawMethod).trim();
+    if (m.includes('카카오') || m.toLowerCase().includes('kakao')) return '카카오페이';
+    if (m.includes('네이버') || m.toLowerCase().includes('naver')) return '네이버페이';
+    if (m.includes('가상')) return '가상계좌';
+    if (m.includes('계좌') || m.includes('이체') || m.toLowerCase().includes('transfer')) return '실시간 계좌이체';
+    return '신용카드'; // 토스페이먼츠, PG, 카드, 테스트 등 결제수단 기본값은 신용카드로 매핑
+  };
+
   const methodStats = useMemo(() => {
     const map: Record<string, { amount: number; count: number }> = {};
     snapshotDonations.forEach((d) => {
-      let method = d.paymentMethod || d.payment_method || d.method || '신용카드';
-      if (method.includes('카드')) method = '신용카드';
-      else if (method.includes('가상')) method = '가상계좌';
-      else if (method.includes('계좌')) method = '실시간 계좌이체';
-      else if (method.includes('카카오')) method = '카카오페이';
-
+      const method = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
       if (!map[method]) map[method] = { amount: 0, count: 0 };
       map[method].amount += Number(d.amount) || 0;
       map[method].count += 1;
@@ -405,12 +410,7 @@ export default function TenantStatisticsPage() {
       map[key].totalCount += 1;
 
       // 1. 수단별
-      let method = d.paymentMethod || d.payment_method || '신용카드';
-      if (method.includes('카드')) method = '신용카드';
-      else if (method.includes('가상')) method = '가상계좌';
-      else if (method.includes('계좌')) method = '실시간 계좌이체';
-      else if (method.includes('카카오')) method = '카카오페이';
-
+      const method = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
       if (!map[key].methods[method]) map[key].methods[method] = { amount: 0, count: 0 };
       map[key].methods[method].amount += amt;
       map[key].methods[method].count += 1;

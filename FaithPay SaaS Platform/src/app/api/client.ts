@@ -385,12 +385,12 @@ export function normalizePaymentMethod(rawMethod?: string, isRecurring?: boolean
   if (m.includes('OffPG') || m.includes('현장')) return '신용카드 (OffPG)';
   if (m.includes('카카오') || m.toLowerCase().includes('kakao')) return '카카오페이';
   if (m.includes('네이버') || m.toLowerCase().includes('naver')) return '네이버페이';
-  if (m.includes('계좌') || m.includes('이체')) return '계좌이체';
   if (m.includes('가상')) return '가상계좌';
-  if (m.includes('카드') || m.toLowerCase().includes('card')) return '신용카드';
+  if (m.includes('계좌') || m.includes('이체')) return '계좌이체';
+  if (m.includes('카드') || m.toLowerCase().includes('card') || m.includes('토스') || m.toLowerCase().includes('toss') || m.includes('나이스') || m.includes('pg') || m.includes('테스트')) return '신용카드';
   if (m.includes('정기') || m.includes('빌링')) return '정기결제';
 
-  return m;
+  return '신용카드';
 }
 
 export const donationAPI = {
