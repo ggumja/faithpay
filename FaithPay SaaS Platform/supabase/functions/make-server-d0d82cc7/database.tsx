@@ -1323,6 +1323,10 @@ export async function getAllPartners(): Promise<Partner[]> {
     referralCode: r.referral_code ?? '',
     bankName: r.bank_name ?? '', accountNumber: r.account_number ?? '', accountHolder: r.account_holder ?? '',
     status: r.status, createdAt: r.created_at,
+    businessType: r.business_type ?? '',
+    corpRegNo: r.corp_reg_no ?? '', corpName: r.corp_name ?? '', ceoName: r.ceo_name ?? '',
+    taxEmail: r.tax_email ?? '', realName: r.real_name ?? '', resNo: r.res_no ?? '',
+    region: r.region ?? '', memo: r.memo ?? '',
   }));
 }
 
@@ -1338,6 +1342,10 @@ export async function getPartnerById(id: string): Promise<Partner | null> {
     referralCode: data.referral_code ?? '',
     bankName: data.bank_name ?? '', accountNumber: data.account_number ?? '', accountHolder: data.account_holder ?? '',
     status: data.status, createdAt: data.created_at,
+    businessType: data.business_type ?? '',
+    corpRegNo: data.corp_reg_no ?? '', corpName: data.corp_name ?? '', ceoName: data.ceo_name ?? '',
+    taxEmail: data.tax_email ?? '', realName: data.real_name ?? '', resNo: data.res_no ?? '',
+    region: data.region ?? '', memo: data.memo ?? '',
   };
 }
 
@@ -1388,6 +1396,10 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
     accountHolder: data.account_holder ?? '',
     status: data.status,
     createdAt: data.created_at,
+    businessType: data.business_type ?? '',
+    corpRegNo: data.corp_reg_no ?? '', corpName: data.corp_name ?? '', ceoName: data.ceo_name ?? '',
+    taxEmail: data.tax_email ?? '', realName: data.real_name ?? '', resNo: data.res_no ?? '',
+    region: data.region ?? '', memo: data.memo ?? '',
   };
 }
 
@@ -1408,6 +1420,10 @@ export async function updatePartnerStatus(id: string, status: 'active' | 'suspen
     referralCode: data.referral_code ?? '',
     bankName: data.bank_name ?? '', accountNumber: data.account_number ?? '', accountHolder: data.account_holder ?? '',
     status: data.status, createdAt: data.created_at,
+    businessType: data.business_type ?? '',
+    corpRegNo: data.corp_reg_no ?? '', corpName: data.corp_name ?? '', ceoName: data.ceo_name ?? '',
+    taxEmail: data.tax_email ?? '', realName: data.real_name ?? '', resNo: data.res_no ?? '',
+    region: data.region ?? '', memo: data.memo ?? '',
   };
 }
 
@@ -1427,6 +1443,15 @@ export async function updatePartner(id: string, updates: Partial<Partner>): Prom
   if (updates.accountHolder !== undefined) dbUpdates.account_holder = updates.accountHolder;
   if (updates.status !== undefined) dbUpdates.status = updates.status;
   if ((updates as any).businessType !== undefined) dbUpdates.business_type = (updates as any).businessType;
+  // 사업자 정보 필드
+  if (updates.corpRegNo !== undefined) dbUpdates.corp_reg_no = updates.corpRegNo;
+  if (updates.corpName  !== undefined) dbUpdates.corp_name   = updates.corpName;
+  if (updates.ceoName   !== undefined) dbUpdates.ceo_name    = updates.ceoName;
+  if (updates.taxEmail  !== undefined) dbUpdates.tax_email   = updates.taxEmail;
+  if (updates.realName  !== undefined) dbUpdates.real_name   = updates.realName;
+  if (updates.resNo     !== undefined) dbUpdates.res_no      = updates.resNo;
+  if (updates.region    !== undefined) dbUpdates.region      = updates.region;
+  if (updates.memo      !== undefined) dbUpdates.memo        = updates.memo;
 
   const { data, error } = await sb
     .from('partners')
@@ -1455,6 +1480,10 @@ export async function updatePartner(id: string, updates: Partial<Partner>): Prom
     accountHolder: data.account_holder ?? '',
     status: data.status,
     createdAt: data.created_at,
+    businessType: data.business_type ?? '',
+    corpRegNo: data.corp_reg_no ?? '', corpName: data.corp_name ?? '', ceoName: data.ceo_name ?? '',
+    taxEmail: data.tax_email ?? '', realName: data.real_name ?? '', resNo: data.res_no ?? '',
+    region: data.region ?? '', memo: data.memo ?? '',
   };
 }
 

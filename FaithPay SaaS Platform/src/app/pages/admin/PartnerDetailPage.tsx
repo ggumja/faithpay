@@ -72,6 +72,16 @@ export default function PartnerDetailPage() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  // 사업자 정보 편집 state
+  const [editBusinessType, setEditBusinessType] = useState('');
+  const [editCorpRegNo, setEditCorpRegNo] = useState('');
+  const [editCorpName, setEditCorpName] = useState('');
+  const [editCeoName, setEditCeoName] = useState('');
+  const [editTaxEmail, setEditTaxEmail] = useState('');
+  const [editRealName, setEditRealName] = useState('');
+  const [editResNo, setEditResNo] = useState('');
+  const [editRegion, setEditRegion] = useState('');
+  const [editMemo, setEditMemo] = useState('');
 
   interface PartnerHistoryEntry {
     id: string;
@@ -327,9 +337,23 @@ export default function PartnerDetailPage() {
   const handleSaveEditInfo = async () => {
     if (!partner) return;
     try {
-      const res = await partnerAPI.update(partner.id, { name: editName, email: editEmail, phone: editPhone });
+      const payload: Partial<Partner> = {
+        name: editName,
+        email: editEmail,
+        phone: editPhone,
+        businessType: editBusinessType || undefined,
+        corpRegNo: editCorpRegNo || undefined,
+        corpName: editCorpName || undefined,
+        ceoName: editCeoName || undefined,
+        taxEmail: editTaxEmail || undefined,
+        realName: editRealName || undefined,
+        resNo: editResNo || undefined,
+        region: editRegion || undefined,
+        memo: editMemo || undefined,
+      };
+      const res = await partnerAPI.update(partner.id, payload);
       if (res.success) {
-        setPartner({ ...partner, name: editName, email: editEmail, phone: editPhone });
+        setPartner({ ...partner, ...payload });
         setIsEditModalOpen(false);
 
         const newEntry: PartnerHistoryEntry = {
@@ -340,12 +364,7 @@ export default function PartnerDetailPage() {
           afterVal: `${editName} · ${editPhone} · ${editEmail}`,
           modifiedBy: '시스템 관리자 (본사)',
         };
-        const updated = [newEntry, ...history];
-        setHistory(updated);
-        try {
-          localStorage.setItem(`soulpay:myinfo_history:${partner.id}`, JSON.stringify(updated));
-        } catch {}
-
+        setHistory([newEntry, ...history]);
         toast.success('파트너 기본 정보가 DB에 저장되었습니다.');
       } else {
         toast.error(res.error || '정보 수정에 실패했습니다.');
@@ -374,6 +393,15 @@ export default function PartnerDetailPage() {
       setEditName(partner.name || '');
       setEditEmail(partner.email || '');
       setEditPhone(partner.phone || '');
+      setEditBusinessType(partner.businessType || '');
+      setEditCorpRegNo(partner.corpRegNo || '');
+      setEditCorpName(partner.corpName || '');
+      setEditCeoName(partner.ceoName || '');
+      setEditTaxEmail(partner.taxEmail || '');
+      setEditRealName(partner.realName || '');
+      setEditResNo(partner.resNo || '');
+      setEditRegion(partner.region || '');
+      setEditMemo(partner.memo || '');
     }
     setIsEditModalOpen(true);
   };
@@ -1111,32 +1139,107 @@ export default function PartnerDetailPage() {
 
       {/* ── 파트너 기본 정보 수정 모달 ── */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <Edit3 className="h-4 w-4 text-purple-600" /> 파트너 정보 수정
             </DialogTitle>
             <DialogDescription className="text-xs">
-              파트너명, 이메일, 전화번호 등 기본 정보를 수정합니다.
+              파트너 기본 정보 및 사업자 정보를 수정합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2 text-xs">
+            {/* 기본 정보 */}
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b pb-1">기본 정보</p>
             <div>
-              <Label className="text-xs font-bold text-slate-700">파트너명 (상호/성명)</Label>
-              <Input value={editName} onChange={e => setEditName(e.target.value)} className="mt-1 text-xs" />
+              <Label className="text-xs font-bold text-slate-700">파트너명 (상호/성명) *</Label>
+              <input value={editName} onChange={e => setEditName(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
             </div>
             <div>
-              <Label className="text-xs font-bold text-slate-700">이메일 주소</Label>
-              <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="mt-1 text-xs" />
+              <Label className="text-xs font-bold text-slate-700">이메일 주소 *</Label>
+              <input value={editEmail} onChange={e => setEditEmail(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
             </div>
             <div>
-              <Label className="text-xs font-bold text-slate-700">전화번호</Label>
-              <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="mt-1 text-xs" />
+              <Label className="text-xs font-bold text-slate-700">전화번호 *</Label>
+              <input value={editPhone} onChange={e => setEditPhone(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
             </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-700">담당 지역</Label>
+              <input value={editRegion} onChange={e => setEditRegion(e.target.value)}
+                placeholder="예: 서울 강남구"
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+            </div>
+
+            {/* 사업자 정보 */}
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b pb-1 pt-2">사업자 정보</p>
+            <div>
+              <Label className="text-xs font-bold text-slate-700">사업자 유형</Label>
+              <select value={editBusinessType} onChange={e => setEditBusinessType(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white">
+                <option value="">-- 선택 --</option>
+                <option value="INDIVIDUAL">👤 개인 / 프리랜서 (3.3% 원천징수)</option>
+                <option value="individual_business">🏬 일반과세자 (개인사업자, 세금계산서)</option>
+                <option value="CORPORATE">🏢 법인사업자 (세금계산서)</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs font-bold text-slate-700">사업자등록번호</Label>
+                <input value={editCorpRegNo} onChange={e => setEditCorpRegNo(e.target.value)}
+                  placeholder="000-00-00000"
+                  className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+              </div>
+              <div>
+                <Label className="text-xs font-bold text-slate-700">대표자명</Label>
+                <input value={editCeoName} onChange={e => setEditCeoName(e.target.value)}
+                  placeholder="홍길동"
+                  className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-700">법인명 / 상호</Label>
+              <input value={editCorpName} onChange={e => setEditCorpName(e.target.value)}
+                placeholder="(주)예시컴퍼니"
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-700">세금계산서 수신 이메일</Label>
+              <input value={editTaxEmail} onChange={e => setEditTaxEmail(e.target.value)}
+                placeholder="tax@example.com"
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+            </div>
+            {/* 개인/프리랜서 전용 */}
+            {(editBusinessType === 'INDIVIDUAL' || editBusinessType === 'freelancer') && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs font-bold text-slate-700">실명</Label>
+                  <input value={editRealName} onChange={e => setEditRealName(e.target.value)}
+                    placeholder="홍길동"
+                    className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+                </div>
+                <div>
+                  <Label className="text-xs font-bold text-slate-700">주민등록번호 (마스킹)</Label>
+                  <input value={editResNo} onChange={e => setEditResNo(e.target.value)}
+                    placeholder="920101-1******"
+                    className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-xs bg-white" />
+                </div>
+              </div>
+            )}
+
+            {/* 관리자 메모 */}
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b pb-1 pt-2">관리자 메모</p>
+            <textarea value={editMemo} onChange={e => setEditMemo(e.target.value)}
+              rows={2} placeholder="내부 메모 (파트너에게 노출 안 됨)"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs bg-white resize-none" />
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(false)}>취소</Button>
-            <Button size="sm" className="bg-purple-600 hover:bg-purple-700 font-bold" onClick={handleSaveEditInfo}>저장하기</Button>
+            <button className="px-4 py-2 rounded-md border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              onClick={() => setIsEditModalOpen(false)}>취소</button>
+            <button className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
+              onClick={handleSaveEditInfo}>저장하기</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

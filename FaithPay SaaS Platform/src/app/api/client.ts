@@ -605,12 +605,23 @@ export interface Partner {
   role: 'master_agency' | 'sales_agent'; // 대리점 vs 영업자
   parentId?: string; // 상위 대리점 ID
   commissionRate: number; // 수수료율 (%)
-  referralCode: string; // 영업자 추천코드 (예: AGENT_KIM)
+  agencyRate?: number;    // 대리점 마진율 (%)
+  referralCode: string;   // 영업자 추천코드 (예: AGENT_KIM)
   bankName: string;
   accountNumber: string;
   accountHolder: string;
   status: 'active' | 'pending' | 'suspended';
   createdAt: string;
+  // 사업자 정보
+  businessType?: string;  // 'INDIVIDUAL' | 'freelancer' | 'individual_business' | 'CORPORATE'
+  corpRegNo?: string;     // 사업자등록번호
+  corpName?: string;      // 법인명/상호
+  ceoName?: string;       // 대표자명
+  taxEmail?: string;      // 세금계산서 수신 이메일
+  realName?: string;      // 실명 (프리랜서)
+  resNo?: string;         // 주민등록번호 (마스킹)
+  region?: string;        // 담당 지역
+  memo?: string;          // 관리자 메모
 }
 
 export interface PartnerCommission {
