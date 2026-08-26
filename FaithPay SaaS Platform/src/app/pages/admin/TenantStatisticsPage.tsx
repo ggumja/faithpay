@@ -81,47 +81,63 @@ export default function TenantStatisticsPage() {
   }, [yesterdayCutoff]);
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
+    const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+    const tenant = tenants.find(
+      (t) =>
+        (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+        (t.id && t.id.toLowerCase() === decodedSlug) ||
+        (t.name && t.name.toLowerCase() === decodedSlug) ||
+        (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+    ) || currentTenant;
+
+    const targetKey = tenant?.id || tenant?.slug || decodedSlug;
     if (tenant) {
       setCurrentTenant(tenant);
-      fetchData(tenant.id);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+    if (targetKey) {
+      fetchData(targetKey);
+    }
+  }, [tenantSlug, tenants, setCurrentTenant, currentTenant]);
 
-  const fetchData = async (tenantId: string) => {
+  const fetchData = async (targetTenantId: string) => {
     setIsLoading(true);
     try {
-      const res = await donationAPI.getByTenant(tenantId);
+      let res = await donationAPI.getByTenant(targetTenantId);
+      if ((!res.success || !res.data || res.data.length === 0) && tenantSlug && tenantSlug !== targetTenantId) {
+        const altRes = await donationAPI.getByTenant(tenantSlug);
+        if (altRes.success && Array.isArray(altRes.data) && altRes.data.length > 0) {
+          res = altRes;
+        }
+      }
       if (res.success && Array.isArray(res.data)) {
         const list = assignSequentialDonationIds(res.data);
         setDonations(list);
+      } else {
+        setDonations([]);
       }
     } catch (e: any) {
+      console.error('Failed to fetch statistics data from DB:', e);
       toast.error('통계 데이터를 불러오는 중 오류가 발생했습니다.');
+      setDonations([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 🔴 선택된 기간 선택(periodSelection) 및 전일 23:59:59 마감 필터링
+  // 🔴 선택된 기간 선택(periodSelection) 조건에 따라 100% DB 데이터 필터링
   const snapshotDonations = useMemo(() => {
     const startLimit = periodSelection.startDate;
-    let endLimit = periodSelection.endDate;
-    if (endLimit > yesterdayCutoff) {
-      endLimit = yesterdayCutoff;
-    }
+    const endLimit = periodSelection.endDate;
 
     return donations.filter((d) => {
       const created = new Date(d.createdAt || d.created_at || d.date || 0);
       if (isNaN(created.getTime())) return false;
 
-      // 1. 마감 시점(전일 23:59:59 또는 선택 종료일) 이하
+      // 1. 선택 기간 범위(시작일 ~ 종료일 23:59:59) 이내
       if (created > endLimit) return false;
-
-      // 2. 선택 시작일 이상
       if (created < startLimit) return false;
 
-      // 3. 정상 승인 완료건(completed/paid/success/approved)만
+      // 2. 정상 승인 완료건(completed/paid/success/approved)만
       const rawStatus = String(d.paymentStatus || d.payment_status || d.status || 'completed').toLowerCase();
       const isCompleted =
         rawStatus === 'completed' ||
@@ -132,7 +148,15 @@ export default function TenantStatisticsPage() {
         rawStatus === '승인완료';
       return isCompleted;
     });
-  }, [donations, periodSelection, yesterdayCutoff]);
+  }, [donations, periodSelection]);
+
+  // 마감 승인 성공률 (실제 DB 데이터 기준 계산)
+  const approvalSuccessRate = useMemo(() => {
+    if (donations.length === 0) return '0.0%';
+    const successCount = snapshotDonations.length;
+    const totalCount = donations.length;
+    return `${((successCount / totalCount) * 100).toFixed(1)}%`;
+  }, [donations, snapshotDonations]);
 
   // 마감 상세 목록 검색 및 페이징
   const filteredSnapshotList = useMemo(() => {
@@ -525,14 +549,14 @@ export default function TenantStatisticsPage() {
             />
           </div>
 
-          {/* ℹ️ 전일 23:59:59 마감 집계 안내 배너 */}
+          {/* ℹ️ 실시간 DB 마감 집계 안내 배너 */}
           <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl p-4 flex items-start gap-3 shadow-sm">
             <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
               <span className="font-bold text-sm block mb-0.5">
-                🗓️ 마감 시점 기준: {cutoffDateStr} 기준 완료 데이터
+                🗓️ 조회 기간: {periodSelection.label} 기준 실제 수납 데이터
               </span>
-              본 통계 화면은 실시간 결제의 시차 변동 오류를 방지하기 위해 **전일 23:59:59 시점까지 정상 승인 완료된 결제건만 마감 집계**하여 보여줍니다. (당일 신규 결제건은 익일 새벽 자동 마감 집계 후 본 통계에 포함됩니다.)
+              본 통계 화면은 백엔드 데이터베이스(Supabase)의 **실제 결제 수납 데이터 (100% DB 직결)**를 기반으로 기간별 수납 건수 및 금액을 실시간으로 집계하여 제공합니다. (Mock / 가짜 / 로컬 데이터 미사용)
             </div>
           </div>
 
@@ -634,8 +658,8 @@ export default function TenantStatisticsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-black text-blue-600">100.0%</div>
-                    <p className="text-xs text-slate-400 mt-1">미승인/이탈건 제외 정제 완료</p>
+                    <div className="text-3xl font-black text-blue-600">{approvalSuccessRate}</div>
+                    <p className="text-xs text-slate-400 mt-1">DB 수납 내역 정상 승인 비율</p>
                   </CardContent>
                 </Card>
               </div>
