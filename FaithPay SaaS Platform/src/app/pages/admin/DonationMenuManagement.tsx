@@ -180,7 +180,7 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
 export default function DonationMenuManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, currentAdmin, tenants, getTenantDonationItems, saveDonationItem, deleteDonationItem } = useApp();
+  const { currentTenant, setCurrentTenant, currentAdmin, tenants } = useApp();
   const [editingItem, setEditingItem] = useState<DonationItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
@@ -245,11 +245,11 @@ export default function DonationMenuManagement() {
   }
 
   const currentPath = `/${tenantSlug}/admin/menu`;
-  const donationItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
+  const donationItems = dbItems;
 
   const handleSave = async (itemData: Partial<DonationItem>) => {
-    // 기준 목록: DB에 저장된 항목이 있으면 그것, 없으면 현재 표시 중인 기본값 항목
-    const baseList = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
+    // 기준 목록: 항상 DB 항목 기준
+    const baseList = dbItems;
     let updatedList: DonationItem[];
 
     if (editingItem?.id) {
@@ -270,9 +270,8 @@ export default function DonationMenuManagement() {
     }
 
     setDbItems(updatedList);
-    saveDonationItem(currentTenant.id || currentTenant.slug, currentTenant.religionType, { ...itemData, id: editingItem?.id });
 
-    // 무조건 서버 DB로 100% 저장
+    // 서버 DB로 저장
     try {
       const targetId = currentTenant.id || currentTenant.slug || tenantSlug;
       if (targetId) {
@@ -294,13 +293,12 @@ export default function DonationMenuManagement() {
 
 
   const handleDelete = async (itemId: string) => {
-    const baseList = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
+    const baseList = dbItems;
     const updatedList = baseList.filter(item => item.id !== itemId);
 
     setDbItems(updatedList);
-    deleteDonationItem(currentTenant.id || currentTenant.slug, currentTenant.religionType, itemId);
-    
-    // 무조건 서버 DB에서 100% 삭제 반영
+
+    // 서버 DB에서 삭제 반영
     try {
       const targetId = currentTenant.id || currentTenant.slug || tenantSlug;
       if (targetId) {

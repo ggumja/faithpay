@@ -22,15 +22,11 @@ export default function DonationFlow() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { tenants, currentTenant, setCurrentTenant, setDonationFormData, getTenantDonationItems } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, setDonationFormData } = useApp();
 
   const [step, setStep] = useState(1);
   const [selectedItem, setSelectedItem] = useState<DonationItem | null>(() => {
     if (location.state?.selectedItem) return location.state.selectedItem;
-    if (currentTenant) {
-      const items = getTenantDonationItems(currentTenant);
-      if (items && items.length > 0) return items[0];
-    }
     return null;
   });
   const [amount, setAmount] = useState<number>(0);
@@ -127,20 +123,11 @@ export default function DonationFlow() {
           if (!selectedItem || !res.data.some(i => i.id === selectedItem.id)) {
             setSelectedItem(res.data[0]);
           }
-        } else {
-          if (!selectedItem) {
-            const items = getTenantDonationItems(currentTenant);
-            if (items && items.length > 0) setSelectedItem(items[0]);
-          }
         }
-      }).catch(() => {
-        if (!selectedItem) {
-          const items = getTenantDonationItems(currentTenant);
-          if (items && items.length > 0) setSelectedItem(items[0]);
-        }
-      });
+        // DB에 항목이 없으면 선택 안 함 (하드코딩 fallback 제거)
+      }).catch(() => {});
     }
-  }, [currentTenant, selectedItem, getTenantDonationItems]);
+  }, [currentTenant, selectedItem]);
 
   useEffect(() => {
     if (location.state?.isRecurring !== undefined) {

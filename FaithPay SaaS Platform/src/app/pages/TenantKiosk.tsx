@@ -137,7 +137,7 @@ function assembleHangulKey(prev: string, key: string): string {
 export default function TenantKiosk() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, getTenantDonationItems } = useApp();
+  const { currentTenant } = useApp();
 
   // Kiosk State
   const [step, setStep] = useState<KioskStep>('MODE_SELECT');
@@ -260,8 +260,7 @@ export default function TenantKiosk() {
   }, [step, resetToHome]);
 
   const ft = FAITH_THEMES[currentTenant?.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-  const contextItems = currentTenant ? getTenantDonationItems(currentTenant.id) : [];
-  const items = dbItems.length > 0 ? dbItems : contextItems;
+  const items = dbItems;
 
   // 2-Set Hangul Automata Helper for On-Screen Soft Keyboard
   const handleSoftKeyClick = (key: string) => {

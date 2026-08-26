@@ -50,7 +50,7 @@ export interface HistoryItem {
 export default function MyDonations() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, getTenantDonationItems } = useApp();
+  const { tenants, currentTenant, setCurrentTenant } = useApp();
 
   // 📱 전화번호 하이픈 자동 포맷팅 헬퍼
   const formatPhoneNumber = (val: string) => {
@@ -285,6 +285,17 @@ export default function MyDonations() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
+  // DB에서 수납 항목 로드
+  useEffect(() => {
+    if (currentTenant) {
+      donationItemsAPI.getItems(currentTenant.id).then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          setDbItems(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [currentTenant]);
+
   const fetchDonorData = useCallback(async (targetPhone: string) => {
     const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
     if (!cleanPhone || !currentTenant) return;
@@ -367,7 +378,7 @@ export default function MyDonations() {
 
   if (!currentTenant) return null;
 
-  const effectiveItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
+  const effectiveItems = dbItems;
   const hasRecurringSupport = effectiveItems.length > 0
     ? effectiveItems.some(item => item.enabled !== false && item.allowRecurring !== false)
     : true;
