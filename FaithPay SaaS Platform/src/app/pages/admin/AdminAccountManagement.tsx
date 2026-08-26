@@ -202,7 +202,7 @@ export default function AdminAccountManagement() {
         { id: 'donations', menuName: '수납/보시 내역', path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
         { id: 'recurring_pending', menuName: '정기결제 마감', path: '/admin/recurring-pending', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
         { id: 'statistics', menuName: '마감 통계', path: '/admin/statistics', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },
-        { id: 'prayers', menuName: '지향문/축원', path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
+        { id: 'prayers', menuName: '메시지 관리', path: '/admin/prayers', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'full' } },
         { id: 'menu', menuName: '수납 항목 관리', path: '/admin/menu', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'none' } },
         { id: 'members', menuName: '회원 관리', path: '/admin/members', groupPermissions: { tenant_admin: 'full', finance_manager: 'read', staff: 'read' } },
         { id: 'settlement', menuName: '정산', path: '/admin/settlement', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'none' } },

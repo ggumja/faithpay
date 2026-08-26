@@ -17,7 +17,7 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     donationHistory: '수납/후원 내역',
     donationItems: '수납/후원 항목',
     recurringPending: '정기결제 대기',
-    prayer: '메시지/지향 관리',
+    prayer: '메시지 관리',
     donor: '후원자/기부자',
     prayerInputLabel: '응원/소원 메시지',
   },

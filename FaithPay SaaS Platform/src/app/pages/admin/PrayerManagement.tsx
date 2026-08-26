@@ -148,7 +148,7 @@ export default function PrayerManagement() {
     }
 
     const orgName = currentTenant.name || '단체명';
-    const prayerTerm = terms.prayer || '메시지/지향';
+    const prayerTerm = terms.prayer || '메시지';
 
     let printHtml = '';
 
