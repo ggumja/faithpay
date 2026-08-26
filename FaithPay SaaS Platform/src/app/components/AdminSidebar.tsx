@@ -82,12 +82,13 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
       </div>
 
       {(() => {
+        const rawName = currentAdmin?.name && currentAdmin.name !== '시스템 최고 관리자' ? currentAdmin.name : '';
         const adminDisplayName =
-          (currentAdmin?.name && currentAdmin.name !== '시스템 최고 관리자' ? currentAdmin.name : '') ||
+          rawName ||
           currentTenant?.adminName ||
-          currentTenant?.contact?.name ||
           currentTenant?.businessInfo?.representativeName ||
-          (currentTenant?.name ? `${currentTenant.name} 관리자` : '대표 관리자');
+          currentTenant?.contact?.name ||
+          '대표 관리자';
 
         const adminRole = currentAdmin?.role === 'system_admin' ? 'tenant_admin' : (currentAdmin?.role || 'tenant_admin');
         const initialChar = adminDisplayName ? adminDisplayName[0] : '관';

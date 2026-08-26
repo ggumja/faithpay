@@ -174,7 +174,7 @@ export default function AdminLogin() {
           id: matchedAccount?.id || `admin-${urlTenant.id}`,
           tenantId: urlTenant.id,
           email: cleanEmail,
-          name: matchedAccount?.name || `${urlTenant.name} 관리자`,
+          name: matchedAccount?.name || '대표 관리자',
           role: (matchedAccount?.groupId === 'finance_manager' || cleanEmail.includes('finance'))
             ? ('finance_manager' as const)
             : ('tenant_admin' as const),
@@ -221,7 +221,7 @@ export default function AdminLogin() {
       id: matchedAccount?.id || `admin-${targetTenant.id}`,
       tenantId: targetTenant.id,
       email: cleanEmail,
-      name: matchedAccount?.name || `${targetTenant.name} 관리자`,
+      name: matchedAccount?.name || '대표 관리자',
       role: (matchedAccount?.groupId === 'finance_manager' || cleanEmail.includes('finance'))
         ? ('finance_manager' as const)
         : ('tenant_admin' as const),
@@ -244,7 +244,7 @@ export default function AdminLogin() {
       id: matchedAccount?.id || `admin-${targetTenant.id}`,
       tenantId: targetTenant.id,
       email: email.trim().toLowerCase(),
-      name: matchedAccount?.name || `${targetTenant.name} 관리자`,
+      name: matchedAccount?.name || '대표 관리자',
       role: (matchedAccount?.groupId === 'finance_manager' || email.toLowerCase().includes('finance'))
         ? ('finance_manager' as const)
         : ('tenant_admin' as const),
