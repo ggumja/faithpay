@@ -248,10 +248,12 @@ export default function DonationMenuManagement() {
   const donationItems = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
 
   const handleSave = async (itemData: Partial<DonationItem>) => {
+    // 기준 목록: DB에 저장된 항목이 있으면 그것, 없으면 현재 표시 중인 기본값 항목
+    const baseList = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
     let updatedList: DonationItem[];
 
     if (editingItem?.id) {
-      updatedList = dbItems.map(item => item.id === editingItem.id ? { ...item, ...itemData } as DonationItem : item);
+      updatedList = baseList.map(item => item.id === editingItem.id ? { ...item, ...itemData } as DonationItem : item);
     } else {
       const newItem: DonationItem = {
         id: `item-${Date.now()}`,
@@ -264,7 +266,7 @@ export default function DonationMenuManagement() {
         enablePrayerField: itemData.enablePrayerField ?? true,
         enabled: itemData.enabled ?? true,
       };
-      updatedList = [...dbItems, newItem];
+      updatedList = [...baseList, newItem];
     }
 
     setDbItems(updatedList);
@@ -290,8 +292,10 @@ export default function DonationMenuManagement() {
     refreshItems();
   };
 
+
   const handleDelete = async (itemId: string) => {
-    const updatedList = dbItems.filter(item => item.id !== itemId);
+    const baseList = dbItems.length > 0 ? dbItems : getTenantDonationItems(currentTenant);
+    const updatedList = baseList.filter(item => item.id !== itemId);
 
     setDbItems(updatedList);
     deleteDonationItem(currentTenant.id || currentTenant.slug, currentTenant.religionType, itemId);
