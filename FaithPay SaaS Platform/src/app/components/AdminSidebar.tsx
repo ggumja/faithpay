@@ -119,14 +119,10 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
                   {adminDisplayName}
                 </p>
 
-                {/* Role Badge & Status */}
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold rounded-full border border-indigo-200/80 shadow-2xs whitespace-nowrap shrink-0">
+                {/* Role Badge (온라인 배지 삭제) */}
+                <div className="pt-0.5">
+                  <span className="inline-flex items-center px-2.5 py-0.5 bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold rounded-full border border-indigo-200/80 shadow-2xs whitespace-nowrap">
                     {getRoleName(adminRole)}
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    온라인
                   </span>
                 </div>
               </div>
