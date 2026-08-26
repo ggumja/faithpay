@@ -12,23 +12,12 @@ import {
   Palette, UserCheck, ChevronDown, ChevronUp, FileCheck, MapPin, Mail, Phone, Lock
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { partnerAPI, Partner } from '../../api/client';
+import { partnerAPI, Partner, settingsAPI } from '../../api/client';
 import { convertKoreanToQwerty } from '../../utils/koreanConverter';
 import { openDaumPostcode } from '../../utils/daumPostcode';
 
-const STORAGE_KEY_PG     = 'soulpay:pg_rates';
-const STORAGE_KEY_MARGIN = 'soulpay:platform_margin';
-
-function loadFeeConfig() {
-  let pgCost = 1.5, platformMargin = 0.5;
-  try {
-    const pgs = JSON.parse(localStorage.getItem(STORAGE_KEY_PG) || '[]');
-    if (pgs.length > 0) pgCost = pgs[0].rate ?? 1.5;
-    const pm = parseFloat(localStorage.getItem(STORAGE_KEY_MARGIN) || '');
-    if (!isNaN(pm)) platformMargin = pm;
-  } catch { /* ignore */ }
-  return { pgCost, platformMargin };
-}
+// pg_rates·platform_margin은 settingsAPI(system_settings DB)에서 비동기 로드
+// 컴포넌트 내 useEffect에서 처리
 
 const RELIGION_PRESETS = [
   { key: 'buddhist',   label: '⛩️ 불교 (사찰/암자)',  color: '#c2410c', desc: '보시 · 축원문 · 불자' },
@@ -51,7 +40,17 @@ export default function PartnerTenantCreate() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [myPartner, setMyPartner] = useState<Partner | null>(null);
 
-  const [feeConfig] = useState(loadFeeConfig);
+  const [feeConfig, setFeeConfig] = useState({ pgCost: 1.5, platformMargin: 0.5 });
+  useEffect(() => {
+    settingsAPI.getAll().then(res => {
+      if (!res.success || !res.data) return;
+      const { pg_rates, platform_margin } = res.data;
+      let pgCost = 1.5, platformMargin = 0.5;
+      if (Array.isArray(pg_rates) && pg_rates.length > 0) pgCost = pg_rates[0].rate ?? 1.5;
+      if (platform_margin !== undefined) { const pm = parseFloat(String(platform_margin)); if (!isNaN(pm)) platformMargin = pm; }
+      setFeeConfig({ pgCost, platformMargin });
+    }).catch(() => {});
+  }, []);
   const [contractRate, setContractRate] = useState(3.0);
 
   // 1. 단체 유형 및 기본 정보

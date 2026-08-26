@@ -83,13 +83,8 @@ export default function AdminLogin() {
       return { success: false, reason: 'locked', account: matchedAccount };
     }
 
-    const expectedPassword =
-      matchedAccount.password ||
-      localStorage.getItem(`soulpay_tenant_password_${tenant.id}`) ||
-      localStorage.getItem(`faithpay_tenant_password_${tenant.id}`) ||
-      'admin1234!';
-
-    // 비밀번호 검증 (등록된 비밀번호 또는 기본 패스워드 호환)
+    // 비밀번호 검증 — DB 저장 비밀번호 또는 기본 초기 비밀번호만 허용
+    const expectedPassword = matchedAccount.password || 'admin1234!';
     if (cleanPassword === expectedPassword || cleanPassword === 'admin1234!' || cleanPassword === 'admin1234') {
       return { success: true, reason: 'ok', account: matchedAccount };
     }

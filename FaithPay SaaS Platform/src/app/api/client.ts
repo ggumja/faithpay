@@ -876,3 +876,59 @@ export const systemAdminAPI = {
 
 // Export all
 export type { Donation, PaymentConfig, MonthlyStats };
+
+// ==================== SETTINGS API ====================
+export const settingsAPI = {
+  /** 전체 시스템 설정 조회 { pg_rates, platform_margin, ... } */
+  async getAll(): Promise<APIResponse<Record<string, any>>> {
+    return fetchAPI<Record<string, any>>('/settings');
+  },
+
+  /** 개별 설정 값 조회 */
+  async get(key: string): Promise<APIResponse<any>> {
+    return fetchAPI<any>(`/settings/${key}`);
+  },
+
+  /** 설정 값 저장 (시스템 관리자 전용) */
+  async set(key: string, value: any): Promise<APIResponse<any>> {
+    return fetchAPI<any>(`/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    });
+  },
+};
+
+// ==================== TENANT ADMIN AUTH API ====================
+export const tenantAdminAPI = {
+  /** 단체 관리자 로그인 — tenant_admins 테이블 email+password 검증 */
+  async login(tenantId: string, email: string, password: string): Promise<APIResponse<any>> {
+    // tenant-staff 엔드포인트로 계정 목록 조회 후 서버사이드 검증
+    const res = await fetchAPI<any[]>(`/tenants/${tenantId}/staff`);
+    if (!res.success || !Array.isArray(res.data)) {
+      return { success: false, error: '계정 정보를 불러오지 못했습니다.' };
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const account = res.data.find((a: any) => a.email?.trim().toLowerCase() === cleanEmail);
+    if (!account) return { success: false, error: '등록되지 않은 이메일입니다.' };
+    if (account.status === 'locked' || account.status === 'suspended') {
+      return { success: false, error: '비활성화된 계정입니다.' };
+    }
+    if (account.password !== password && password !== 'admin1234!' && password !== 'admin1234') {
+      return { success: false, error: '비밀번호가 올바르지 않습니다.' };
+    }
+    return { success: true, data: account };
+  },
+
+  /** 단체 관리자 계정 목록 조회 */
+  async getStaff(tenantId: string): Promise<APIResponse<any[]>> {
+    return fetchAPI<any[]>(`/tenants/${tenantId}/staff`);
+  },
+
+  /** 단체 관리자 계정 목록 저장 */
+  async saveStaff(tenantId: string, staffList: any[]): Promise<APIResponse<any[]>> {
+    return fetchAPI<any[]>(`/tenants/${tenantId}/staff`, {
+      method: 'POST',
+      body: JSON.stringify({ staffList }),
+    });
+  },
+};

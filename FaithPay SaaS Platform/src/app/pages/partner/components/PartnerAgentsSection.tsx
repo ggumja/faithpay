@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Copy, Trophy, Building2, UserPlus, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -6,7 +6,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Partner, partnerAPI } from '../../../api/client';
+import { Partner, partnerAPI, settingsAPI } from '../../../api/client';
 import { PartnerAgentDetailView } from './PartnerAgentDetailView';
 import { toast } from 'sonner';
 
@@ -37,6 +37,17 @@ export function PartnerAgentsSection({
   tenants,
   commissions = [],
 }: PartnerAgentsSectionProps) {
+  // PG·플랫폼 원가 — DB(system_settings)에서 로드
+  const [pgCost2, setPgCost2] = useState(1.5);
+  const [platformMargin2, setPlatformMargin2] = useState(0.5);
+  useEffect(() => {
+    settingsAPI.getAll().then(res => {
+      if (!res.success || !res.data) return;
+      const { pg_rates, platform_margin } = res.data;
+      if (Array.isArray(pg_rates) && pg_rates.length > 0) setPgCost2(pg_rates[0].rate ?? 1.5);
+      if (platform_margin !== undefined) { const pm = parseFloat(String(platform_margin)); if (!isNaN(pm)) setPlatformMargin2(pm); }
+    }).catch(() => {});
+  }, []);
   const [agentSubTab, setAgentSubTab] = useState<'list' | 'overriding'>('list');
   const [showRegDialog, setShowRegDialog] = useState(false);
   const [newAgentName,           setNewAgentName]           = useState('');
@@ -228,14 +239,8 @@ export function PartnerAgentsSection({
                 const rate = isAgencyDirect
                   ? editAgencyRate
                   : agentRates[agent.id] ?? editAgencyRate ?? 0.3;
-                let pgCost2 = 1.5, platformMargin2 = 0.5;
-                try {
-                  const pgs2 = JSON.parse(localStorage.getItem('soulpay:pg_rates') || localStorage.getItem('faithpay:pg_rates') || '[]');
-                  if (pgs2.length > 0) pgCost2 = pgs2[0].rate ?? 1.5;
-                  const pm2 = parseFloat(localStorage.getItem('soulpay:platform_margin') || localStorage.getItem('faithpay:platform_margin') || '');
-                  if (!isNaN(pm2)) platformMargin2 = pm2;
-                } catch {}
-                const subAgentFloor = +(pgCost2 + platformMargin2 + rate).toFixed(2);
+                let pgCost2Local = pgCost2, platformMargin2Local = platformMargin2;
+                const subAgentFloor = +(pgCost2Local + platformMargin2Local + rate).toFixed(2);
                 const isActive = agent.status === 'active';
 
                 return (

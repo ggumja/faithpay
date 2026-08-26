@@ -1,9 +1,10 @@
 import { Building2, Plus, Copy, ChevronRight, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { Partner, PartnerCommission } from '../../../api/client';
+import { Partner, PartnerCommission, settingsAPI } from '../../../api/client';
 import { toast } from 'sonner';
 
 interface PartnerHomeSectionProps {
@@ -22,29 +23,33 @@ export function PartnerHomeSection({
   const navigate = useNavigate();
   const isAgency = partner.role === 'master_agency';
 
-  // 수수료 및 거래액 집계
   const totalDonation = commissions.reduce((sum, c) => sum + (c.donationAmount ?? 0), 0);
   const totalCommission = commissions.reduce((sum, c) => sum + (c.commissionAmount ?? 0), 0);
 
-  // PG, 플랫폼 원가
-  let pgCost = 1.5;
-  let platformMargin = 0.5;
-  try {
-    const pgs = JSON.parse(localStorage.getItem('soulpay:pg_rates') || localStorage.getItem('faithpay:pg_rates') || '[]');
-    if (pgs.length > 0) pgCost = pgs[0].rate ?? 1.5;
-    const pm = parseFloat(localStorage.getItem('soulpay:platform_margin') || localStorage.getItem('faithpay:platform_margin') || '');
-    if (!isNaN(pm)) platformMargin = pm;
-  } catch {}
+  // PG·플랫폼 원가 — DB(system_settings) 에서 로드
+  const [pgCost, setPgCost] = useState(1.5);
+  const [platformMargin, setPlatformMargin] = useState(0.5);
+  const [agencyRateForAgent, setAgencyRateForAgent] = useState(0.3);
 
-  // 영업자 베이스 수수료 하한선 (PG 1.5% + 플랫폼 0.5% + 대리점 지정 수수료율)
-  let agencyRateForAgent = 0.3;
-  let agentRatesMap: Record<string, number> = {};
-  try {
-    agentRatesMap = JSON.parse(localStorage.getItem('soulpay:agent_rates') || localStorage.getItem('faithpay:agent_rates') || '{}');
-    if (agentRatesMap[partner.id] !== undefined) {
-      agencyRateForAgent = agentRatesMap[partner.id];
+  useEffect(() => {
+    settingsAPI.getAll().then(res => {
+      if (!res.success || !res.data) return;
+      const { pg_rates, platform_margin } = res.data;
+      if (Array.isArray(pg_rates) && pg_rates.length > 0) {
+        setPgCost(pg_rates[0].rate ?? 1.5);
+      }
+      if (platform_margin !== undefined) {
+        const pm = parseFloat(String(platform_margin));
+        if (!isNaN(pm)) setPlatformMargin(pm);
+      }
+    }).catch(() => {});
+
+    // 영업자 본인의 대리점 수수료율은 partner.agencyRate에서 직접 읽기
+    if (partner.agencyRate !== undefined) {
+      setAgencyRateForAgent(partner.agencyRate);
     }
-  } catch {}
+  }, [partner.agencyRate]);
+
   const agentBaseFloor = +(pgCost + platformMargin + agencyRateForAgent).toFixed(2);
 
   return (

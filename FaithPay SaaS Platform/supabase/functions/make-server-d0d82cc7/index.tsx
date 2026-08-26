@@ -360,6 +360,65 @@ app.delete("/make-server-d0d82cc7/tenants/:id", async (c) => {
 
 
 
+// ==================== SYSTEM SETTINGS ROUTES ====================
+
+// 시스템 설정 전체 조회 — GET /settings
+app.get("/make-server-d0d82cc7/settings", async (c) => {
+  try {
+    const sb = db.pgClient();
+    const { data, error } = await sb
+      .from('system_settings')
+      .select('key, value, description');
+    if (error) throw error;
+    // { pg_rates: [...], platform_margin: 0.5, ... } 형태로 반환
+    const result: Record<string, any> = {};
+    (data ?? []).forEach((row: any) => { result[row.key] = row.value; });
+    return c.json({ success: true, data: result });
+  } catch (err) {
+    console.error('Error fetching system settings:', err);
+    return c.json({ success: false, error: 'Failed to fetch settings' }, 500);
+  }
+});
+
+// 시스템 설정 개별 조회 — GET /settings/:key
+app.get("/make-server-d0d82cc7/settings/:key", async (c) => {
+  try {
+    const key = c.req.param('key');
+    const sb = db.pgClient();
+    const { data, error } = await sb
+      .from('system_settings')
+      .select('key, value, description')
+      .eq('key', key)
+      .single();
+    if (error || !data) return c.json({ success: false, error: 'Setting not found' }, 404);
+    return c.json({ success: true, data: data.value });
+  } catch (err) {
+    console.error('Error fetching setting:', err);
+    return c.json({ success: false, error: 'Failed to fetch setting' }, 500);
+  }
+});
+
+// 시스템 설정 저장 — PUT /settings/:key  (시스템 관리자 전용)
+app.put("/make-server-d0d82cc7/settings/:key", async (c) => {
+  try {
+    const key = c.req.param('key');
+    const body = await c.req.json();
+    const value = body.value ?? body;
+    const sb = db.pgClient();
+    const { data, error } = await sb
+      .from('system_settings')
+      .upsert({ key, value }, { onConflict: 'key' })
+      .select('key, value')
+      .single();
+    if (error) throw error;
+    return c.json({ success: true, data: data?.value });
+  } catch (err) {
+    console.error('Error updating setting:', err);
+    return c.json({ success: false, error: 'Failed to update setting' }, 500);
+  }
+});
+
+
 // ==================== PAYMENT CONFIG ROUTES ====================
 
 // 결제 설정 조회
