@@ -1426,6 +1426,7 @@ export async function updatePartner(id: string, updates: Partial<Partner>): Prom
   if (updates.accountNumber !== undefined) dbUpdates.account_number = updates.accountNumber;
   if (updates.accountHolder !== undefined) dbUpdates.account_holder = updates.accountHolder;
   if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if ((updates as any).businessType !== undefined) dbUpdates.business_type = (updates as any).businessType;
 
   const { data, error } = await sb
     .from('partners')

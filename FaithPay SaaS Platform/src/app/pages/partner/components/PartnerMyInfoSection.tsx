@@ -56,12 +56,13 @@ export function PartnerMyInfoSection({
   const [isSaving, setIsSaving] = useState(false);
   const isAgency = partner.role === 'master_agency';
 
-  // 사업자 유형 — 단일 변수로 통일 (배지 + 세무 폼 분기 공유)
-  const businessType: string =
+  // 사업자 유형 — 편집 가능 state (DB business_type 컬럼 연동)
+  const [editBusinessType, setEditBusinessType] = useState<string>(
     (partner as any).businessType ||
-    localStorage.getItem(`soulpay:partner_type:${partner.id}`) ||
-    localStorage.getItem(`faithpay:partner_type:${partner.id}`) ||
-    'CORPORATE';
+    (partner as any).business_type ||
+    ''
+  );
+  const businessType = editBusinessType; // UI 분기용 alias
   const isCorporate = businessType !== 'INDIVIDUAL' && businessType !== 'freelancer';
 
   // 법인 세무 필드
@@ -230,59 +231,29 @@ export function PartnerMyInfoSection({
               <span className="text-[10.5px] font-normal text-slate-500">사업자 유형에 따라 세무 서식이 자동 지정됩니다</span>
             </p>
 
-            {/* 사업자 유형 — 등록 시 확정, 읽기 전용 */}
+            {/* 사업자 유형 — 편집 가능 Select */}
             <div className="space-y-1.5 bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-bold text-slate-700">사업자 유형</Label>
-                <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                  🔒 등록 시 확정 · 변경 불가
+                <span className="flex items-center gap-1 text-[10px] text-purple-600 font-medium">
+                  ✏️ 변경 후 하단 저장 버튼을 눌러주세요
                 </span>
               </div>
-              <div className="pt-1">
-                {(() => {
-                  if (!isCorporate) {
-                    return (
-                      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
-                        <span className="text-lg">👤</span>
-                        <div>
-                          <div className="text-[12.5px] font-bold text-emerald-900">개인 / 프리랜서</div>
-                          <div className="text-[10.5px] text-emerald-700 mt-0.5">3.3% 사업소득세 원천징수 후 지급 → 원천징수 영수증 발행</div>
-                        </div>
-                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-600 text-white">
-                          원천징수
-                        </span>
-                      </div>
-                    );
-                  }
-                  if (businessType === 'individual_business') {
-                    return (
-                      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200">
-                        <span className="text-lg">🏬</span>
-                        <div>
-                          <div className="text-[12.5px] font-bold text-green-900">일반과세자 (개인사업자)</div>
-                          <div className="text-[10.5px] text-green-700 mt-0.5">부가가치세 10% 포함 전자세금계산서 발행</div>
-                        </div>
-                        <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-green-600 text-white">
-                          세금계산서
-                        </span>
-                      </div>
-                    );
-                  }
-                  // CORPORATE / corporation (기본값)
-                  return (
-                    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200">
-                      <span className="text-lg">🏢</span>
-                      <div>
-                        <div className="text-[12.5px] font-bold text-blue-900">법인사업자</div>
-                        <div className="text-[10.5px] text-blue-700 mt-0.5">부가가치세 10% 포함 전자세금계산서 발행</div>
-                      </div>
-                      <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-blue-600 text-white">
-                        세금계산서
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
+              <select
+                value={editBusinessType}
+                onChange={e => setEditBusinessType(e.target.value)}
+                className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              >
+                <option value="">-- 사업자 유형 선택 --</option>
+                <option value="INDIVIDUAL">👤 개인 / 프리랜서 (3.3% 원천징수)</option>
+                <option value="individual_business">🏬 일반과세자 (개인사업자, 세금계산서)</option>
+                <option value="CORPORATE">🏢 법인사업자 (세금계산서)</option>
+              </select>
+              {!editBusinessType && (
+                <p className="text-[10.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                  ⚠️ 사업자 유형을 선택하면 정산 세무 서식이 자동으로 지정됩니다.
+                </p>
+              )}
             </div>
 
 
@@ -393,6 +364,7 @@ export function PartnerMyInfoSection({
                     bankName: editBank,
                     accountNumber: editAccount,
                     accountHolder: editHolder,
+                    businessType: editBusinessType || undefined,
                     ...taxFields,
                   });
                   if (res.success) {
