@@ -637,7 +637,7 @@ export default function TenantStatisticsPage() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      평균 객단가 (1건당)
+                      평균 결제금액
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -692,7 +692,7 @@ export default function TenantStatisticsPage() {
                       <TableRow>
                         <TableHead>조회 기간</TableHead>
                         <TableHead className="text-right">수납 건수</TableHead>
-                        <TableHead className="text-right">평균 객단가</TableHead>
+                        <TableHead className="text-right">평균 결제금액</TableHead>
                         <TableHead className="text-right">총 수납 금액</TableHead>
                       </TableRow>
                     </TableHeader>
