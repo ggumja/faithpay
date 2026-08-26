@@ -1,7 +1,7 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
-import * as kv from "./kv_store.tsx";
+
 import * as db from "./database.tsx";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
@@ -151,34 +151,70 @@ app.get("/make-server-d0d82cc7/tenants/slug/:slug", async (c) => {
   }
 });
 
-// 📌 가맹 단체별 관리자 계정 목록 조회 및 저장 (by tenantId) ← /tenants/:id 와일드카드보다 반드시 앞!
+// 📌 가맹 단체별 관리자 계정 목록 조회 (tenant_admins 테이블 사용)
 const handleGetTenantStaff = async (c: any) => {
   try {
     const tenantId = c.req.param('tenantId');
-    const staffList = await kv.get(`tenant_staff_${tenantId}`);
-    
-    if (staffList && Array.isArray(staffList) && staffList.length > 0) {
-      return c.json({ success: true, data: staffList });
+    const sb = db.pgClient();
+
+    // tenant_admins DB 조회
+    const { data: staffList, error } = await sb
+      .from('tenant_admins')
+      .select('id, tenant_id, email, password, name, role, status, phone, group_id, last_login_at, created_at, updated_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: true });
+
+    if (!error && staffList && staffList.length > 0) {
+      // KV 호환 필드명 변환 (프론트엔드 호환성 유지)
+      const mapped = staffList.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        phone: s.phone || '',
+        groupId: s.group_id || s.role || 'tenant_admin',
+        password: s.password,
+        status: s.status,
+        createdAt: s.created_at?.slice(0, 10) ?? '',
+        lastLoginAt: s.last_login_at?.slice(0, 16).replace('T', ' ') ?? '',
+      }));
+      return c.json({ success: true, data: mapped });
     }
 
-    // DB에 등록된 스태프 목록이 없으면 해당 단체 가입 대표자 1개 계정 로드
+    // DB에 계정 없으면 단체 대표자 정보로 초기 계정 자동 생성 후 저장
     const tenants = await db.getAllTenants();
     const tenant = tenants.find((t: any) => t.id === tenantId || t.slug === tenantId);
-    
     const primaryEmail = (tenant?.contact?.email || `admin@${tenant?.slug || 'soulpay'}.or.kr`).trim().toLowerCase();
-    const primaryAdmin = {
-      id: `admin-${tenantId}`,
-      name: tenant?.contact?.name || `${tenant?.name || '가맹점'} 대표 관리자`,
-      email: primaryEmail,
-      phone: tenant?.contact?.phone || '',
-      groupId: 'tenant_admin',
-      password: 'admin1234!',
-      status: 'active',
-      createdAt: tenant?.appliedAt ? tenant.appliedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
-      lastLoginAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    };
+    const primaryName = tenant?.contact?.name || `${tenant?.name || '가맹점'} 대표 관리자`;
+    const primaryPhone = tenant?.contact?.phone || '';
 
-    return c.json({ success: true, data: [primaryAdmin] });
+    const { data: created } = await sb
+      .from('tenant_admins')
+      .upsert({
+        tenant_id: tenantId,
+        email: primaryEmail,
+        password: 'admin1234!',
+        name: primaryName,
+        phone: primaryPhone,
+        role: 'tenant_admin',
+        group_id: 'tenant_admin',
+        status: 'active',
+      }, { onConflict: 'tenant_id,email' })
+      .select('id, tenant_id, email, password, name, role, status, phone, group_id, created_at')
+      .single();
+
+    const init = created ? [{
+      id: created.id,
+      name: created.name,
+      email: created.email,
+      phone: created.phone || '',
+      groupId: created.group_id || 'tenant_admin',
+      password: created.password,
+      status: created.status,
+      createdAt: created.created_at?.slice(0, 10) ?? '',
+      lastLoginAt: '',
+    }] : [];
+
+    return c.json({ success: true, data: init });
   } catch (error) {
     console.error('Error fetching tenant staff:', error);
     return c.json({ success: false, error: 'Failed to fetch tenant staff' }, 500);
@@ -189,12 +225,36 @@ const handleSaveTenantStaff = async (c: any) => {
   try {
     const tenantId = c.req.param('tenantId');
     const { staffList } = await c.req.json();
-    
+
     if (!Array.isArray(staffList)) {
       return c.json({ success: false, error: 'staffList must be an array' }, 400);
     }
-    
-    await kv.set(`tenant_staff_${tenantId}`, staffList);
+
+    const sb = db.pgClient();
+
+    // 기존 계정 삭제 후 전체 upsert (배열 교체 방식)
+    await sb.from('tenant_admins').delete().eq('tenant_id', tenantId);
+
+    if (staffList.length > 0) {
+      const rows = staffList.map((s: any) => ({
+        id: s.id?.startsWith('admin-') ? undefined : s.id,  // 임시 ID 제거 → DB auto-generate
+        tenant_id: tenantId,
+        email: s.email,
+        password: s.password || 'admin1234!',
+        name: s.name,
+        phone: s.phone || '',
+        role: s.groupId || s.role || 'tenant_admin',
+        group_id: s.groupId || 'tenant_admin',
+        status: s.status || 'active',
+      })).map((r: any) => { const { id, ...rest } = r; return id ? { id, ...rest } : rest; });
+
+      const { error } = await sb.from('tenant_admins').insert(rows);
+      if (error) {
+        console.error('Error inserting tenant_admins:', error);
+        return c.json({ success: false, error: '관리자 계정 저장에 실패했습니다.' }, 500);
+      }
+    }
+
     return c.json({ success: true, data: staffList });
   } catch (error) {
     console.error('Error saving tenant staff:', error);
@@ -290,7 +350,7 @@ app.delete("/make-server-d0d82cc7/tenants/:id", async (c) => {
   try {
     const id = c.req.param('id');
     await db.deleteTenant(id);
-    await kv.del(`tenant:${id}`);
+    // kv 캐시 제거 불필요 — DB 직접 조회 방식으로 전환됨
     return c.json({ success: true, message: 'Tenant deleted successfully' });
   } catch (error) {
     console.error('Error deleting tenant:', error);
