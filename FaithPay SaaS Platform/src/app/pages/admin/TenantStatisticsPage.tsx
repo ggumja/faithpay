@@ -549,6 +549,14 @@ export default function TenantStatisticsPage() {
             />
           </div>
 
+          {/* ℹ️ 집계 시점 안내 배너 */}
+          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl p-3.5 flex items-center gap-3 shadow-xs">
+            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <span className="font-bold text-xs text-amber-900 dark:text-amber-200">
+              🗓️ 조회 기간: {periodSelection.label} 기준 완료 데이터
+            </span>
+          </div>
+
           {/* 하위 메뉴 탭 (5개 세분화 하위메뉴) */}
           <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
             <button
