@@ -193,10 +193,6 @@ export default function PaymentSelection() {
     const isToss = activePg.includes('toss');
     const isNanopay = !isToss;
 
-    if (donationFormData.isRecurring && !currentAdmin) {
-      toast.error('정기결제는 회원 로그인 후 이용 가능합니다.');
-      return;
-    }
 
     if (!agreed) {
       toast.error('결제 진행에 동의해주세요');
@@ -1009,33 +1005,13 @@ export default function PaymentSelection() {
           </CardContent>
         </Card>
 
-        {/* Recurring Payment Login Warning */}
-        {donationFormData.isRecurring && !currentAdmin && (
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/50 text-amber-800 dark:text-amber-450 p-4 rounded-xl flex flex-col items-center gap-2.5 text-center">
-            <p className="text-xs font-bold leading-relaxed">
-              정기 봉헌(카드 자동 등록)은 회원가입/로그인 후에 신청할 수 있습니다.
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/admin/login')} 
-              className="h-8 text-xs font-bold rounded-lg border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900 hover:bg-amber-100/10 cursor-pointer"
-            >
-              로그인 / 회원가입하기
-            </Button>
-          </div>
-        )}
 
         {/* Submit Button */}
         <Button
           className="w-full h-14 text-sm font-bold tracking-wide rounded-xl text-white shadow-md disabled:bg-zinc-200 disabled:dark:bg-zinc-800 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer disabled:shadow-none"
           onClick={handlePayment}
-          disabled={!agreed || (donationFormData.isRecurring && !currentAdmin) || isProcessing}
-          style={
-            (agreed && !(donationFormData.isRecurring && !currentAdmin))
-              ? { backgroundColor: ft.primary }
-              : {}
-          }
+          disabled={!agreed || isProcessing}
+          style={agreed ? { backgroundColor: ft.primary } : {}}
         >
           {isProcessing ? (
             <div className="flex items-center gap-2">
