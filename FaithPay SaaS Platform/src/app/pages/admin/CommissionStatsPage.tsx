@@ -59,12 +59,10 @@ export default function CommissionStatsPage() {
           const cr = await partnerAPI.getCommissions(p.id);
           const comms: PartnerCommission[] = cr?.success && Array.isArray(cr.data) ? cr.data : [];
           const totalAmount   = comms.reduce((s, c) => s + (c.commissionAmount || 0), 0);
-          // status 필드명 통일: 'settled' | 'paid' | 'SETTLED' 모두 정산 완료로 처리
-          const isSettled = (c: PartnerCommission) => {
-            const st1 = ((c as any).status ?? '').toLowerCase();
-            const st2 = ((c as any).settlementStatus ?? '').toLowerCase();
-            return st1 === 'settled' || st1 === 'paid' || st2 === 'settled' || st2 === 'paid';
-          };
+          // status 필드 기준: 'settled' | 'paid' 모두 정산 완료로 처리
+          // DB 스키마 정규화 완료 후 'settled' 단일 비교로 교체 예정
+          const isSettled = (c: PartnerCommission) =>
+            ['settled', 'paid'].includes(((c as any).status ?? '').toLowerCase());
           const settledAmount = comms.filter(isSettled).reduce((s, c) => s + (c.commissionAmount || 0), 0);
           return { ...p, commissions: comms, totalAmount, settledAmount, pendingAmount: totalAmount - settledAmount };
         } catch {

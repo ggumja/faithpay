@@ -657,6 +657,14 @@ export interface PartnerSettlement {
 }
 
 export const partnerAPI = {
+  /** 파트너 로그인 — email + password DB 검증 */
+  async login(email: string, password: string): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>('/partners/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
   async getAll(): Promise<APIResponse<Partner[]>> {
     return fetchAPI<Partner[]>('/partners');
   },

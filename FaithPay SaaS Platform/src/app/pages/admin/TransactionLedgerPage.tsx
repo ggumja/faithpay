@@ -92,12 +92,21 @@ export default function TransactionLedgerPage() {
       const agMap    = Object.fromEntries(agencies.map(a => [a.id, a.name]));
 
       const out: LedgerRow[] = [];
+      // 영업자 수수료 원장
       await Promise.all(agents.map(async (ag) => {
         try {
           const cr = await partnerAPI.getCommissions(ag.id);
           const comms: PartnerCommission[] = cr?.success && Array.isArray(cr.data) ? cr.data : [];
           const pid = (ag as any).parentId ?? '';
           comms.forEach(c => out.push({ ...c, agentName: ag.name, agencyId: pid, agencyName: agMap[pid] ?? '(직접)' }));
+        } catch {}
+      }));
+      // 대리점 직접 계약 수수료 원장 (parentId 없는 단체)
+      await Promise.all(agencies.map(async (agency) => {
+        try {
+          const cr = await partnerAPI.getCommissions(agency.id);
+          const comms: PartnerCommission[] = cr?.success && Array.isArray(cr.data) ? cr.data : [];
+          comms.forEach(c => out.push({ ...c, agentName: '(대리점 직접)', agencyId: agency.id, agencyName: agency.name }));
         } catch {}
       }));
       setRows(out);

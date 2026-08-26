@@ -70,7 +70,7 @@ const S = {
 export default function SystemAdminShell() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { tenants, currentAdmin, setCurrentAdmin } = useApp();
+  const { tenants, currentAdmin } = useApp();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tenantsOpen, setTenantsOpen] = useState(true);
@@ -112,19 +112,12 @@ export default function SystemAdminShell() {
     if (['tenants','pending','tenantDetail'].includes(active)) setTenantsOpen(true);
   }, [active]);
 
-  // 인증 체크 (데모 모드: /system/admin 접속 시 최고 관리자 세션 즉시 자동 보장)
+  // 인증 체크: system_admin 세션 없으면 로그인 페이지로 redirect
   useEffect(() => {
     if (!currentAdmin || currentAdmin.role !== 'system_admin') {
-      const sysAdmin = {
-        id: 'system_admin',
-        tenantId: 'system',
-        email: 'admin@soulpay.kr',
-        name: '시스템 최고 관리자',
-        role: 'system_admin' as const,
-      };
-      setCurrentAdmin(sysAdmin);
+      navigate('/system/admin/login');
     }
-  }, [currentAdmin, setCurrentAdmin]);
+  }, [currentAdmin, navigate]);
 
   return (
     <div className={S.shell}>

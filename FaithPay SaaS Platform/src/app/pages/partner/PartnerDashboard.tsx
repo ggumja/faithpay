@@ -96,21 +96,21 @@ export default function PartnerDashboard() {
       setIsLoading(true);
       try {
         // 세션 파트너 정보 읽기 (로그인 세션)
-        let sessionPartner: Partial<Partner> = {
-          id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-          name: '한국불교문화원',
-          email: 'agency@soulpay.kr',
-          role: 'master_agency',
-          referralCode: 'BIT2024',
-          phone: '010-1234-5678',
-        };
+        const raw = sessionStorage.getItem('faithpay_partner_session');
+        if (!raw) {
+          navigate('/partner/login');
+          return;
+        }
+        let sessionPartner: Partial<Partner> = {};
         try {
-          const raw = sessionStorage.getItem('faithpay_partner_session');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && parsed.id) sessionPartner = parsed;
-          }
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.id) sessionPartner = parsed;
         } catch {}
+
+        if (!sessionPartner.id) {
+          navigate('/partner/login');
+          return;
+        }
 
         const sessionPartnerId = sessionPartner.id!;
 
@@ -134,30 +134,18 @@ export default function PartnerDashboard() {
           } catch {}
         }
 
-        // DB에 조회가 되지 않는 경우 세션 정보를 기초로 구성
+        // DB에서도 찾지 못하면 로그인 redirect
         if (!currentPartner) {
-          currentPartner = {
-            id: sessionPartner.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-            name: sessionPartner.name || '한국불교문화원',
-            email: sessionPartner.email || 'agency@soulpay.kr',
-            phone: sessionPartner.phone || '02-567-8901',
-            role: (sessionPartner.role as any) || 'master_agency',
-            commissionRate: sessionPartner.agencyRate ?? 0.5,
-            agencyRate: sessionPartner.agencyRate ?? 0.5,
-            referralCode: sessionPartner.referralCode || 'BIT2024',
-            bankName: (sessionPartner as any).bankName || '국민은행',
-            accountNumber: (sessionPartner as any).accountNumber || '620-21-0123456',
-            accountHolder: (sessionPartner as any).accountHolder || '불교정보화협의회',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          };
-        } else {
-          // 세션의 역할 정보 유지
-          if (sessionPartner.role) {
-            currentPartner.role = sessionPartner.role as any;
-          }
+          toast.error('파트너 정보를 불러오지 못했습니다. 다시 로그인해 주세요.');
+          sessionStorage.removeItem('faithpay_partner_session');
+          navigate('/partner/login');
+          return;
         }
 
+        // 세션의 역할 정보 유지
+        if (sessionPartner.role) {
+          currentPartner.role = sessionPartner.role as any;
+        }
 
         setPartner(currentPartner);
         setEditPhone(currentPartner.phone ?? '');
@@ -210,6 +198,7 @@ export default function PartnerDashboard() {
         }
       } catch (err) {
         console.error('Failed to load partner dashboard:', err);
+        toast.error('포털 로딩 중 오류가 발생했습니다.');
       } finally {
         setIsLoading(false);
       }

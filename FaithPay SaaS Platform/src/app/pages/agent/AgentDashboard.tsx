@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp } from '../../context/AppContext';
+
 
 import {
   LayoutDashboard, Building2, TrendingUp, UserCircle,
@@ -46,7 +46,7 @@ const navMeta = Object.fromEntries(NAV.map(n => [n.key, n]));
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
-  const { tenants } = useApp();
+
 
   const [partner,     setPartner]     = useState<Partner | null>(null);
   const [myTenants,   setMyTenants]   = useState<any[]>([]);
@@ -110,25 +110,19 @@ export default function AgentDashboard() {
         setEditAccount((activePartner as any).accountNumber ?? '');
         setEditHolder((activePartner as any).accountHolder ?? '');
 
-        /* ── 관할 단체 필터링 ── */
-        const agentKeys = [activePartner.id, activePartner.referralCode].filter(Boolean);
-        setMyTenants(tenants.filter(t =>
-          agentKeys.includes((t as any).registeredByPartnerId) ||
-          agentKeys.includes((t as any).registeredByReferralCode) ||
-          agentKeys.includes((t as any).referralCode)
-        ));
-
-
-        /* ── 백그라운드 API 동기화 ── */
+        /* ── 관할 단체 API 조회 (PartnerDashboard와 동일 방식) ── */
         try {
-          const res = await partnerAPI.getAll();
-          if (res.success && Array.isArray(res.data)) {
-            const found = res.data.find(x =>
-              x.id === activePartner.id || x.email === activePartner.email
-            );
-            if (found) setPartner(prev => ({ ...prev!, ...found }));
+          const tr = await partnerAPI.getPartnerTenants(activePartner.id);
+          if (tr.success && Array.isArray(tr.data)) {
+            setMyTenants(tr.data);
+          } else {
+            setMyTenants([]);
           }
-        } catch {}
+        } catch {
+          setMyTenants([]);
+        }
+
+        /* ── 수수료 원장 API ── */
         try {
           const cr = await partnerAPI.getCommissions(activePartner.id);
           if (cr.success && cr.data) setCommissions(cr.data);
@@ -140,7 +134,7 @@ export default function AgentDashboard() {
       }
     }
     load();
-  }, [tenants, navigate]);
+  }, [navigate]);
 
   /* ── 로딩 ── */
   if (isLoading) {

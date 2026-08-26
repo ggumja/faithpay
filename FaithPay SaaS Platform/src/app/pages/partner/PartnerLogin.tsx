@@ -38,22 +38,20 @@ export default function PartnerLogin() {
     setIsLoading(true);
 
     try {
-      const res = await partnerAPI.getAll();
-      if (res.success && Array.isArray(res.data)) {
-        const found = res.data.find(a => a.email?.toLowerCase() === email.toLowerCase());
-        if (found) {
-          // sessionStorage 사용 — 탭 닫힘 시 자동 파기
-          sessionStorage.setItem('faithpay_partner_session', JSON.stringify(found));
-          toast.success(`${found.name}님, 환영합니다!`);
-          if (found.role === 'sales_agent') {
-            navigate('/agent/dashboard');
-          } else {
-            navigate('/partner/dashboard');
-          }
-          return;
+      const res = await partnerAPI.login(email.trim(), password);
+      if (res.success && res.data) {
+        const found = res.data;
+        // sessionStorage 사용 — 탭 닫힘 시 자동 파기
+        sessionStorage.setItem('faithpay_partner_session', JSON.stringify(found));
+        toast.success(`${found.name}님, 환영합니다!`);
+        if (found.role === 'sales_agent') {
+          navigate('/agent/dashboard');
+        } else {
+          navigate('/partner/dashboard');
         }
+        return;
       }
-      toast.error('등록된 파트너 계정을 찾을 수 없거나 비밀번호가 올바르지 않습니다.');
+      toast.error(res.error ?? '이메일 또는 비밀번호가 올바르지 않습니다.');
     } catch {
       toast.error('로그인 처리 중 오류가 발생했습니다.');
     } finally {

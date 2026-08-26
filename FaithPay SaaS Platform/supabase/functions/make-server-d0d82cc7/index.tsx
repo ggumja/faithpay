@@ -1452,6 +1452,34 @@ app.get("/make-server-d0d82cc7/partners", async (c) => {
   }
 });
 
+// 파트너 로그인 — email + password DB 검증
+app.post("/make-server-d0d82cc7/partners/login", async (c) => {
+  try {
+    const { email, password } = await c.req.json();
+    if (!email || !password) {
+      return c.json({ success: false, error: "이메일과 비밀번호를 입력해 주세요." }, 400);
+    }
+    const sb = db.pgClient();
+    const { data, error } = await sb
+      .from("partners")
+      .select("id, name, email, phone, role, parent_id, commission_rate, agency_rate, referral_code, bank_name, account_number, account_holder, status, created_at")
+      .eq("email", email.trim().toLowerCase())
+      .eq("password", password)
+      .single();
+
+    if (error || !data) {
+      return c.json({ success: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." }, 401);
+    }
+    if (data.status !== "active") {
+      return c.json({ success: false, error: "비활성화된 계정입니다. 시스템 관리자에게 문의하세요." }, 403);
+    }
+    return c.json({ success: true, data });
+  } catch (err) {
+    console.error("Partner login error:", err);
+    return c.json({ success: false, error: "로그인 처리 중 오류가 발생했습니다." }, 500);
+  }
+});
+
 // 개별 영업 파트너 상세 조회
 app.get("/make-server-d0d82cc7/partners/:id", async (c) => {
   try {
