@@ -187,27 +187,27 @@ export function PartnerAgentDetailView({
               onClick={async () => {
                 setSavingAgentId(selectedAgent.id);
                 try {
-                  await partnerAPI.updateAgentRate(selectedAgent.id, currentRate);
-                  let savedMap: Record<string, number> = {};
-                  try { savedMap = JSON.parse(localStorage.getItem('soulpay:agent_rates') || localStorage.getItem('faithpay:agent_rates') || '{}'); } catch {}
-                  savedMap[selectedAgent.id] = currentRate;
-                  localStorage.setItem('soulpay:agent_rates', JSON.stringify(savedMap));
-                  localStorage.setItem('faithpay:agent_rates', JSON.stringify(savedMap));
+                  const res = await partnerAPI.updateAgentRate(selectedAgent.id, currentRate);
+                  if (!res.success) {
+                    toast.error(res.error ?? '수수료율 저장에 실패했습니다.');
+                    return;
+                  }
+                  // DB 저장 완료 — 응답값으로 상태 갱신
+                  const savedRate = (res.data as any)?.agencyRate ?? (res.data as any)?.agency_rate ?? currentRate;
+                  setAgentRates(prev => ({ ...prev, [selectedAgent.id]: savedRate }));
 
-                  // 수정 이력 추가 저장
+                  // 수정 이력 추가
                   const newEntry: HistoryEntry = {
                     id: `h-${Date.now()}`,
                     timestamp: new Date().toLocaleString('ko-KR', { hour12: false }),
                     category: '수수료율 변경',
                     beforeVal: `대리점 ${prevRate}% (베이스 ${+(pgCost2 + platformMargin2 + prevRate).toFixed(2)}%)`,
-                    afterVal: `대리점 ${currentRate}% (베이스 ${subAgentFloor}%)`,
-                    modifiedBy: '한국불교문화원 (대리점)',
+                    afterVal: `대리점 ${savedRate}% (베이스 ${subAgentFloor}%)`,
+                    modifiedBy: '대리점',
                   };
-                  const updatedHistory = [newEntry, ...history];
-                  setHistory(updatedHistory);
-                  localStorage.setItem(historyStorageKey, JSON.stringify(updatedHistory));
+                  setHistory(prev => [newEntry, ...prev]);
 
-                  toast.success(`[${selectedAgent.name}] 영업자의 베이스 수수료가 ${subAgentFloor}% (대리점 수수료 ${currentRate}%)로 저장되었습니다.`);
+                  toast.success(`[${selectedAgent.name}] 영업자의 대리점 수수료가 ${savedRate}% (베이스 ${subAgentFloor}%)로 저장되었습니다.`);
                 } catch {
                   toast.error('저장 중 오류가 발생했습니다.');
                 } finally {

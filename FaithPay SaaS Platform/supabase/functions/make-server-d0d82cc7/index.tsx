@@ -1771,9 +1771,22 @@ app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
       return c.json({ success: false, error: '영업자(sales_agent)만 대상으로 할 수 있습니다.' }, 400);
     }
 
-    // 업데이트
-    const updated: db.Partner = { ...agent, channelShareRate };
-    await kv.set(`partner:${agentId}`, updated);
+    // DB 업데이트 — agency_rate 컬럼에 영구 저장
+    const sb = db.pgClient();
+    const { data: updated, error } = await sb
+      .from('partners')
+      .update({
+        agency_rate: channelShareRate,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', agentId)
+      .select('id, name, email, phone, role, parent_id, commission_rate, agency_rate, referral_code, bank_name, account_number, account_holder, status, created_at')
+      .single();
+
+    if (error || !updated) {
+      console.error('Error updating agent rate in DB:', error);
+      return c.json({ success: false, error: '수수료율 DB 저장에 실패했습니다.' }, 500);
+    }
 
     return c.json({ success: true, data: updated });
   } catch (error) {
