@@ -25,6 +25,7 @@ export default function DonationFlow() {
   const { tenants, currentTenant, setCurrentTenant, setDonationFormData } = useApp();
 
   const [step, setStep] = useState(1);
+  const [itemsLoaded, setItemsLoaded] = useState(false); // DB 항목 로딩 완료 여부
   const [selectedItem, setSelectedItem] = useState<DonationItem | null>(() => {
     if (location.state?.selectedItem) return location.state.selectedItem;
     return null;
@@ -121,13 +122,15 @@ export default function DonationFlow() {
       donationItemsAPI.getItems(currentTenant.id).then((res) => {
         if (res.success && res.data && res.data.length > 0) {
           if (!selectedItem || !res.data.some(i => i.id === selectedItem.id)) {
-            setSelectedItem(res.data[0]);
+            setSelectedItem(res.data.filter(i => i.enabled !== false)[0] ?? res.data[0]);
           }
         }
-        // DB에 항목이 없으면 선택 안 함 (하드코딩 fallback 제거)
-      }).catch(() => {});
+        setItemsLoaded(true); // 로딩 완료 (항목 없어도)
+      }).catch(() => {
+        setItemsLoaded(true); // 오류여도 로딩 완료 처리
+      });
     }
-  }, [currentTenant, selectedItem]);
+  }, [currentTenant]); // selectedItem 의존성 제거 - 무한 재호출 방지
 
   useEffect(() => {
     if (location.state?.isRecurring !== undefined) {
@@ -148,12 +151,47 @@ export default function DonationFlow() {
     }
   }, [selectedItem]);
 
-  if (!currentTenant || !selectedItem) {
+  // 테넌트 로딩 중
+  if (!currentTenant) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3 text-slate-600 font-sans">
           <Loader2 className="w-8 h-8 animate-spin text-[#3182F6]" />
           <span className="text-sm font-bold">봉헌 폼을 불러오는 중입니다...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 항목 DB 로딩 중
+  if (!itemsLoaded && !selectedItem) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-slate-600 font-sans">
+          <Loader2 className="w-8 h-8 animate-spin text-[#3182F6]" />
+          <span className="text-sm font-bold">봉헌 항목을 불러오는 중입니다...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 로딩 완료 후에도 항목이 없는 경우 → 관리자에게 안내
+  if (itemsLoaded && !selectedItem) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-sm w-full text-center space-y-4 bg-white rounded-2xl shadow-sm p-8">
+          <div className="text-4xl">📋</div>
+          <h2 className="text-base font-bold text-slate-800">등록된 수납 항목이 없습니다</h2>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            관리자 페이지에서 수납 항목을 먼저 등록해 주세요.
+          </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="w-full py-3 rounded-xl text-sm font-bold text-white"
+            style={{ background: '#3182F6' }}
+          >
+            돌아가기
+          </button>
         </div>
       </div>
     );
