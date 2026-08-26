@@ -549,17 +549,6 @@ export default function TenantStatisticsPage() {
             />
           </div>
 
-          {/* ℹ️ 실시간 DB 마감 집계 안내 배너 */}
-          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-            <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-              <span className="font-bold text-sm block mb-0.5">
-                🗓️ 조회 기간: {periodSelection.label} 기준 실제 수납 데이터
-              </span>
-              본 통계 화면은 백엔드 데이터베이스(Supabase)의 **실제 결제 수납 데이터 (100% DB 직결)**를 기반으로 기간별 수납 건수 및 금액을 실시간으로 집계하여 제공합니다. (Mock / 가짜 / 로컬 데이터 미사용)
-            </div>
-          </div>
-
           {/* 하위 메뉴 탭 (5개 세분화 하위메뉴) */}
           <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-zinc-800 pb-3">
             <button
