@@ -81,26 +81,38 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
         <p className="text-sm text-muted-foreground">관리자 대시보드</p>
       </div>
 
-      {currentAdmin && (
-        <div className="mb-6 p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center shrink-0">
-            {currentAdmin.name ? currentAdmin.name[0] : '관'}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-bold text-sm text-slate-800 truncate">{currentAdmin.name}</p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-semibold rounded-md border border-blue-200/60">
-                {getRoleName(currentAdmin.role)}
-              </span>
-              {currentTenant?.name && (
-                <span className="text-[11px] text-slate-500 truncate">
-                  · {currentTenant.name}
+      {(() => {
+        const adminDisplayName =
+          (currentAdmin?.name && currentAdmin.name !== '시스템 최고 관리자' ? currentAdmin.name : '') ||
+          currentTenant?.adminName ||
+          currentTenant?.contact?.name ||
+          currentTenant?.businessInfo?.representativeName ||
+          (currentTenant?.name ? `${currentTenant.name} 최고 관리자` : '대표 관리자');
+
+        const adminRole = currentAdmin?.role === 'system_admin' ? 'tenant_admin' : (currentAdmin?.role || 'tenant_admin');
+        const initialChar = adminDisplayName ? adminDisplayName[0] : '관';
+
+        return (
+          <div className="mb-6 p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center shrink-0">
+              {initialChar}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-sm text-slate-800 truncate">{adminDisplayName}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-semibold rounded-md border border-blue-200/60">
+                  {getRoleName(adminRole)}
                 </span>
-              )}
+                {currentTenant?.name && (
+                  <span className="text-[11px] text-slate-500 truncate">
+                    · {currentTenant.name}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <nav className="space-y-2 flex-1">
         {accessibleMenuItems.map((item) => {

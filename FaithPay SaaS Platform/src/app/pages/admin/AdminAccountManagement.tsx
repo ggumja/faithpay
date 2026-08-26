@@ -169,8 +169,13 @@ export default function AdminAccountManagement() {
       });
 
       // DB /tenants 에 저장된 가맹점 실측 담당자 정보만 표출 (100% DB 직결)
-      const registeredEmail = tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '';
-      const registeredName = tenant.contact?.name && tenant.contact.name.trim() ? tenant.contact.name.trim() : '대표 관리자';
+      const registeredEmail = tenant.adminEmail || (tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '');
+      const registeredName =
+        tenant.adminName ||
+        (tenant.contact?.name && tenant.contact.name.trim() !== '시스템 최고 관리자' ? tenant.contact.name.trim() : '') ||
+        tenant.businessInfo?.representativeName ||
+        (tenant.name ? `${tenant.name} 관리자` : '대표 관리자');
+      const registeredPhone = tenant.adminPhone || tenant.contact?.phone || '';
 
       if (registeredEmail) {
         setStaffList([
@@ -178,7 +183,7 @@ export default function AdminAccountManagement() {
             id: `admin-${tenant.id}`,
             name: registeredName,
             email: registeredEmail,
-            phone: tenant.contact?.phone || '',
+            phone: registeredPhone,
             groupId: 'tenant_admin',
             password: tenant.tempPassword || 'admin1234!',
             status: 'active',
