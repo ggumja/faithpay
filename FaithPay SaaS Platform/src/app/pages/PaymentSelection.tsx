@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useLocation } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -19,7 +19,8 @@ import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandL
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, tenants, donationFormData, currentAdmin } = useApp();
+  const { currentTenant, setCurrentTenant, tenants, donationFormData, setDonationFormData, currentAdmin } = useApp();
+  const location = useLocation();
 
   const [paymentMethod, setPaymentMethod] = useState<string>('card');
   const [selectedEasyPay, setSelectedEasyPay] = useState<'kakaopay' | 'naverpay' | 'tosspay'>('kakaopay');
@@ -67,6 +68,35 @@ export default function PaymentSelection() {
       }
     }
   }, [donationFormData]);
+
+  // Toss failUrl 복귀 시 (?code=xxx) localStorage snapshot에서 donationFormData 복원
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const failCode = params.get('code');
+    const failMsg = params.get('message');
+
+    if (failCode && !donationFormData) {
+      // 결제 실패로 돌아온 경우 - snapshot 복원 시도
+      const snapStr =
+        sessionStorage.getItem('pending_donation_latest') ||
+        localStorage.getItem('pending_donation_latest');
+
+      if (snapStr) {
+        try {
+          const snap = JSON.parse(snapStr);
+          if (snap?.formData) {
+            setDonationFormData(snap.formData);
+            // failUrl 복귀임을 사용자에게 안내
+            const errMsg = failMsg ? decodeURIComponent(failMsg) : '결제가 취소되었거나 오류가 발생했습니다.';
+            toast.error(`결제 실패: ${errMsg}`, { duration: 5000 });
+          }
+        } catch (e) {
+          console.warn('Failed to restore donation snapshot:', e);
+        }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   useEffect(() => {
     if (tenantSlug) {

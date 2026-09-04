@@ -279,13 +279,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
 
-  const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('faithpay_donation_form_data');
-      return saved ? JSON.parse(saved) : null;
-    }
-    return null;
-  });
+  const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('faithpay_current_admin');
