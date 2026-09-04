@@ -103,7 +103,14 @@ export default function DonationFlow() {
       }
     }
   };
-  const [isRecurring, setIsRecurring] = useState<boolean>(() => location.state?.isRecurring ?? false);
+  const [isRecurring, setIsRecurring] = useState<boolean>(() => {
+    // location.state에 명시적으로 지정된 경우 우선 사용
+    if (location.state?.isRecurring !== undefined) return location.state.isRecurring;
+    // 항목이 정기결제만 허용하는 경우 자동으로 정기결제 선택
+    const item = location.state?.selectedItem as DonationItem | undefined;
+    if (item && item.allowRecurring && !item.allowOneTime) return true;
+    return false;
+  });
   const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>('일');
   const [recurringDay, setRecurringDay] = useState<number>(5);
@@ -133,11 +140,17 @@ export default function DonationFlow() {
   }, [currentTenant]); // selectedItem 의존성 제거 - 무한 재호출 방지
 
   useEffect(() => {
-    if (location.state?.isRecurring !== undefined) {
-      setIsRecurring(location.state.isRecurring);
-    }
     if (location.state?.selectedItem) {
-      setSelectedItem(location.state.selectedItem);
+      const item = location.state.selectedItem as DonationItem;
+      setSelectedItem(item);
+      // 항목이 정기결제만 허용하는 경우 자동으로 정기결제 선택
+      if (location.state?.isRecurring !== undefined) {
+        setIsRecurring(location.state.isRecurring);
+      } else if (item.allowRecurring && !item.allowOneTime) {
+        setIsRecurring(true);
+      }
+    } else if (location.state?.isRecurring !== undefined) {
+      setIsRecurring(location.state.isRecurring);
     }
   }, [location.state]);
 
@@ -313,7 +326,9 @@ export default function DonationFlow() {
             {step === 1 && (
               <div>
                 <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
-                  얼마를 봉헌하시겠어요?
+                  {selectedItem.amountType === 'fixed' && selectedItem.fixedAmount
+                    ? '봉헌 금액을 확인해주세요'
+                    : '얼마를 봉헌하시겠어요?'}
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium">
                   {selectedItem.description}
@@ -621,15 +636,20 @@ export default function DonationFlow() {
               <div className="flex flex-col gap-6">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
-                    결제 방식을 선택해주세요
+                    {selectedItem.allowRecurring && !selectedItem.allowOneTime
+                      ? '정기 결제 주기를 선택해주세요'
+                      : '결제 방식을 선택해주세요'}
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium font-sans">
-                    정기 봉헌 설정 시 지정하신 매월 결제일에 자동으로 봉헌됩니다.
+                    {isRecurring
+                      ? '선택하신 주기마다 자동으로 봉헌이 이뤄집니다.'
+                      : '정기 봉헌 설정 시 지정하신 결제일에 자동으로 봉헌됩니다.'}
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  {selectedItem.allowOneTime && (
+                {/* 단건/정기 선택 (둘 다 허용되는 경우만 표시) */}
+                {selectedItem.allowOneTime && selectedItem.allowRecurring && (
+                  <div className="flex flex-col gap-3">
                     <RecurringOption
                       id="onetime" 
                       label={`일회성 단발 ${currentTenant.terminology.donation}`}
@@ -638,18 +658,22 @@ export default function DonationFlow() {
                       onClick={() => setIsRecurring(false)}
                       ft={ft}
                     />
-                  )}
-                  {selectedItem.allowRecurring && (
                     <RecurringOption
                       id="recurring" 
-                      label={`매월 정기 ${currentTenant.terminology.donation}`}
-                      desc="매월 자동으로 따뜻한 봉헌을 이어갑니다."
+                      label={`정기 ${currentTenant.terminology.donation}`}
+                      desc="선택한 주기마다 자동으로 따뜻한 봉헌을 이어갑니다."
                       selected={isRecurring} 
                       onClick={() => setIsRecurring(true)}
                       ft={ft}
                     />
-                  )}
-                </div>
+                  </div>
+                )}
+                {/* 단건만 허용 */}
+                {selectedItem.allowOneTime && !selectedItem.allowRecurring && (
+                  <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-600">
+                    일회성 단발 {currentTenant.terminology.donation}으로 진행됩니다.
+                  </div>
+                )}
 
                 {isRecurring && (
                   <div className="animate-fade-in space-y-3">
