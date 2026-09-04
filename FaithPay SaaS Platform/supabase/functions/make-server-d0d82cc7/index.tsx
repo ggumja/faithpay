@@ -603,7 +603,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
 
     if (isTossPayment) {
       // 🚀 토스페이먼츠 취소 API 연동 (https://api.tosspayments.com/v1/payments/{paymentKey}/cancel)
-      let secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+      let secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
       const basicAuth = btoa(`${secretKey}:`);
 
       try {
@@ -723,7 +723,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
     const config = await db.getPaymentConfig(tenantId);
     
     // 토스페이먼츠 시크릿 키 기본값 (toss secretKey)
-    let secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+    let secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
     const basicAuth = btoa(`${secretKey}:`);
 
     const tossResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
@@ -785,7 +785,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/issue", async (c) =
     }
 
     const config = await db.getPaymentConfig(tenantId);
-    const secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+    const secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
     const basicAuth = btoa(`${secretKey}:`);
 
     // Toss 빌링키 발급 API
@@ -827,7 +827,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
     }
 
     const config = await db.getPaymentConfig(tenantId);
-    const secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+    const secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
     const basicAuth = btoa(`${secretKey}:`);
 
     // Toss 빌링 결제 실행 API
