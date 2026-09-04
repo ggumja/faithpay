@@ -775,6 +775,123 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
   }
 });
 
+// 🔴 토스페이먼츠 빌링키 발급 (authKey → billingKey)
+// successUrl 리다이렉트 후 프론트엔드에서 호출
+app.post("/make-server-d0d82cc7/payment/process/toss/billing/issue", async (c) => {
+  try {
+    const { tenantId, authKey, customerKey } = await c.req.json();
+    if (!authKey || !customerKey) {
+      return c.json({ success: false, error: 'authKey와 customerKey가 필요합니다.' }, 400);
+    }
+
+    const config = await db.getPaymentConfig(tenantId);
+    const secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+    const basicAuth = btoa(`${secretKey}:`);
+
+    // Toss 빌링키 발급 API
+    const tossRes = await fetch("https://api.tosspayments.com/v1/billing/authorizations/issue", {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ authKey, customerKey }),
+    });
+
+    const result = await tossRes.json();
+
+    if (!tossRes.ok || !result.billingKey) {
+      console.error('Toss billing issue failed:', result);
+      return c.json({ success: false, error: result.message || '빌링키 발급 실패', data: result }, 400);
+    }
+
+    return c.json({
+      success: true,
+      billingKey: result.billingKey,
+      customerKey: result.customerKey,
+      card: result.card || null,
+      toss: result,
+    });
+  } catch (error: any) {
+    console.error('Toss billing issue error:', error);
+    return c.json({ success: false, error: '빌링키 발급 중 오류 발생' }, 500);
+  }
+});
+
+// 🔴 토스페이먼츠 빌링키로 즉시 결제 실행
+app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) => {
+  try {
+    const { tenantId, billingKey, customerKey, orderId, orderName, amount, customerName, customerEmail, customerMobilePhone, donorPhone, itemId, itemName, prayerText, baptismName, recurringInterval, recurringDay } = await c.req.json();
+    if (!billingKey || !customerKey || !orderId || !amount) {
+      return c.json({ success: false, error: 'billingKey, customerKey, orderId, amount가 필요합니다.' }, 400);
+    }
+
+    const config = await db.getPaymentConfig(tenantId);
+    const secretKey = config?.secretKey || "test_sk_zXLk5nODwbWmBneD2508x44E2551";
+    const basicAuth = btoa(`${secretKey}:`);
+
+    // Toss 빌링 결제 실행 API
+    const tossRes = await fetch(`https://api.tosspayments.com/v1/billing/${billingKey}`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerKey,
+        orderId,
+        orderName: orderName || '정기 봉헌금',
+        amount: Number(amount),
+        customerName: customerName || '신도',
+        customerEmail: customerEmail || undefined,
+        customerMobilePhone: customerMobilePhone || undefined,
+      }),
+    });
+
+    const result = await tossRes.json();
+
+    if (!tossRes.ok || result.status !== "DONE") {
+      console.error('Toss billing charge failed:', result);
+      return c.json({ success: false, error: result.message || '빌링 결제 실패', data: result }, 400);
+    }
+
+    // DB에 결제 기록 저장
+    const approveNo = result.card?.approveNo || `TB-${Date.now().toString().slice(-8)}`;
+    const donation = await db.createDonation({
+      id: orderId,
+      tenantId,
+      itemId: itemId || 'general',
+      itemName: itemName || orderName || '정기 봉헌금',
+      amount: Number(amount),
+      donorName: customerName || '신도',
+      donorPhone: donorPhone || customerMobilePhone || '',
+      prayerText: prayerText || '',
+      baptismName: baptismName || '',
+      isRecurring: true,
+      recurringInterval: recurringInterval || 'monthly',
+      recurringDay: recurringDay || null,
+      paymentStatus: 'completed',
+      paymentMethod: '정기결제(토스)',
+      transactionId: result.paymentKey,
+      approveNo,
+      receiptUrl: result.receipt?.url || '',
+    });
+
+    return c.json({
+      success: true,
+      data: donation,
+      billingKey,
+      paymentKey: result.paymentKey,
+      approveNo,
+      toss: result,
+    });
+  } catch (error: any) {
+    console.error('Toss billing charge error:', error);
+    return c.json({ success: false, error: '빌링 결제 실행 중 오류 발생' }, 500);
+  }
+});
+
+
 // 토스페이먼츠 공식 정산 내역 조회 API 연동 (GET /v1/settlements)
 app.get("/make-server-d0d82cc7/payment/settlements/toss/:tenantId", async (c) => {
   try {

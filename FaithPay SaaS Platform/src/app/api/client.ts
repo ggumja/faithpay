@@ -253,6 +253,39 @@ export const paymentAPI = {
     return fetchAPI<any>(`/payment/settlements/toss/${tenantId}${query}`);
   },
 
+  // 토스 빌링키 발급 (authKey → billingKey)
+  async tossBillingIssue(payload: { tenantId: string; authKey: string; customerKey: string }): Promise<APIResponse<{ billingKey: string; customerKey: string; card: any }>> {
+    return fetchAPI<any>('/payment/process/toss/billing/issue', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // 토스 빌링키로 즉시 결제 실행
+  async tossBillingCharge(payload: {
+    tenantId: string;
+    billingKey: string;
+    customerKey: string;
+    orderId: string;
+    orderName: string;
+    amount: number;
+    customerName: string;
+    customerEmail?: string;
+    customerMobilePhone?: string;
+    donorPhone?: string;
+    itemId?: string;
+    itemName?: string;
+    prayerText?: string;
+    baptismName?: string;
+    recurringInterval?: string;
+    recurringDay?: number;
+  }): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/payment/process/toss/billing/charge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   async processManual(payload: any): Promise<APIResponse<any>> {
     return fetchAPI<any>('/payment/process/manual', {
       method: 'POST',

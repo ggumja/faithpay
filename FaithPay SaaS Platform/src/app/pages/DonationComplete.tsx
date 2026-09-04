@@ -4,7 +4,7 @@ import { useApp, Tenant, DonationFormData } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import TaxReceiptModal from '../components/TaxReceiptModal';
-import { donationAPI, tenantAPI } from '../api/client';
+import { donationAPI, tenantAPI, paymentAPI } from '../api/client';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Share2, Download, CheckCircle2, Loader2 } from 'lucide-react';
@@ -24,6 +24,8 @@ export default function DonationComplete() {
   const amountParam = searchParams.get('amount') ? parseInt(searchParams.get('amount')!, 10) : 0;
   const paymentKeyParam = searchParams.get('paymentKey') || '';
   const typeParam = searchParams.get('type') || '';
+  const authKeyParam = searchParams.get('authKey') || '';     // Toss 빌링키 인증 후 전달
+  const customerKeyParam = searchParams.get('customerKey') || ''; // Toss 빌링키 발급 시 사용
 
   // 영수증 ID 생성 (쿼리 파라미터가 있으면 우선 사용, 없으면 새 포맷으로 생성)
   const [receiptId] = useState(() => {
@@ -96,6 +98,74 @@ export default function DonationComplete() {
       }
     }
   }, [tenant, tenantSlug, tenants]);
+
+  // 토스 빌링키 발급 + 즉시 결제 (type=toss_billing, authKey 있을 때)
+  const hasBilledRef = useRef(false);
+  useEffect(() => {
+    if (typeParam !== 'toss_billing' || !authKeyParam || !customerKeyParam) return;
+    if (hasBilledRef.current) return;
+    if (!tenant) return;
+
+    hasBilledRef.current = true;
+
+    const snap = (() => {
+      try {
+        const s = sessionStorage.getItem(`pending_donation_${donIdParam}`) ||
+                  localStorage.getItem(`pending_donation_${donIdParam}`) ||
+                  sessionStorage.getItem('pending_donation_latest') ||
+                  localStorage.getItem('pending_donation_latest');
+        return s ? JSON.parse(s) : null;
+      } catch { return null; }
+    })();
+
+    const fd = snap?.formData || formData;
+    const cleanPhone = (fd?.phone || '').replace(/[^0-9]/g, '');
+
+    toast.info('빌링키를 발급하고 첫 결제를 진행합니다...');
+
+    paymentAPI.tossBillingIssue({
+      tenantId: tenant.id,
+      authKey: authKeyParam,
+      customerKey: customerKeyParam,
+    }).then((issueRes) => {
+      if (!issueRes.success || !issueRes.data?.billingKey) {
+        toast.error(`빌링키 발급 실패: ${issueRes.error || '알 수 없는 오류'}`);
+        return;
+      }
+      const billingKey = issueRes.data.billingKey;
+
+      return paymentAPI.tossBillingCharge({
+        tenantId: tenant.id,
+        billingKey,
+        customerKey: customerKeyParam,
+        orderId: donIdParam || `don_${Date.now()}`,
+        orderName: fd?.itemName || `${tenant.name} 정기 봉헌금`,
+        amount: fd?.amount || amountParam || 10000,
+        customerName: fd?.name || '신도',
+        customerMobilePhone: cleanPhone || undefined,
+        donorPhone: cleanPhone,
+        itemId: fd?.itemId,
+        itemName: fd?.itemName,
+        prayerText: fd?.prayerText,
+        baptismName: fd?.baptismName,
+        recurringInterval: fd?.recurringInterval,
+        recurringDay: fd?.recurringDay,
+      });
+    }).then((chargeRes) => {
+      if (!chargeRes) return;
+      if (chargeRes.success) {
+        toast.success('정기결제 등록 및 첫 결제가 완료되었습니다!');
+        // snapshot 정리
+        localStorage.removeItem('pending_donation_latest');
+        sessionStorage.removeItem('pending_donation_latest');
+      } else {
+        toast.error(`결제 실패: ${chargeRes.error || '알 수 없는 오류'}`);
+      }
+    }).catch((err) => {
+      toast.error('빌링키 처리 중 오류가 발생했습니다.');
+      console.error('Billing flow error:', err);
+    });
+  }, [tenant, typeParam, authKeyParam, customerKeyParam]);
 
   useEffect(() => {
     confetti({
