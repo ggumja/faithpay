@@ -75,8 +75,8 @@ export default function DonationComplete() {
       name: '성도',
       phone: '',
       prayerText: '',
-      isRecurring: typeParam === 'toss_billing',
-      paymentMethod: typeParam === 'toss_billing' ? '정기결제' : '토스페이먼츠',
+      isRecurring: typeParam === 'toss_billing' || typeParam === 'nano_billing',
+      paymentMethod: (typeParam === 'toss_billing' || typeParam === 'nano_billing') ? '정기결제' : '토스페이먼츠',
     };
   });
 
@@ -217,10 +217,12 @@ export default function DonationComplete() {
         donorPhone: resolvedPhone,
         prayerText: formData.prayerText || '',
         baptismName: formData.baptismName || '',
-        isRecurring: formData.isRecurring || typeParam === 'toss_billing',
+        isRecurring: formData.isRecurring || typeParam === 'toss_billing' || typeParam === 'nano_billing',
+        recurringInterval: formData.recurringInterval,
         recurringDay: formData.recurringDay,
+        recurringDayOfWeek: formData.recurringDayOfWeek,
         paymentStatus: 'completed',
-        paymentMethod: formData.paymentMethod || (formData.isRecurring ? '정기결제' : '토스페이먼츠'),
+        paymentMethod: formData.paymentMethod || ((formData.isRecurring || typeParam === 'nano_billing') ? '정기결제' : '토스페이먼츠'),
         transactionId: paymentKeyParam || receiptId,
       }).then((res) => {
         if (res.success) {
@@ -333,7 +335,13 @@ export default function DonationComplete() {
                 ['봉헌자 성명', formData.name || '성도'],
                 ...(formData.baptismName ? [['세례명', formData.baptismName]] : []),
                 ['연락처', formData.phone || '-'],
-                ...(formData.isRecurring ? [['결제 주기', `정기 결제 (매월 ${formData.recurringDay || 10}일)`]] : [['결제 유형', '일회성 단발']]),
+                ...(formData.isRecurring ? [['결제 주기', (() => {
+                  const interval = formData.recurringInterval;
+                  if (interval === 'daily') return '정기 결제 (매일)';
+                  if (interval === 'weekly') return `정기 결제 (매주 ${formData.recurringDayOfWeek || '일'}요일)`;
+                  // monthly (기본)
+                  return `정기 결제 (매월 ${formData.recurringDay || '-'}일)`;
+                })()]] : [['결제 유형', '일회성 단발']]),
               ].map(([key, val]) => (
                 <div key={key} className="flex justify-between items-center text-xs">
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium">{key}</span>

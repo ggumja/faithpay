@@ -478,10 +478,40 @@ export default function PaymentSelection() {
           }
         } catch (e) {}
 
-        toast.success('정기결제 카드 등록창이 열렸습니다.');
+        // 현재 결제 정보를 snapshot으로 저장 (DonationComplete 복원용)
+        const snapPayload = {
+          tenant: currentTenant,
+          formData: {
+            ...donationFormData,
+            recurringInterval,
+            recurringDayOfWeek: recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
+            recurringDay: recurringInterval === 'monthly' ? recurringDay : undefined,
+          },
+          savedAt: Date.now(),
+        };
+        localStorage.setItem('pending_donation_latest', JSON.stringify(snapPayload));
+        localStorage.setItem(`pending_donation_${tempDonationId}`, JSON.stringify(snapPayload));
+
+        toast.success('정기결제 카드 등록창이 열렸습니다. 카드 정보 입력 후 창이 닫히면 완료됩니다.');
+
+        // 팝업창이 닫힐 때까지 500ms 간격으로 감지 → 닫히면 complete 이동
+        const pollTimer = setInterval(() => {
+          if (!paymentWindow || paymentWindow.closed) {
+            clearInterval(pollTimer);
+            setIsProcessing(false);
+            navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
+          }
+        }, 500);
+
+        // 최대 10분 후 타임아웃 처리
         setTimeout(() => {
-          navigate(`/${tenantSlug}/complete`);
-        }, 4000);
+          clearInterval(pollTimer);
+          if (!paymentWindow.closed) {
+            paymentWindow.close();
+          }
+          setIsProcessing(false);
+        }, 10 * 60 * 1000);
+
       } catch (error) {
         console.error('BillKey error:', error);
         toast.error('정기결제 요청 중 오류가 발생했습니다.');
