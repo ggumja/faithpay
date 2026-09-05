@@ -10,7 +10,7 @@ import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
 import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { paymentAPI, donationAPI, kakaoPayAPI } from '../api/client';
+import { paymentAPI, donationAPI, kakaoPayAPI, subscriptionAPI } from '../api/client';
 import { generateTransactionId } from '../utils/transactionId';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
@@ -416,9 +416,10 @@ export default function PaymentSelection() {
         const now = new Date();
         const pad = (n: number) => n.toString().padStart(2, '0');
         const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-        const tempDonationId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
+        const tempDonationId = generateTransactionId();
         const donorName = donationFormData.name || "신도";
         const donorPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
+        const popupOpenedAt = Date.now(); // 팝업 열린 시각 기록
 
         const isMobile = window.innerWidth <= 768;
         const nanoUrl = isMobile 
@@ -478,7 +479,7 @@ export default function PaymentSelection() {
           }
         } catch (e) {}
 
-        // 현재 결제 정보를 snapshot으로 저장 (DonationComplete 복원용)
+        // snapshot 저장 (DonationComplete 복원용)
         const snapPayload = {
           tenant: currentTenant,
           formData: {
@@ -492,21 +493,52 @@ export default function PaymentSelection() {
         localStorage.setItem('pending_donation_latest', JSON.stringify(snapPayload));
         localStorage.setItem(`pending_donation_${tempDonationId}`, JSON.stringify(snapPayload));
 
-        toast.success('정기결제 카드 등록창이 열렸습니다. 카드 정보 입력 후 창이 닫히면 완료됩니다.');
+        toast.success('카드 등록창이 열렸습니다. 카드 정보 입력 후 등록을 완료해주세요.');
 
-        // 팝업창이 닫힐 때까지 500ms 간격으로 감지 → 닫히면 complete 이동
-        const pollTimer = setInterval(() => {
+        // ① 팝업창 닫힘 감지 (500ms 간격)
+        const popupPollTimer = setInterval(() => {
           if (!paymentWindow || paymentWindow.closed) {
-            clearInterval(pollTimer);
-            setIsProcessing(false);
-            navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
+            clearInterval(popupPollTimer);
+            toast.info('카드 등록 완료 여부를 확인하고 있습니다...');
+
+            // ② 팝업 닫힌 후 2초 대기 (나노PG 콜백 처리 시간)
+            setTimeout(async () => {
+              // ③ DB에서 subscription 생성 여부 polling (2초 간격, 최대 15초)
+              let checkAttempts = 0;
+              const dbPollTimer = setInterval(async () => {
+                checkAttempts++;
+                try {
+                  const subRes = await subscriptionAPI.getByPhone(donorPhone);
+                  if (subRes.success && subRes.data && subRes.data.length > 0) {
+                    // 팝업 열린 이후 생성된 subscription이 있는지 확인 (60초 이내)
+                    const recentSub = subRes.data.find((s: any) => {
+                      const createdAt = new Date(s.createdAt || s.created_at).getTime();
+                      return createdAt >= popupOpenedAt - 5000; // 5초 여유
+                    });
+                    if (recentSub) {
+                      clearInterval(dbPollTimer);
+                      setIsProcessing(false);
+                      toast.success('정기결제 카드 등록이 완료되었습니다!');
+                      navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
+                      return;
+                    }
+                  }
+                } catch (e) {}
+
+                if (checkAttempts >= 8) { // 최대 16초 대기
+                  clearInterval(dbPollTimer);
+                  setIsProcessing(false);
+                  toast.error('카드 등록이 완료되지 않았습니다. 다시 시도해주세요.');
+                }
+              }, 2000);
+            }, 2000);
           }
         }, 500);
 
-        // 최대 10분 후 타임아웃 처리
+        // 최대 10분 후 팝업 강제 종료
         setTimeout(() => {
-          clearInterval(pollTimer);
-          if (!paymentWindow.closed) {
+          clearInterval(popupPollTimer);
+          if (paymentWindow && !paymentWindow.closed) {
             paymentWindow.close();
           }
           setIsProcessing(false);
