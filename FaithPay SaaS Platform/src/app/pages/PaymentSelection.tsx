@@ -458,7 +458,7 @@ export default function PaymentSelection() {
               <input type="hidden" name="orderEmail" value="donator@faithpay.kr" />
               <input type="hidden" name="payWay" value="card" />
               <input type="hidden" name="goodsName" value="${donationFormData.itemName || 'FaithPay 정기 봉헌금'}" />
-              <input type="hidden" name="receiveUrl" value="https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/billkey/cert/callback" />
+              <input type="hidden" name="receiveUrl" value="https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback" />
               <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
               <input type="hidden" name="compOrderMem" value="${donorName}" />
               <input type="hidden" name="ediDate" value="${ediDate}" />

@@ -1135,31 +1135,58 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 // 빌키 발급 콜백 결과 처리
 app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => {
   try {
-    const body = await c.req.json();
+    // 나노PG는 form-urlencoded로 POST 전송
+    let body: any = {};
+    const contentType = c.req.header('content-type') || '';
+    if (contentType.includes('application/json')) {
+      body = await c.req.json();
+    } else {
+      const text = await c.req.text();
+      const params = new URLSearchParams(text);
+      params.forEach((value, key) => { body[key] = value; });
+    }
     console.log("Nanopay BillKey Callback Received:", body);
 
     const { resultCode, resultMsg, billKey, userId, cardNo, cardName, compData } = body;
 
     if (resultCode === "0000" && billKey) {
+      // compData 구조: { tenantId, donationData: { itemId, itemName, amount, name, phone, ... } }
       let meta: any = {};
-      try { meta = JSON.parse(compData || "{}"); } catch(e){}
+      let donationData: any = {};
+      try {
+        meta = JSON.parse(compData || "{}");
+        donationData = meta.donationData || meta; // 중첩 또는 flat 모두 대응
+      } catch(e) {}
+
+      const tenantId = meta.tenantId || donationData.tenantId || "default";
+      const donorName = donationData.name || meta.donorName || "신도";
+      const donorPhone = (donationData.phone || meta.donorPhone || "01000000000").replace(/[^0-9]/g, '');
+      const itemId = donationData.itemId || meta.itemId || "recurring";
+      const itemName = donationData.itemName || meta.itemName || "정기 봉헌금";
+      const amount = Number(donationData.amount || meta.amount || 10000);
+      const recurringInterval = donationData.recurringInterval || meta.recurringInterval || "monthly";
+      const recurringDay = donationData.recurringDay || meta.recurringDay || 10;
+      const recurringDayOfWeek = donationData.recurringDayOfWeek || meta.recurringDayOfWeek || undefined;
 
       const newSub = await db.createSubscription({
-        tenantId: meta.tenantId || "default",
-        donorName: meta.donorName || "신도",
-        donorPhone: meta.donorPhone || "01000000000",
-        donorEmail: meta.donorEmail || "",
-        itemId: meta.itemId || "recurring",
-        itemName: meta.itemName || "정기 봉헌금",
-        amount: meta.amount || 10000,
-        userId: userId || "user",
+        tenantId,
+        donorName,
+        donorPhone,
+        donorEmail: donationData.email || meta.donorEmail || "",
+        itemId,
+        itemName,
+        amount,
+        userId: userId || donorPhone,
         billKey: billKey,
         cardNo: cardNo || "****-****-****-****",
         cardName: cardName || "신용카드",
-        recurringDay: meta.recurringDay || 10,
+        recurringInterval,
+        recurringDay,
+        recurringDayOfWeek,
         status: "active",
       });
 
+      console.log("BillKey subscription created:", newSub);
       return c.json({ resultCode: "0000", resultMsg: "Success", subscription: newSub });
     }
     return c.json({ resultCode: resultCode || "9999", resultMsg: resultMsg || "Failed" });
@@ -1168,6 +1195,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     return c.json({ resultCode: "9999", resultMsg: "Callback error" }, 500);
   }
 });
+
 
 // ==================== 1초 SMS OTP AUTH & SUBSCRIPTION API ====================
 
