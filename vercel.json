@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm --prefix \"FaithPay SaaS Platform\" run build",
-  "outputDirectory": "FaithPay SaaS Platform/dist",
+  "buildCommand": "pnpm --prefix \"SoulPay SaaS Platform\" run build",
+  "outputDirectory": "SoulPay SaaS Platform/dist",
   "rewrites": [
     {
       "source": "/(.*)",

@@ -32,14 +32,14 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-          cache-dependency-path: 'FaithPay SaaS Platform/pnpm-lock.yaml'
+          cache-dependency-path: 'SoulPay SaaS Platform/pnpm-lock.yaml'
 
       - name: Install dependencies
-        working-directory: "FaithPay SaaS Platform"
+        working-directory: "SoulPay SaaS Platform"
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        working-directory: "FaithPay SaaS Platform"
+        working-directory: "SoulPay SaaS Platform"
         run: pnpm run build
 
       - name: Setup Pages
@@ -48,7 +48,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "FaithPay SaaS Platform/dist"
+          path: "SoulPay SaaS Platform/dist"
 
   deploy:
     environment:

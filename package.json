@@ -2,7 +2,7 @@
   "name": "soulpay-monorepo",
   "private": true,
   "scripts": {
-    "build": "pnpm --prefix \"FaithPay SaaS Platform\" run build",
-    "dev": "pnpm --prefix \"FaithPay SaaS Platform\" run dev"
+    "build": "pnpm --prefix \"SoulPay SaaS Platform\" run build",
+    "dev": "pnpm --prefix \"SoulPay SaaS Platform\" run dev"
   }
 }

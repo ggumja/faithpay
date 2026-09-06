@@ -1,5 +1,5 @@
 packages:
-  - 'FaithPay SaaS Platform'
+  - 'SoulPay SaaS Platform'
 allowBuilds:
   '@tailwindcss/oxide': true
   esbuild: true
