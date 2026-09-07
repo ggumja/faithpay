@@ -1163,10 +1163,11 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       ? Boolean(config.devMode) 
       : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || config?.ver === "smbtest" || billingCfg?.mid === "240000005");
 
-    const NANO_API_KEY = billingCfg?.apiKey || config?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : "");
-    const shopcode = billingCfg?.mid || config?.mid || (isTest ? "240000005" : "");
-    const loginId = billingCfg?.loginId || config?.loginId || (isTest ? "shoptest" : "");
-    const ver = billingCfg?.ver || config?.ver || (isTest ? "240000005" : "240000005");
+    // 정기결제(빌링)는 일반결제(240000006)와 상점코드가 다름. 빌링전용 설정(billingCfg)이 있으면 사용하고, 테스트 모드에서는 240000005 테스트 계정 적용
+    const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : config?.apiKey);
+    const shopcode = billingCfg?.mid || (isTest ? "240000005" : config?.mid);
+    const loginId = billingCfg?.loginId || (isTest ? "shoptest" : config?.loginId);
+    const ver = billingCfg?.ver || (isTest ? "240000005" : (config?.ver || "240000005"));
 
     if (!NANO_API_KEY || !shopcode || !loginId) {
       return c.json({ 
@@ -1213,7 +1214,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       compData,
     };
 
-    console.log("[NanoPG BillKey Req] Calling:", NANO_REQKEY_URL);
+    console.log("[NanoPG BillKey Req] Calling:", NANO_REQKEY_URL, "shopcode:", shopcode, "loginId:", loginId);
 
     // 서버 사이드에서 Nanopay reqkey.io 직접 호출하여 Smartro 인증 HTML 수신
     const nanoRes = await fetch(NANO_REQKEY_URL, {
@@ -1227,6 +1228,14 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 
     const nanoText = await nanoRes.text();
     console.log("[NanoPG BillKey Req] Response status:", nanoRes.status, "Length:", nanoText.length);
+
+    if (!nanoText || nanoText.trim().length === 0) {
+      console.error("[NanoPG BillKey Req] Empty HTML received from Nanopay for shopcode:", shopcode);
+      return c.json({
+        success: false,
+        error: "나노페이 정기결제 응답이 비어있습니다. 상점코드(240000005) 및 빌링 API Key 설정을 확인해주세요.",
+      }, 400);
+    }
 
     if (nanoText.startsWith("{")) {
       try {
@@ -2395,10 +2404,10 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
           const BILLPAY_URL = `${baseUrl}/api/payment/recure/billpay.io`;
 
-          const NANO_API_KEY = billingCfg?.apiKey || config?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : "");
-          const shopcode = billingCfg?.mid || config?.mid || (isTest ? "240000005" : "");
-          const loginId = billingCfg?.loginId || config?.loginId || (isTest ? "shoptest" : "");
-          const ver = billingCfg?.ver || config?.ver || (isTest ? "240000005" : "240000005");
+          const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : config?.apiKey);
+          const shopcode = billingCfg?.mid || (isTest ? "240000005" : config?.mid);
+          const loginId = billingCfg?.loginId || (isTest ? "shoptest" : config?.loginId);
+          const ver = billingCfg?.ver || (isTest ? "240000005" : (config?.ver || "240000005"));
 
           if (NANO_API_KEY && shopcode && loginId) {
             const timestamp = Date.now().toString();
