@@ -1527,6 +1527,21 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     border-color: #3D47B8 !important;
     box-shadow: 0 0 0 4px rgba(61, 71, 184, 0.12) !important;
   }
+  /* 브라우저 자동완성(아이디/패스워드) 푸른색 배경 및 자동 채움 스타일 무력화 */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active,
+  input:autofill,
+  input:autofill:hover,
+  input:autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    -webkit-text-fill-color: #0F172A !important;
+    caret-color: #0F172A !important;
+    background-color: #FFFFFF !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
   .form-row {
     display: flex !important;
     gap: 10px !important;
@@ -1635,7 +1650,17 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
   </div>
 </div>
 `;
-    formattedHtml = formattedHtml.replace(/(<form[^>]*id=["\x27]payForm["\x27][^>]*>)/i, `${summaryCardHtml}\n$1\n<div class="sp-form-title">💳 신용카드 정기결제 등록</div><div class="sp-form-desc">안전하고 투명한 금융 거래를 위해 공식 결제대행사(스마트로)를 통해 암호화 등록됩니다.</div>`);
+    const decoyInputs = `
+<div style="display:none !important; position:absolute; left:-9999px; top:-9999px; opacity:0; pointer-events:none;" aria-hidden="true">
+  <input type="text" name="fake_username_autofill_decoy" tabindex="-1" autocomplete="off" />
+  <input type="password" name="fake_password_autofill_decoy" tabindex="-1" autocomplete="new-password" />
+</div>
+`;
+    // form 태그에 autocomplete="off" 부여 및 미끼(decoy) 인풋 주입하여 브라우저 비밀번호 관리자의 자동완성 가로채기 방지
+    formattedHtml = formattedHtml.replace(
+      /(<form[^>]*id=["\x27]payForm["\x27][^>]*)>/i,
+      `${summaryCardHtml}\n$1 autocomplete="off">\n${decoyInputs}\n<div class="sp-form-title">💳 신용카드 정기결제 등록</div><div class="sp-form-desc">안전하고 투명한 금융 거래를 위해 공식 결제대행사(스마트로)를 통해 암호화 등록됩니다.</div>`
+    );
 
     // 4. 버튼 문구 개선 및 보안 인증 마크 추가
     formattedHtml = formattedHtml.replace(
@@ -1643,7 +1668,22 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       `<button type="button" class="pay-btn" onclick="chkPayment()">🔒 ${formattedAmount}원 정기결제 카드 등록하기</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
     );
 
-    // 5. 나노솔루션 공식 카드 스캔(OCR 카메라) 버튼 및 스크립트 연동
+    // 5. 카드번호/비밀번호/생년월일에 브라우저 자동완성 방지 속성 부여
+    formattedHtml = formattedHtml
+      .replace(
+        /id=["\x27]cardno["\x27]/i,
+        'id="cardno" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
+      )
+      .replace(
+        /name=["\x27]card_passwd["\x27]/i,
+        'name="card_passwd" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
+      )
+      .replace(
+        /name=["\x27]card_birthday["\x27]/i,
+        'name="card_birthday" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
+      );
+
+    // 6. 나노솔루션 공식 카드 스캔(OCR 카메라) 버튼 및 스크립트 연동
     const scanPad = (n: number, l = 2) => n.toString().padStart(l, '0');
     const scanKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const scanTimestamp = `${scanPad(scanKst.getUTCHours())}${scanPad(scanKst.getUTCMinutes())}${scanPad(scanKst.getUTCSeconds())}${scanPad(scanKst.getUTCMilliseconds(), 3)}`;
@@ -1665,9 +1705,61 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       </div>`
     );
 
-    // 스캔 핸들러 스크립트 주입 (2자리 연도를 스마트로의 4자리 연도로 자동 변환 매핑)
+    // 스캔 핸들러 및 브라우저 자동완성(아이디/비밀번호) 방지 스크립트 주입
     const scanScriptHtml = `
 <script>
+  // 🛡️ 브라우저 자동완성(아이디/비밀번호 관리자) 강제 무력화 및 소제
+  var userInteractedCard = false;
+  var userInteractedPass = false;
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var cInput = document.getElementById("cardno");
+    if (cInput) {
+      cInput.addEventListener('input', function(e) { if (e.isTrusted) userInteractedCard = true; });
+      cInput.addEventListener('keydown', function(e) { if (e.isTrusted) userInteractedCard = true; });
+    }
+    var pInput = document.querySelector('input[name="card_passwd"]');
+    if (pInput) {
+      pInput.addEventListener('input', function(e) { if (e.isTrusted) userInteractedPass = true; });
+      pInput.addEventListener('keydown', function(e) { if (e.isTrusted) userInteractedPass = true; });
+    }
+  });
+
+  function cleanAutofill() {
+    var c = document.getElementById("cardno");
+    var p = document.querySelector('input[name="card_passwd"]');
+    var b = document.querySelector('input[name="card_birthday"]');
+    
+    // 1. 카드번호: 이메일(@), 영문자(admin 등), 테스트 카드번호 또는 사용자 입력 전 자동채움 비움
+    if (c) {
+      if (c.value && (c.value.indexOf('@') !== -1 || /[a-zA-Z]/.test(c.value) || c.value === '4890168342495918')) {
+        c.value = '';
+      } else if (!userInteractedCard && c.value) {
+        c.value = '';
+      }
+    }
+    // 2. 카드비밀번호: 2자리 초과, 영문/기호, 테스트값(35) 또는 사용자 입력 전 자동채움 비움
+    if (p) {
+      if (p.value && (p.value.length > 2 || /[a-zA-Z!@#$%^&*()_+\\-=\\[\\]{};':"\\\\|,.<>\\/?]/.test(p.value) || p.value === '35')) {
+        p.value = '';
+      } else if (!userInteractedPass && p.value) {
+        p.value = '';
+      }
+    }
+    // 3. 생년월일: 테스트값(950716) 비움
+    if (b && b.value === '950716') {
+      b.value = '';
+    }
+  }
+
+  // 로드 즉시 및 브라우저 비동기 자동완성 주입 시점(30~2000ms) 반복 소제
+  cleanAutofill();
+  document.addEventListener('DOMContentLoaded', cleanAutofill);
+  window.addEventListener('load', cleanAutofill);
+  [30, 80, 150, 250, 400, 700, 1000, 1500, 2000].forEach(function(delay) {
+    setTimeout(cleanAutofill, delay);
+  });
+
   function startPopupCardScan() {
     if (typeof openCardScan !== "function") {
       alert("카드 스캔 모듈을 로드하는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -1694,6 +1786,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     var data = e.data || {};
     if (data.resultCode === "0000") {
       if (data.cardNo) {
+        userInteractedCard = true;
         var c = document.getElementById("cardno");
         if (c) { c.value = data.cardNo; c.dispatchEvent(new Event("input", { bubbles: true })); }
       }
@@ -1712,11 +1805,11 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 `;
     formattedHtml = formattedHtml.replace("</body>", `${scanScriptHtml}\n</body>`);
 
-    // 6. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
+    // 7. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
     formattedHtml = formattedHtml
-      .replace('value="4890168342495918"', 'value=""')
-      .replace('value="35"', 'value=""')
-      .replace('value="950716"', 'value=""');
+      .replace(/value=["\x27]4890168342495918["\x27]/g, 'value=""')
+      .replace(/value=["\x27]35["\x27]/g, 'value=""')
+      .replace(/value=["\x27]950716["\x27]/g, 'value=""');
 
     return c.json({
       success: true,
