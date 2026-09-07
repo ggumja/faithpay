@@ -20,7 +20,7 @@ function injectTenantManifest(tenant: Tenant) {
     // 앱 실행 시 해당 테넌트 홈으로 바로 진입
     start_url: `${window.location.origin}/${tenant.slug}`,
     lang: 'ko',
-    icons: [
+    icons: tenant.logoUrl ? [
       {
         src: tenant.logoUrl,
         sizes: '192x192',
@@ -31,6 +31,12 @@ function injectTenantManifest(tenant: Tenant) {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable',
+      },
+    ] : [
+      {
+        src: '/favicon.svg',
+        sizes: '192x192',
+        type: 'image/svg+xml',
       },
     ],
   };
