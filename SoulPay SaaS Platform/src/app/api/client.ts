@@ -332,6 +332,13 @@ export const paymentAPI = {
     });
   },
 
+  async getCardScanParams(payload: { tenantId: string; isBilling?: boolean }): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/payment/scan/params', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   async createTestDonation(payload: { tenantId: string; amount: number; donorName?: string; paymentMethod?: string }): Promise<APIResponse<any>> {
     return fetchAPI<any>('/admin/test-donations', {
       method: 'POST',

@@ -771,6 +771,64 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
   }
 });
 
+// 카드 스캔(OCR 카메라) 연동 인증 파라미터 발급 API
+app.post("/make-server-d0d82cc7/payment/scan/params", async (c) => {
+  try {
+    const { tenantId, isBilling } = await c.req.json();
+    const config = await db.getPaymentConfig(tenantId);
+    const billingCfg = config?.providerConfigs?.billing;
+
+    const isTest = config?.devMode !== undefined 
+      ? Boolean(config.devMode) 
+      : (isBilling ? (!billingCfg?.apiKey || billingCfg?.mid === "240000005") : (!config?.apiKey || config?.mid === "240000006"));
+
+    let NANO_API_KEY = isBilling 
+      ? (billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : undefined))
+      : (config?.apiKey || (isTest ? "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL" : undefined));
+    let shopcode = isBilling 
+      ? (billingCfg?.mid || (isTest ? "240000005" : undefined))
+      : (config?.mid || (isTest ? "240000006" : undefined));
+    let loginId = isBilling 
+      ? (billingCfg?.loginId || (isTest ? "shoptest" : undefined))
+      : (config?.loginId || (isTest ? "smbtestshop" : undefined));
+    let ver = isBilling 
+      ? (billingCfg?.ver || (isTest ? "240000005" : "240000005"))
+      : (config?.ver || (isTest ? "smbtest" : "smbtest"));
+
+    if (!NANO_API_KEY || !shopcode || !loginId) {
+      return c.json({ success: false, error: "카드 스캔에 필요한 PG 가맹점 설정이 올바르지 않습니다." }, 400);
+    }
+
+    const pad = (n: number, l = 2) => n.toString().padStart(l, '0');
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const timestamp = `${pad(kst.getUTCHours())}${pad(kst.getUTCMinutes())}${pad(kst.getUTCSeconds())}${pad(kst.getUTCMilliseconds(), 3)}`;
+
+    // 공식 규격: SHA256( ver + "|" + loginId + "|" + shopcode + "|" + timestamp + "|" + API_KEY )
+    const hashRaw = `${ver}|${loginId}|${shopcode}|${timestamp}|${NANO_API_KEY}`;
+    const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex");
+
+    const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
+    const scanJsUrl = `${baseUrl}/api/scan/inc/card-scan.js`;
+
+    return c.json({
+      success: true,
+      data: {
+        ver,
+        shopcode,
+        loginId,
+        timestamp,
+        hashValue,
+        scanJsUrl,
+        scanUrl: `${baseUrl}/api/scan/scan.io`,
+      }
+    });
+  } catch (error: any) {
+    console.error("Error generating card scan params:", error);
+    return c.json({ success: false, error: error?.message || "Failed to generate scan params" }, 500);
+  }
+});
+
+
 // DB 내 기존 결제 수단 일괄 정규화 마이그레이션
 app.post("/make-server-d0d82cc7/admin/migrate-payment-methods", async (c) => {
   try {
@@ -1585,7 +1643,76 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       `<button type="button" class="pay-btn" onclick="chkPayment()">🔒 ${formattedAmount}원 정기결제 카드 등록하기</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
     );
 
-    // 5. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
+    // 5. 나노솔루션 공식 카드 스캔(OCR 카메라) 버튼 및 스크립트 연동
+    const scanPad = (n: number, l = 2) => n.toString().padStart(l, '0');
+    const scanKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const scanTimestamp = `${scanPad(scanKst.getUTCHours())}${scanPad(scanKst.getUTCMinutes())}${scanPad(scanKst.getUTCSeconds())}${scanPad(scanKst.getUTCMilliseconds(), 3)}`;
+    const scanHashRaw = `${ver}|${loginId}|${shopcode}|${scanTimestamp}|${NANO_API_KEY}`;
+    const scanHashValue = crypto.createHash("sha256").update(scanHashRaw).digest("hex");
+    const scanJsUrl = `${baseUrl}/api/scan/inc/card-scan.js`;
+
+    // head에 카드 스캔 js 추가
+    formattedHtml = formattedHtml.replace("</head>", `<script src="${scanJsUrl}"></script>\n</head>`);
+
+    // 카드번호 라벨 옆에 📷 카드 카메라 스캔 버튼 주입
+    formattedHtml = formattedHtml.replace(
+      /<label[^>]*class=["\x27]form-label["\x27][^>]*>\s*카드번호.*<\/label>/i,
+      `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">
+        <label class="form-label" style="margin-bottom: 0 !important;">카드번호 <span class="req">*</span></label>
+        <button type="button" onclick="startPopupCardScan()" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; font-size: 12px; font-weight: 700; color: #3D47B8; background: #EFF0FB; border: 1px solid #DCDEF5; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+          📷 카드 카메라 스캔
+        </button>
+      </div>`
+    );
+
+    // 스캔 핸들러 스크립트 주입 (2자리 연도를 스마트로의 4자리 연도로 자동 변환 매핑)
+    const scanScriptHtml = `
+<script>
+  function startPopupCardScan() {
+    if (typeof openCardScan !== "function") {
+      alert("카드 스캔 모듈을 로드하는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    openCardScan({
+      fields: {
+        cardNo: "cardno",
+        expYY: "expire_year",
+        expMM: "expire_month"
+      },
+      params: {
+        ver: "${ver}",
+        shopcode: "${shopcode}",
+        loginId: "${loginId}",
+        timestamp: "${scanTimestamp}",
+        hashValue: "${scanHashValue}"
+      }
+    });
+  }
+
+  window.addEventListener("message", function(e) {
+    if (e.origin !== "${baseUrl}") return;
+    var data = e.data || {};
+    if (data.resultCode === "0000") {
+      if (data.cardNo) {
+        var c = document.getElementById("cardno");
+        if (c) { c.value = data.cardNo; c.dispatchEvent(new Event("input", { bubbles: true })); }
+      }
+      if (data.expMM) {
+        var m = document.getElementById("expire_month");
+        if (m) { m.value = data.expMM.toString().padStart(2, '0'); m.dispatchEvent(new Event("change", { bubbles: true })); }
+      }
+      if (data.expYY) {
+        var y = document.getElementById("expire_year");
+        var fullYear = data.expYY.length === 2 ? "20" + data.expYY : data.expYY;
+        if (y) { y.value = fullYear; y.dispatchEvent(new Event("change", { bubbles: true })); }
+      }
+    }
+  });
+</script>
+`;
+    formattedHtml = formattedHtml.replace("</body>", `${scanScriptHtml}\n</body>`);
+
+    // 6. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
     formattedHtml = formattedHtml
       .replace('value="4890168342495918"', 'value=""')
       .replace('value="35"', 'value=""')

@@ -8,7 +8,7 @@ import { Label } from '../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
-import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { paymentAPI, donationAPI, kakaoPayAPI, subscriptionAPI, API_BASE_URL } from '../api/client';
 import { generateTransactionId } from '../utils/transactionId';
@@ -33,6 +33,7 @@ export default function PaymentSelection() {
   const [birth, setBirth] = useState('');
   const [installment, setInstallment] = useState('00');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   // 정기결제 주기 옵션 State (매일 / 매주 / 매월) — 전단계(DonationFlow)에서 선택한 주기 값 유지
   const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>(
@@ -675,6 +676,84 @@ export default function PaymentSelection() {
     }
   };
 
+  const handleScanCard = async () => {
+    const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
+    if (!targetTenantId) {
+      toast.error('단체 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    setIsScanning(true);
+    toast.info('카드 스캔 카메라를 준비하고 있습니다...');
+
+    try {
+      const res = await paymentAPI.getCardScanParams({
+        tenantId: targetTenantId,
+        isBilling: false,
+      });
+
+      if (!res.success || !res.data) {
+        toast.error(res.error || '카드 스캔 인증값을 생성하지 못했습니다.');
+        setIsScanning(false);
+        return;
+      }
+
+      const { scanJsUrl, ver, shopcode, loginId, timestamp, hashValue } = res.data;
+
+      // Nanopay card-scan.js 라이브러리 동적 로드
+      if (!(window as any).openCardScan) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = scanJsUrl;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('카드 스캔 스크립트 로드 실패'));
+          document.head.appendChild(script);
+        });
+      }
+
+      // postMessage 수신 리스너 등록
+      const onScanResult = (e: MessageEvent) => {
+        const data = e.data || {};
+        if (data.resultCode === '0000') {
+          if (data.cardNo) {
+            const clean = data.cardNo.replace(/[^0-9]/g, '');
+            const formatted = clean.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+            setCardNumber(formatted);
+          }
+          if (data.expMM && data.expYY) {
+            setExpiry(`${data.expMM}/${data.expYY}`);
+          }
+          toast.success('카드가 성공적으로 인식되었습니다.');
+          window.removeEventListener('message', onScanResult);
+        } else if (data.resultCode && data.resultCode !== '9999') {
+          toast.error(data.resultMsg || '카드 인식에 실패했습니다.');
+        }
+      };
+      window.addEventListener('message', onScanResult);
+
+      // Nanopay 공식 openCardScan 실행
+      (window as any).openCardScan({
+        fields: {
+          cardNo: 'cardNumber',
+          expYY: 'expiry',
+          expMM: 'expiry',
+        },
+        params: {
+          ver,
+          shopcode,
+          loginId,
+          timestamp,
+          hashValue,
+        },
+      });
+    } catch (err: any) {
+      console.error('Failed to open card scan:', err);
+      toast.error('카메라를 열 수 없거나 권한이 거부되었습니다.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans pb-16">
       {/* Header Banner */}
@@ -941,7 +1020,18 @@ export default function PaymentSelection() {
                             </div>
                           )}
                           <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="cardNumber" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">카드번호</Label>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="cardNumber" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">카드번호</Label>
+                              <button
+                                type="button"
+                                onClick={handleScanCard}
+                                disabled={isScanning}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition-colors cursor-pointer border border-indigo-100 dark:border-indigo-900/50"
+                              >
+                                {isScanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                                <span>{isScanning ? '스캔 준비 중...' : '카드 카메라 스캔'}</span>
+                              </button>
+                            </div>
                             <Input
                               id="cardNumber"
                               placeholder="**** **** **** ****"
