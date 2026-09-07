@@ -351,7 +351,8 @@ export default function TenantKiosk() {
     if (paymentType === 'KAKAO_PAY') {
       try {
         const orderId = `FP-KIOSK-${Date.now()}`;
-        const userId = `USER-${(phone || '01071404795').replace(/[^0-9]/g, '')}`;
+        const userPhoneDigits = phone ? phone.replace(/[^0-9]/g, '') : '';
+        const userId = userPhoneDigits ? `USER-${userPhoneDigits}` : `USER-KIOSK-${Date.now()}`;
 
         // 1. 카카오페이 결제 준비 Ready API 통신 전송
         const readyRes = await kakaoPayAPI.ready({

@@ -28,14 +28,14 @@ export default function KakaoPayApprovePage() {
         // ignore
       }
 
-      const tenantId = pending.tenantId || 'gakwonsa';
-      const tenantSlug = pending.tenantSlug || 'gakwonsa';
-      const amount = Number(pending.amount || amountStr || 50000);
-      const donorName = pending.donorName || '홍길동 성도';
-      const donorPhone = pending.donorPhone || '01071404795';
-      const baptismName = pending.baptismName || '청련';
+      const tenantId = pending.tenantId || '';
+      const tenantSlug = pending.tenantSlug || '';
+      const amount = Number(pending.amount || amountStr || 0);
+      const donorName = pending.donorName || '익명';
+      const donorPhone = pending.donorPhone || '';
+      const baptismName = pending.baptismName || '';
       const itemId = pending.itemId || 'general';
-      const itemName = pending.itemName || '각원사 봉헌금';
+      const itemName = pending.itemName || '온라인 봉헌금';
 
       try {
         const receiptId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
@@ -57,13 +57,17 @@ export default function KakaoPayApprovePage() {
         });
 
         setStatus('success');
-        toast.success('💛 카카오페이 개발자 테스트 결제가 성공적으로 완료되었습니다!');
+        toast.success('💛 카카오페이 결제가 성공적으로 완료되었습니다!');
         
         sessionStorage.removeItem('soulpay_kakaopay_pending');
         sessionStorage.removeItem('faithpay_kakaopay_pending');
 
         setTimeout(() => {
-          navigate(`/${tenantSlug}/complete?donId=${receiptId}`);
+          if (tenantSlug) {
+            navigate(`/${tenantSlug}/complete?donId=${receiptId}`);
+          } else {
+            navigate('/');
+          }
         }, 1500);
 
       } catch (err: any) {

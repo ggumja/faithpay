@@ -128,7 +128,7 @@ export default function AdminLogin() {
         urlTenant = {
           id: `tenant-${tenantSlug}`,
           slug: tenantSlug,
-          name: tenantSlug === 'dream' ? '꿈의교회' : `${tenantSlug} 단체`,
+          name: `${tenantSlug} 단체`,
           religionType: 'protestant',
           contact: {
             email: `admin@${tenantSlug}.or.kr`,

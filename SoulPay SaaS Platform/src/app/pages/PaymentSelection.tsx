@@ -588,7 +588,7 @@ export default function PaymentSelection() {
         paymentWindow.document.write('<p style="text-align:center;padding-top:60px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;color:#334155;">나노페이 안전 결제창으로 연결 중입니다...</p>');
 
         const isMobile = window.innerWidth <= 768;
-        const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || 'dream';
+        const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
         const res = await paymentAPI.processCertRequest({
           tenantId: targetTenantId,
           donationData: donationFormData,
