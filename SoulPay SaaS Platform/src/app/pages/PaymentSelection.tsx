@@ -489,6 +489,7 @@ export default function PaymentSelection() {
         const messageHandler = (event: MessageEvent) => {
           if (event.data && event.data.type === 'SOULPAY_BILLKEY_RESULT') {
             messageReceived = true;
+            console.log('[Nanopay BillKey Result Received in Parent]:', event.data);
             window.removeEventListener('message', messageHandler);
             if (event.data.resultCode === '0000') {
               setIsProcessing(false);
