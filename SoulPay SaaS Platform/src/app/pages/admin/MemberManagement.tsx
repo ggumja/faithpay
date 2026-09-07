@@ -88,6 +88,7 @@ export default function MemberManagement() {
           const map = new Map<string, MemberDetailData>();
           
           res.data.forEach((d: any) => {
+            const isCompleted = !d.paymentStatus || d.paymentStatus === 'completed';
             const rawPhone = d.donorPhone || '';
             const digitsKey = stripPhoneDigits(rawPhone) || '미등록';
 
@@ -100,15 +101,17 @@ export default function MemberManagement() {
                 email: d.donorEmail || '',
                 address: d.address || '',
                 registeredDate: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-                totalDonation: d.amount || 0,
+                totalDonation: isCompleted ? (d.amount || 0) : 0,
                 lastDonation: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-                recurringCount: d.isRecurring ? 1 : 0,
+                recurringCount: (d.isRecurring && isCompleted) ? 1 : 0,
                 note: '',
               });
             } else {
               const existing = map.get(digitsKey)!;
-              existing.totalDonation += d.amount || 0;
-              if (d.isRecurring) existing.recurringCount += 1;
+              if (isCompleted) {
+                existing.totalDonation += d.amount || 0;
+                if (d.isRecurring) existing.recurringCount += 1;
+              }
               if (existing.name === '익명 보시/후원자' && d.donorName) existing.name = d.donorName;
               if (!existing.email && d.donorEmail) existing.email = d.donorEmail;
             }

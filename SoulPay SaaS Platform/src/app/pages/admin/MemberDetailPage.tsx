@@ -188,10 +188,12 @@ export default function MemberDetailPage() {
 
             // Filter all donations for this donor phone
             const donorDonations = res.data.filter((d: any) => stripPhoneDigits(d.donorPhone) === digitsKey);
-            const totalSum = donorDonations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+            const totalSum = donorDonations
+              .filter((d: any) => !d.paymentStatus || d.paymentStatus === 'completed')
+              .reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
             
             // 1. 정기 약정 현황 (Subscriptions) - DB의 isRecurring 결제 건을 기반으로 약정 정보 수집
-            const recurringDonations = donorDonations.filter((d: any) => d.isRecurring);
+            const recurringDonations = donorDonations.filter((d: any) => d.isRecurring && (!d.paymentStatus || d.paymentStatus === 'completed'));
             const recurringMap = new Map<string, any>();
 
             recurringDonations.forEach((d: any) => {
@@ -248,7 +250,7 @@ export default function MemberDetailPage() {
                 amount: d.amount || 0,
                 paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
                 type: d.isRecurring ? 'recurring' : 'once',
-                status: 'completed',
+                status: d.paymentStatus || 'completed',
               })),
               subscriptions: subscriptionsList,
               prayersHistory: prayersList,

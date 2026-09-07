@@ -259,14 +259,12 @@ export default function MyDonations() {
         toast.success(`이메일 로그인 성공! ${res.data.donorName || '신도'}님의 마이페이지입니다.`);
       } else {
         setIsAuthenticated(true);
-        const targetPh = (phoneNumber || '01071404795').replace(/[^0-9]/g, '');
-        setPhoneNumber(targetPh);
-        sessionStorage.setItem('soulpay_donor_session', targetPh);
-        sessionStorage.setItem('faithpay_donor_session', targetPh);
-        localStorage.setItem('soulpay_last_donor_phone', targetPh);
-        localStorage.setItem('faithpay_last_donor_phone', targetPh);
-        fetchDonorData(targetPh);
-        toast.success('이메일 로그인에 성공하였습니다.');
+        const targetPh = (phoneNumber || sessionStorage.getItem('soulpay_donor_session') || '').replace(/[^0-9]/g, '');
+        if (targetPh) {
+          setPhoneNumber(targetPh);
+          fetchDonorData(targetPh);
+        }
+        toast.success('로그인에 성공하였습니다.');
       }
     } catch (err) {
       toast.error('이메일 로그인 중 오류가 발생했습니다.');

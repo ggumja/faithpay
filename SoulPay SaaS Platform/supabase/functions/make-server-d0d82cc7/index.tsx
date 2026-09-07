@@ -1063,7 +1063,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     const NANO_API_KEY = config?.apiKey || "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
     const shopcode = config?.mid || "240000006";
     const loginId = config?.loginId || "smbtestshop";
-    const ver = "240000005";
+    const ver = config?.ver || "smbtest";
 
     const cleanPhone = (donationData?.phone || "01000000000").replace(/[^0-9]/g, '');
     const userId = `${tenantId}_${cleanPhone}`;

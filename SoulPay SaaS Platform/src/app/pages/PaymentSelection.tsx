@@ -253,7 +253,7 @@ export default function PaymentSelection() {
       toast.info('💛 카카오페이(TC0ONETIME) 개발자 샌드박스 결제 창을 호출합니다...');
 
       const partnerOrderId = `FP-${Date.now()}`;
-      const cleanPhone = (donationFormData.phone || '01071404795').replace(/[^0-9]/g, '');
+      const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
       const partnerUserId = `USER-${cleanPhone}`;
       const itemName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
       const amount = donationFormData.amount || 50000;
@@ -426,10 +426,10 @@ export default function PaymentSelection() {
 
         paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제(빌링키) 등록창으로 연결 중입니다...</p>');
 
-        const shopcode = "240000006";
-        const loginId = "smbtestshop";
-        const ver = "smbtest";
-        const apiKey = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+        const shopcode = currentTenant?.paymentConfig?.mid || "240000006";
+        const loginId = currentTenant?.paymentConfig?.loginId || "smbtestshop";
+        const ver = currentTenant?.paymentConfig?.ver || "smbtest";
+        const apiKey = currentTenant?.paymentConfig?.apiKey || "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
         
         const now = new Date();
         const pad = (n: number) => n.toString().padStart(2, '0');
