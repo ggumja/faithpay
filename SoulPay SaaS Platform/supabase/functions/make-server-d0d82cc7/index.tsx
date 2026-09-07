@@ -1684,9 +1684,10 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     const formGuideHtml = `
 <div class="sp-form-guide">
   📌 <strong>카드 등록 필수 확인</strong><br>
-  • <strong>비밀번호</strong>: 카드 비밀번호 <strong>앞 2자리</strong>를 입력해주세요.<br>
-  • <strong>생년월일</strong>: 카드 명의자의 <strong>생년월일 6자리 (YYMMDD)</strong>를 입력해주세요. (법인카드는 사업자번호 10자리)<br>
-  • <strong>안내</strong>: 카드사 실제 본인 인증 절차가 진행되므로, <strong>실제 유효한 본인 카드</strong> 정보와 정확한 비밀번호/생년월일을 입력하셔야 정상 등록됩니다.
+  • <strong>테스트 환경 카드 안내</strong>: 스마트로 공용 테스트 환경에서는 <strong>신한 · 현대 · 삼성 · BC · 롯데 개인 신용카드</strong> 사용을 권장합니다.<br>
+  <span style="color:#DC2626; font-size:11.5px; display:block; margin-top:2px;">※ <strong>국민카드(카카오뱅크 포함), 하나카드, 일부 체크카드</strong>는 스마트로 공용 테스트 상점 정책상 테스트 승인이 불가합니다. (상용 서비스 전환 시 전 카드사 정상 지원)</span>
+  • <strong>비밀번호</strong>: 카드 비밀번호 <strong>앞 2자리</strong> 입력<br>
+  • <strong>생년월일</strong>: 카드 명의자의 <strong>생년월일 6자리 (YYMMDD)</strong> 입력
 </div>
 `;
     formattedHtml = formattedHtml.replace(
@@ -2109,7 +2110,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       isSuccess 
         ? "정기결제 카드가 정상적으로 등록되었습니다." 
         : (resultCode === "99" 
-            ? "카드사 승인 또는 본인 인증에 실패했습니다. (오류코드: 99)\n비밀번호 앞 2자리 및 생년월일 6자리가 카드 명의자 정보와 일치하는지 확인해주세요." 
+            ? "카드사 승인 또는 본인 인증에 실패했습니다. (오류코드: 99)\n스마트로 공용 테스트 환경에서는 국민카드·하나카드·체크카드가 지원되지 않으므로, 신한·현대·삼성·BC·롯데 신용카드로 테스트해주세요." 
             : `카드 등록에 실패했습니다. (오류코드: ${resultCode || '알 수 없음'})`)
     );
 
@@ -2233,11 +2234,11 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     
     ${!isSuccess ? `
     <div class="err-box">
-      <div class="err-header">🔍 등록 실패 원인 점검</div>
+      <div class="err-header">🔍 등록 실패 주요 원인 안내</div>
       <ul class="err-list">
-        <li><strong>비밀번호 앞 2자리</strong> 또는 <strong>생년월일 6자리(YYMMDD)</strong> 불일치</li>
-        <li>테스트(개발) 환경에서도 카드사 연동을 위해 <strong>실제 유효한 개인 카드</strong>와 <strong>실제 카드 비밀번호/생년월일</strong> 입력 필수</li>
-        <li>체크카드 또는 법인카드의 경우 정기 자동결제(빌키 발급) 미지원 카드일 수 있습니다.</li>
+        <li><strong>스마트로 테스트 환경 카드 제한</strong>: 공용 테스트 상점에서는 <strong>국민카드(카카오뱅크 포함), 하나카드, 일부 체크카드</strong>가 카드사 정책상 결제 지원되지 않습니다. (👉 <strong>신한 · 현대 · 삼성 · BC · 롯데 신용카드</strong>로 테스트 필요)</li>
+        <li><strong>비밀번호/생년월일 불일치</strong>: 카드 비밀번호 앞 2자리 및 명의자 생년월일 6자리가 실제 카드 정보와 일치해야 합니다.</li>
+        <li><strong>상용 가맹점 전환 안내</strong>: 실제 운영 서비스 전환 시에는 국민카드, 하나카드를 포함한 모든 카드사가 정상 지원됩니다.</li>
       </ul>
       <div class="btn-group">
         <button type="button" class="btn-retry" onclick="window.history.back()">🔄 다시 시도하기</button>
