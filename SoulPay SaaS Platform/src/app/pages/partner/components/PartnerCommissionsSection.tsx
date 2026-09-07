@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays } from 'lucide-react';
+import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays, Search, Building2, CreditCard, RotateCcw, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
@@ -18,6 +18,7 @@ interface PartnerCommissionsSectionProps {
   commissions: PartnerCommission[];
   isAgency?: boolean;
   partner: Partner;
+  myTenants?: any[];
 }
 
 /* ── 상태 배지 ── */
@@ -72,11 +73,19 @@ function PeriodFilter({
   onCustomTo: (v: string) => void;
 }) {
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const lastMonthDate = new Date(currentYear, now.getMonth() - 1, 1);
+  const lastMonth = lastMonthDate.getMonth() + 1;
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const lastMonthLabel = lastMonthYear !== currentYear
+    ? `${lastMonthYear}년 ${lastMonth}월 (지난 달)`
+    : `${lastMonth}월 (지난 달)`;
+
   const options: { key: PeriodKey; label: string }[] = [
     { key: 'thisMonth', label: `${now.getMonth() + 1}월 (이번 달)` },
-    { key: 'lastMonth', label: `${now.getMonth()}월 (지난 달)` },
+    { key: 'lastMonth', label: lastMonthLabel },
     { key: 'custom',    label: '기간 직접 지정' },
-    { key: 'all',       label: '전체' },
+    { key: 'all',       label: '전체 기간' },
   ];
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -114,20 +123,49 @@ function PeriodFilter({
   );
 }
 
-/* ── 날짜 포함 여부 체크 (공용) ── */
+/* ── 날짜 포함 여부 체크 (KST 한국 표준시 기준) ── */
 function inPeriod(dateStr: string, period: PeriodKey, customFrom: string, customTo: string): boolean {
   if (period === 'all') return true;
+  if (!dateStr) return false;
   try {
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return true;
+
+    // 한국 표준시(KST) YYYY-MM-DD
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d);
+    const m: Record<string, string> = {};
+    for (const p of parts) m[p.type] = p.value;
+    const itemDateStr = `${m.year}-${m.month}-${m.day}`;
+    const iY = parseInt(m.year, 10);
+    const iM = parseInt(m.month, 10);
+
     const now = new Date();
-    if (period === 'thisMonth') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    const nowParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+    const nm: Record<string, string> = {};
+    for (const p of nowParts) nm[p.type] = p.value;
+    const nowY = parseInt(nm.year, 10);
+    const nowM = parseInt(nm.month, 10);
+
+    if (period === 'thisMonth') {
+      return iY === nowY && iM === nowM;
+    }
     if (period === 'lastMonth') {
-      const lm = new Date(now.getFullYear(), now.getMonth() - 1);
-      return d.getFullYear() === lm.getFullYear() && d.getMonth() === lm.getMonth();
+      const prevM = nowM === 1 ? 12 : nowM - 1;
+      const prevY = nowM === 1 ? nowY - 1 : nowY;
+      return iY === prevY && iM === prevM;
     }
     if (period === 'custom' && customFrom && customTo) {
-      const from = new Date(customFrom); const to = new Date(customTo + 'T23:59:59');
-      return d >= from && d <= to;
+      return itemDateStr >= customFrom && itemDateStr <= customTo;
     }
   } catch {}
   return true;
@@ -138,6 +176,7 @@ export function PartnerCommissionsSection({
   commissions,
   isAgency = false,
   partner,
+  myTenants,
 }: PartnerCommissionsSectionProps) {
   /* ── 서브탭 ── */
   type MainTab = 'commission' | 'settlement' | 'agentPayout';
@@ -155,6 +194,12 @@ export function PartnerCommissionsSection({
   const [settleTo,     setSettleTo]     = useState('');
   const [agentFrom,    setAgentFrom]    = useState('');
   const [agentTo,      setAgentTo]      = useState('');
+
+  /* ── 수수료 발생 내역 다차원 필터 상태 ── */
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('all');
+  const [commStatusFilter, setCommStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
+  const [payMethodFilter,  setPayMethodFilter]  = useState<string>('all');
+  const [searchKeyword,    setSearchKeyword]    = useState<string>('');
 
   /* ── 정산 내역 데이터 ── */
   const [settlements,        setSettlements]        = useState<PartnerSettlement[]>([]);
@@ -176,12 +221,75 @@ export function PartnerCommissionsSection({
   /* ── now ── */
   const now = new Date();
 
-  /* ════════════════════════════════════
-     탭 1: 수수료 발생 내역 집계
-  ════════════════════════════════════ */
-  const filteredComm = useMemo(() => commissions.filter(c =>
-    inPeriod(c.createdAt, commPeriod, commFrom, commTo)
-  ), [commissions, commPeriod, commFrom, commTo]);
+  /* ── 소속 단체 목록 옵션 추출 (myTenants 우선 + 원장 등장 단체 합성) ── */
+  const tenantOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    if (myTenants && Array.isArray(myTenants)) {
+      myTenants.forEach(t => {
+        if (t?.id && t?.name) map.set(t.id, t.name);
+      });
+    }
+    commissions.forEach(c => {
+      if (c?.tenantId && c?.tenantName) map.set(c.tenantId, c.tenantName);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [myTenants, commissions]);
+
+  /* ── 탭 1: 정산 상태 탭 카운트 산출용 기준 데이터 (기간 + 단체 + 수단 + 검색어 적용) ── */
+  const baseForStatus = useMemo(() => {
+    return commissions.filter(c => {
+      if (!inPeriod(c.createdAt, commPeriod, commFrom, commTo)) return false;
+      if (selectedTenantId !== 'all' && c.tenantId !== selectedTenantId) return false;
+
+      if (payMethodFilter !== 'all') {
+        const pm = (c.paymentMethod || '').toLowerCase();
+        const isRec = Boolean(c.isRecurring) || (c.paymentType === 'BILLING');
+        if (payMethodFilter === 'recurring') {
+          if (!isRec && !pm.includes('정기') && !pm.includes('빌링')) return false;
+        } else if (payMethodFilter === 'card') {
+          if (isRec || (!pm.includes('카드') && !pm.includes('card') && pm !== '')) return false;
+        } else if (payMethodFilter === 'kakaopay') {
+          if (!pm.includes('카카오') && !pm.includes('kakao')) return false;
+        } else if (payMethodFilter === 'naverpay') {
+          if (!pm.includes('네이버') && !pm.includes('naver')) return false;
+        } else if (payMethodFilter === 'tosspay') {
+          if (!pm.includes('토스') && !pm.includes('toss')) return false;
+        }
+      }
+
+      if (searchKeyword.trim()) {
+        const kw = searchKeyword.trim().toLowerCase();
+        const matchDonationId = (c.donationId || '').toLowerCase().includes(kw);
+        const matchTenantName = (c.tenantName || '').toLowerCase().includes(kw);
+        const matchDonorName  = (c.donorName || '').toLowerCase().includes(kw);
+        if (!matchDonationId && !matchTenantName && !matchDonorName) return false;
+      }
+
+      return true;
+    });
+  }, [commissions, commPeriod, commFrom, commTo, selectedTenantId, payMethodFilter, searchKeyword]);
+
+  const pendingCount = useMemo(() => baseForStatus.filter(c => c.settlementStatus !== 'paid').length, [baseForStatus]);
+  const paidCount    = useMemo(() => baseForStatus.filter(c => c.settlementStatus === 'paid').length, [baseForStatus]);
+
+  /* ── 탭 1: 수수료 발생 내역 집계 (상태 필터까지 최종 반영) ── */
+  const filteredComm = useMemo(() => {
+    if (commStatusFilter === 'all') return baseForStatus;
+    if (commStatusFilter === 'paid') return baseForStatus.filter(c => c.settlementStatus === 'paid');
+    return baseForStatus.filter(c => c.settlementStatus !== 'paid');
+  }, [baseForStatus, commStatusFilter]);
+
+  const isFilterActive = selectedTenantId !== 'all' || commStatusFilter !== 'all' || payMethodFilter !== 'all' || searchKeyword.trim() !== '' || commPeriod !== 'all';
+
+  const handleResetFilters = () => {
+    setSelectedTenantId('all');
+    setCommStatusFilter('all');
+    setPayMethodFilter('all');
+    setSearchKeyword('');
+    setCommPeriod('all');
+    setCommFrom('');
+    setCommTo('');
+  };
 
   const pendingList     = filteredComm.filter(c => c.settlementStatus !== 'paid');
   const settledComms    = filteredComm.filter(c => c.settlementStatus === 'paid');
@@ -189,10 +297,21 @@ export function PartnerCommissionsSection({
   const totalCommission = filteredComm.reduce((s, c) => s + (c.commissionAmount ?? 0), 0);
   const totalSettledComm= settledComms.reduce((s, c) => s + (c.commissionAmount ?? 0), 0);
 
-  const commPeriodLabel = commPeriod === 'thisMonth'
-    ? `${now.getMonth() + 1}월` : commPeriod === 'lastMonth'
-    ? `${now.getMonth()}월` : commPeriod === 'custom' && commFrom && commTo
-    ? `${commFrom} ~ ${commTo}` : '전체';
+  const getPeriodLabel = (period: PeriodKey, from: string, to: string) => {
+    if (period === 'thisMonth') return `${now.getMonth() + 1}월`;
+    if (period === 'lastMonth') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return lm.getFullYear() !== now.getFullYear()
+        ? `${lm.getFullYear()}년 ${lm.getMonth() + 1}월`
+        : `${lm.getMonth() + 1}월`;
+    }
+    if (period === 'custom' && from && to) return `${from} ~ ${to}`;
+    return '전체 기간';
+  };
+
+  const commPeriodLabel     = getPeriodLabel(commPeriod, commFrom, commTo);
+  const settlePeriodLabel   = getPeriodLabel(settlePeriod, settleFrom, settleTo);
+  const agentPayPeriodLabel = getPeriodLabel(agentPayPeriod, agentFrom, agentTo);
 
   /* ════════════════════════════════════
      탭 2: 정산 수령 내역 집계
@@ -204,10 +323,6 @@ export function PartnerCommissionsSection({
   const paidSettlements   = filteredSettlements.filter(s => s.status === 'paid');
   const totalReceived     = paidSettlements.reduce((s, x) => s + x.netAmount, 0);
   const totalCommTotal    = paidSettlements.reduce((s, x) => s + x.totalCommission, 0);
-  const settlePeriodLabel = settlePeriod === 'thisMonth'
-    ? `${now.getMonth() + 1}월` : settlePeriod === 'lastMonth'
-    ? `${now.getMonth()}월` : settlePeriod === 'custom' && settleFrom && settleTo
-    ? `${settleFrom} ~ ${settleTo}` : '전체';
 
   /* ════════════════════════════════════
      탭 3: 영업자별 지급 현황 집계
@@ -228,11 +343,6 @@ export function PartnerCommissionsSection({
     agentMap.set(b.agentId, { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: prev.totalNet + (b.netAgentReceived ?? (b as any).agentReceived ?? 0), totalMargin: prev.totalMargin + b.agencyMargin, count: prev.count + 1 });
   });
   const agentSummaries = Array.from(agentMap.entries()).map(([id, v]) => ({ id, ...v }));
-
-  const agentPayPeriodLabel = agentPayPeriod === 'thisMonth'
-    ? `${now.getMonth() + 1}월` : agentPayPeriod === 'lastMonth'
-    ? `${now.getMonth()}월` : agentPayPeriod === 'custom' && agentFrom && agentTo
-    ? `${agentFrom} ~ ${agentTo}` : '전체';
 
   /* ── 탭 정의 ── */
   const TABS: { key: MainTab; icon: any; label: string; badge?: number }[] = [
@@ -278,12 +388,110 @@ export function PartnerCommissionsSection({
       ══════════════════════════════════ */}
       {mainTab === 'commission' && (
         <>
-          {/* 기간 필터 */}
-          <PeriodFilter
-            value={commPeriod} onChange={setCommPeriod}
-            customFrom={commFrom} customTo={commTo}
-            onCustomFrom={setCommFrom} onCustomTo={setCommTo}
-          />
+          {/* 기간 및 상세 검색/필터 통합 바 */}
+          <div className="p-4 bg-[var(--hm-paper)] border border-[var(--hm-border)] rounded-xl space-y-3 shadow-2xs">
+            {/* 1열: 기간 필터 & 필터 초기화 버튼 */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <PeriodFilter
+                value={commPeriod} onChange={setCommPeriod}
+                customFrom={commFrom} customTo={commTo}
+                onCustomFrom={setCommFrom} onCustomTo={setCommTo}
+              />
+              {isFilterActive && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11.5px] font-medium text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-slate-200"
+                >
+                  <RotateCcw size={12} />
+                  필터 초기화
+                </button>
+              )}
+            </div>
+
+            {/* 2열: 단체 선택, 결제수단 선택, 정산상태 토글, 실시간 검색 */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-[var(--hm-border)]">
+              {/* 가맹 단체 드롭다운 */}
+              <div className="flex items-center gap-1.5">
+                <Building2 size={13} className="text-[var(--hm-ink-3)] shrink-0" />
+                <select
+                  value={selectedTenantId}
+                  onChange={e => setSelectedTenantId(e.target.value)}
+                  className="px-2.5 py-1.5 text-[11.5px] font-medium rounded-lg border border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="all">전체 단체 ({tenantOptions.length}개)</option>
+                  {tenantOptions.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 결제 수단 드롭다운 */}
+              <div className="flex items-center gap-1.5">
+                <CreditCard size={13} className="text-[var(--hm-ink-3)] shrink-0" />
+                <select
+                  value={payMethodFilter}
+                  onChange={e => setPayMethodFilter(e.target.value)}
+                  className="px-2.5 py-1.5 text-[11.5px] font-medium rounded-lg border border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="all">전체 결제수단</option>
+                  <option value="card">신용/체크카드</option>
+                  <option value="kakaopay">카카오페이</option>
+                  <option value="naverpay">네이버페이</option>
+                  <option value="tosspay">토스페이</option>
+                  <option value="recurring">정기결제 (빌링)</option>
+                </select>
+              </div>
+
+              {/* 정산 상태 필터 토글 */}
+              <div className="flex items-center gap-1 bg-[var(--hm-paper-2)] p-0.5 rounded-lg border border-[var(--hm-border)]">
+                {[
+                  { key: 'all' as const, label: '상태 전체', count: baseForStatus.length },
+                  { key: 'pending' as const, label: '정산대기', count: pendingCount },
+                  { key: 'paid' as const, label: '입금완료', count: paidCount },
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setCommStatusFilter(tab.key)}
+                    className={`px-2.5 py-1 rounded-[6px] text-[11px] font-semibold transition-all cursor-pointer border-0 ${
+                      commStatusFilter === tab.key
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-transparent text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)]'
+                    }`}
+                  >
+                    {tab.label}
+                    <span className={`ml-1 text-[9.5px] px-1 py-0.2 rounded-full font-mono ${
+                      commStatusFilter === tab.key ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 실시간 통합 검색창 */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--hm-ink-3)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={e => setSearchKeyword(e.target.value)}
+                  placeholder="결제번호, 단체명, 후원자 검색..."
+                  className="w-full pl-8 pr-7 py-1.5 text-[11.5px] border border-[var(--hm-border)] rounded-lg bg-[var(--hm-paper)] text-[var(--hm-ink)] placeholder:text-[var(--hm-ink-3)] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+                {searchKeyword && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchKeyword('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* KPI */}
           <div className="grid grid-cols-3 gap-3">
@@ -358,9 +566,16 @@ export function PartnerCommissionsSection({
           {/* 건별 원장 테이블 */}
           <Card className="border-slate-200">
             <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-[14px] font-bold text-[var(--hm-ink)]">
-                수수료 발생 원장 — {commPeriodLabel} ({filteredComm.length}건 / 미정산 {pendingList.length}건)
-              </CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-[14px] font-bold text-[var(--hm-ink)]">
+                  수수료 발생 원장 — {commPeriodLabel} ({filteredComm.length}건 / 미정산 {pendingList.length}건)
+                </CardTitle>
+                {isFilterActive && (
+                  <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                    필터 적용 중 (총 {commissions.length}건 중 {filteredComm.length}건 표시)
+                  </span>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -368,7 +583,8 @@ export function PartnerCommissionsSection({
                   <TableRow className="bg-[var(--hm-paper-2)]">
                     <TableHead className="text-[11px]">발생일시</TableHead>
                     <TableHead className="text-[11px]">단체명</TableHead>
-                    <TableHead className="text-[11px]">결제번호</TableHead>
+                    <TableHead className="text-[11px]">결제번호 / 후원자</TableHead>
+                    <TableHead className="text-[11px]">결제수단</TableHead>
                     <TableHead className="text-right text-[11px]">신도 결제액</TableHead>
                     <TableHead className="text-right text-[11px]">수수료 적립</TableHead>
                     <TableHead className="text-center text-[11px]">정산 상태</TableHead>
@@ -377,15 +593,41 @@ export function PartnerCommissionsSection({
                 <TableBody>
                   {filteredComm.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-slate-400 text-sm">
-                        {commPeriodLabel} 수수료 발생 기록이 없습니다.
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center space-y-2 text-slate-400">
+                          <Receipt size={28} className="text-slate-300" />
+                          <p className="text-[13px] font-semibold text-slate-600">
+                            {isFilterActive
+                              ? '선택하신 필터 조건에 부합하는 수수료 발생 내역이 없습니다.'
+                              : `${commPeriodLabel} 수수료 발생 기록이 없습니다.`}
+                          </p>
+                          {isFilterActive && (
+                            <button
+                              type="button"
+                              onClick={handleResetFilters}
+                              className="text-[11.5px] text-emerald-600 hover:underline font-medium cursor-pointer mt-1 inline-flex items-center gap-1"
+                            >
+                              <RotateCcw size={11} /> 필터 전체 초기화
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredComm.map(c => (
                     <TableRow key={c.id} className="hover:bg-[var(--hm-paper-2)]">
                       <TableCell className="text-[11px] text-[var(--hm-ink-3)]">{fmtDate(c.createdAt)}</TableCell>
                       <TableCell className="font-semibold text-[12.5px] text-[var(--hm-ink)]">{c.tenantName}</TableCell>
-                      <TableCell className="font-mono text-[11px] text-[var(--hm-ink-3)]">{c.donationId}</TableCell>
+                      <TableCell>
+                        <div className="font-mono text-[11px] text-[var(--hm-ink-3)]">{c.donationId}</div>
+                        {c.donorName ? (
+                          <div className="text-[11px] font-medium text-slate-700 mt-0.5">{c.donorName} 성도</div>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="text-[11px]">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                          {c.isRecurring ? '정기결제 (빌링)' : (c.paymentMethod || '신용카드')}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right text-[12px] font-semibold text-[var(--hm-ink)]">{fmt(c.donationAmount ?? 0)}</TableCell>
                       <TableCell className="text-right font-bold text-emerald-600 text-[12px]">+{fmt(c.commissionAmount ?? 0)}</TableCell>
                       <TableCell className="text-center">

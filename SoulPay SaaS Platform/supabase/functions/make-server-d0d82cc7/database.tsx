@@ -1817,6 +1817,10 @@ export async function getCommissionsByPartnerPg(partnerId: string): Promise<any[
       settlementStatus: r.settlement_status ?? 'pending',
       settlementMonth: r.settlement_month,
       createdAt: r.created_at,
+      paymentMethod: r.payment_method ?? '',
+      donorName: r.donor_name ?? '',
+      isRecurring: Boolean(r.is_recurring),
+      paymentType: r.payment_type ?? '',
     }));
   } catch {
     return [];

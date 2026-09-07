@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   ArrowLeft, Building2, Users, CheckCircle, Ban, Copy, FileText, Percent,
   Landmark, TrendingUp, Coins, Calendar, Mail, Phone, UserCheck, ChevronRight,
-  Edit3, Save, RefreshCw, AlertCircle, ExternalLink, ShieldCheck, Layers, Search, Briefcase, Receipt, History
+  Edit3, Save, RefreshCw, AlertCircle, ExternalLink, ShieldCheck, Layers, Search, Briefcase, Receipt, History,
+  RotateCcw, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Partner, PartnerCommission, partnerAPI, tenantAPI, Tenant } from '../../api/client';
@@ -49,10 +50,30 @@ export default function PartnerDetailPage() {
   const [parentAgency, setParentAgency] = useState<Partner | null>(null);
   const [subAgents, setSubAgents] = useState<Partner[]>([]);
   const [commissions, setCommissions] = useState<PartnerCommission[]>([]);
+  const [commStatusFilter, setCommStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
+  const [commSearchKeyword, setCommSearchKeyword] = useState<string>('');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [partnerStats, setPartnerStats] = useState<{ totalVolume: number; totalCommission: number; pendingSettlement: number; donationCount: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [tab, setTab] = useState<TabKey>('info');
+
+  const filteredCommissions = useMemo(() => {
+    return commissions.filter(c => {
+      if (commStatusFilter !== 'all') {
+        const isPaid = c.settlementStatus === 'paid';
+        if (commStatusFilter === 'paid' && !isPaid) return false;
+        if (commStatusFilter === 'pending' && isPaid) return false;
+      }
+      if (commSearchKeyword.trim()) {
+        const kw = commSearchKeyword.trim().toLowerCase();
+        const matchTenant = (c.tenantName || '').toLowerCase().includes(kw);
+        const matchDonationId = (c.donationId || '').toLowerCase().includes(kw);
+        const matchDonor = ((c as any).donorName || '').toLowerCase().includes(kw);
+        if (!matchTenant && !matchDonationId && !matchDonor) return false;
+      }
+      return true;
+    });
+  }, [commissions, commStatusFilter, commSearchKeyword]);
 
   // 모달 상태
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
@@ -973,44 +994,122 @@ export default function PartnerDetailPage() {
       {/* ── 탭 4: 수수료 정산 및 거래 원장 ── */}
       {tab === 'commissions' && (
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+          <CardHeader className="pb-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
                 <Coins className="h-4 w-4 text-emerald-600" /> 수수료 발생 & 정산 내역 원장
               </CardTitle>
               <CardDescription className="text-[11.5px]">결제 발생 시 분배된 수수료 정산 내역입니다.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="text-xs">
-              <FileText className="h-3.5 w-3.5 mr-1" /> 엑셀 다운로드
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="text-xs">
+                <FileText className="h-3.5 w-3.5 mr-1" /> 엑셀 다운로드
+              </Button>
+            </div>
           </CardHeader>
+
+          {/* 필터 및 검색 바 */}
+          <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                {[
+                  { key: 'all' as const, label: '전체', count: commissions.length },
+                  { key: 'pending' as const, label: '정산 대기', count: commissions.filter(c => c.settlementStatus !== 'paid').length },
+                  { key: 'paid' as const, label: '정산 완료', count: commissions.filter(c => c.settlementStatus === 'paid').length },
+                ].map(item => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setCommStatusFilter(item.key)}
+                    className={`px-2.5 py-1 rounded-[6px] text-[11px] font-semibold transition-all cursor-pointer border-0 ${
+                      commStatusFilter === item.key
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {item.label} ({item.count})
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative min-w-[220px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <Input
+                type="text"
+                value={commSearchKeyword}
+                onChange={e => setCommSearchKeyword(e.target.value)}
+                placeholder="단체명, 결제번호 검색..."
+                className="pl-8 pr-7 h-8 text-xs bg-white"
+              />
+              {commSearchKeyword && (
+                <button
+                  type="button"
+                  onClick={() => setCommSearchKeyword('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 text-[11px]">
                   <TableHead>거래 일시</TableHead>
                   <TableHead>해당 가맹 단체</TableHead>
+                  <TableHead>결제번호</TableHead>
                   <TableHead className="text-right">원결제금액</TableHead>
                   <TableHead className="text-right">파트너 수수료</TableHead>
                   <TableHead className="text-center">정산 상태</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {commissions.map(c => (
-                  <TableRow key={c.id} className="hover:bg-slate-50/50">
-                    <TableCell className="font-mono text-xs text-slate-600">{fmtDate(c.createdAt)}</TableCell>
-                    <TableCell className="font-semibold text-xs text-slate-800">{c.tenantName}</TableCell>
-                    <TableCell className="text-right font-mono text-xs text-slate-700">{c.donationAmount.toLocaleString()}원</TableCell>
-                    <TableCell className="text-right font-bold text-xs text-purple-700">{c.commissionAmount.toLocaleString()}원</TableCell>
-                    <TableCell className="text-center">
-                      {c.settlementStatus === 'paid' ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">정산 완료</Badge>
-                      ) : (
-                        <Badge className="bg-amber-100 text-amber-700 text-[10px]">정산 대기</Badge>
-                      )}
+                {filteredCommissions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-slate-400">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <Receipt className="h-7 w-7 text-slate-300" />
+                        <p className="text-xs font-semibold text-slate-600">
+                          {commStatusFilter !== 'all' || commSearchKeyword
+                            ? '선택하신 조건에 부합하는 수수료 내역이 없습니다.'
+                            : '등록된 수수료 정산 내역이 없습니다.'}
+                        </p>
+                        {(commStatusFilter !== 'all' || commSearchKeyword) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCommStatusFilter('all');
+                              setCommSearchKeyword('');
+                            }}
+                            className="text-[11px] text-purple-600 hover:underline font-medium cursor-pointer"
+                          >
+                            필터 초기화
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredCommissions.map(c => (
+                    <TableRow key={c.id} className="hover:bg-slate-50/50">
+                      <TableCell className="font-mono text-xs text-slate-600">{fmtDate(c.createdAt)}</TableCell>
+                      <TableCell className="font-semibold text-xs text-slate-800">{c.tenantName}</TableCell>
+                      <TableCell className="font-mono text-[11px] text-slate-500">{c.donationId}</TableCell>
+                      <TableCell className="text-right font-mono text-xs text-slate-700">{c.donationAmount.toLocaleString()}원</TableCell>
+                      <TableCell className="text-right font-bold text-xs text-purple-700">{c.commissionAmount.toLocaleString()}원</TableCell>
+                      <TableCell className="text-center">
+                        {c.settlementStatus === 'paid' ? (
+                          <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">정산 완료</Badge>
+                        ) : (
+                          <Badge className="bg-amber-100 text-amber-700 text-[10px]">정산 대기</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

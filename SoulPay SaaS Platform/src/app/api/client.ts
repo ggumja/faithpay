@@ -671,6 +671,10 @@ export interface PartnerCommission {
   agencyRate?: number;    // 대리점 마진율
   floorRate?: number;     // 영업자 베이스 수수료율
   contractRate?: number;  // 가맹점 계약 수수료율
+  paymentMethod?: string;
+  donorName?: string;
+  isRecurring?: boolean;
+  paymentType?: string;
 }
 
 /** 메인 관리자 집행 정산 (batch 단위 입금 확정본) */
