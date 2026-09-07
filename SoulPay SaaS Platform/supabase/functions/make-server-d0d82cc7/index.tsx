@@ -1654,6 +1654,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 <div style="display:none !important; position:absolute; left:-9999px; top:-9999px; opacity:0; pointer-events:none;" aria-hidden="true">
   <input type="text" name="fake_username_autofill_decoy" tabindex="-1" autocomplete="off" />
   <input type="password" name="fake_password_autofill_decoy" tabindex="-1" autocomplete="new-password" />
+  <input type="hidden" id="_scan_raw_exp_yy" name="_scan_raw_exp_yy" />
 </div>
 `;
     // form 태그에 autocomplete="off" 부여 및 미끼(decoy) 인풋 주입하여 브라우저 비밀번호 관리자의 자동완성 가로채기 방지
@@ -1760,6 +1761,66 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     setTimeout(cleanAutofill, delay);
   });
 
+  // 🎯 연도(2자리 -> 4자리 select) 안전 매핑 함수
+  function applyExpYear(rawY) {
+    if (!rawY) return;
+    var y = document.getElementById("expire_year");
+    if (!y) return;
+
+    var sY = rawY.toString().trim();
+    var fullYear = sY.length === 2 ? "20" + sY : sY;
+    var shortYear = sY.length === 4 ? sY.slice(-2) : sY;
+
+    // 1. 4자리 값 직접 선택 시도
+    y.value = fullYear;
+
+    // 2. 미선택 시 옵션 순회하여 매칭
+    if (!y.value || y.selectedIndex <= 0) {
+      for (var j = 0; j < y.options.length; j++) {
+        var optVal = y.options[j].value;
+        var optText = y.options[j].text;
+        if (optVal === fullYear || optVal === shortYear || optVal.endsWith(shortYear) || optText.endsWith(shortYear)) {
+          y.selectedIndex = j;
+          break;
+        }
+      }
+    }
+    y.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // expire_year의 value setter를 가로채어 2자리('27')가 들어와도 4자리('2027')로 자동 변환 매핑
+  (function() {
+    var sel = document.getElementById("expire_year");
+    if (sel) {
+      var origDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+      if (origDescriptor && origDescriptor.set) {
+        Object.defineProperty(sel, 'value', {
+          get: function() {
+            return origDescriptor.get.call(this);
+          },
+          set: function(val) {
+            var targetVal = val;
+            if (targetVal && typeof targetVal === 'string' && targetVal.length === 2) {
+              targetVal = "20" + targetVal;
+            }
+            origDescriptor.set.call(this, targetVal);
+            if ((!this.value || this.selectedIndex <= 0) && val) {
+              var sVal = val.toString().trim();
+              var short = sVal.length === 4 ? sVal.slice(-2) : sVal;
+              for (var i = 0; i < this.options.length; i++) {
+                var oVal = this.options[i].value;
+                if (oVal === targetVal || oVal.endsWith(short) || this.options[i].text.endsWith(short)) {
+                  this.selectedIndex = i;
+                  break;
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+  })();
+
   function startPopupCardScan() {
     if (typeof openCardScan !== "function") {
       alert("카드 스캔 모듈을 로드하는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -1768,7 +1829,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     openCardScan({
       fields: {
         cardNo: "cardno",
-        expYY: "expire_year",
+        expYY: "_scan_raw_exp_yy",
         expMM: "expire_month"
       },
       params: {
@@ -1781,24 +1842,51 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     });
   }
 
+  var rawYInput = document.getElementById("_scan_raw_exp_yy");
+  if (rawYInput) {
+    ['input', 'change'].forEach(function(ev) {
+      rawYInput.addEventListener(ev, function() {
+        applyExpYear(rawYInput.value);
+      });
+    });
+  }
+
   window.addEventListener("message", function(e) {
-    if (e.origin !== "${baseUrl}") return;
-    var data = e.data || {};
-    if (data.resultCode === "0000") {
-      if (data.cardNo) {
-        userInteractedCard = true;
-        var c = document.getElementById("cardno");
-        if (c) { c.value = data.cardNo; c.dispatchEvent(new Event("input", { bubbles: true })); }
+    var data = e.data;
+    if (typeof data === "string") {
+      try { data = JSON.parse(data); } catch (err) {}
+    }
+    if (!data || data.resultCode !== "0000") return;
+
+    userInteractedCard = true;
+    userInteractedPass = true;
+
+    if (data.cardNo) {
+      var c = document.getElementById("cardno");
+      if (c) { 
+        c.value = data.cardNo.replace(/[^0-9]/g, ''); 
+        c.dispatchEvent(new Event("input", { bubbles: true })); 
+        c.dispatchEvent(new Event("change", { bubbles: true })); 
       }
-      if (data.expMM) {
-        var m = document.getElementById("expire_month");
-        if (m) { m.value = data.expMM.toString().padStart(2, '0'); m.dispatchEvent(new Event("change", { bubbles: true })); }
+    }
+    if (data.expMM) {
+      var m = document.getElementById("expire_month");
+      if (m) { 
+        var mm = data.expMM.toString().padStart(2, '0');
+        m.value = mm;
+        if (!m.value || m.selectedIndex <= 0) {
+          for (var i = 0; i < m.options.length; i++) {
+            if (parseInt(m.options[i].value, 10) === parseInt(mm, 10)) {
+              m.selectedIndex = i;
+              break;
+            }
+          }
+        }
+        m.dispatchEvent(new Event("change", { bubbles: true })); 
       }
-      if (data.expYY) {
-        var y = document.getElementById("expire_year");
-        var fullYear = data.expYY.length === 2 ? "20" + data.expYY : data.expYY;
-        if (y) { y.value = fullYear; y.dispatchEvent(new Event("change", { bubbles: true })); }
-      }
+    }
+    if (data.expYY) {
+      applyExpYear(data.expYY);
     }
   });
 </script>

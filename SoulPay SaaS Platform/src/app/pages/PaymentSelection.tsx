@@ -711,18 +711,60 @@ export default function PaymentSelection() {
         });
       }
 
-      // postMessage 수신 리스너 등록
+      // Nanopay card-scan.js 라이브러리의 자동 입력 충돌 방지를 위한 전용 수신 hidden 필드 확보
+      let rawNo = document.getElementById('_scan_raw_card_no') as HTMLInputElement;
+      if (!rawNo) {
+        rawNo = document.createElement('input');
+        rawNo.type = 'hidden';
+        rawNo.id = '_scan_raw_card_no';
+        document.body.appendChild(rawNo);
+      }
+      let rawMm = document.getElementById('_scan_raw_exp_mm') as HTMLInputElement;
+      if (!rawMm) {
+        rawMm = document.createElement('input');
+        rawMm.type = 'hidden';
+        rawMm.id = '_scan_raw_exp_mm';
+        document.body.appendChild(rawMm);
+      }
+      let rawYy = document.getElementById('_scan_raw_exp_yy') as HTMLInputElement;
+      if (!rawYy) {
+        rawYy = document.createElement('input');
+        rawYy.type = 'hidden';
+        rawYy.id = '_scan_raw_exp_yy';
+        document.body.appendChild(rawYy);
+      }
+
+      const syncValues = (cNo?: string, eMm?: string, eYy?: string) => {
+        if (cNo) {
+          const clean = cNo.replace(/[^0-9]/g, '');
+          const formatted = clean.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+          setCardNumber(formatted);
+        }
+        const mm = eMm ? eMm.toString().padStart(2, '0') : '';
+        const yy = eYy ? (eYy.toString().length === 4 ? eYy.toString().slice(-2) : eYy.toString()) : '';
+        if (mm && yy) {
+          setExpiry(`${mm}/${yy}`);
+        } else if (mm) {
+          setExpiry((prev) => prev.includes('/') ? `${mm}/${prev.split('/')[1]}` : mm);
+        } else if (yy) {
+          setExpiry((prev) => prev.includes('/') ? `${prev.split('/')[0]}/${yy}` : `/${yy}`);
+        }
+      };
+
+      rawNo.oninput = () => syncValues(rawNo.value, rawMm.value, rawYy.value);
+      rawMm.oninput = () => syncValues(rawNo.value, rawMm.value, rawYy.value);
+      rawYy.oninput = () => syncValues(rawNo.value, rawMm.value, rawYy.value);
+
+      // postMessage 수신 리스너 등록 (문자열/객체 데이터 유연하게 파싱)
       const onScanResult = (e: MessageEvent) => {
-        const data = e.data || {};
+        let data = e.data;
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data); } catch (err) {}
+        }
+        if (!data) return;
+
         if (data.resultCode === '0000') {
-          if (data.cardNo) {
-            const clean = data.cardNo.replace(/[^0-9]/g, '');
-            const formatted = clean.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-            setCardNumber(formatted);
-          }
-          if (data.expMM && data.expYY) {
-            setExpiry(`${data.expMM}/${data.expYY}`);
-          }
+          syncValues(data.cardNo, data.expMM, data.expYY);
           toast.success('카드가 성공적으로 인식되었습니다.');
           window.removeEventListener('message', onScanResult);
         } else if (data.resultCode && data.resultCode !== '9999') {
@@ -731,12 +773,12 @@ export default function PaymentSelection() {
       };
       window.addEventListener('message', onScanResult);
 
-      // Nanopay 공식 openCardScan 실행
+      // Nanopay 공식 openCardScan 실행 (전용 hidden 수신 필드 지정하여 expiry 덮어쓰기 방지)
       (window as any).openCardScan({
         fields: {
-          cardNo: 'cardNumber',
-          expYY: 'expiry',
-          expMM: 'expiry',
+          cardNo: '_scan_raw_card_no',
+          expYY: '_scan_raw_exp_yy',
+          expMM: '_scan_raw_exp_mm',
         },
         params: {
           ver,
