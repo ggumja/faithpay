@@ -1035,6 +1035,12 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
 
     return c.json({
       success: true,
+      data: {
+        donationId: tempDonationId,
+        redirectUrl,
+        html: nanoHtml,
+        NANO_API_URL,
+      },
       donationId: tempDonationId,
       redirectUrl,
       html: nanoHtml,

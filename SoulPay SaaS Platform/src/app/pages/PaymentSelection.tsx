@@ -587,21 +587,28 @@ export default function PaymentSelection() {
         paymentWindow.document.write('<p style="text-align:center;padding-top:60px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;color:#334155;">나노페이 안전 결제창으로 연결 중입니다...</p>');
 
         const isMobile = window.innerWidth <= 768;
+        const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || 'dream';
         const res = await paymentAPI.processCertRequest({
-          tenantId: currentTenant.id,
+          tenantId: targetTenantId,
           donationData: donationFormData,
           deviceType: isMobile ? 'mobile' : 'pc',
           payWay: 'card',
         });
 
-        if (!res.success || !res.data) {
+        console.log('[Nanopay Cert] processCertRequest response:', res);
+
+        const certData = (res as any)?.data || res;
+        const redirectUrl = certData?.redirectUrl || (res as any)?.redirectUrl;
+        const html = certData?.html || (res as any)?.html;
+        const donationId = certData?.donationId || (res as any)?.donationId;
+
+        if (!res.success || (!redirectUrl && !html)) {
           paymentWindow.close();
-          toast.error(res.error || '결제창 요청에 실패했습니다.');
+          toast.error(res.error || (certData as any)?.error || '결제창 요청에 실패했습니다.');
           setIsProcessing(false);
           return;
         }
 
-        const { redirectUrl, html, donationId } = res.data;
         if (redirectUrl) {
           paymentWindow.location.href = redirectUrl;
         } else if (html) {
