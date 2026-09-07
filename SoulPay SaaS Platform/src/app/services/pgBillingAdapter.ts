@@ -40,22 +40,25 @@ export class PGBillingAdapter {
   }
 
   /**
-   * 1. NanoPG (나노PG) 빌키 정기결제 승인
-   * Endpoint: POST https://pay.nanopay.co.kr/api/payment/recure/pay.io
+   * 1. NanoPG (나노PG) 빌키 정기결제 승인 (공식 v2.2.1 규격)
+   * Endpoint: POST https://pay.nanopay.co.kr/api/payment/recure/billpay.io (운영)
+   *           POST https://dev3.nanopay.co.kr/api/payment/recure/billpay.io (테스트)
+   * Header: Content-Type: application/json, API_KEY: {apiKey}
+   * Security: encData (AES-256-CBC, PKCS7 enc of {userId, billKey})
+   * Note: 보안상의 이유로 실제 승인 API 호출은 Edge Function 배치 스케줄러(/payment/recurring/batch-run)에서 안전하게 수행됩니다.
    */
   private async executeNanoPayBilling(req: BillingPaymentRequest): Promise<BillingPaymentResult> {
     try {
       console.log(`[NanoPG Billing] Executing payment for Sub: ${req.subscriptionId}, BillKey: ${req.billingKey}`);
 
-      // 🔴 NanoPG API payload formatting
+      // 🔴 NanoPG v2.2.1 REST API payload formatting
       const payload = {
         ver: '240000005',
-        billKey: req.billingKey,
         compOrderNo: req.orderId,
         goodsName: req.orderName,
         amount: req.amount,
         buyerName: req.customerName,
-        buyerTel: req.customerPhone || '',
+        buyerTel: (req.customerPhone || '').replace(/[^0-9]/g, ''),
         timestamp: Date.now().toString(),
       };
 

@@ -413,7 +413,7 @@ export default function PaymentSelection() {
       return;
     }
 
-    // 나노 PG 정기결제 빌링키 자동 발급 (창 호출 방식)
+    // 나노 PG 정기결제 빌링키 자동 발급 (창 호출 방식 - v2.2.1)
     if (donationFormData.isRecurring && isNanopay) {
       setIsProcessing(true);
       toast.info('정기결제 카드 등록창을 연결하고 있습니다...');
@@ -428,78 +428,44 @@ export default function PaymentSelection() {
 
         paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제(빌링키) 등록창으로 연결 중입니다...</p>');
 
-        const shopcode = currentTenant?.paymentConfig?.mid || "240000006";
-        const loginId = currentTenant?.paymentConfig?.loginId || "smbtestshop";
-        const ver = currentTenant?.paymentConfig?.ver || "smbtest";
-        const apiKey = currentTenant?.paymentConfig?.apiKey || "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-        
-        const now = new Date();
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
         const tempDonationId = generateTransactionId();
-        const donorName = donationFormData.name || terms.donor || "무기명";
         const donorPhone = (donationFormData.phone || "").replace(/[^0-9]/g, '');
-        const popupOpenedAt = Date.now(); // 팝업 열린 시각 기록
+        const popupOpenedAt = Date.now();
+        const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
 
-        const isMobile = window.innerWidth <= 768;
-        const isTestMode = currentTenant?.paymentConfig?.devMode !== undefined 
-          ? Boolean(currentTenant.paymentConfig.devMode)
-          : (shopcode === '240000006' || shopcode === 'shoptest' || !apiKey);
-        const nanoBaseUrl = isTestMode ? 'https://dev3.nanopay.co.kr' : 'https://pay.nanopay.co.kr';
-        const nanoUrl = `${nanoBaseUrl}/api/billkey/mobile/request.io`;
-
-        const hashRawString = `${shopcode}${ediDate}${loginId}${apiKey}`;
-        const msgBuffer = new TextEncoder().encode(hashRawString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashValue = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-
-        const compData = JSON.stringify({
-          tenantId: currentTenant.id,
+        // 나노페이 v2.2.1 정기결제 빌키 발급 요청 (서버사이드에서 reqkey.io 호출 후 Smartro 카드 등록창 HTML 수신)
+        const res = await paymentAPI.processBillKeyRequest({
+          tenantId: targetTenantId,
           donationData: {
             ...donationFormData,
             recurringInterval,
             recurringDayOfWeek: recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
             recurringDay: recurringInterval === 'monthly' ? recurringDay : undefined,
-          }
+          },
         });
 
-        const payFormHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head><meta charset="utf-8"><title>Nanopay BillKey Registration</title></head>
-          <body>
-            <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 정기결제 등록창으로 이동 중입니다...</p>
-            <form id="nanoBillKeyForm" method="POST" action="${nanoUrl}">
-              <input type="hidden" name="ver" value="${ver}" />
-              <input type="hidden" name="loginId" value="${loginId}" />
-              <input type="hidden" name="shopcode" value="${shopcode}" />
-              <input type="hidden" name="apiKey" value="${apiKey}" />
-              <input type="hidden" name="API_KEY" value="${apiKey}" />
-              <input type="hidden" name="orderName" value="${donorName}" />
-              <input type="hidden" name="orderTel" value="${donorPhone}" />
-              <input type="hidden" name="orderEmail" value="donator@soulpay.kr" />
-              <input type="hidden" name="payWay" value="card" />
-              <input type="hidden" name="goodsName" value="${donationFormData.itemName || 'SoulPay 정기 봉헌금'}" />
-              <input type="hidden" name="receiveUrl" value="${API_BASE_URL}/payment/process/billkey/callback" />
-              <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
-              <input type="hidden" name="compOrderMem" value="${donorName}" />
-              <input type="hidden" name="ediDate" value="${ediDate}" />
-              <input type="hidden" name="hashValue" value="${hashValue}" />
-              <input type="hidden" name="compData" value='${compData}' />
-            </form>
-            <script>document.getElementById('nanoBillKeyForm').submit();</script>
-          </body>
-          </html>
-        `;
+        console.log('[Nanopay BillKey] processBillKeyRequest response:', res);
 
+        const billKeyData = (res as any)?.data || res;
+        const html = billKeyData?.html || (res as any)?.html;
+
+        if (!res.success || !html) {
+          paymentWindow.close();
+          toast.error(res.error || (billKeyData as any)?.error || '나노페이 정기결제 카드 등록창 요청에 실패했습니다.');
+          setIsProcessing(false);
+          return;
+        }
+
+        // Smartro 카드 등록창 HTML 주입
         try {
           if (paymentWindow && !paymentWindow.closed) {
             paymentWindow.document.open();
-            paymentWindow.document.write(payFormHtml);
+            paymentWindow.document.write(html);
             paymentWindow.document.close();
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('Failed to write HTML to payment window:', e);
+        }
 
         // snapshot 저장 (DonationComplete 복원용)
         const snapPayload = {
@@ -517,28 +483,50 @@ export default function PaymentSelection() {
 
         toast.success('카드 등록창이 열렸습니다. 카드 정보 입력 후 등록을 완료해주세요.');
 
-        // ① 팝업창 닫힘 감지 (500ms 간격)
+        // ① 콜백 팝업창에서 발송하는 postMessage 이벤트 수신 (즉시 반응)
+        let messageReceived = false;
+        const messageHandler = (event: MessageEvent) => {
+          if (event.data && event.data.type === 'SOULPAY_BILLKEY_RESULT') {
+            messageReceived = true;
+            window.removeEventListener('message', messageHandler);
+            if (event.data.resultCode === '0000') {
+              setIsProcessing(false);
+              toast.success('정기결제 카드 등록이 완료되었습니다!');
+              navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
+            } else {
+              setIsProcessing(false);
+              toast.error(event.data.resultMsg || '카드 등록에 실패했습니다.');
+            }
+          }
+        };
+        window.addEventListener('message', messageHandler);
+
+        // ② 팝업창 닫힘 감지 및 DB Polling (postMessage 미수신 대비 보조 동기화)
         const popupPollTimer = setInterval(() => {
           if (!paymentWindow || paymentWindow.closed) {
             clearInterval(popupPollTimer);
+            if (messageReceived) return;
+
             toast.info('카드 등록 완료 여부를 확인하고 있습니다...');
 
-            // ② 팝업 닫힌 후 2초 대기 (나노PG 콜백 처리 시간)
             setTimeout(async () => {
-              // ③ DB에서 subscription 생성 여부 polling (2초 간격, 최대 15초)
               let checkAttempts = 0;
               const dbPollTimer = setInterval(async () => {
+                if (messageReceived) {
+                  clearInterval(dbPollTimer);
+                  return;
+                }
                 checkAttempts++;
                 try {
                   const subRes = await subscriptionAPI.getByPhone(donorPhone);
                   if (subRes.success && subRes.data && subRes.data.length > 0) {
-                    // 팝업 열린 이후 생성된 subscription이 있는지 확인 (60초 이내)
                     const recentSub = subRes.data.find((s: any) => {
                       const createdAt = new Date(s.createdAt || s.created_at).getTime();
-                      return createdAt >= popupOpenedAt - 5000; // 5초 여유
+                      return createdAt >= popupOpenedAt - 5000;
                     });
                     if (recentSub) {
                       clearInterval(dbPollTimer);
+                      window.removeEventListener('message', messageHandler);
                       setIsProcessing(false);
                       toast.success('정기결제 카드 등록이 완료되었습니다!');
                       navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
@@ -547,19 +535,21 @@ export default function PaymentSelection() {
                   }
                 } catch (e) {}
 
-                if (checkAttempts >= 8) { // 최대 16초 대기
+                if (checkAttempts >= 8) {
                   clearInterval(dbPollTimer);
+                  window.removeEventListener('message', messageHandler);
                   setIsProcessing(false);
                   toast.error('카드 등록이 완료되지 않았습니다. 다시 시도해주세요.');
                 }
               }, 2000);
-            }, 2000);
+            }, 1500);
           }
         }, 500);
 
-        // 최대 10분 후 팝업 강제 종료
+        // 최대 10분 후 타임아웃 정리
         setTimeout(() => {
           clearInterval(popupPollTimer);
+          window.removeEventListener('message', messageHandler);
           if (paymentWindow && !paymentWindow.closed) {
             paymentWindow.close();
           }

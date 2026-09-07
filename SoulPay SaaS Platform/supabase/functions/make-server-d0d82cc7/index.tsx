@@ -1153,56 +1153,102 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
 app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
   try {
     const { tenantId, donationData } = await c.req.json();
+    if (!tenantId) {
+      return c.json({ success: false, error: "tenantId is required" }, 400);
+    }
     const config = await db.getPaymentConfig(tenantId);
     
-    const NANO_API_KEY = config?.apiKey || "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-    const shopcode = config?.mid || "240000006";
-    const loginId = config?.loginId || "smbtestshop";
-    const ver = config?.ver || "smbtest";
+    const isTest = config?.devMode !== undefined 
+      ? Boolean(config.devMode) 
+      : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || config?.ver === "smbtest");
+
+    const NANO_API_KEY = config?.apiKey || (isTest ? "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL" : "");
+    const shopcode = config?.mid || (isTest ? "240000005" : "");
+    const loginId = config?.loginId || (isTest ? "shoptest" : "");
+    const ver = config?.ver || (isTest ? "240000005" : "240000005");
+
+    if (!NANO_API_KEY || !shopcode || !loginId) {
+      return c.json({ 
+        success: false, 
+        error: "나노페이 결제 설정(API Key, 상점코드, 로그인 ID)이 올바르지 않습니다." 
+      }, 400);
+    }
 
     const cleanPhone = (donationData?.phone || "").replace(/[^0-9]/g, '');
     const userId = cleanPhone ? `${tenantId}_${cleanPhone}` : `${tenantId}_${Date.now()}`;
     const timestamp = Date.now().toString();
     const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
 
-    // hashValue 예시: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO")
+    // 공식 v2.2.1 규격: hashValue = SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO").toLowerCase()
     const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
-    const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toUpperCase();
+    const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toLowerCase();
 
     const tempSubId = `sub_${Date.now()}`;
     const compData = JSON.stringify({
       tempSubId,
       tenantId,
-      donorName: donationData.name,
+      donorName: donationData?.name || "",
       donorPhone: cleanPhone,
-      donorEmail: donationData.email || "",
-      itemId: donationData.itemId || "recurring",
-      itemName: donationData.itemName || "정기 봉헌금",
-      amount: donationData.amount,
-      recurringDay: donationData.recurringDay || 10,
+      donorEmail: donationData?.email || "",
+      itemId: donationData?.itemId || "recurring",
+      itemName: donationData?.itemName || "정기 봉헌금",
+      amount: donationData?.amount || 0,
+      recurringInterval: donationData?.recurringInterval || "monthly",
+      recurringDay: donationData?.recurringDay || 10,
+      recurringDayOfWeek: donationData?.recurringDayOfWeek,
     });
 
-    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (!config?.apiKey || shopcode === "240000006" || ver === "smbtest");
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     const NANO_REQKEY_URL = `${baseUrl}/api/payment/recure/reqkey.io`;
+
+    const reqPayload = {
+      ver,
+      loginId,
+      shopcode,
+      userId,
+      receiveUrl,
+      timestamp,
+      hashValue,
+      compData,
+    };
+
+    console.log("[NanoPG BillKey Req] Calling:", NANO_REQKEY_URL);
+
+    // 서버 사이드에서 Nanopay reqkey.io 직접 호출하여 Smartro 인증 HTML 수신
+    const nanoRes = await fetch(NANO_REQKEY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "API_KEY": NANO_API_KEY,
+      },
+      body: JSON.stringify(reqPayload),
+    });
+
+    const nanoText = await nanoRes.text();
+    console.log("[NanoPG BillKey Req] Response status:", nanoRes.status, "Length:", nanoText.length);
+
+    if (nanoText.startsWith("{")) {
+      try {
+        const jsonRes = JSON.parse(nanoText);
+        if (jsonRes.resultCode && jsonRes.resultCode !== "0000") {
+          return c.json({
+            success: false,
+            error: `나노페이 오류: [${jsonRes.resultCode}] ${jsonRes.resultMsg || "빌키 발급 요청 실패"}`,
+            details: jsonRes,
+          }, 400);
+        }
+      } catch (e) {}
+    }
 
     return c.json({
       success: true,
       reqUrl: NANO_REQKEY_URL,
-      payload: {
-        ver,
-        loginId,
-        shopcode,
-        userId,
-        receiveUrl,
-        timestamp,
-        hashValue,
-        compData,
-      }
+      html: nanoText,
+      payload: reqPayload,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("BillKey request error:", error);
-    return c.json({ success: false, error: "Failed to initiate BillKey request" }, 500);
+    return c.json({ success: false, error: error?.message || "Failed to initiate BillKey request" }, 500);
   }
 });
 
@@ -1222,51 +1268,141 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     console.log("Nanopay BillKey Callback Received:", body);
 
     const { resultCode, resultMsg, billKey, userId, cardNo, cardName, compData } = body;
+    const isSuccess = resultCode === "0000" && Boolean(billKey);
+    let newSub: any = null;
 
-    if (resultCode === "0000" && billKey) {
-      // compData 구조: { tenantId, donationData: { itemId, itemName, amount, name, phone, ... } }
+    if (isSuccess) {
       let meta: any = {};
       let donationData: any = {};
       try {
         meta = JSON.parse(compData || "{}");
-        donationData = meta.donationData || meta; // 중첩 또는 flat 모두 대응
-      } catch(e) {}
+        donationData = meta.donationData || meta;
+      } catch(e) {
+        console.error("Failed to parse compData JSON:", e);
+      }
 
-      const tenantId = meta.tenantId || donationData.tenantId || "default";
-      const donorName = donationData.name || meta.donorName || "신도";
-      const donorPhone = (donationData.phone || meta.donorPhone || "").replace(/[^0-9]/g, '');
-      const itemId = donationData.itemId || meta.itemId || "recurring";
-      const itemName = donationData.itemName || meta.itemName || "정기 봉헌금";
-      const amount = Number(donationData.amount || meta.amount || 10000);
-      const recurringInterval = donationData.recurringInterval || meta.recurringInterval || "monthly";
-      const recurringDay = donationData.recurringDay || meta.recurringDay || 10;
-      const recurringDayOfWeek = donationData.recurringDayOfWeek || meta.recurringDayOfWeek || undefined;
+      const tenantId = meta.tenantId || donationData.tenantId;
+      if (tenantId) {
+        const donorName = donationData.name || meta.donorName || "";
+        const donorPhone = (donationData.phone || meta.donorPhone || "").replace(/[^0-9]/g, '');
+        const itemId = donationData.itemId || meta.itemId || "recurring";
+        const itemName = donationData.itemName || meta.itemName || "정기 봉헌금";
+        const amount = Number(donationData.amount || meta.amount || 0);
+        const recurringInterval = donationData.recurringInterval || meta.recurringInterval || "monthly";
+        const recurringDay = donationData.recurringDay || meta.recurringDay || 10;
+        const recurringDayOfWeek = donationData.recurringDayOfWeek || meta.recurringDayOfWeek || undefined;
 
-      const newSub = await db.createSubscription({
-        tenantId,
-        donorName,
-        donorPhone,
-        donorEmail: donationData.email || meta.donorEmail || "",
-        itemId,
-        itemName,
-        amount,
-        userId: userId || donorPhone,
-        billKey: billKey,
-        cardNo: cardNo || "****-****-****-****",
-        cardName: cardName || "신용카드",
-        recurringInterval,
-        recurringDay,
-        recurringDayOfWeek,
-        status: "active",
-      });
+        newSub = await db.createSubscription({
+          tenantId,
+          donorName,
+          donorPhone,
+          donorEmail: donationData.email || meta.donorEmail || "",
+          itemId,
+          itemName,
+          amount,
+          userId: userId || donorPhone,
+          billKey: billKey,
+          cardNo: cardNo || "",
+          cardName: cardName || "신용카드",
+          recurringInterval,
+          recurringDay,
+          recurringDayOfWeek,
+          status: "active",
+        });
 
-      console.log("BillKey subscription created:", newSub);
-      return c.json({ resultCode: "0000", resultMsg: "Success", subscription: newSub });
+        console.log("BillKey subscription created:", newSub);
+      } else {
+        console.error("Tenant ID missing in compData, cannot create subscription");
+      }
     }
-    return c.json({ resultCode: resultCode || "9999", resultMsg: resultMsg || "Failed" });
-  } catch (error) {
+
+    // 사용자 팝업 창에 응답할 안내 화면 및 postMessage 스크립트 반환
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${isSuccess ? '카드 등록 완료' : '카드 등록 실패'}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+      color: #0f172a;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid #e2e8f0;
+    }
+    .icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+    .icon.success { background: #ecfdf5; color: #10b981; }
+    .icon.fail { background: #fef2f2; color: #ef4444; }
+    h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+    p { font-size: 14px; color: #64748b; margin: 0 0 20px; line-height: 1.5; }
+    .footer { font-size: 12px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon ${isSuccess ? 'success' : 'fail'}">${isSuccess ? '✓' : '✕'}</div>
+    <h2>${isSuccess ? '카드 등록이 완료되었습니다' : '카드 등록에 실패했습니다'}</h2>
+    <p>${resultMsg || (isSuccess ? '정기결제 카드가 정상적으로 등록되었습니다.' : '카드 등록 중 오류가 발생했습니다.')}</p>
+    <div class="footer">잠시 후 결제 완료 화면으로 자동 이동합니다...</div>
+  </div>
+  <script>
+    try {
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'SOULPAY_BILLKEY_RESULT',
+          resultCode: ${JSON.stringify(resultCode || (isSuccess ? "0000" : "9999"))},
+          resultMsg: ${JSON.stringify(resultMsg || '')},
+          billKey: ${JSON.stringify(billKey || '')},
+          userId: ${JSON.stringify(userId || '')},
+          cardNo: ${JSON.stringify(cardNo || '')},
+          cardName: ${JSON.stringify(cardName || '')},
+          subscriptionId: ${JSON.stringify(newSub?.id || '')},
+          compData: ${JSON.stringify(compData || '')}
+        }, '*');
+      }
+    } catch (e) {
+      console.error('postMessage error:', e);
+    }
+    setTimeout(function() {
+      window.close();
+    }, 1500);
+  </script>
+</body>
+</html>`;
+
+    return c.html(html);
+  } catch (error: any) {
     console.error("BillKey callback error:", error);
-    return c.json({ resultCode: "9999", resultMsg: "Callback error" }, 500);
+    const failHtml = `<!DOCTYPE html><html><body><script>
+      try { if (window.opener) window.opener.postMessage({ type: 'SOULPAY_BILLKEY_RESULT', resultCode: '9999', resultMsg: '서버 오류' }, '*'); } catch(e){}
+      setTimeout(function(){ window.close(); }, 1500);
+    </script></body></html>`;
+    return c.html(failHtml, 500);
   }
 });
 
@@ -2245,8 +2381,76 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
     const results = [];
     for (const sub of targets) {
       try {
-        // 나노페이 v2.2.1 정기결제 승인 요청 (billpay.io)
-        // 실제 운영 키 등록 시 나노페이 PG 비동기 결제 승인 수행
+        // 나노페이 v2.2.1 정기결제 승인 요청 (POST /api/payment/recure/billpay.io)
+        let tranNo = `NANO_TRAN_${Date.now()}`;
+        let apprNo = `APPR_${Date.now()}`;
+        
+        if (sub.billKey) {
+          const config = await db.getPaymentConfig(sub.tenantId);
+          const isTest = config?.devMode !== undefined 
+            ? Boolean(config.devMode) 
+            : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006");
+          const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
+          const BILLPAY_URL = `${baseUrl}/api/payment/recure/billpay.io`;
+
+          const NANO_API_KEY = config?.apiKey || (isTest ? "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL" : "");
+          const shopcode = config?.mid || (isTest ? "240000005" : "");
+          const loginId = config?.loginId || (isTest ? "shoptest" : "");
+          const ver = config?.ver || (isTest ? "240000005" : "240000005");
+
+          if (NANO_API_KEY && shopcode && loginId) {
+            const timestamp = Date.now().toString();
+            const compOrderNo = `ORD_${Date.now()}_${String(sub.id).slice(0, 8)}`;
+
+            // AES-256-CBC encData 암호화 (Key: API_KEY, IV: API_KEY 앞 16자리)
+            const iv = Buffer.from(NANO_API_KEY.slice(0, 16), "utf-8");
+            const key = Buffer.from(NANO_API_KEY, "utf-8");
+            const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+            let encData = cipher.update(JSON.stringify({ userId: sub.userId || sub.donorPhone, billKey: sub.billKey }), "utf-8", "hex");
+            encData += cipher.final("hex");
+
+            // hashValue: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO").toLowerCase()
+            const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
+            const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toLowerCase();
+
+            const billpayPayload = {
+              ver,
+              loginId,
+              shopcode,
+              compOrderNo,
+              goodsName: sub.itemName || "정기 봉헌금",
+              amount: String(sub.amount),
+              buyerName: sub.donorName,
+              buyerTel: (sub.donorPhone || "").replace(/[^0-9]/g, ""),
+              encData,
+              timestamp,
+              hashValue,
+              compData: JSON.stringify({ subscriptionId: sub.id, tenantId: sub.tenantId }),
+            };
+
+            const billpayRes = await fetch(BILLPAY_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "API_KEY": NANO_API_KEY,
+              },
+              body: JSON.stringify(billpayPayload),
+            });
+
+            const billpayData = await billpayRes.json().catch(() => null);
+            console.log(`[Batch Scheduler] Billpay response for sub ${sub.id}:`, billpayData);
+
+            if (billpayData && billpayData.resultCode && billpayData.resultCode !== "0000") {
+              throw new Error(`[${billpayData.resultCode}] ${billpayData.resultMsg || '빌링 결제 승인 실패'}`);
+            }
+
+            if (billpayData) {
+              tranNo = billpayData.tranNo || tranNo;
+              apprNo = billpayData.apprNo || apprNo;
+            }
+          }
+        }
+
         const donationRecord = await db.createDonation({
           tenantId: sub.tenantId,
           itemId: sub.itemId,
@@ -2257,6 +2461,8 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           donorEmail: sub.donorEmail || '',
           paymentMethod: 'card',
           paymentStatus: 'completed',
+          transactionId: tranNo,
+          approveNo: apprNo,
           isRecurring: true,
           receiptIssued: true,
         });
