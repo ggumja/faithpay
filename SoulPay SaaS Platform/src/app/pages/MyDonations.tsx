@@ -43,6 +43,9 @@ export interface HistoryItem {
   date: string;
   rawDate?: string;
   status: string;
+  paymentStatus?: string;
+  cancelReason?: string;
+  cancelledAt?: string;
   isRecurring: boolean;
   deviceType?: 'KIOSK' | 'WEB_MOBILE';
   paymentMethod?: string;
@@ -90,6 +93,8 @@ export default function MyDonations() {
 
   // 🗂️ 서브 탭 메뉴 상태 ('history' | 'recurring' | 'profile')
   const [activeTab, setActiveTab] = useState<'history' | 'recurring' | 'profile'>('history');
+  // 🔘 결제 상태 필터 ('all' | 'completed' | 'cancelled')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'cancelled'>('all');
 
   // 📅 기간 지정 필터 상태 & 📄 10개씩 페이징 상태
   const [startDate, setStartDate] = useState<string>('');
@@ -308,32 +313,40 @@ export default function MyDonations() {
       const dbRes = await donationAPI.getByTenant(currentTenant.id);
       let matchedRaw: any[] = [];
       if (dbRes.success && Array.isArray(dbRes.data)) {
-        matchedRaw = dbRes.data.filter(d => 
-          (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone &&
-          (!d.paymentStatus || d.paymentStatus === 'completed')
-        );
+        matchedRaw = dbRes.data.filter(d => {
+          const phoneMatch = (d.donorPhone || d.donor_phone || '').replace(/[^0-9]/g, '') === cleanPhone;
+          const status = d.paymentStatus || d.payment_status || d.status || 'completed';
+          return phoneMatch && (status === 'completed' || status === 'cancelled');
+        });
       }
 
-      const matched: HistoryItem[] = matchedRaw.map(d => ({
-        id: d.id,
-        itemId: d.itemId,
-        itemName: d.itemName,
-        amount: d.amount,
-        name: d.donorName,
-        phone: d.donorPhone,
-        date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-        rawDate: d.createdAt,
-        status: '결제완료',
-        isRecurring: d.isRecurring,
-        deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-        paymentMethod: cleanPaymentMethod(d.paymentMethod),
-      }));
+      const matched: HistoryItem[] = matchedRaw.map(d => {
+        const rawStatus = d.paymentStatus || d.payment_status || d.status || 'completed';
+        const isCancelled = rawStatus === 'cancelled';
+        return {
+          id: d.id,
+          itemId: d.itemId,
+          itemName: d.itemName,
+          amount: d.amount,
+          name: d.donorName || d.donor_name || d.name,
+          phone: d.donorPhone || d.donor_phone || cleanPhone,
+          date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
+          rawDate: d.createdAt,
+          status: isCancelled ? '결제취소' : '결제완료',
+          paymentStatus: rawStatus,
+          cancelReason: d.cancelReason || d.cancel_reason,
+          cancelledAt: d.cancelledAt || d.cancelled_at,
+          isRecurring: d.isRecurring,
+          deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+          paymentMethod: cleanPaymentMethod(d.paymentMethod),
+        };
+      });
 
       setHistory(matched);
       loadSavedProfile(cleanPhone, matchedRaw);
 
-      // 정기결제 약정 목록: 결제 이력(matchedRaw) 중 isRecurring === true인 건을 정기 약정으로 100% 자동 합성
-      const recurringLogs = matchedRaw.filter(d => d.isRecurring);
+      // 정기결제 약정 목록: 정상 결제 완료(completed) 이력 중 isRecurring === true인 건을 약정으로 합성
+      const recurringLogs = matchedRaw.filter(d => d.isRecurring && (!d.paymentStatus || d.paymentStatus === 'completed'));
       const fetchedSubs: any[] = recurringLogs.map(d => ({
         id: d.id || `sub_${d.createdAt || Date.now()}`,
         tenantId: currentTenant.id,
@@ -431,25 +444,35 @@ export default function MyDonations() {
         setSubscriptions(res.data.subscriptions || []);
 
         if (res.data.donations && res.data.donations.length > 0) {
-          const completedDonations = res.data.donations.filter(
-            (d: any) => !d.paymentStatus || d.paymentStatus === 'completed'
+          const validDonations = res.data.donations.filter(
+            (d: any) => {
+              const s = d.paymentStatus || d.status || 'completed';
+              return s === 'completed' || s === 'cancelled';
+            }
           );
-          const matched: HistoryItem[] = completedDonations.map((d: any) => ({
-            id: d.id,
-            itemId: d.itemId,
-            itemName: d.itemName,
-            amount: d.amount,
-            name: d.donorName,
-            phone: d.donorPhone,
-            date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-            rawDate: d.createdAt,
-            status: '결제완료',
-            isRecurring: d.isRecurring,
-            deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-            paymentMethod: cleanPaymentMethod(d.paymentMethod),
-          }));
+          const matched: HistoryItem[] = validDonations.map((d: any) => {
+            const rawStatus = d.paymentStatus || d.status || 'completed';
+            const isCancelled = rawStatus === 'cancelled';
+            return {
+              id: d.id,
+              itemId: d.itemId,
+              itemName: d.itemName,
+              amount: d.amount,
+              name: d.donorName,
+              phone: d.donorPhone,
+              date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
+              rawDate: d.createdAt,
+              status: isCancelled ? '결제취소' : '결제완료',
+              paymentStatus: rawStatus,
+              cancelReason: d.cancelReason || d.cancel_reason,
+              cancelledAt: d.cancelledAt || d.cancelled_at,
+              isRecurring: d.isRecurring,
+              deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+              paymentMethod: cleanPaymentMethod(d.paymentMethod),
+            };
+          });
           setHistory(matched);
-          loadSavedProfile(cleanedInputPhone, completedDonations);
+          loadSavedProfile(cleanedInputPhone, validDonations);
         } else {
           setHistory([]);
           loadSavedProfile(cleanedInputPhone, []);
@@ -460,29 +483,34 @@ export default function MyDonations() {
         setIsAuthenticated(true);
         const dbRes = await donationAPI.getByTenant(currentTenant.id);
         if (dbRes.success && dbRes.data) {
-          const matchedRaw = dbRes.data.filter(d => 
-            (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone &&
-            (!d.paymentStatus || d.paymentStatus === 'completed')
-          );
-          const matched: HistoryItem[] = matchedRaw.map(d => ({
-            id: d.id,
-            itemId: d.itemId,
-            itemName: d.itemName,
-            amount: d.amount,
-            name: d.donorName,
-            phone: d.donorPhone,
-            date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-            rawDate: d.createdAt,
-            status: '결제완료',
-            isRecurring: d.isRecurring,
-            deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-            paymentMethod: cleanPaymentMethod(d.paymentMethod),
-          }));
+          const matchedRaw = dbRes.data.filter(d => {
+            const phoneMatch = (d.donorPhone || d.donor_phone || '').replace(/[^0-9]/g, '') === cleanedInputPhone;
+            const status = d.paymentStatus || d.payment_status || d.status || 'completed';
+            return phoneMatch && (status === 'completed' || status === 'cancelled');
+          });
+          const matched: HistoryItem[] = matchedRaw.map(d => {
+            const rawStatus = d.paymentStatus || d.payment_status || d.status || 'completed';
+            const isCancelled = rawStatus === 'cancelled';
+            return {
+              id: d.id,
+              itemId: d.itemId,
+              itemName: d.itemName,
+              amount: d.amount,
+              name: d.donorName || d.donor_name || d.name,
+              phone: d.donorPhone || d.donor_phone || cleanedInputPhone,
+              date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
+              rawDate: d.createdAt,
+              status: isCancelled ? '결제취소' : '결제완료',
+              paymentStatus: rawStatus,
+              cancelReason: d.cancelReason || d.cancel_reason,
+              cancelledAt: d.cancelledAt || d.cancelled_at,
+              isRecurring: d.isRecurring,
+              deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+              paymentMethod: cleanPaymentMethod(d.paymentMethod),
+            };
+          });
           setHistory(matched);
           loadSavedProfile(cleanedInputPhone, matchedRaw);
-        } else {
-          setHistory([]);
-          loadSavedProfile(cleanedInputPhone, []);
         }
         toast.success('본인 인증이 완료되었습니다.');
       }
@@ -1083,10 +1111,10 @@ export default function MyDonations() {
                   )}
                 </Card>
 
-                {/* 📊 동적 기간 지정 필터링 로직 계산 */}
+                {/* 📊 동적 기간 및 상태 필터링 로직 계산 */}
                 {(() => {
                   const currentYear = new Date().getFullYear();
-                  const filteredHistory = history.filter((item) => {
+                  const dateFilteredHistory = history.filter((item) => {
                     if (!item.rawDate) return true;
                     const d = new Date(item.rawDate);
                     if (isNaN(d.getTime())) return true;
@@ -1101,11 +1129,21 @@ export default function MyDonations() {
                     return true; // 'ALL'
                   });
 
-                  const filteredTotal = filteredHistory.reduce((sum, item) => sum + (item.amount || 0), 0);
-                  const filteredCount = filteredHistory.length;
+                  const completedList = dateFilteredHistory.filter(item => item.paymentStatus !== 'cancelled');
+                  const cancelledList = dateFilteredHistory.filter(item => item.paymentStatus === 'cancelled');
+
+                  const filteredHistory = dateFilteredHistory.filter((item) => {
+                    if (statusFilter === 'completed') return item.paymentStatus !== 'cancelled';
+                    if (statusFilter === 'cancelled') return item.paymentStatus === 'cancelled';
+                    return true;
+                  });
+
+                  const filteredTotal = completedList.reduce((sum, item) => sum + (item.amount || 0), 0);
+                  const filteredCount = completedList.length;
+                  const cancelledCount = cancelledList.length;
 
                   // 📄 10개씩 페이징 계산
-                  const totalPages = Math.ceil(filteredCount / ITEMS_PER_PAGE) || 1;
+                  const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE) || 1;
                   const paginatedHistory = filteredHistory.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
                   const rangeText = quickRange === 'THIS_YEAR'
@@ -1123,11 +1161,16 @@ export default function MyDonations() {
                         <Card className="bg-white border-none shadow-xs">
                           <CardContent className="pt-6">
                             <p className="text-xs text-muted-foreground mb-1 font-bold">
-                              {rangeText} 총 {currentTenant.terminology.donation}
+                              {rangeText} 실 {terms.donation} 총액
                             </p>
                             <p className="text-2xl font-black" style={{ color: currentTenant.primaryColor }}>
                               {filteredTotal.toLocaleString()}원
                             </p>
+                            {cancelledCount > 0 && (
+                              <p className="text-[11px] text-red-500 font-semibold mt-1">
+                                (결제취소 {cancelledCount}건 제외됨)
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                         <Card className="bg-white border-none shadow-xs">
@@ -1136,106 +1179,181 @@ export default function MyDonations() {
                               {rangeText} 참여 횟수
                             </p>
                             <p className="text-2xl font-black">{filteredCount}회</p>
+                            {cancelledCount > 0 && (
+                              <p className="text-[11px] text-slate-500 font-semibold mt-1">
+                                전체 시도 {dateFilteredHistory.length}건 중 {cancelledCount}건 취소
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       </div>
 
-                      {/* History List */}
+                      {/* History List Header with Status Filter */}
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-zinc-200">
                             <History className="h-5 w-5 text-[#3182F6]" />
-                            <span>봉헌 상세 내역 ({filteredCount}건)</span>
+                            <span>{terms.donation} 상세 내역 ({filteredHistory.length}건)</span>
                           </h3>
-                          <span className="text-xs text-slate-500 font-semibold">{rangeText} 조회 기준 (페이지 {currentPage}/{totalPages})</span>
+
+                          {/* 🔘 결제 상태 필터 (전체 / 결제완료 / 결제취소) */}
+                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                            <button
+                              onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                statusFilter === 'all'
+                                  ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                              }`}
+                            >
+                              전체 ({dateFilteredHistory.length})
+                            </button>
+                            <button
+                              onClick={() => { setStatusFilter('completed'); setCurrentPage(1); }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                statusFilter === 'completed'
+                                  ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                              }`}
+                            >
+                              결제완료 ({completedList.length})
+                            </button>
+                            <button
+                              onClick={() => { setStatusFilter('cancelled'); setCurrentPage(1); }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                statusFilter === 'cancelled'
+                                  ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                              }`}
+                            >
+                              결제취소 ({cancelledList.length})
+                            </button>
+                          </div>
                         </div>
 
                         {filteredHistory.length === 0 ? (
                           <Card className="p-8 text-center bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800">
                             <AlertCircle className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
                             <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1">
-                              선택하신 기간({rangeText})에 등록된 보시/헌금 내역이 없습니다.
+                              선택하신 기간 및 조건에 해당하는 {terms.donation} 내역이 없습니다.
                             </p>
                             <p className="text-xs text-zinc-500">
-                              상단의 [전체] 또는 [직접 입력] 버튼을 눌러 다른 기간으로 조회해 보세요.
+                              상단의 [전체] 버튼을 누르거나 필터 조건을 변경하여 조회해 보세요.
                             </p>
                           </Card>
                         ) : (
                           <>
                             <div className="space-y-3">
-                              {paginatedHistory.map((item) => (
-                                <Card key={item.id} className="overflow-hidden hover:shadow-md transition-all border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs rounded-2xl">
-                                  <div className="flex">
-                                    {/* Left Primary Color Accent Bar */}
-                                    <div 
-                                      className="w-2 flex-shrink-0" 
-                                      style={{ backgroundColor: currentTenant.primaryColor }}
-                                    />
-                                    <div className="flex-1 p-4 sm:p-5">
-                                      <div className="flex justify-between items-start mb-2 gap-2">
-                                        <div>
-                                          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                                            <Badge variant="outline" className="text-xs font-bold border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800">
-                                              {item.itemName}
-                                            </Badge>
-                                            {item.isRecurring && (
-                                              <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 text-[11px] font-bold border-none px-2 py-0.5">
-                                                ⚡ 정기
+                              {paginatedHistory.map((item) => {
+                                const isCancelled = item.paymentStatus === 'cancelled';
+                                return (
+                                  <Card key={item.id} className={`overflow-hidden hover:shadow-md transition-all border bg-white dark:bg-zinc-900 shadow-xs rounded-2xl ${isCancelled ? 'border-red-200 dark:border-red-950/60 bg-red-50/20' : 'border-slate-200/80 dark:border-zinc-800'}`}>
+                                    <div className="flex">
+                                      {/* Left Accent Bar */}
+                                      <div 
+                                        className="w-2 flex-shrink-0" 
+                                        style={{ backgroundColor: isCancelled ? '#EF4444' : currentTenant.primaryColor }}
+                                      />
+                                      <div className="flex-1 p-4 sm:p-5">
+                                        <div className="flex justify-between items-start mb-2 gap-2">
+                                          <div>
+                                            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                              <Badge variant="outline" className={`text-xs font-bold ${isCancelled ? 'border-red-200 text-red-700 bg-red-50' : 'border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800'}`}>
+                                                {item.itemName}
                                               </Badge>
-                                            )}
-                                            {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
-                                              <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-800 border-amber-300 font-bold px-2 py-0.5">
-                                                🖥️ 현장 키오스크 결제
-                                              </Badge>
-                                            ) : (
-                                              <Badge variant="outline" className="text-[11px] bg-slate-50 text-slate-700 border-slate-300 font-semibold px-2 py-0.5">
-                                                📱 온라인 웹/모바일 결제
-                                              </Badge>
+                                              {item.isRecurring && (
+                                                <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 text-[11px] font-bold border-none px-2 py-0.5">
+                                                  ⚡ 정기
+                                                </Badge>
+                                              )}
+                                              {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
+                                                <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-800 border-amber-300 font-bold px-2 py-0.5">
+                                                  🖥️ 현장 키오스크 결제
+                                                </Badge>
+                                              ) : (
+                                                <Badge variant="outline" className="text-[11px] bg-slate-50 text-slate-700 border-slate-300 font-semibold px-2 py-0.5">
+                                                  📱 온라인 웹/모바일 결제
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <div className="flex items-baseline gap-2">
+                                              <h4 
+                                                className={`text-xl font-extrabold tracking-tight ${isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : ''}`} 
+                                                style={!isCancelled ? { color: currentTenant.primaryColor } : undefined}
+                                              >
+                                                {item.amount.toLocaleString()}원
+                                              </h4>
+                                              {isCancelled && (
+                                                <span className="text-xs font-bold text-red-600 bg-red-100 dark:bg-red-950/80 px-2 py-0.5 rounded-md">
+                                                  승인 취소
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            {/* 취소 사유 표출 */}
+                                            {isCancelled && item.cancelReason && (
+                                              <div className="mt-2 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 p-2 rounded-lg border border-red-200 dark:border-red-900/50">
+                                                <span className="font-bold">취소 사유:</span> {item.cancelReason}
+                                                {item.cancelledAt && (
+                                                  <span className="text-slate-400 ml-2">({new Date(item.cancelledAt).toLocaleString('ko-KR')})</span>
+                                                )}
+                                              </div>
                                             )}
                                           </div>
-                                          <h4 className="text-xl font-extrabold tracking-tight" style={{ color: currentTenant.primaryColor }}>
-                                            {item.amount.toLocaleString()}원
-                                          </h4>
+
+                                          {isCancelled ? (
+                                            <Badge className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-none px-2.5 py-1 flex items-center gap-1 font-bold text-xs">
+                                              <AlertCircle className="h-3.5 w-3.5" />
+                                              결제취소
+                                            </Badge>
+                                          ) : (
+                                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border-none px-2.5 py-1 flex items-center gap-1 font-bold text-xs">
+                                              <CheckCircle2 className="h-3.5 w-3.5" />
+                                              {item.status}
+                                            </Badge>
+                                          )}
                                         </div>
 
-                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border-none px-2.5 py-1 flex items-center gap-1 font-bold text-xs">
-                                          <CheckCircle2 className="h-3.5 w-3.5" />
-                                          {item.status}
-                                        </Badge>
-                                      </div>
+                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+                                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono">
+                                            <Calendar className="h-3.5 w-3.5 text-[#3182F6]" />
+                                            <span>{item.date}</span>
+                                            <span className="text-slate-300 dark:text-zinc-700">|</span>
+                                            <span className="text-slate-600 dark:text-zinc-300 font-sans">{item.paymentMethod}</span>
+                                          </div>
 
-                                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono">
-                                          <Calendar className="h-3.5 w-3.5 text-[#3182F6]" />
-                                          <span>{item.date}</span>
-                                          <span className="text-slate-300 dark:text-zinc-700">|</span>
-                                          <span className="text-slate-600 dark:text-zinc-300 font-sans">{item.paymentMethod}</span>
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className={`h-8 px-3 text-xs font-bold rounded-xl cursor-pointer shadow-xs ${
+                                              isCancelled 
+                                                ? 'text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-900' 
+                                                : 'text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-300 dark:border-zinc-700'
+                                            }`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedReceiptData({
+                                                receiptId: item.id,
+                                                donorName: item.name,
+                                                donorPhone: item.phone,
+                                                amount: item.amount,
+                                                itemName: item.itemName,
+                                                date: item.date,
+                                                isCancelled,
+                                                cancelReason: item.cancelReason,
+                                                cancelledAt: item.cancelledAt,
+                                              });
+                                            }}
+                                          >
+                                            <Download className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                            {isCancelled ? '취소 영수증 PDF' : '영수증 PDF'}
+                                          </Button>
                                         </div>
-
-                                        <Button 
-                                          variant="outline" 
-                                          size="sm" 
-                                          className="h-8 px-3 text-xs font-bold text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-300 dark:border-zinc-700 rounded-xl cursor-pointer shadow-xs"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedReceiptData({
-                                              receiptId: item.id,
-                                              donorName: item.name,
-                                              donorPhone: item.phone,
-                                              amount: item.amount,
-                                              itemName: item.itemName,
-                                              date: item.date,
-                                            });
-                                          }}
-                                        >
-                                          <Download className="h-3.5 w-3.5 mr-1 text-slate-500" />
-                                          영수증 PDF
-                                        </Button>
                                       </div>
                                     </div>
-                                  </div>
-                                </Card>
-                              ))}
+                                  </Card>
+                                );
+                              })}
                             </div>
 
                             {/* 📄 10개씩 페이징 컨트롤 바 */}

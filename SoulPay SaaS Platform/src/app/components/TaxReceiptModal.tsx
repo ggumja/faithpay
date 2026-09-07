@@ -12,6 +12,9 @@ interface ReceiptData {
   amount: number;
   itemName: string;
   date: string;
+  isCancelled?: boolean;
+  cancelReason?: string;
+  cancelledAt?: string;
 }
 
 interface Props {
@@ -31,9 +34,9 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
       <div className="bg-white text-black w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden relative my-8 print:shadow-none print:m-0 print:w-full print:max-w-none">
         
         {/* 모달 상단 조작 헤더 (인쇄 시 숨김) */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
+        <div className={`text-white px-6 py-4 flex items-center justify-between print:hidden ${data.isCancelled ? 'bg-red-900' : 'bg-slate-900'}`}>
           <h3 className="font-bold text-base flex items-center gap-2">
-            <span>📄</span> 국세청 양식 기부금 영수증
+            <span>📄</span> 국세청 양식 기부금 영수증 {data.isCancelled ? '(결제 취소)' : ''}
           </h3>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" className="text-black bg-white hover:bg-slate-100 font-semibold" onClick={handlePrint}>
@@ -52,9 +55,16 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
             [소득세법 시행규칙 별지 제45호 서식]
           </div>
 
-          <h1 className="text-center font-bold text-2xl sm:text-3xl border-b-2 border-black pb-3 tracking-wider mb-6">
-            기 부 금 영 수 증
+          <h1 className={`text-center font-bold text-2xl sm:text-3xl border-b-2 pb-3 tracking-wider mb-4 ${data.isCancelled ? 'border-red-600 text-red-600' : 'border-black text-black'}`}>
+            기 부 금 영 수 증 {data.isCancelled ? '(결제 취소)' : ''}
           </h1>
+
+          {data.isCancelled && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 text-xs font-bold text-center">
+              ⚠️ [결제 취소 내역] 본 영수증은 정상 승인 취소(환불) 처리된 건으로, 소득공제 및 세액감면 증빙용으로 사용할 수 없습니다.
+              {data.cancelReason && <div className="mt-1 text-red-600 font-medium">취소 사유: {data.cancelReason}</div>}
+            </div>
+          )}
 
           {/* 일련번호 */}
           <div className="flex justify-between text-xs mb-4">
@@ -135,13 +145,24 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
                 <td className="border border-black p-2 font-medium">{data.itemName}</td>
                 <td className="border border-black p-2">{data.date.split(' ')[0]}</td>
                 <td className="border border-black p-2 font-bold text-right pr-4">
-                  {data.amount.toLocaleString('ko-KR')} 원
+                  {data.isCancelled ? (
+                    <>
+                      <span className="line-through text-gray-400 mr-1.5">{data.amount.toLocaleString('ko-KR')} 원</span>
+                      <span className="text-red-600 font-bold">[승인 취소]</span>
+                    </>
+                  ) : (
+                    `${data.amount.toLocaleString('ko-KR')} 원`
+                  )}
                 </td>
               </tr>
               <tr className="bg-gray-50 font-bold">
                 <td colSpan={4} className="border border-black p-2 text-right pr-4">합 계</td>
                 <td className="border border-black p-2 text-right pr-4 text-sm">
-                  {data.amount.toLocaleString('ko-KR')} 원
+                  {data.isCancelled ? (
+                    <span className="text-red-600 font-bold">0 원 (승인 취소)</span>
+                  ) : (
+                    `${data.amount.toLocaleString('ko-KR')} 원`
+                  )}
                 </td>
               </tr>
             </tbody>
@@ -150,8 +171,17 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
           {/* 선언문 */}
           <div className="text-center my-8 leading-relaxed text-xs sm:text-sm font-medium">
             <p className="mb-4">
-              「소득세법」 제34조, 제59조의4 및 「법인세법」 제24조에 따라<br />
-              위와 같이 {tenant.name}에 기부금({tenant.terminology.donation})을 정상 납부하였음을 증명합니다.
+              {data.isCancelled ? (
+                <>
+                  「소득세법」 및 「법인세법」에 따라<br />
+                  위 {tenant.name}에 납부되었던 기부금({tenant.terminology.donation})이 정상 승인 취소(환불)되었음을 확인합니다.
+                </>
+              ) : (
+                <>
+                  「소득세법」 제34조, 제59조의4 및 「법인세법」 제24조에 따라<br />
+                  위와 같이 {tenant.name}에 기부금({tenant.terminology.donation})을 정상 납부하였음을 증명합니다.
+                </>
+              )}
             </p>
             <div className="font-bold text-base mt-6">
               {data.date.split(' ')[0].replace(/-/g, '년 ').replace(/년 (\d+)/, '년 $1월 ')}일
@@ -161,12 +191,14 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
           {/* 서명 및 직인 */}
           <div className="mt-8 pt-4 flex justify-between items-center border-t border-gray-300">
             <div className="text-xs text-gray-600">
-              * 본 영수증은 국세청 연말정산 간소화 서비스 제출용으로 사용할 수 있습니다.
+              {data.isCancelled 
+                ? '* 본 영수증은 승인 취소 확인용이며 소득공제용으로 사용할 수 없습니다.' 
+                : '* 본 영수증은 국세청 연말정산 간소화 서비스 제출용으로 사용할 수 있습니다.'}
             </div>
             <div className="text-right flex items-center gap-2 font-bold text-sm sm:text-base">
               <span>{tenant.name} 직인</span>
-              <div className="w-12 h-12 rounded-full border-2 border-red-600 text-red-600 flex items-center justify-center font-bold text-xs transform -rotate-12 bg-red-50/50">
-                [직인생략]
+              <div className={`w-12 h-12 rounded-full border-2 text-red-600 flex items-center justify-center font-bold text-xs transform -rotate-12 ${data.isCancelled ? 'border-red-600 bg-red-100' : 'border-red-600 bg-red-50/50'}`}>
+                {data.isCancelled ? '[취소완료]' : '[직인생략]'}
               </div>
             </div>
           </div>

@@ -1306,7 +1306,7 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
     const allDonations = await db.getAllDonations();
     const donations = allDonations.filter(d => 
       d.donorPhone.replace(/[^0-9]/g, '') === cleanPhone && 
-      (!d.paymentStatus || d.paymentStatus === 'completed')
+      (!d.paymentStatus || d.paymentStatus === 'completed' || d.paymentStatus === 'cancelled')
     );
 
     return c.json({
