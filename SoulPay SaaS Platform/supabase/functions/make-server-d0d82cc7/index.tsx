@@ -419,166 +419,10 @@ app.put("/make-server-d0d82cc7/settings/:key", async (c) => {
 });
 
 
-// ==================== PAYMENT CONFIG ROUTES ====================
-
-// 결제 설정 조회
-app.get("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
-  try {
-    const tenantId = c.req.param('tenantId');
-    const config = await db.getPaymentConfig(tenantId);
-    
-    if (!config) {
-      // 기본 나노PG 결제 설정 반환
-      const defaultConfig = {
-        tenantId,
-        pgProvider: 'nanopay',
-        enableCard: true,
-        enableEasyPayment: false,
-        enableVBank: true,
-        enableKakaoPay: false,
-        enableNaverPay: false,
-        enableTossPay: false,
-        isActive: true,
-      };
-      return c.json({ success: true, data: defaultConfig });
-    }
-    
-    return c.json({ success: true, data: config });
-  } catch (error) {
-    console.error('Error fetching payment config:', error);
-    return c.json({ success: false, error: 'Failed to fetch payment config' }, 500);
-  }
-});
-
-// 결제 설정 저장/수정
-app.post("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
-  try {
-    const tenantId = c.req.param('tenantId');
-    const body = await c.req.json();
-    const config = await db.setPaymentConfig({ ...body, tenantId });
-    
-    return c.json({ success: true, data: config });
-  } catch (error: any) {
-    console.error('Error saving payment config:', error);
-    return c.json({ success: false, error: error?.message || 'Failed to save payment config' }, 500);
-  }
-});
-
-// 결제 설정 삭제
-app.delete("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
-  try {
-    const tenantId = c.req.param('tenantId');
-    await db.deletePaymentConfig(tenantId);
-    
-    return c.json({ success: true, message: 'Payment config deleted' });
-  } catch (error) {
-    console.error('Error deleting payment config:', error);
-    return c.json({ success: false, error: 'Failed to delete payment config' }, 500);
-  }
-});
-
-// 수기결제 처리
-app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
-  try {
-    const { tenantId, donationData, paymentData } = await c.req.json();
-    
-    // DB에서 테넌트 결제 설정 조회
-    const config = await db.getPaymentConfig(tenantId);
-    
-    // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
-    let NANO_ENC_KEY = "Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6";
-    let NANO_IV = "Nx5Lq7Kv4W8Jp6Mu";
-    let shopcode = "240000006";
-    let loginId = "smbtestshop";
-    let ver = "smbtest";
-    
-    if (config && config.pgProvider === 'nanopay' && config.isActive) {
-      NANO_API_KEY = config.apiKey || NANO_API_KEY;
-      NANO_ENC_KEY = config.secretKey || NANO_ENC_KEY;
-      NANO_IV = config.iv || NANO_IV;
-      shopcode = config.mid || shopcode;
-      loginId = config.loginId || loginId;
-      ver = config.ver || ver;
-    }
-
-    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
-    const NANO_API_URL = isTest 
-      ? "https://dev3.nanopay.co.kr/api/payment/approval.io"
-      : "https://pay.nanopay.co.kr/api/payment/approval.io";
-    
-    // 카드 정보 암호화
-    const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(NANO_ENC_KEY, "utf-8"), Buffer.from(NANO_IV, "utf-8"));
-    // 결과 인코딩을 hex로 할지 base64로 할지는 명세서에 따르나 일반적인 hex를 우선 적용 (실패시 base64)
-    let encData = cipher.update(JSON.stringify(paymentData), "utf-8", "hex");
-    encData += cipher.final("hex");
-
-    const payload = {
-      ver: ver,
-      loginId: loginId,
-      shopcode: shopcode,
-      payMethod: "card", // card로 고정 (수기결제)
-      orderName: donationData.name,
-      orderTel: donationData.phone.replace(/[^0-9]/g, ''),
-      orderEmail: "",
-      goodsName: donationData.itemName,
-      reqPayAmt: donationData.amount.toString(),
-      installment: paymentData.installment || "00",
-      encData: encData,
-    };
-
-    const response = await fetch(NANO_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'CharSet': 'UTF-8',
-        'API_KEY': NANO_API_KEY,
-        'API-KEY': NANO_API_KEY,
-        'api_key': NANO_API_KEY,
-        'api-key': NANO_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-
-    if (result.resultCode === "0000") {
-      // 결제 성공, DB에 저장
-      const donation = await db.createDonation({
-        tenantId,
-        itemId: donationData.itemId || 'manual',
-        itemName: donationData.itemName,
-        amount: donationData.amount,
-        donorName: donationData.name,
-        donorPhone: donationData.phone,
-        prayerText: donationData.prayerText,
-        isRecurring: donationData.isRecurring || false,
-        paymentStatus: 'completed',
-        paymentMethod: '신용카드',
-        transactionId: result.tranNo || result.apprNo,
-      });
-      return c.json({ success: true, data: donation });
-    } else {
-      return c.json({ success: false, error: result.resultMsg, data: result }, 400);
-    }
-  } catch (error) {
-    console.error('Error processing manual payment:', error);
-    return c.json({ success: false, error: 'Failed to process payment' }, 500);
-  }
-});
-
-// DB 내 기존 결제 수단 일괄 정규화 마이그레이션
-app.post("/make-server-d0d82cc7/admin/migrate-payment-methods", async (c) => {
-  try {
-    const result = await db.migrateNormalizeExistingDonations();
-    return c.json({ success: true, data: result });
-  } catch (error) {
-    console.error('Error running payment method migration:', error);
-    return c.json({ success: false, error: 'Migration failed' }, 500);
-  }
-});
+// ==================== PAYMENT CANCEL ROUTE ====================
 
 // 결제 취소 처리 (토스페이먼츠 및 나노페이 통합)
+// ※ :tenantId 파라미터 라우트에 의해 가로채이지 않도록 반드시 상단에 선언
 app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
   try {
     const { tenantId, donationId, cancelReason } = await c.req.json();
@@ -719,6 +563,178 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     return c.json({ success: false, error: error?.message || 'Failed to process cancellation' }, 500);
   }
 });
+
+// ==================== PAYMENT CONFIG ROUTES ====================
+
+const RESERVED_PAYMENT_PATHS = ['cancel', 'process', 'settlements', 'recurring'];
+
+// 결제 설정 조회
+app.get("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    if (RESERVED_PAYMENT_PATHS.includes(tenantId)) {
+      return c.json({ success: false, error: 'Invalid tenantId' }, 404);
+    }
+    const config = await db.getPaymentConfig(tenantId);
+    
+    if (!config) {
+      // 기본 나노PG 결제 설정 반환
+      const defaultConfig = {
+        tenantId,
+        pgProvider: 'nanopay',
+        enableCard: true,
+        enableEasyPayment: false,
+        enableVBank: true,
+        enableKakaoPay: false,
+        enableNaverPay: false,
+        enableTossPay: false,
+        isActive: true,
+      };
+      return c.json({ success: true, data: defaultConfig });
+    }
+    
+    return c.json({ success: true, data: config });
+  } catch (error) {
+    console.error('Error fetching payment config:', error);
+    return c.json({ success: false, error: 'Failed to fetch payment config' }, 500);
+  }
+});
+
+// 결제 설정 저장/수정
+app.post("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    if (RESERVED_PAYMENT_PATHS.includes(tenantId)) {
+      return c.json({ success: false, error: 'Invalid tenantId' }, 404);
+    }
+    const body = await c.req.json();
+    const config = await db.setPaymentConfig({ ...body, tenantId });
+    
+    return c.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error('Error saving payment config:', error);
+    return c.json({ success: false, error: error?.message || 'Failed to save payment config' }, 500);
+  }
+});
+
+// 결제 설정 삭제
+app.delete("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    if (RESERVED_PAYMENT_PATHS.includes(tenantId)) {
+      return c.json({ success: false, error: 'Invalid tenantId' }, 404);
+    }
+    await db.deletePaymentConfig(tenantId);
+    
+    return c.json({ success: true, message: 'Payment config deleted' });
+  } catch (error) {
+    console.error('Error deleting payment config:', error);
+    return c.json({ success: false, error: 'Failed to delete payment config' }, 500);
+  }
+});
+
+// 수기결제 처리
+app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
+  try {
+    const { tenantId, donationData, paymentData } = await c.req.json();
+    
+    // DB에서 테넌트 결제 설정 조회
+    const config = await db.getPaymentConfig(tenantId);
+    
+    // 기본 테스트 계정 정보 (기본값)
+    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
+    let NANO_ENC_KEY = "Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6";
+    let NANO_IV = "Nx5Lq7Kv4W8Jp6Mu";
+    let shopcode = "240000006";
+    let loginId = "smbtestshop";
+    let ver = "smbtest";
+    
+    if (config && config.pgProvider === 'nanopay' && config.isActive) {
+      NANO_API_KEY = config.apiKey || NANO_API_KEY;
+      NANO_ENC_KEY = config.secretKey || NANO_ENC_KEY;
+      NANO_IV = config.iv || NANO_IV;
+      shopcode = config.mid || shopcode;
+      loginId = config.loginId || loginId;
+      ver = config.ver || ver;
+    }
+
+    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
+    const NANO_API_URL = isTest 
+      ? "https://dev3.nanopay.co.kr/api/payment/approval.io"
+      : "https://pay.nanopay.co.kr/api/payment/approval.io";
+    
+    // 카드 정보 암호화
+    const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(NANO_ENC_KEY, "utf-8"), Buffer.from(NANO_IV, "utf-8"));
+    // 결과 인코딩을 hex로 할지 base64로 할지는 명세서에 따르나 일반적인 hex를 우선 적용 (실패시 base64)
+    let encData = cipher.update(JSON.stringify(paymentData), "utf-8", "hex");
+    encData += cipher.final("hex");
+
+    const payload = {
+      ver: ver,
+      loginId: loginId,
+      shopcode: shopcode,
+      payMethod: "card", // card로 고정 (수기결제)
+      orderName: donationData.name,
+      orderTel: donationData.phone.replace(/[^0-9]/g, ''),
+      orderEmail: "",
+      goodsName: donationData.itemName,
+      reqPayAmt: donationData.amount.toString(),
+      installment: paymentData.installment || "00",
+      encData: encData,
+    };
+
+    const response = await fetch(NANO_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CharSet': 'UTF-8',
+        'API_KEY': NANO_API_KEY,
+        'API-KEY': NANO_API_KEY,
+        'api_key': NANO_API_KEY,
+        'api-key': NANO_API_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (result.resultCode === "0000") {
+      // 결제 성공, DB에 저장
+      const donation = await db.createDonation({
+        tenantId,
+        itemId: donationData.itemId || 'manual',
+        itemName: donationData.itemName,
+        amount: donationData.amount,
+        donorName: donationData.name,
+        donorPhone: donationData.phone,
+        prayerText: donationData.prayerText,
+        isRecurring: donationData.isRecurring || false,
+        paymentStatus: 'completed',
+        paymentMethod: '신용카드',
+        transactionId: result.tranNo || result.apprNo,
+      });
+      return c.json({ success: true, data: donation });
+    } else {
+      return c.json({ success: false, error: result.resultMsg, data: result }, 400);
+    }
+  } catch (error) {
+    console.error('Error processing manual payment:', error);
+    return c.json({ success: false, error: 'Failed to process payment' }, 500);
+  }
+});
+
+// DB 내 기존 결제 수단 일괄 정규화 마이그레이션
+app.post("/make-server-d0d82cc7/admin/migrate-payment-methods", async (c) => {
+  try {
+    const result = await db.migrateNormalizeExistingDonations();
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error running payment method migration:', error);
+    return c.json({ success: false, error: 'Migration failed' }, 500);
+  }
+});
+
+
 
 // 토스페이먼츠(TossPayments) 승인 API 연동 (/v1/payments/confirm)
 app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
