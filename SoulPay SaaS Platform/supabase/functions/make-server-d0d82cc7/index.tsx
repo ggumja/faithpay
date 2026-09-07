@@ -454,19 +454,13 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       const idempotencyKey = `cancel_${donationId}_${Date.now()}`;
 
       try {
-        const tossCancelResponse = await fetch(`https://api.tosspayments.com/v1/payments/${donation.transactionId}/cancel`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Basic ${basicAuth}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotencyKey,
-          },
-          body: JSON.stringify({
-            cancelReason: reasonText,
-          }),
-        });
-
-        const result = await tossCancelResponse.json();
+        const tossText = await tossCancelResponse.text();
+        let result: any = {};
+        try {
+          result = JSON.parse(tossText);
+        } catch {
+          result = { message: tossText.startsWith('<') ? `토스페이먼츠 통신 오류 (HTTP ${tossCancelResponse.status})` : tossText };
+        }
 
         if (tossCancelResponse.ok && (result.status === "CANCELED" || result.status === "PARTIAL_CANCELED" || result.cancels)) {
           const cancelTransactionKey = result.cancels?.[0]?.transactionKey || `TC-${Date.now().toString().slice(-8)}`;
@@ -501,7 +495,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       }
     }
 
-    // 기본 나노페이 테스트 계정 정보 (기본값)
+    // 나노페이 PG 결제 취소 연동
     let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
@@ -531,28 +525,45 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     const response = await fetch(NANO_API_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
         'CharSet': 'UTF-8',
+        'API_KEY': NANO_API_KEY,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 SoulPay/1.0',
       },
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
+    const respText = await response.text();
+    let result: any = {};
+    try {
+      result = JSON.parse(respText);
+    } catch {
+      result = {
+        resultCode: '9999',
+        resultMsg: respText.startsWith('<') ? `PG 서버 통신 거부 (HTTP ${response.status})` : respText
+      };
+    }
 
-    if (result.resultCode === "0000" || isTest) {
-      const cancelTransactionKey = result.cancelTranNo || result.apprNo || `TC-${Date.now().toString().slice(-8)}`;
+    if (result.resultCode === "0000") {
+      const cancelTransactionKey = result.apprNo || result.cancelTranNo || result.apprTranNo || `TC-${Date.now().toString().slice(-8)}`;
+      const cancelApprovedAt = result.cancelDate && result.cancelTime
+        ? `${result.cancelDate.slice(0, 4)}-${result.cancelDate.slice(4, 6)}-${result.cancelDate.slice(6, 8)}T${result.cancelTime.slice(0, 2)}:${result.cancelTime.slice(2, 4)}:${result.cancelTime.slice(4, 6)}+09:00`
+        : new Date().toISOString();
+
       const updatedDonation = await db.cancelDonationAndLedger(tenantId, donationId, {
         cancelTransactionId: cancelTransactionKey,
+        cancelApprovedAt: cancelApprovedAt,
         cancelReason: reasonText,
       });
       return c.json({
         success: true,
         data: updatedDonation,
         approveNo: donation.approveNo || donation.transactionId,
-        cancelApproveNo: cancelTransactionKey
+        cancelApproveNo: cancelTransactionKey,
+        cancelApprovedAt: cancelApprovedAt
       });
     } else {
-      const cancelFailMsg = result.resultMsg || 'PG 결제 취소 거부';
+      const cancelFailMsg = result.resultMsg || `PG 결제 취소 거부 (${result.resultCode || response.status})`;
       await db.updateDonation(tenantId, donationId, {
         cancelFailureReason: cancelFailMsg,
       });
@@ -560,7 +571,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     }
   } catch (error: any) {
     console.error('Error processing cancellation:', error);
-    return c.json({ success: false, error: error?.message || 'Failed to process cancellation' }, 500);
+    return c.json({ success: false, error: error?.message || '결제 취소 처리 중 서버 오류가 발생했습니다.' }, 500);
   }
 });
 

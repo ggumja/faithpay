@@ -94,7 +94,12 @@ async function fetchAPI<T>(
     try {
       data = JSON.parse(text);
     } catch {
-      data = { error: text || `HTTP ${response.status}` };
+      const isHtml = text.trim().startsWith('<');
+      data = {
+        error: isHtml
+          ? `서버 통신 오류 (HTTP ${response.status})`
+          : (text || `HTTP ${response.status}`)
+      };
     }
 
     if (!response.ok) {
