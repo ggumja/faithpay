@@ -156,6 +156,23 @@ export default function PaymentSelection() {
     }
   }, [currentTenant, tenantSlug]);
 
+  // 나노페이/결제 팝업창 완료 수신 리스너
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'SOULPAY_PAYMENT_RESULT') {
+        if (event.data.success) {
+          toast.success('결제가 완료되었습니다.');
+          navigate(`/${tenantSlug}/complete`);
+        } else {
+          toast.error(event.data.resultMsg || '결제에 실패하였습니다.');
+          setIsProcessing(false);
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [tenantSlug, navigate]);
+
   if (!currentTenant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
@@ -426,9 +443,7 @@ export default function PaymentSelection() {
           ? Boolean(currentTenant.paymentConfig.devMode)
           : (shopcode === '240000006' || shopcode === 'shoptest' || !apiKey);
         const nanoBaseUrl = isTestMode ? 'https://dev3.nanopay.co.kr' : 'https://pay.nanopay.co.kr';
-        const nanoUrl = isMobile 
-          ? `${nanoBaseUrl}/api/billkey/mobile/request.io`
-          : `${nanoBaseUrl}/api/billkey/pc/request.io`;
+        const nanoUrl = `${nanoBaseUrl}/api/billkey/mobile/request.io`;
 
         const hashRawString = `${shopcode}${ediDate}${loginId}${apiKey}`;
         const msgBuffer = new TextEncoder().encode(hashRawString);
@@ -559,7 +574,7 @@ export default function PaymentSelection() {
     // 나노 PG 일반 인증결제 처리 (일반 결제창 모드)
     if (isNanopay && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
       setIsProcessing(true);
-      toast.info('결제창을 요청하고 있습니다...');
+      toast.info('나노페이 결제창을 준비하고 있습니다...');
       
       try {
         const paymentWindow = window.open('about:blank', 'NanopayPayment', 'width=650,height=700,scrollbars=yes,resizable=yes');
@@ -569,84 +584,42 @@ export default function PaymentSelection() {
           return;
         }
 
-        paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 안전 결제창으로 연결 중입니다...</p>');
-
-        // 1. 파라미터 준비
-        const shopcode = "240000006";
-        const loginId = "smbtestshop";
-        const ver = "smbtest";
-        const apiKey = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-        
-        const now = new Date();
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-        const tempDonationId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
-        const reqPayAmt = donationFormData.amount.toString();
-        const donorName = donationFormData.name || "신도";
-        const donorPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
-
-        // 2. Web Crypto API를 사용한 SHA-256 (shopcode + ediDate + reqPayAmt + apiKey) 대문자 생성
-        const hashRawString = `${shopcode}${ediDate}${reqPayAmt}${apiKey}`;
-        const msgBuffer = new TextEncoder().encode(hashRawString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashValue = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        paymentWindow.document.write('<p style="text-align:center;padding-top:60px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;color:#334155;">나노페이 안전 결제창으로 연결 중입니다...</p>');
 
         const isMobile = window.innerWidth <= 768;
-        const isTestMode = currentTenant?.paymentConfig?.devMode !== undefined 
-          ? Boolean(currentTenant.paymentConfig.devMode)
-          : (shopcode === '240000006' || shopcode === 'shoptest' || !apiKey);
-        const nanoBaseUrl = isTestMode ? 'https://dev3.nanopay.co.kr' : 'https://pay.nanopay.co.kr';
-        const nanoUrl = isMobile 
-          ? `${nanoBaseUrl}/api/payment/cert/mobile/request.io`
-          : `${nanoBaseUrl}/api/payment/cert/pc/request.io`;
+        const res = await paymentAPI.processCertRequest({
+          tenantId: currentTenant.id,
+          donationData: donationFormData,
+          deviceType: isMobile ? 'mobile' : 'pc',
+          payWay: 'card',
+        });
 
-        // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입
-        const payFormHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head><meta charset="utf-8"><title>Nanopay Payment</title></head>
-          <body>
-            <p style="text-align:center;padding-top:40px;font-family:sans-serif;">나노페이 안전 결제창으로 이동 중입니다...</p>
-            <form id="nanoPayForm" method="POST" action="${nanoUrl}">
-              <input type="hidden" name="ver" value="${ver}" />
-              <input type="hidden" name="loginId" value="${loginId}" />
-              <input type="hidden" name="shopcode" value="${shopcode}" />
-              <input type="hidden" name="apiKey" value="${apiKey}" />
-              <input type="hidden" name="API_KEY" value="${apiKey}" />
-              <input type="hidden" name="orderName" value="${donorName}" />
-              <input type="hidden" name="orderTel" value="${donorPhone}" />
-              <input type="hidden" name="orderEmail" value="donator@soulpay.kr" />
-              <input type="hidden" name="payWay" value="card" />
-              <input type="hidden" name="goodsName" value="${donationFormData.itemName || 'SoulPay 봉헌금'}" />
-              <input type="hidden" name="reqPayAmt" value="${reqPayAmt}" />
-              <input type="hidden" name="receiveUrl" value="https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback" />
-              <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
-              <input type="hidden" name="compOrderMem" value="${donorName}" />
-              <input type="hidden" name="ediDate" value="${ediDate}" />
-              <input type="hidden" name="hashValue" value="${hashValue}" />
-              <input type="hidden" name="hash" value="${hashValue}" />
-            </form>
-            <script>document.getElementById('nanoPayForm').submit();</script>
-          </body>
-          </html>
-        `;
+        if (!res.success || !res.data) {
+          paymentWindow.close();
+          toast.error(res.error || '결제창 요청에 실패했습니다.');
+          setIsProcessing(false);
+          return;
+        }
 
-        try {
-          if (paymentWindow && !paymentWindow.closed) {
-            paymentWindow.document.open();
-            paymentWindow.document.write(payFormHtml);
-            paymentWindow.document.close();
-          }
-        } catch (e) {
-          console.warn('[Nanopay] Cross-origin popup write warning handled safely:', e);
+        const { redirectUrl, html, donationId } = res.data;
+        if (redirectUrl) {
+          paymentWindow.location.href = redirectUrl;
+        } else if (html) {
+          paymentWindow.document.open();
+          paymentWindow.document.write(html);
+          paymentWindow.document.close();
+        } else {
+          paymentWindow.close();
+          toast.error('결제창 URL을 가져오지 못했습니다.');
+          setIsProcessing(false);
+          return;
         }
 
         toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
-        pollDonationStatus(tempDonationId);
-      } catch (error) {
+        pollDonationStatus(donationId);
+      } catch (error: any) {
         console.error('Cert payment error:', error);
-        toast.error('결제 요청 중 오류가 발생했습니다.');
+        toast.error(error?.message || '결제 요청 중 오류가 발생했습니다.');
         setIsProcessing(false);
       }
       return;

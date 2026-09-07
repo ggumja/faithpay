@@ -961,11 +961,8 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     
-    const isMobile = deviceType === 'mobile';
-    // 나노페이 PG 웹 결제창 표준 요청 URL
-    const NANO_API_URL = isMobile
-      ? `${baseUrl}/api/payment/cert/mobile/request.io`
-      : `${baseUrl}/api/payment/cert/pc/request.io`;
+    // 나노페이 PG 웹 결제창 표준 요청 URL (Smallbee 공식 검증: PC/Mobile 공통 mobile request.io 엔드포인트 사용)
+    const NANO_API_URL = `${baseUrl}/api/payment/cert/mobile/request.io`;
       
     // 임시 거래 내역 생성 (pending 상태)
     const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();
@@ -987,89 +984,65 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     // 콜백 주소
     const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
-    // 14자리 ediDate (YYYYMMDDHHmmss) 타임스탬프 생성
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const timestamp = Date.now().toString();
+    // Smallbee 표준 타임스탬프 (HHmmssSSS, KST 기준)
+    const pad = (n: number, l = 2) => n.toString().padStart(l, '0');
+    const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const timestamp = `${pad(kstDate.getUTCHours())}${pad(kstDate.getUTCMinutes())}${pad(kstDate.getUTCSeconds())}${pad(kstDate.getUTCMilliseconds(), 3)}`;
     const reqPayAmt = donationData.amount.toString();
-
-    // 나노페이 KICC PG 표준 해시 검증 연산 (1. shopcode + ediDate + reqPayAmt + apiKey / 2. shopcode + ediDate + reqPayAmt + secretKey)
-    const hashStandardApiUpper = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_API_KEY}`).digest("hex").toUpperCase();
-    const hashStandardApiLower = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_API_KEY}`).digest("hex");
-    const hashStandardSecretUpper = crypto.createHash("sha256").update(`${shopcode}${ediDate}${reqPayAmt}${NANO_SECRET_KEY}`).digest("hex").toUpperCase();
-
     const realDonorName = donationData?.name || donationData?.donorName || "신도";
+    const donorPhone = (donationData?.phone || donationData?.donorPhone || "01000000000").replace(/[^0-9]/g, '');
+    const donorEmail = donationData?.email || "donator@soulpay.kr";
 
-    const payload = {
-      ver: ver,
-      loginId: loginId,
-      shopcode: shopcode,
+    // Smallbee 검증 완료 공식 해시: sha256(ver + loginId + shopcode + reqPayAmt + timestamp + apiKey + "NANO")
+    const hashValue = crypto.createHash("sha256")
+      .update(`${ver}${loginId}${shopcode}${reqPayAmt}${timestamp}${NANO_API_KEY}NANO`)
+      .digest("hex");
+
+    const nanoPayload = {
+      ver,
+      loginId,
+      shopcode,
       orderName: realDonorName,
-      orderTel: (donationData?.phone || donationData?.donorPhone || "01000000000").replace(/[^0-9]/g, ''),
-      orderEmail: donationData?.email || "donator@soulpay.kr",
+      orderTel: donorPhone,
+      orderEmail: donorEmail,
       payWay: payWay || "card",
       goodsName: donationData?.itemName || "SoulPay 봉헌금",
-      reqPayAmt: reqPayAmt,
-      receiveUrl: receiveUrl,
+      reqPayAmt,
+      receiveUrl,
       compOrderNo: tempDonationId,
       compOrderMem: realDonorName,
-      ediDate: ediDate,
-      timestamp: timestamp,
-      hashValue: hashStandardApiUpper,
-      hash: hashStandardApiLower,
-      secretHash: hashStandardSecretUpper,
+      timestamp,
+      hashValue,
     };
 
-    console.log("Nanopay Auth Configs -> API_KEY:", NANO_API_KEY, "shopcode:", shopcode, "loginId:", loginId, "ver:", ver, "ediDate:", ediDate, "hashStandardApiUpper:", hashStandardApiUpper);
+    console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(nanoPayload));
 
-    const debugInfo = { NANO_API_KEY, NANO_SECRET_KEY, shopcode, loginId, ver, receiveUrl, NANO_API_URL };
-    console.log("Calling Nanopay Cert Request URL:", NANO_API_URL, "Payload:", JSON.stringify(payload));
+    const nanoRes = await fetch(NANO_API_URL, {
+      method: "POST",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(nanoPayload),
+    });
 
-    // 나노페이 KICC 결제창 호출용 자동 전송 HTML Form 생성
-    const payFormHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Nanopay Payment</title>
-      </head>
-      <body>
-        <p style="text-align:center; padding-top:20px; font-family:sans-serif;">나노페이 안전 결제창으로 이동 중입니다...</p>
-        <form id="nanoPayForm" method="POST" action="${NANO_API_URL}">
-          <input type="hidden" name="ver" value="${ver}" />
-          <input type="hidden" name="loginId" value="${loginId}" />
-          <input type="hidden" name="shopcode" value="${shopcode}" />
-          <input type="hidden" name="orderName" value="${realDonorName}" />
-          <input type="hidden" name="orderTel" value="${(donationData?.phone || "01000000000").replace(/[^0-9]/g, '')}" />
-          <input type="hidden" name="orderEmail" value="${donationData?.email || "donator@soulpay.kr"}" />
-          <input type="hidden" name="payWay" value="${payWay || "card"}" />
-          <input type="hidden" name="goodsName" value="${donationData?.itemName || "SoulPay 봉헌금"}" />
-          <input type="hidden" name="reqPayAmt" value="${reqPayAmt}" />
-          <input type="hidden" name="receiveUrl" value="${receiveUrl}" />
-          <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
-          <input type="hidden" name="compOrderMem" value="${realDonorName}" />
-          <input type="hidden" name="ediDate" value="${ediDate}" />
-          <input type="hidden" name="hashValue" value="${hashStandardApiUpper}" />
-          <input type="hidden" name="hash" value="${hashStandardApiLower}" />
-        </form>
-        <script>
-          document.getElementById('nanoPayForm').submit();
-        </script>
-      </body>
-      </html>
-    `;
+    const nanoHtml = await nanoRes.text();
+    console.log("Nanopay response html:", nanoHtml);
+
+    // script location.href 추출
+    const match = nanoHtml.match(/location\.href=[\x27\x22]([^\x27\x22]+)[\x27\x22]/);
+    const redirectUrl = match ? match[1] : null;
 
     return c.json({
       success: true,
-      isJson: false,
-      html: payFormHtml,
       donationId: tempDonationId,
-      debug: debugInfo
+      redirectUrl,
+      html: nanoHtml,
+      NANO_API_URL,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error initiating certified payment:', error);
-    return c.json({ success: false, error: 'Failed to initiate certified payment' }, 500);
+    return c.json({ success: false, error: error?.message || 'Failed to initiate certified payment' }, 500);
   }
 });
 
@@ -1270,43 +1243,104 @@ app.post("/make-server-d0d82cc7/subscriptions/:id/status", async (c) => {
   }
 });
 
-// 인증결제 콜백 결과 처리
-app.post("/make-server-d0d82cc7/payment/process/cert/callback", async (c) => {
+// 인증결제 콜백 결과 처리 (Nanopay / Mainpay POST/GET 처리)
+const handleCertCallback = async (c: any) => {
   try {
-    const body = await c.req.json();
-    console.log("Nanopay Cert Callback Received:", body);
-
-    const { resultCode, resultMsg, shopcode, compOrderNo, tranNo, payWay } = body;
-    const donationId = compOrderNo;
-    
-    const donations = await db.getAllDonations();
-    const donation = donations.find(d => d.id === donationId);
-    
-    if (!donation) {
-      console.error("Donation not found for ID:", donationId);
-      return c.json({ resultCode: "9999", resultMsg: "Donation record not found" });
-    }
-    
-    if (resultCode === "0000") {
-      await db.updateDonation(donation.tenantId, donation.id, {
-        paymentStatus: 'completed',
-        transactionId: tranNo,
-        paymentMethod: payWay || 'card',
-      });
-      console.log(`✅ Certified payment successful for donation: ${donation.id}`);
-      return c.json({ resultCode: "0000", resultMsg: "Success" });
+    let body: any = {};
+    const contentType = c.req.header('content-type') || '';
+    if (contentType.includes('application/json')) {
+      body = await c.req.json().catch(() => ({}));
     } else {
-      await db.updateDonation(donation.tenantId, donation.id, {
-        paymentStatus: 'failed',
-      });
-      console.log(`❌ Certified payment failed for donation: ${donation.id}, error: ${resultMsg}`);
-      return c.json({ resultCode: "0000", resultMsg: "Failure processed" });
+      body = await c.req.parseBody().catch(() => ({}));
     }
+
+    console.log("Nanopay Cert Callback Headers:", c.req.header());
+    console.log("Nanopay Cert Callback Received Body:", body);
+
+    const resultCode = body.resultCode || body.res_cd || (body.apprNo ? "0000" : "9999");
+    const resultMsg = body.resultMsg || body.res_msg || (resultCode === "0000" ? "정상 승인" : "결제 실패");
+    const donationId = body.compOrderNo || body.orderNo || body.comp_order_no;
+    const tranNo = body.tranNo || body.apprNo || body.tno || "";
+    const apprNo = body.apprNo || tranNo;
+    const payWay = body.payWay || "card";
+
+    const isSuccess = resultCode === "0000";
+
+    if (donationId) {
+      const donations = await db.getAllDonations();
+      const donation = donations.find(d => d.id === donationId);
+      
+      if (donation) {
+        if (isSuccess) {
+          await db.updateDonation(donation.tenantId, donation.id, {
+            paymentStatus: 'completed',
+            transactionId: tranNo,
+            approveNo: apprNo,
+            paymentMethod: payWay || 'card',
+          });
+          console.log(`✅ Certified payment successful for donation: ${donation.id}`);
+        } else {
+          await db.updateDonation(donation.tenantId, donation.id, {
+            paymentStatus: 'failed',
+          });
+          console.log(`❌ Certified payment failed for donation: ${donation.id}, error: ${resultMsg}`);
+        }
+      } else {
+        console.warn("Donation record not found for ID:", donationId);
+      }
+    }
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>결제 결과</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; }
+    .card { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; max-width: 360px; }
+    .title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: ${isSuccess ? '#16a34a' : '#dc2626'}; }
+    .desc { font-size: 14px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">${isSuccess ? '결제가 완료되었습니다' : '결제 실패'}</div>
+    <div class="desc">${isSuccess ? '창이 곧 자동으로 닫힙니다.' : (resultMsg || '결제를 완료하지 못했습니다.')}</div>
+  </div>
+  <script>
+    try {
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'SOULPAY_PAYMENT_RESULT',
+          success: ${isSuccess},
+          donationId: '${donationId || ''}',
+          resultCode: '${resultCode}',
+          resultMsg: '${resultMsg}'
+        }, '*');
+      }
+      localStorage.setItem('nanoPayResData${donationId || ''}', JSON.stringify({
+        success: ${isSuccess},
+        donationId: '${donationId || ''}'
+      }));
+    } catch (e) {
+      console.error(e);
+    }
+    setTimeout(function() {
+      window.close();
+    }, 1200);
+  </script>
+</body>
+</html>`;
+
+    return c.html(html);
   } catch (error) {
     console.error('Error processing certified payment callback:', error);
-    return c.json({ resultCode: "9999", resultMsg: "Server error" });
+    return c.html(`<html><body><h3>결제 처리 중 오류가 발생했습니다.</h3><script>setTimeout(function(){window.close();}, 1500);</script></body></html>`);
   }
-});
+};
+
+app.post("/make-server-d0d82cc7/payment/process/cert/callback", handleCertCallback);
+app.get("/make-server-d0d82cc7/payment/process/cert/callback", handleCertCallback);
 
 // ==================== DONATION ITEMS ROUTES ====================
 
