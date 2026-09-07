@@ -1262,10 +1262,19 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       } catch (e) {}
     }
 
+    let formattedHtml = nanoText;
+    if (formattedHtml.includes("<head>")) {
+      formattedHtml = formattedHtml.replace("<head>", `<head>\n\t\t<base href="${baseUrl}/">`);
+    }
+    // 상대 경로(/css/, /js/)를 나노PG 서버의 절대 URL로 확실하게 치환하여 CSS 스타일 및 검증 스크립트 정상 로드
+    formattedHtml = formattedHtml
+      .replaceAll('href="/', `href="${baseUrl}/`)
+      .replaceAll('src="/', `src="${baseUrl}/`);
+
     return c.json({
       success: true,
       reqUrl: NANO_REQKEY_URL,
-      html: nanoText,
+      html: formattedHtml,
       payload: reqPayload,
     });
   } catch (error: any) {
