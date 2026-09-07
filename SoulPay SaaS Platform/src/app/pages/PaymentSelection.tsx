@@ -420,14 +420,19 @@ export default function PaymentSelection() {
       toast.info('정기결제 카드 등록창을 연결하고 있습니다...');
       
       try {
-        const paymentWindow = window.open('about:blank', 'NanopayBillKey', 'width=520,height=860,scrollbars=yes,resizable=yes');
+        const windowName = `NanopayBillKey_${Date.now()}`;
+        const paymentWindow = window.open('about:blank', windowName, 'width=520,height=860,scrollbars=yes,resizable=yes');
         if (!paymentWindow) {
           toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
           setIsProcessing(false);
           return;
         }
 
-        paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제(빌링키) 등록창으로 연결 중입니다...</p>');
+        try {
+          paymentWindow.document.write('<p style="text-align:center;padding-top:40px;font-family:sans-serif;font-size:14px;color:#333;">나노페이 정기결제(빌링키) 등록창으로 연결 중입니다...</p>');
+        } catch (e) {
+          console.warn('Initial popup write skipped:', e);
+        }
 
         const tempDonationId = generateTransactionId();
         const donorPhone = (donationFormData.phone || "").replace(/[^0-9]/g, '');
