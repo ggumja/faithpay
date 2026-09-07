@@ -506,10 +506,10 @@ export default function TenantKiosk() {
                 <Sparkles className="w-4 h-4" /> 현장 오프라인 터치 결제
               </span>
               <h1 className="text-4xl sm:text-5xl font-black text-[#191F28] tracking-tight leading-tight">
-                원하시는 봉헌 방식을 선택해 주세요
+                원하시는 {terms.donation} 방식을 선택해 주세요
               </h1>
               <p className="text-base sm:text-lg text-[#4E5968] font-semibold">
-                무명으로 5초 만에 빠르게 봉헌하시거나, 휴대폰 번호로 교인 이력을 연동하실 수 있습니다.
+                무명으로 5초 만에 빠르게 {terms.donation}하시거나, 휴대폰 번호로 {terms.donor} 이력을 연동하실 수 있습니다.
               </p>
             </div>
 
@@ -530,7 +530,7 @@ export default function TenantKiosk() {
 
                 <div className="space-y-3">
                   <h2 className="text-3xl font-black text-[#191F28] group-hover:text-[#3182F6] transition-colors">
-                    무명(익명)으로 빠른 봉헌
+                    무명(익명)으로 빠른 {terms.donation}
                   </h2>
                   <p className="text-sm sm:text-base text-[#4E5968] font-medium leading-relaxed">
                     전화번호나 성함 입력 없이 **항목과 금액만 터치하여 5초 만에 카드 결제**합니다.
@@ -580,7 +580,7 @@ export default function TenantKiosk() {
           <div className="max-w-[#540px] mx-auto w-full space-y-7 text-center my-auto">
             <div className="space-y-2">
               <h2 className="text-3xl sm:text-4xl font-black text-[#191F28]">010 뒤 8자리 번호를 입력해 주세요</h2>
-              <p className="text-base sm:text-lg text-[#4E5968] font-semibold">교인 정보 자동 매칭 및 알림톡 감사 메시지가 전송됩니다.</p>
+              <p className="text-base sm:text-lg text-[#4E5968] font-semibold">{terms.donor} 정보 자동 매칭 및 알림톡 감사 메시지가 전송됩니다.</p>
             </div>
 
             {/* 대형 전화번호 디스플레이 */}
@@ -606,7 +606,7 @@ export default function TenantKiosk() {
                       환영합니다, {donorName}님! {baptismName && `(${baptismName})`}
                     </div>
                     <div className="text-sm text-[#4E5968] font-semibold mt-0.5">
-                      이전에 {matchedCount}회 봉헌하신 이력이 확인되었습니다.
+                      이전에 {matchedCount}회 {terms.donation}하신 이력이 확인되었습니다.
                     </div>
                   </div>
                 </div>
@@ -637,7 +637,7 @@ export default function TenantKiosk() {
               onClick={startAnonymousTrack}
               className="w-full py-4 rounded-2xl bg-[#FFF6E6] hover:bg-[#FFE8C2] text-[#CC6D00] font-black text-sm sm:text-base cursor-pointer border border-[#FFE8C2] flex items-center justify-center gap-2 shadow-xs"
             >
-              <span>⚡ 무명(익명)으로 빠른 봉헌으로 전환</span>
+              <span>⚡ 무명(익명)으로 빠른 {terms.donation}으로 전환</span>
             </button>
 
             <div className="flex gap-4 pt-1">
@@ -663,7 +663,7 @@ export default function TenantKiosk() {
           <div className="space-y-8 text-center my-auto max-w-5xl mx-auto w-full">
             <div className="space-y-2">
               <span className="text-sm font-extrabold text-[#3182F6] font-mono bg-[#E8F3FF] px-3 py-1 rounded-md">STEP 1 / 3</span>
-              <h2 className="text-4xl sm:text-5xl font-black text-[#191F28] tracking-tight">봉헌(보시) 항목을 선택해 주세요</h2>
+              <h2 className="text-4xl sm:text-5xl font-black text-[#191F28] tracking-tight">{terms.donation} 항목을 선택해 주세요</h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
@@ -695,7 +695,7 @@ export default function TenantKiosk() {
                           </span>
                         ) : (
                           <span className="bg-[#F2F4F6] text-[#4E5968] text-xs sm:text-sm font-extrabold px-3 py-1 rounded-lg">
-                            자율 봉헌 (최저 1,000원)
+                            자율 {terms.donation} (최저 1,000원)
                           </span>
                         )}
                       </div>
@@ -725,7 +725,7 @@ export default function TenantKiosk() {
             <div className="space-y-2">
               <span className="text-sm font-extrabold text-[#3182F6] font-mono bg-[#E8F3FF] px-3 py-1 rounded-md">STEP 2 / 3</span>
               <h2 className="text-4xl sm:text-5xl font-black text-[#191F28] tracking-tight">
-                [{selectedItem.name}] 봉헌 금액을 선택해 주세요
+                [{selectedItem.name}] {terms.donation} 금액을 선택해 주세요
               </h2>
               {selectedItem.amountType === 'fixed' && selectedItem.fixedAmount && (
                 <p className="text-sm font-black text-[#1B64DA] bg-[#E8F3FF] inline-block px-4 py-1.5 rounded-full border border-[#CEE4FE]">
@@ -796,7 +796,7 @@ export default function TenantKiosk() {
               <button
                 onClick={() => {
                   if (amount < 1000) {
-                    toast.error('최소 봉헌 금액은 1,000원 이상이어야 합니다.');
+                    toast.error(`최소 ${terms.donation} 금액은 1,000원 이상이어야 합니다.`);
                     return;
                   }
                   if (isAnonymous) {
@@ -1167,7 +1167,7 @@ export default function TenantKiosk() {
             {/* 결제 정보 요약 */}
             <div className="bg-[#F9FAFB] p-4 rounded-2xl text-sm space-y-1 text-[#4E5968] font-mono border border-[#E5E8EB]">
               <div>결제 금액: <strong className="text-[#3182F6] font-black text-lg">{amount.toLocaleString()}원</strong></div>
-              <div>기부자: <strong className="text-[#191F28] font-bold">{donorName || '무기명'}</strong> ({phone ? phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3') : '무기명'})</div>
+              <div>{terms.donor}: <strong className="text-[#191F28] font-bold">{donorName || '무기명'}</strong> ({phone ? phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3') : '무기명'})</div>
               <div>결제 수단: <strong className="text-[#1B64DA] font-bold">
                 {paymentType === 'CARD' ? '신용·체크카드 / 삼성·애플페이' : paymentType === 'KAKAO_PAY' ? '카카오페이 (QR/바코드)' : '네이버페이 (QR/바코드)'}
               </strong></div>

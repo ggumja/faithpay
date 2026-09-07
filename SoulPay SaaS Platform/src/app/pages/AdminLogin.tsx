@@ -123,19 +123,10 @@ export default function AdminLogin() {
 
     // 1. URL에 특정 단체 slug가 명시된 경우 (예: /dream/admin/login, /gakwonsa/admin/login)
     if (tenantSlug) {
-      let urlTenant = tenants.find((t) => t.slug === tenantSlug);
+      const urlTenant = tenants.find((t) => t.slug === tenantSlug || t.id === tenantSlug);
       if (!urlTenant) {
-        urlTenant = {
-          id: `tenant-${tenantSlug}`,
-          slug: tenantSlug,
-          name: `${tenantSlug} 단체`,
-          religionType: 'protestant',
-          contact: {
-            email: `admin@${tenantSlug}.or.kr`,
-            name: `${tenantSlug} 대표 관리자`,
-          },
-          terminology: { donation: '헌금', member: '성도', prayer: '기도제목' },
-        } as any;
+        toast.error('등록되지 않은 단체입니다. 주소를 다시 확인해 주세요.');
+        return;
       }
 
       if (urlTenant) {

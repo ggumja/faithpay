@@ -9,6 +9,7 @@ import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { Share2, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import { generateTransactionId, formatTransactionId } from '../utils/transactionId';
+import { useTenantTerms } from '../hooks/useTenantTerms';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('ko-KR').format(n || 0);
@@ -53,6 +54,8 @@ export default function DonationComplete() {
     return null;
   });
 
+  const terms = useTenantTerms(tenant);
+
   // 2. 헌금 폼 데이터 복구
   const [formData, setFormData] = useState<DonationFormData>(() => {
     if (appFormData && appFormData.amount) return appFormData;
@@ -77,8 +80,15 @@ export default function DonationComplete() {
       prayerText: '',
       isRecurring: typeParam === 'toss_billing' || typeParam === 'nano_billing',
       paymentMethod: (typeParam === 'toss_billing' || typeParam === 'nano_billing') ? '정기결제' : '토스페이먼츠',
+      donorName: '무기명',
     };
   });
+
+  // 복구된 tenant의 theme 결정
+  const ft = useMemo(() => {
+    if (!tenant) return FAITH_THEMES.protestant;
+    return FAITH_THEMES[tenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
+  }, [tenant]);
 
   const hasRecordedRef = useRef(false);
 
@@ -99,37 +109,36 @@ export default function DonationComplete() {
     }
   }, [tenant, tenantSlug, tenants]);
 
-  // 토스 빌링키 발급 + 즉시 결제 (type=toss_billing, authKey 있을 때)
-  const hasBilledRef = useRef(false);
+  // Toss 빌링키 자동 승인 처리 (정기결제 첫 결제 즉시 승인)
+  const billingChargedRef = useRef(false);
   useEffect(() => {
-    if (typeParam !== 'toss_billing' || !authKeyParam || !customerKeyParam) return;
-    if (hasBilledRef.current) return;
-    if (!tenant) return;
+    if (!typeParam || typeParam !== 'recurring' || !authKeyParam || !customerKeyParam || !tenant) return;
+    if (billingChargedRef.current) return;
+    billingChargedRef.current = true;
 
-    hasBilledRef.current = true;
-
-    const snap = (() => {
+    const snapStr =
+      sessionStorage.getItem(`pending_donation_${donIdParam}`) ||
+      localStorage.getItem(`pending_donation_${donIdParam}`) ||
+      sessionStorage.getItem('pending_donation_latest') ||
+      localStorage.getItem('pending_donation_latest');
+    let fd = formData;
+    if (snapStr) {
       try {
-        const s = sessionStorage.getItem(`pending_donation_${donIdParam}`) ||
-                  localStorage.getItem(`pending_donation_${donIdParam}`) ||
-                  sessionStorage.getItem('pending_donation_latest') ||
-                  localStorage.getItem('pending_donation_latest');
-        return s ? JSON.parse(s) : null;
-      } catch { return null; }
-    })();
+        const snap = JSON.parse(snapStr);
+        if (snap.formData) fd = snap.formData;
+      } catch (e) {}
+    }
 
-    const fd = snap?.formData || formData;
     const cleanPhone = (fd?.phone || '').replace(/[^0-9]/g, '');
-
-    toast.info('빌링키를 발급하고 첫 결제를 진행합니다...');
 
     paymentAPI.tossBillingIssue({
       tenantId: tenant.id,
       authKey: authKeyParam,
       customerKey: customerKeyParam,
+      donorPhone: cleanPhone,
     }).then((issueRes) => {
-      if (!issueRes.success || !issueRes.data?.billingKey) {
-        toast.error(`빌링키 발급 실패: ${issueRes.error || '알 수 없는 오류'}`);
+      if (!issueRes || !issueRes.success || !issueRes.data?.billingKey) {
+        toast.error(issueRes?.error || '빌링키 발급에 실패했습니다.');
         return;
       }
       const billingKey = issueRes.data.billingKey;
@@ -139,9 +148,9 @@ export default function DonationComplete() {
         billingKey,
         customerKey: customerKeyParam,
         orderId: donIdParam || `don_${Date.now()}`,
-        orderName: fd?.itemName || `${tenant.name} 정기 봉헌금`,
+        orderName: fd?.itemName || `${tenant.name} 정기 ${terms.donation}`,
         amount: fd?.amount || amountParam || 10000,
-        customerName: fd?.name || '신도',
+        customerName: fd?.name || terms.donor,
         customerMobilePhone: cleanPhone || undefined,
         donorPhone: cleanPhone,
         itemId: fd?.itemId,
@@ -264,17 +273,16 @@ export default function DonationComplete() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 text-center">
         <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">봉헌 완료 내역을 불러오고 있습니다...</p>
+        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">결제 완료 내역을 불러오고 있습니다...</p>
       </div>
     );
   }
 
-  const ft = FAITH_THEMES[tenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-
   const completionMessage =
     tenant.religionType === 'buddhist' ? '맑고 따뜻한 마음이 전해졌습니다.' :
     tenant.religionType === 'catholic' ? '주님께서 봉헌을 받아주실 것입니다.' :
-    '정성 어린 봉헌에 감사드립니다.';
+    tenant.religionType === 'charity' || tenant.religionType === 'general' ? '소중하고 따뜻한 마음에 깊이 감사드립니다.' :
+    `정성 어린 ${terms.donation}에 감사드립니다.`;
 
   const formattedDate = new Date().toLocaleString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit',
@@ -332,11 +340,11 @@ export default function DonationComplete() {
               style={{ background: ft.primaryBg, color: ft.primary }}
             >
               <Motif kind={ft.motif} size={10} color={ft.primary} />
-              <span>기부금 영수증</span>
+              <span>{terms.receiptModalTitle}</span>
             </span>
 
             <span className="block text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mb-1.5">
-              최종 봉헌 금액
+              최종 {terms.donation} 금액
             </span>
             
             <div className="flex items-baseline gap-1 mb-6 border-b pb-5 border-dashed border-zinc-200 dark:border-zinc-800">
@@ -350,10 +358,10 @@ export default function DonationComplete() {
             <div className="flex flex-col gap-3">
               {[
                 ['영수증 번호', receiptId],
-                [`${tenant.terminology?.donation || '납부'} 일시`, formattedDate],
-                [`${tenant.terminology?.donation || '납부'} 항목`, formData.itemName || `${tenant.name} ${tenant.terminology?.donation || '기부금'}`],
+                [`${terms.donation} 일시`, formattedDate],
+                [`${terms.donation} 항목`, formData.itemName || `${tenant.name} ${terms.donation}`],
                 ['받은 기관', tenant.name],
-                [`${tenant.religionType === 'buddhist' ? '보시자' : tenant.religionType === 'charity' ? '후원자' : '봉헌자'} 성명`, formData.name || '무기명'],
+                [`${terms.receiptDonorLabel.replace(/\s+/g, '')} 성명`, formData.name || '무기명'],
                 ...(formData.baptismName ? [['세례명', formData.baptismName]] : []),
                 ['연락처', formData.phone || '-'],
                 ...(formData.isRecurring ? [['결제 주기', (() => {

@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { donationAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
@@ -98,6 +99,7 @@ export default function MemberDetailPage() {
   const { tenantSlug, memberId } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   const [member, setMember] = useState<MemberDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -227,7 +229,7 @@ export default function MemberDetailPage() {
                 date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
                 title: String(d.prayerText),
                 category: d.itemName || currentTenant.terminology?.prayer || '메시지',
-                beneficiaryName: d.donorName || rawMatch.donorName || (currentTenant.terminology?.member || '신도'),
+                beneficiaryName: d.donorName || rawMatch.donorName || terms.donor,
               }));
 
             const loadedMem: MemberDetailData = {
@@ -308,9 +310,9 @@ export default function MemberDetailPage() {
   }
 
   const currentPath = `/${tenantSlug}/admin/members`;
-  const memberTerm = currentTenant.terminology?.member || (currentTenant.religionType === 'buddhist' ? '불자' : currentTenant.religionType === 'protestant' ? '성도' : currentTenant.religionType === 'catholic' ? '교우' : '회원');
-  const donationTerm = currentTenant.terminology?.donation || (currentTenant.religionType === 'buddhist' ? '보시' : currentTenant.religionType === 'protestant' ? '헌금' : currentTenant.religionType === 'catholic' ? '봉헌' : '후원');
-  const prayerTerm = currentTenant.terminology?.prayer || (currentTenant.religionType === 'buddhist' ? '발원문' : currentTenant.religionType === 'protestant' ? '기도제목' : currentTenant.religionType === 'catholic' ? '미사지향' : '메시지');
+  const memberTerm = terms.donor;
+  const donationTerm = terms.donation;
+  const prayerTerm = terms.prayer;
 
   const getTitleLabel = () => {
     if (currentTenant.religionType === 'catholic') return '세례명';
@@ -333,7 +335,7 @@ export default function MemberDetailPage() {
   const handleGenerateTaxReceipt = () => {
     if (!member || !currentTenant) return;
     if (!taxRrn.trim()) {
-      toast.error('소득공제용 기부금영수증 발급을 위해 기부자의 주민등록번호를 입력해주세요.');
+      toast.error(`소득공제용 기부금영수증 발급을 위해 ${terms.donor}(기부자)의 주민등록번호를 입력해주세요.`);
       return;
     }
 
@@ -1041,7 +1043,7 @@ export default function MemberDetailPage() {
                 개인정보보호법에 따른 안전 안내
               </div>
               <p className="text-[11.5px] text-amber-800 leading-relaxed">
-                기부자의 <strong>주민등록번호</strong>는 영수증 출력 시에만 일시 사용되며, <strong>DB에 영구 저장되지 않으므로</strong> 개인정보 유출 우려 없이 안전하게 발급하실 수 있습니다.
+                {terms.donor}(기부자)의 <strong>주민등록번호</strong>는 영수증 출력 시에만 일시 사용되며, <strong>DB에 영구 저장되지 않으므로</strong> 개인정보 유출 우려 없이 안전하게 발급하실 수 있습니다.
               </p>
             </div>
 
@@ -1068,7 +1070,7 @@ export default function MemberDetailPage() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">기부자 성명</Label>
+              <Label className="text-xs font-bold text-slate-700">{terms.donor} 성명 (기부자)</Label>
               <Input
                 type="text"
                 value={taxDonorName}
@@ -1095,7 +1097,7 @@ export default function MemberDetailPage() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">기부자 주소</Label>
+              <Label className="text-xs font-bold text-slate-700">{terms.donor} 주소 (기부자)</Label>
               <Input
                 type="text"
                 value={taxAddress}

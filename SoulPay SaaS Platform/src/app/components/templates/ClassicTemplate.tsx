@@ -4,6 +4,7 @@ import { Tenant, DonationItem } from '../../context/AppContext';
 import { FaithTheme } from '../../theme/faithTheme';
 import { Motif, MotifLarge } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 import {
   MapPin, Phone, Mail, Clock, ChevronRight,
   Shield, Repeat, Landmark, Heart, Search, Star, Sparkles
@@ -115,6 +116,7 @@ interface ClassicTemplateProps {
 
 export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, install }: ClassicTemplateProps) {
   const navigate = useNavigate();
+  const terms = useTenantTerms(currentTenant);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recurring' | 'onetime'>('all');
   const heroRef = useRef<HTMLDivElement>(null);
@@ -185,7 +187,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = 'none'; }}
             >
               <span>🔑</span>
-              <span>신도 로그인 · 마이페이지</span>
+              <span>{terms.donor} 로그인 · 마이페이지</span>
             </button>
             <button
               className="th-btn-spring"
@@ -203,7 +205,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                 navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
               }}
               style={{ height: 36, padding: '0 16px', fontSize: 13, fontWeight: 700, borderRadius: 10, background: ft.primary, color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}
-            >{currentTenant.terminology.donation}하기</button>
+            >{terms.donation}하기</button>
           </div>
         </div>
 
@@ -270,7 +272,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'; }}
                 >
                   <Motif kind={ft.motif} size={15} color={ft.primary} />
-                  {currentTenant.terminology.donation}하기
+                  {terms.donation}하기
                 </button>
                 <button
                   className="th-btn-spring"
@@ -352,7 +354,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: C.ink, letterSpacing: '-0.02em' }}>
-              {currentTenant.terminology.donation} 항목
+              {terms.donation} 항목
             </h2>
             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: C.cobalt, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, padding: '2px 9px', borderRadius: 6 }}>{filtered.length}</span>
           </div>
@@ -362,7 +364,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               <ClassicItemRow
                 key={item.id}
                 item={item}
-                terminology={currentTenant.terminology.donation}
+                terminology={terms.donation}
                 delay={Math.min(i + 1, 3)}
                 onClick={() => navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: item } })}
               />
@@ -383,7 +385,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               <MotifLarge kind={ft.motif} color="white" opacity={1} />
             </div>
             <div style={{ position: 'relative' }}>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'rgba(255, 255, 255, 0.7)', letterSpacing: '0.06em', marginBottom: 8, fontWeight: 700 }}>온라인 {currentTenant.terminology.donation}</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'rgba(255, 255, 255, 0.7)', letterSpacing: '0.06em', marginBottom: 8, fontWeight: 700 }}>온라인 {terms.donation}</div>
               <p style={{ fontSize: 15, fontWeight: 800, color: 'white', lineHeight: 1.45, marginBottom: 16 }}>{ft.tagline}</p>
               <button
                 className="th-btn-spring"
@@ -394,7 +396,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                 style={{ width: '100%', height: 42, background: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
               >
                 <Motif kind={ft.motif} size={14} color={ft.primary} />
-                <span>{currentTenant.terminology.donation}하기</span>
+                <span>{terms.donation}하기</span>
               </button>
             </div>
           </div>

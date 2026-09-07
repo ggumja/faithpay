@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Tenant, DonationItem } from '../../context/AppContext';
 import { FaithTheme } from '../../theme/faithTheme';
 import { Motif } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
+import { donationAPI } from '../../api/client';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 import {
   ChevronRight, Heart, Landmark, Star, Repeat, Shield, MapPin, Phone, Mail, Clock, ArrowLeft, Search, Sparkles, UserCheck
 } from 'lucide-react';
@@ -122,8 +124,42 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
     return matchSearch && matchTab && item.enabled;
   });
 
-  const totalDonationCount = 148;
-  const monthlyGoalPercent = 78;
+  const terms = useTenantTerms(currentTenant);
+  const [totalDonationCount, setTotalDonationCount] = useState<number>(0);
+  const [uniqueDonorCount, setUniqueDonorCount] = useState<number>(0);
+  const [thisMonthAmount, setThisMonthAmount] = useState<number>(0);
+
+  useEffect(() => {
+    if (!currentTenant?.id) return;
+    donationAPI.getByTenant(currentTenant.id).then(res => {
+      if (res.success && res.data) {
+        const completed = res.data.filter((d: any) => d.paymentStatus === 'completed' || d.status === 'completed');
+        setTotalDonationCount(completed.length);
+
+        const donorSet = new Set(
+          completed.map((d: any) => d.donorPhone || d.donor_phone || d.donorName || d.donor_name).filter(Boolean)
+        );
+        setUniqueDonorCount(donorSet.size);
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const monthSum = completed.reduce((acc: number, d: any) => {
+          const dateStr = d.createdAt || d.created_at || d.date;
+          if (dateStr) {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime()) && date.getFullYear() === currentYear && date.getMonth() === currentMonth) {
+              return acc + (d.amount || 0);
+            }
+          }
+          return acc;
+        }, 0);
+        setThisMonthAmount(monthSum);
+      }
+    }).catch(err => {
+      console.error('Failed to fetch donations for metrics:', err);
+    });
+  }, [currentTenant?.id]);
 
   return (
     <div className="neo-container">
@@ -175,7 +211,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
                   {currentTenant.name}
                 </h1>
                 <p style={{ fontSize: 13, color: NEO.midGray, margin: '4px 0 0 0', fontWeight: 600 }}>
-                  {currentTenant.contact.phone || '온라인 공식 봉헌 플랫폼'}
+                  {currentTenant.contact.phone || `온라인 공식 ${terms.donation} 플랫폼`}
                 </p>
               </div>
             </div>
@@ -257,40 +293,44 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, borderBottom: `1px solid ${NEO.borderDark}`, paddingBottom: 22 }}>
             <div>
               <div style={{ fontSize: 28, fontWeight: 900, color: NEO.white, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                {totalDonationCount}
+                {fmt(totalDonationCount)}
               </div>
               <div style={{ fontSize: 11, color: NEO.textSub, marginTop: 7, fontWeight: 600 }}>
-                누적 봉헌
+                누적 {terms.donation}
               </div>
             </div>
 
             <div>
               <div style={{ fontSize: 28, fontWeight: 900, color: NEO.white, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                86<span style={{ fontSize: 14, fontWeight: 600, color: NEO.textSub }}>명</span>
+                {fmt(uniqueDonorCount)}<span style={{ fontSize: 14, fontWeight: 600, color: NEO.textSub }}>명</span>
               </div>
               <div style={{ fontSize: 11, color: NEO.textSub, marginTop: 7, fontWeight: 600 }}>
-                참여 {currentTenant.terminology?.member || (currentTenant.religionType === 'buddhist' ? '불자' : currentTenant.religionType === 'catholic' ? '교우' : currentTenant.religionType === 'protestant' ? '성도' : '후원자')}
+                참여 {terms.donor}
               </div>
             </div>
 
             <div>
               <div style={{ fontSize: 28, fontWeight: 900, color: NEO.electricGreen, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                ₩1,240<span style={{ fontSize: 13, fontWeight: 600, color: NEO.electricGreen }}>만</span>
+                {thisMonthAmount >= 10000 ? (
+                  <>₩{fmt(Math.round(thisMonthAmount / 10000))}<span style={{ fontSize: 13, fontWeight: 600, color: NEO.electricGreen }}>만</span></>
+                ) : (
+                  `₩${fmt(thisMonthAmount)}`
+                )}
               </div>
               <div style={{ fontSize: 11, color: NEO.textSub, marginTop: 7, fontWeight: 600 }}>
-                이달의 나눔
+                이달의 {terms.donation}
               </div>
             </div>
           </div>
 
-          {/* Progress Bar Section */}
+          {/* Real-time Status Section */}
           <div style={{ paddingTop: 18 }}>
-            <div style={{ height: 7, backgroundColor: NEO.charcoal, borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
-              <div style={{ width: `${monthlyGoalPercent}%`, height: '100%', backgroundColor: NEO.electricGreen, borderRadius: 4 }} />
+            <div style={{ height: 4, backgroundColor: NEO.charcoal, borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
+              <div style={{ width: totalDonationCount > 0 ? '100%' : '0%', height: '100%', backgroundColor: NEO.electricGreen, borderRadius: 4, transition: 'width 0.5s ease' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: NEO.textSub, fontWeight: 600 }}>
-              <span>월간 나눔 목표 달성률</span>
-              <span style={{ color: NEO.electricGreen, fontWeight: 800 }}>{monthlyGoalPercent}%</span>
+              <span>실시간 {terms.donation} 집계 현황</span>
+              <span style={{ color: NEO.electricGreen, fontWeight: 800 }}>{totalDonationCount > 0 ? `${fmt(totalDonationCount)}건 연동 완료` : '0건 (집계 대기)'}</span>
             </div>
           </div>
         </div>
@@ -299,7 +339,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
         <div style={{ marginTop: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 23, fontWeight: 900, color: NEO.black, letterSpacing: '-0.03em', margin: 0 }}>
-              {currentTenant.terminology.donation} 항목 선택
+              {terms.donation} 항목 선택
             </h2>
 
             {/* Filter Tabs */}
@@ -332,7 +372,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
             <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: NEO.midGray }} />
             <input
               type="text"
-              placeholder="봉헌 항목 검색..."
+              placeholder={`${terms.donation} 항목 검색...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
@@ -424,7 +464,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
                         lineHeight: 1.45,
                         fontWeight: 400,
                       }}>
-                        {item.description || `${currentTenant.name} 온라인 ${currentTenant.terminology.donation}`}
+                        {item.description || `${currentTenant.name} 온라인 ${terms.donation}`}
                       </p>
                     </div>
                   </div>
@@ -456,7 +496,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
           <div className="neo-card-round" style={{ backgroundColor: NEO.white, padding: '22px 24px', border: `1px solid ${NEO.borderLight}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: NEO.black, fontWeight: 900, fontSize: 15 }}>
               <Clock size={18} color={NEO.black} />
-              <span>{currentTenant.religionType === 'protestant' ? '예배' : currentTenant.religionType === 'buddhist' ? '법회' : '미사'} 시간 안내</span>
+              <span>{currentTenant.religionType === 'protestant' ? '예배' : currentTenant.religionType === 'buddhist' ? '법회' : currentTenant.religionType === 'catholic' ? '미사' : currentTenant.religionType === 'charity' ? '활동' : '운영'} 시간 안내</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {currentTenant.schedule?.map((s, i) => (
@@ -513,7 +553,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
         >
           <Motif kind={ft.motif} size={22} color={NEO.black} />
           <span>
-            {selectedItem?.name ? `${selectedItem.name} ${currentTenant.terminology.donation}하기` : `${currentTenant.terminology.donation}하기`}
+            {selectedItem?.name ? `${selectedItem.name} ${terms.donation}하기` : `${terms.donation}하기`}
           </span>
           <ChevronRight size={22} color={NEO.black} />
         </button>

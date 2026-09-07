@@ -4,6 +4,7 @@ import { Tenant, DonationItem } from '../../context/AppContext';
 import { FaithTheme } from '../../theme/faithTheme';
 import { Motif } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Heart, Star } from 'lucide-react';
 
 interface MinimalHeroTemplateProps {
@@ -54,6 +55,7 @@ const MINIMAL_CSS = `
 
 export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, install }: MinimalHeroTemplateProps) {
   const navigate = useNavigate();
+  const terms = useTenantTerms(currentTenant);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'recurring' | 'onetime'>('all');
 
@@ -109,7 +111,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
                 cursor: 'pointer',
               }}
             >
-              마이페이지
+              {terms.donor} 마이페이지
             </button>
             <button
               className="mh-btn-spring"
@@ -227,7 +229,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
               onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0) scale(1)')}
             >
               <Sparkles size={18} />
-              <span>{currentTenant.terminology.donation} 시작하기</span>
+              <span>{terms.donation} 시작하기</span>
             </button>
           </div>
         </div>
@@ -275,10 +277,10 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <h2 style={{ fontSize: 24, fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', margin: 0 }}>
-                {currentTenant.terminology.donation} 항목 선택
+                {terms.donation} 항목 선택
               </h2>
               <p style={{ fontSize: 14, color: '#64748B', marginTop: 4, fontWeight: 500 }}>
-                원하시는 후원/봉헌 항목을 선택하여 마음을 전달하세요.
+                원하시는 {terms.donation} 항목을 선택하여 마음을 전달하세요.
               </p>
             </div>
 
@@ -311,7 +313,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
             <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
             <input
               type="text"
-              placeholder="항목 검색..."
+              placeholder={`${terms.donation} 항목 검색...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{

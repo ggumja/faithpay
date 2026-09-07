@@ -46,11 +46,13 @@ import { donationAPI } from '../../api/client';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   const [members, setMembers] = useState<MemberDetailData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,8 +160,8 @@ export default function MemberManagement() {
   }
 
   const currentPath = `/${tenantSlug}/admin/members`;
-  const memberTerm = currentTenant.terminology?.member || (currentTenant.religionType === 'buddhist' ? '불자' : currentTenant.religionType === 'protestant' ? '성도' : currentTenant.religionType === 'catholic' ? '교우' : '회원');
-  const donationTerm = currentTenant.terminology?.donation || (currentTenant.religionType === 'buddhist' ? '보시' : currentTenant.religionType === 'protestant' ? '헌금' : currentTenant.religionType === 'catholic' ? '봉헌' : '후원');
+  const memberTerm = terms.donor;
+  const donationTerm = terms.donation;
 
   const getTitleLabel = () => {
     if (currentTenant.religionType === 'catholic') return '세례명';
@@ -215,7 +217,7 @@ export default function MemberManagement() {
 
   const handleAddMember = () => {
     if (!memberName.trim()) {
-      toast.error('회원 성명을 입력해 주세요.');
+      toast.error(`${memberTerm} 성명을 입력해 주세요.`);
       return;
     }
 
@@ -231,7 +233,7 @@ export default function MemberManagement() {
       totalDonation: 0,
       lastDonation: '납부 기록 없음',
       recurringCount: 0,
-      note: '신규 등록 회원',
+      note: `신규 등록 ${memberTerm}`,
     };
 
     setMembers((prev) => [newMem, ...prev]);
@@ -254,7 +256,7 @@ export default function MemberManagement() {
   const handleSaveEditMember = () => {
     if (!editingMember) return;
     if (!memberName.trim()) {
-      toast.error('회원 성명을 입력해 주세요.');
+      toast.error(`${memberTerm} 성명을 입력해 주세요.`);
       return;
     }
 
@@ -283,7 +285,7 @@ export default function MemberManagement() {
   // UTF-8 BOM CSV Excel Export Engine
   const handleExportCSV = () => {
     if (members.length === 0) {
-      toast.error('다운로드할 회원 데이터가 없습니다.');
+      toast.error(`다운로드할 ${memberTerm} 데이터가 없습니다.`);
       return;
     }
 
@@ -476,7 +478,7 @@ export default function MemberManagement() {
                       <TableHead className="font-bold">정기 약정 현황</TableHead>
                       <TableHead className="text-right font-bold">누적 {donationTerm}액</TableHead>
                       <TableHead className="font-bold">최근 {donationTerm}일</TableHead>
-                      <TableHead className="text-right font-bold">회원 관리 작업</TableHead>
+                      <TableHead className="text-right font-bold">{memberTerm} 관리 작업</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -527,7 +529,7 @@ export default function MemberManagement() {
                             <Button
                               variant="outline"
                               size="sm"
-                              title="회원 상세 정보 및 결제내역"
+                              title={`${memberTerm} 상세 정보 및 결제내역`}
                               onClick={() => handleOpenDetail(m)}
                               className="h-7 px-2 text-xs gap-1 cursor-pointer bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold border-indigo-200"
                             >
@@ -547,7 +549,7 @@ export default function MemberManagement() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              title="회원 삭제"
+                              title={`${memberTerm} 삭제`}
                               onClick={() => handleDeleteMember(m.id, m.name)}
                               className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
                             >

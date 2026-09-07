@@ -28,20 +28,33 @@ import {
   DollarSign,
   Menu,
   Download,
-  FileText as FileTextIcon,
-  TrendingUp,
   Calendar,
-  Filter,
+  CreditCard,
+  Building2,
+  Receipt,
+  FileCheck,
+  TrendingUp,
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+  Clock,
+  Ban,
+  Wallet,
+  ArrowUpRight,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { RBACRouteGuard } from '../../components/RBACRouteGuard';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 export default function SettlementReports() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
   const [dailySettlement, setDailySettlement] = useState<any[]>([]);
@@ -342,7 +355,7 @@ export default function SettlementReports() {
 
     const donorMap: Record<string, { name: string; rno: string; amount: number; count: number }> = {};
     completedDonations.forEach((d) => {
-      const donorName = d.donorName || d.donor_name || '기부자';
+      const donorName = d.donorName || d.donor_name || terms.donor;
       const key = `${donorName}_${d.donorPhone || d.donor_phone || ''}`;
       if (!donorMap[key]) {
         donorMap[key] = {
@@ -757,7 +770,7 @@ export default function SettlementReports() {
                       <TableRow>
                         <TableHead>결제 승인일</TableHead>
                         <TableHead>거래 번호</TableHead>
-                        <TableHead>신도명 / 항목</TableHead>
+                        <TableHead>{terms.donor}명 / 항목</TableHead>
                         <TableHead className="text-right">승인 금액</TableHead>
                         <TableHead className="text-right">PG 수수료 ({paymentConfig?.contractRate ?? contractRate}%)</TableHead>
                         <TableHead className="text-right">실 입금액</TableHead>
@@ -813,7 +826,7 @@ export default function SettlementReports() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>원 결제 승인일</TableHead>
-                        <TableHead>신도명 / 항목</TableHead>
+                        <TableHead>{terms.donor}명 / 항목</TableHead>
                         <TableHead className="text-right">취소 요청 금액</TableHead>
                         <TableHead className="text-right">PG 수수료 보정 차감액</TableHead>
                         <TableHead>차기 이월 정산 반영일</TableHead>

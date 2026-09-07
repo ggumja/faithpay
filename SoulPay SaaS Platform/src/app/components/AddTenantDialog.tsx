@@ -139,6 +139,11 @@ export default function AddTenantDialog({ isOpen, onClose, onAddTenant }: AddTen
         return { donation: '봉헌', member: '교우', prayer: '미사지향' };
       case 'buddhist':
         return { donation: '보시', member: '불자', prayer: '발원문' };
+      case 'charity':
+        return { donation: '후원', member: '후원자', prayer: '응원메시지' };
+      case 'general':
+      default:
+        return { donation: '기부', member: '기부자', prayer: '기부메시지' };
     }
   };
 

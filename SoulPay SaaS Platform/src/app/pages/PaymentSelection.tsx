@@ -15,12 +15,14 @@ import { generateTransactionId } from '../utils/transactionId';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandLogos';
+import { useTenantTerms } from '../hooks/useTenantTerms';
 
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { currentTenant, setCurrentTenant, tenants, donationFormData, setDonationFormData, currentAdmin } = useApp();
   const location = useLocation();
+  const terms = useTenantTerms(currentTenant);
 
   const [paymentMethod, setPaymentMethod] = useState<string>('card');
   const [selectedEasyPay, setSelectedEasyPay] = useState<'kakaopay' | 'naverpay' | 'tosspay'>('kakaopay');
@@ -435,7 +437,7 @@ export default function PaymentSelection() {
         const pad = (n: number) => n.toString().padStart(2, '0');
         const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
         const tempDonationId = generateTransactionId();
-        const donorName = donationFormData.name || "신도";
+        const donorName = donationFormData.name || terms.donor || "무기명";
         const donorPhone = (donationFormData.phone || "").replace(/[^0-9]/g, '');
         const popupOpenedAt = Date.now(); // 팝업 열린 시각 기록
 

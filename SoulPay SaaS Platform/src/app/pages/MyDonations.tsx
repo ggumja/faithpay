@@ -51,6 +51,7 @@ export default function MyDonations() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   // 📱 전화번호 하이픈 자동 포맷팅 헬퍼
   const formatPhoneNumber = (val: string) => {
@@ -256,7 +257,7 @@ export default function MyDonations() {
         }));
         setHistory(matched);
         loadSavedProfile(userPhone.replace(/[^0-9]/g, ''), completedDonations);
-        toast.success(`이메일 로그인 성공! ${res.data.donorName || '신도'}님의 마이페이지입니다.`);
+        toast.success(`이메일 로그인 성공! ${res.data.donorName || terms.donor}님의 마이페이지입니다.`);
       } else {
         setIsAuthenticated(true);
         const targetPh = (phoneNumber || sessionStorage.getItem('soulpay_donor_session') || '').replace(/[^0-9]/g, '');
@@ -561,7 +562,7 @@ export default function MyDonations() {
               <div className="flex items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🔒</span>
-                  <CardTitle className="text-xl font-bold">신도 마이페이지 로그인</CardTitle>
+                  <CardTitle className="text-xl font-bold">{terms.donor} 마이페이지 로그인</CardTitle>
                 </div>
                 <Badge variant="outline" className="text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
                   {currentTenant.name} 전용

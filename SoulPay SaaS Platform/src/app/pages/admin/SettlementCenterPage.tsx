@@ -81,7 +81,7 @@ export default function SettlementCenterPage() {
       const res = await paymentAPI.createTestDonation({
         tenantId: selectedTenantId,
         amount: testAmount,
-        donorName: 'E2E 테스트 성도',
+        donorName: 'E2E 테스트 납부자',
         paymentMethod: '신용카드',
       });
       if (res.success && res.data) {

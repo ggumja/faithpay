@@ -113,10 +113,34 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     receiptEnglishTitle: 'OFFICIAL BUDDHIST DONATION RECEIPT',
     receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
   },
+  // 5. 일반 비영리 / 기부 / 기타 단체
+  general: {
+    donation: '기부',
+    donationHistory: '기부 내역',
+    donationItems: '기부 항목',
+    recurringPending: '정기기부 대기',
+    prayer: '기부메시지 관리',
+    donor: '기부자',
+    prayerInputLabel: '기부 메시지',
+    receiptTitle: '기 부 금  영 수 증',
+    cancelReceiptTitle: '기 부 금  결 제  취 소  영 수 증',
+    receiptModalTitle: '기부금 영수증',
+    cancelReceiptModalTitle: '기부금 결제 취소 영수증',
+    receiptDonorLabel: '기 부 자',
+    receiptItemLabel: '기 부 항 목',
+    receiptAmountLabel: '기 부 금 액',
+    receiptPrayerLabel: '기부 / 응원 메시지',
+    receiptGratitudeText: '위 금액을 정성 어린 기부금으로 정히 수령하였습니다.\n따뜻한 나눔에 진심으로 감사드립니다.',
+    receiptCancelConfirmText: '위 기부금 결제건은 정상적으로 승인 취소 완료되었음을 확인합니다.',
+    receiptEnglishTitle: 'OFFICIAL DONATION RECEIPT',
+    receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
+  },
 };
 
 // 이전 버전 호환성용 alias
 (TENANT_TERMINOLOGY as any).church = TENANT_TERMINOLOGY.protestant;
+(TENANT_TERMINOLOGY as any).buddhist = TENANT_TERMINOLOGY.temple;
+(TENANT_TERMINOLOGY as any).charity = TENANT_TERMINOLOGY.default;
 
 /**
  * 단체 유형(orgType 또는 religionType) 또는 테넌트 객체에 따라 맞춤 용어 딕셔너리를 반환하는 커스텀 훅
@@ -128,8 +152,10 @@ export function useTenantTerms(orgOrReligionTypeOrTenant?: any): TenantTerms {
     
     // 객체로 넘어온 경우 religionType, orgType, terminology.donation 우선 확인
     let rawType = '';
+    let customTerminology: any = null;
     if (typeof orgOrReligionTypeOrTenant === 'object') {
       const t = orgOrReligionTypeOrTenant;
+      customTerminology = t.terminology;
       if (t.religionType) {
         rawType = t.religionType;
       } else if (t.orgType) {
@@ -138,27 +164,56 @@ export function useTenantTerms(orgOrReligionTypeOrTenant?: any): TenantTerms {
         if (t.terminology.donation.includes('보시')) rawType = 'buddhist';
         else if (t.terminology.donation.includes('헌금')) rawType = 'protestant';
         else if (t.terminology.donation.includes('봉헌')) rawType = 'catholic';
+        else if (t.terminology.donation.includes('기부')) rawType = 'general';
       }
     } else if (typeof orgOrReligionTypeOrTenant === 'string') {
       rawType = orgOrReligionTypeOrTenant;
     }
 
-    if (!rawType) return TENANT_TERMINOLOGY.default;
-    const normalized = rawType.toLowerCase().trim();
+    let baseTerms = TENANT_TERMINOLOGY.default;
+    if (rawType) {
+      const normalized = rawType.toLowerCase().trim();
 
-    // 불교
-    if (normalized === 'buddhist' || normalized === 'temple' || normalized === 'buddhism') {
-      return TENANT_TERMINOLOGY.temple;
+      // 불교
+      if (normalized === 'buddhist' || normalized === 'temple' || normalized === 'buddhism') {
+        baseTerms = TENANT_TERMINOLOGY.temple;
+      }
+      // 천주교 / 가톨릭
+      else if (normalized === 'catholic') {
+        baseTerms = TENANT_TERMINOLOGY.catholic;
+      }
+      // 개신교 / 기독교 / 교회
+      else if (normalized === 'protestant' || normalized === 'church' || normalized === 'christian') {
+        baseTerms = TENANT_TERMINOLOGY.protestant;
+      }
+      // 일반 비영리 / 기부
+      else if (normalized === 'general') {
+        baseTerms = TENANT_TERMINOLOGY.general;
+      }
+      // 사회복지 / 구호 / 비영리
+      else {
+        baseTerms = TENANT_TERMINOLOGY.default;
+      }
     }
-    // 천주교 / 가톨릭
-    if (normalized === 'catholic') {
-      return TENANT_TERMINOLOGY.catholic;
+
+    // 테넌트 객체에 별도 커스텀 용어가 설정되어 있는 경우 baseTerms 위에 덮어씌움
+    if (customTerminology) {
+      return {
+        ...baseTerms,
+        ...(customTerminology.donation ? { 
+          donation: customTerminology.donation,
+          donationHistory: `${customTerminology.donation} 내역`,
+          donationItems: `${customTerminology.donation} 항목`,
+          recurringPending: `정기${customTerminology.donation} 대기`,
+        } : {}),
+        ...(customTerminology.member ? { donor: customTerminology.member } : {}),
+        ...(customTerminology.prayer ? { 
+          prayer: `${customTerminology.prayer} 관리`,
+          prayerInputLabel: customTerminology.prayer,
+        } : {}),
+      };
     }
-    // 개신교 / 기독교 / 교회
-    if (normalized === 'protestant' || normalized === 'church' || normalized === 'christian') {
-      return TENANT_TERMINOLOGY.protestant;
-    }
-    // 비영리 / 일반
-    return TENANT_TERMINOLOGY.default;
+
+    return baseTerms;
   }, [orgOrReligionTypeOrTenant]);
 }

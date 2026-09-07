@@ -285,9 +285,13 @@ export default function DonationHistory() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelModalDonation, setCancelModalDonation] = useState<any | null>(null);
-  const [cancelReasonType, setCancelReasonType] = useState<string>('신도 단순 환불 요청');
+  const [cancelReasonType, setCancelReasonType] = useState<string>(() => `${terms.donor} 단순 환불 요청`);
   const [customCancelReason, setCustomCancelReason] = useState<string>('');
   const [recurringCancelScope, setRecurringCancelScope] = useState<'once' | 'all'>('once');
+
+  useEffect(() => {
+    setCancelReasonType(`${terms.donor} 단순 환불 요청`);
+  }, [terms.donor]);
 
 
 
@@ -536,11 +540,11 @@ export default function DonationHistory() {
 
   const handleExport = () => {
     if (filteredDonations.length === 0) {
-      toast.error('다운로드할 봉헌 내역이 없습니다.');
+      toast.error(`다운로드할 ${terms.donation} 내역이 없습니다.`);
       return;
     }
 
-    const headers = ['봉헌번호', '일시', '접수기기', '봉헌자', '연락처', '봉헌항목', '금액', '결제방법', '결제상태', '실패/취소사유', '기도제목/메모'];
+    const headers = [`${terms.donation}번호`, '일시', '접수기기', terms.donor, '연락처', `${terms.donation}항목`, '금액', '결제방법', '결제상태', '실패/취소사유', `${terms.prayerInputLabel}/메모`];
     
     const rows = filteredDonations.map(d => {
       const createdDate = d.createdAt ? new Date(d.createdAt).toLocaleString() : `${d.date || ''} ${d.time || ''}`;
@@ -1286,13 +1290,13 @@ export default function DonationHistory() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <CardHeader>
-                    <CardTitle>봉헌 상세 정보</CardTitle>
+                    <CardTitle>{terms.donation} 상세 정보</CardTitle>
                     <CardDescription>{selectedDonation.id}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">봉헌자</p>
+                        <p className="text-sm text-muted-foreground">{terms.donor}</p>
                         <p className="font-semibold">
                           {!selectedDonation.donorName || selectedDonation.donorName === '무기명' ? (
                             <Badge variant="outline" className="text-zinc-500 bg-zinc-50 border-zinc-200 text-xs font-normal">
@@ -1308,8 +1312,8 @@ export default function DonationHistory() {
                         <p className="font-semibold">{selectedDonation.donorPhone ? formatPhoneNumber(selectedDonation.donorPhone) : '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">봉헌 항목</p>
-                        <p className="font-semibold">{selectedDonation.itemName || '일반헌금/보시'}</p>
+                        <p className="text-sm text-muted-foreground">{terms.donation} 항목</p>
+                        <p className="font-semibold">{selectedDonation.itemName || `일반 ${terms.donation}`}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">금액</p>
@@ -1553,7 +1557,7 @@ export default function DonationHistory() {
                           <textarea
                             value={customCancelReason}
                             onChange={(e) => setCustomCancelReason(e.target.value)}
-                            placeholder="구체적인 취소 사유를 입력해 주세요 (예: 봉헌 항목 착오로 인한 재결제 요청 등)"
+                            placeholder={`구체적인 취소 사유를 입력해 주세요 (예: ${terms.donation} 항목 착오로 인한 재결제 요청 등)`}
                             rows={2}
                             className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-red-500"
                           />

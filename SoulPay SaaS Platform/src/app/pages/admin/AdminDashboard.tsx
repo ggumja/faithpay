@@ -30,6 +30,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 
 import { donationAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 const normalizeDonation = (d: any) => {
   const rawDate = d.createdAt ?? d.created_at ?? d.date;
@@ -93,6 +94,7 @@ export default function AdminDashboard() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   const [dbDonations, setDbDonations] = useState<any[]>([]);
   const [totalMonthlyAmount, setTotalMonthlyAmount] = useState<number>(0);
@@ -271,7 +273,7 @@ export default function AdminDashboard() {
                 <p className="text-muted-foreground">{currentTenant.name}</p>
               </div>
               <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
-                신도 페이지 보기
+                {terms.donor} 페이지 보기
               </Button>
             </div>
           </div>
@@ -280,7 +282,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 총 봉헌액</CardTitle>
+                <CardTitle className="text-sm font-medium">이번 달 총 {terms.donation}액</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -297,7 +299,7 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">신규 {currentTenant.terminology.member}</CardTitle>
+                <CardTitle className="text-sm font-medium">신규 {terms.donor}</CardTitle>
                 <UserPlus className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -316,7 +318,7 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">대기중인 {currentTenant.terminology.prayer}</CardTitle>
+                <CardTitle className="text-sm font-medium">대기중인 {terms.prayer}</CardTitle>
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -338,7 +340,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <Card>
               <CardHeader>
-                <CardTitle>월별 봉헌액 추이</CardTitle>
+                <CardTitle>월별 {terms.donation}액 추이</CardTitle>
                 <CardDescription>DB 수납 데이터 실시간 반영</CardDescription>
               </CardHeader>
               <CardContent>
@@ -356,7 +358,7 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>월별 봉헌액 추이 (꺾은선)</CardTitle>
+                <CardTitle>월별 {terms.donation}액 추이 (꺾은선)</CardTitle>
                 <CardDescription>월별 수납 금액 변동 추이 (결제완료 기준)</CardDescription>
               </CardHeader>
               <CardContent>
@@ -382,16 +384,16 @@ export default function AdminDashboard() {
           {/* Recent Donations */}
           <Card>
             <CardHeader>
-              <CardTitle>실시간 봉헌 내역</CardTitle>
-              <CardDescription>오늘 접수된 최근 봉헌</CardDescription>
+              <CardTitle>실시간 {terms.donation} 내역</CardTitle>
+              <CardDescription>오늘 접수된 최근 {terms.donation}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>접수번호</TableHead>
-                    <TableHead>성명</TableHead>
-                    <TableHead>항목</TableHead>
+                    <TableHead>{terms.donor}명</TableHead>
+                    <TableHead>{terms.donation} 항목</TableHead>
                     <TableHead className="text-right">금액</TableHead>
                     <TableHead>시간</TableHead>
                     <TableHead>결제상태</TableHead>
@@ -401,7 +403,7 @@ export default function AdminDashboard() {
                   {dbDonations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        접수된 봉헌 내역이 없습니다. (신도 페이지에서 테스트 결제를 진행해보세요)
+                        접수된 {terms.donation} 내역이 없습니다. ({terms.donor} 페이지에서 테스트 결제를 진행해보세요)
                       </TableCell>
                     </TableRow>
                   ) : (

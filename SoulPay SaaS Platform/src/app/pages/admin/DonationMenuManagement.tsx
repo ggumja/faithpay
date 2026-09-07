@@ -25,6 +25,7 @@ import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { LayoutDashboard, Heart, Users, MessageSquare, FileText, Settings, DollarSign, Menu, Plus, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 
 
@@ -37,6 +38,8 @@ interface MenuItemFormProps {
 }
 
 function MenuItemForm({ item, onSave, onClose, terminology, religionType }: MenuItemFormProps) {
+  const terms = useTenantTerms(religionType);
+  const prayerLabel = terms.prayerInputLabel;
   const [formData, setFormData] = useState<Partial<DonationItem>>(
     item || {
       name: '',
@@ -48,8 +51,6 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
       enabled: true,
     }
   );
-
-  const prayerLabel = religionType === 'buddhist' ? '발원문' : '기도제목';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,16 +69,16 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
             <Label htmlFor="name">항목명 *</Label>
             <Input
               id="name"
-              value={formData.name}
+              value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={religionType === 'buddhist' ? '인등 / 특별보시' : '주일헌금'}
+              placeholder={religionType === 'buddhist' ? '인등 / 특별보시' : religionType === 'charity' || religionType === 'general' ? '정기후원' : '주일헌금'}
             />
           </div>
           <div className="space-y-2">
             <Label>상태</Label>
             <div className="flex items-center space-x-2 h-10">
               <Switch
-                checked={formData.enabled}
+                checked={formData.enabled ?? true}
                 onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
               />
               <Label>{formData.enabled ? '노출' : '숨김'}</Label>
@@ -89,11 +90,13 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
           <Label htmlFor="description">설명 *</Label>
           <Textarea
             id="description"
-            value={formData.description}
+            value={formData.description || ''}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder={
               religionType === 'buddhist'
                 ? '가족의 건강과 안녕을 기원하는 정기 보시입니다.'
+                : religionType === 'charity' || religionType === 'general'
+                ? '더 나은 내일을 만들어가는 소중한 나눔입니다.'
                 : '수입의 1/10을 드리는 정기 헌금입니다.'
             }
             rows={3}
@@ -105,21 +108,21 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Checkbox
-                checked={formData.allowOneTime}
+                checked={formData.allowOneTime ?? true}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, allowOneTime: checked as boolean })
                 }
               />
-              <Label>단발 {terminology}</Label>
+              <Label>일회성 {terms.donation}</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
-                checked={formData.allowRecurring}
+                checked={formData.allowRecurring ?? true}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, allowRecurring: checked as boolean })
                 }
               />
-              <Label>정기 {terminology}</Label>
+              <Label>정기 {terms.donation}</Label>
             </div>
           </div>
         </div>
@@ -127,7 +130,7 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
         <div className="space-y-3">
           <Label>금액 설정</Label>
           <RadioGroup
-            value={formData.amountType}
+            value={formData.amountType || 'flexible'}
             onValueChange={(value) =>
               setFormData({ ...formData, amountType: value as 'fixed' | 'flexible' })
             }
@@ -157,7 +160,7 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
           <Label>추가 필드 활성화</Label>
           <div className="flex items-center space-x-2">
             <Checkbox
-              checked={formData.enablePrayerField}
+              checked={formData.enablePrayerField ?? true}
               onCheckedChange={(checked) =>
                 setFormData({ ...formData, enablePrayerField: checked as boolean })
               }
@@ -171,7 +174,7 @@ function MenuItemForm({ item, onSave, onClose, terminology, religionType }: Menu
         <Button type="button" variant="outline" onClick={onClose}>
           취소
         </Button>
-        <Button type="submit">저장하기</Button>
+        <Button type="submit">저장</Button>
       </DialogFooter>
     </form>
   );
@@ -181,6 +184,7 @@ export default function DonationMenuManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { currentTenant, setCurrentTenant, currentAdmin, tenants } = useApp();
+  const terms = useTenantTerms(currentTenant);
   const [editingItem, setEditingItem] = useState<DonationItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
@@ -282,9 +286,9 @@ export default function DonationMenuManagement() {
     }
 
     if (editingItem) {
-      toast.success('봉헌 항목이 저장되었습니다');
+      toast.success(`${terms.donation} 항목이 저장되었습니다`);
     } else {
-      toast.success('새 봉헌 항목이 저장되었습니다');
+      toast.success(`새 ${terms.donation} 항목이 저장되었습니다`);
     }
     setIsDialogOpen(false);
     setEditingItem(null);
@@ -396,14 +400,14 @@ export default function DonationMenuManagement() {
                   <DollarSign className="h-8 w-8" />
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-zinc-200 mb-1">
-                  등록된 {currentTenant.terminology.donation} 항목이 없습니다
+                  등록된 {terms.donation} 항목이 없습니다
                 </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto mb-6">
-                  신도들이 온라인에서 선택하여 헌금/보시를 진행할 수 있도록 상단의 [새 항목 추가] 버튼을 눌러 항목을 등록해주세요.
+                  {terms.donor}들이 온라인에서 선택하여 {terms.donation}을(를) 진행할 수 있도록 상단의 [새 항목 추가] 버튼을 눌러 항목을 등록해주세요.
                 </p>
                 <Button onClick={handleAddNew} className="cursor-pointer">
                   <Plus className="h-4 w-4 mr-2" />
-                  첫 번째 {currentTenant.terminology.donation} 항목 추가하기
+                  첫 번째 {terms.donation} 항목 추가하기
                 </Button>
               </CardContent>
             </Card>
@@ -461,7 +465,7 @@ export default function DonationMenuManagement() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">
-                          {currentTenant.religionType === 'buddhist' ? '발원문' : '기도제목'} 입력
+                          {terms.prayerInputLabel} 입력
                         </p>
                         <Badge variant="outline">
                           {item.enablePrayerField ? '활성화' : '비활성화'}
@@ -486,9 +490,9 @@ export default function DonationMenuManagement() {
               <CardTitle className="text-base">안내</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p>• 봉헌 항목은 신도 페이지에서 선택할 수 있는 메뉴입니다</p>
-              <p>• '숨김' 상태로 설정하면 신도 페이지에 표시되지 않습니다</p>
-              <p>• 정기 봉헌은 매월 자동으로 결제되는 구독 방식입니다</p>
+              <p>• {terms.donation} 항목은 {terms.donor} 페이지에서 선택할 수 있는 메뉴입니다</p>
+              <p>• '숨김' 상태로 설정하면 {terms.donor} 페이지에 표시되지 않습니다</p>
+              <p>• 정기 {terms.donation}은(는) 매월 자동으로 결제되는 구독 방식입니다</p>
               <p>• 고정 금액과 자율 금액을 선택할 수 있습니다</p>
             </CardContent>
           </Card>
