@@ -1731,21 +1731,13 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     var p = document.querySelector('input[name="card_passwd"]');
     var b = document.querySelector('input[name="card_birthday"]');
     
-    // 1. 카드번호: 이메일(@), 영문자(admin 등), 테스트 카드번호 또는 사용자 입력 전 자동채움 비움
-    if (c) {
-      if (c.value && (c.value.indexOf('@') !== -1 || /[a-zA-Z]/.test(c.value) || c.value === '4890168342495918')) {
-        c.value = '';
-      } else if (!userInteractedCard && c.value) {
-        c.value = '';
-      }
+    // 1. 카드번호: 이메일(@), 영문자(admin 등) 포함 시 비움
+    if (c && c.value && (c.value.indexOf('@') !== -1 || /[a-zA-Z]/.test(c.value) || c.value === '4890168342495918')) {
+      c.value = '';
     }
-    // 2. 카드비밀번호: 2자리 초과, 영문/기호, 테스트값(35) 또는 사용자 입력 전 자동채움 비움
-    if (p) {
-      if (p.value && (p.value.length > 2 || /[a-zA-Z!@#$%^&*()_+\\-=\\[\\]{};':"\\\\|,.<>\\/?]/.test(p.value) || p.value === '35')) {
-        p.value = '';
-      } else if (!userInteractedPass && p.value) {
-        p.value = '';
-      }
+    // 2. 카드비밀번호: 2자리 초과 또는 영문/기호(계정 비번 자동완성) 포함 시 비움
+    if (p && p.value && (p.value.length > 2 || /[a-zA-Z!@#$%^&*()_+\\-=\\[\\]{};':"\\\\|,.<>\\/?]/.test(p.value))) {
+      p.value = '';
     }
     // 3. 생년월일: 테스트값(950716) 비움
     if (b && b.value === '950716') {
@@ -1753,11 +1745,11 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     }
   }
 
-  // 로드 즉시 및 브라우저 비동기 자동완성 주입 시점(30~2000ms) 반복 소제
+  // 로드 즉시 및 브라우저 비동기 자동완성 주입 시점(30~1500ms) 반복 소제
   cleanAutofill();
   document.addEventListener('DOMContentLoaded', cleanAutofill);
   window.addEventListener('load', cleanAutofill);
-  [30, 80, 150, 250, 400, 700, 1000, 1500, 2000].forEach(function(delay) {
+  [30, 80, 150, 250, 400, 700, 1000, 1500].forEach(function(delay) {
     setTimeout(cleanAutofill, delay);
   });
 
@@ -1890,6 +1882,108 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       applyExpYear(data.expYY);
     }
   });
+
+  // 🚀 현대화된 안전 결제 제출 함수 (브라우저 confirm 차단 극복 및 명확한 에러 안내)
+  window.chkPayment = function() {
+    var form = document.payForm;
+    if (!form) {
+      alert("결제 폼을 찾을 수 없습니다.");
+      return;
+    }
+
+    var c = document.getElementById("cardno");
+    var m = document.getElementById("expire_month");
+    var y = document.getElementById("expire_year");
+    var p = document.querySelector('input[name="card_passwd"]');
+    var b = document.querySelector('input[name="card_birthday"]');
+    var errBox = document.getElementById("sp-error-banner");
+
+    function clearStyles() {
+      if (c) c.style.borderColor = "";
+      if (m) m.style.borderColor = "";
+      if (y) y.style.borderColor = "";
+      if (p) p.style.borderColor = "";
+      if (b) b.style.borderColor = "";
+      if (errBox) errBox.style.display = "none";
+    }
+
+    function showError(msg, targetEl) {
+      clearStyles();
+      if (!errBox) {
+        errBox = document.createElement("div");
+        errBox.id = "sp-error-banner";
+        errBox.style.cssText = "background:#FEF2F2;border:1.5px solid #F87171;color:#B91C1C;padding:12px 16px;border-radius:12px;font-size:13.5px;font-weight:700;margin-top:14px;text-align:center;box-shadow:0 2px 8px rgba(239,68,68,0.15);";
+        var btn = document.querySelector(".pay-btn");
+        if (btn && btn.parentNode) {
+          btn.parentNode.insertBefore(errBox, btn);
+        }
+      }
+      errBox.innerHTML = "⚠️ " + msg;
+      errBox.style.display = "block";
+      if (targetEl) {
+        targetEl.focus();
+        targetEl.style.borderColor = "#EF4444";
+      }
+      try { alert(msg); } catch(e) {}
+    }
+
+    clearStyles();
+
+    // 1. 카드번호 검증 (14~16자리 숫자)
+    if (c) c.value = c.value.replace(/[^0-9]/g, '');
+    if (!c || !c.value || c.value.length < 14) {
+      showError("카드번호(15~16자리 숫자)를 정확히 입력해주세요.", c);
+      return;
+    }
+
+    // 2. 유효기간 월 검증
+    if (!m || !m.value) {
+      showError("유효기간(월)을 선택해주세요.", m);
+      return;
+    }
+
+    // 3. 유효기간 연도 검증
+    if (!y || !y.value || y.selectedIndex <= 0) {
+      showError("유효기간(연도)을 선택해주세요.", y);
+      return;
+    }
+
+    // 4. 비밀번호 앞 2자리 검증
+    if (p) p.value = p.value.replace(/[^0-9]/g, '');
+    if (!p || !p.value || p.value.length < 2) {
+      showError("카드 비밀번호 앞 2자리를 입력해주세요.", p);
+      return;
+    }
+
+    // 5. 생년월일 검증 (6자리 또는 10자리)
+    if (b) b.value = b.value.replace(/[^0-9]/g, '');
+    if (!b || !b.value || b.value.length < 6) {
+      showError("생년월일(YYMMDD 6자리) 또는 사업자번호(10자리)를 입력해주세요.", b);
+      return;
+    }
+
+    // 법인카드(10자리) 일시불 검증
+    if (b.value.length > 9) {
+      var inst = document.getElementById("installment");
+      if (inst && inst.value !== "00") {
+        showError("법인카드는 일시불로만 결제 가능합니다.", inst);
+        return;
+      }
+    }
+
+    if (window.isSubmitting) return;
+    window.isSubmitting = true;
+
+    var btn = document.querySelector(".pay-btn");
+    if (btn) {
+      btn.innerHTML = "⏳ 정기결제 카드 등록 처리 중...";
+      btn.style.opacity = "0.7";
+      btn.style.cursor = "not-allowed";
+      btn.style.pointerEvents = "none";
+    }
+
+    form.submit();
+  };
 </script>
 `;
     formattedHtml = formattedHtml.replace("</body>", `${scanScriptHtml}\n</body>`);
