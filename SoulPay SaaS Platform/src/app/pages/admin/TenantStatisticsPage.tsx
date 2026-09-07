@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 // 색상 팔레트
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
@@ -39,6 +40,7 @@ export default function TenantStatisticsPage() {
   const { tenantSlug } = useParams();
   const location = useLocation();
   const { currentTenant, setCurrentTenant, tenants } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   const [donations, setDonations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1048,20 +1050,20 @@ export default function TenantStatisticsPage() {
             </div>
           )}
 
-          {/* TAB 4: 봉헌 항목별 분석 */}
+          {/* TAB 4: 봉헌/보시/후원 항목별 분석 */}
           {activeTab === 'item' && (
             <div className="space-y-6 animate-in fade-in duration-200">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold">봉헌 항목별 수납 순위 (전일 마감 기준)</CardTitle>
-                  <CardDescription>가장 많이 접수된 봉헌/보시 항목 순위입니다</CardDescription>
+                  <CardTitle className="text-lg font-bold">{terms.donation} 항목별 수납 순위 (전일 마감 기준)</CardTitle>
+                  <CardDescription>가장 많이 접수된 {terms.donation} 항목 순위입니다</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-16 text-center">순위</TableHead>
-                        <TableHead>봉헌 항목명</TableHead>
+                        <TableHead>{terms.donation} 항목명</TableHead>
                         <TableHead className="text-right">접수 건수</TableHead>
                         <TableHead className="text-right">총 수납 금액</TableHead>
                       </TableRow>
@@ -1084,11 +1086,11 @@ export default function TenantStatisticsPage() {
                 </CardContent>
               </Card>
 
-              {/* TAB 4 전용: 기간별 x 봉헌 항목별 집계표 (항목별 컬럼 분할) */}
+              {/* TAB 4 전용: 기간별 x 항목별 집계표 (항목별 컬럼 분할) */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold">기간별 x 봉헌 항목별 상세 수납 집계표</CardTitle>
-                  <CardDescription>선택한 기간별 각 봉헌/보시 항목의 수납 금액 및 건수입니다</CardDescription>
+                  <CardTitle className="text-lg font-bold">기간별 x {terms.donation} 항목별 상세 수납 집계표</CardTitle>
+                  <CardDescription>선택한 기간별 각 {terms.donation} 항목의 수납 금액 및 건수입니다</CardDescription>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
                   <Table>

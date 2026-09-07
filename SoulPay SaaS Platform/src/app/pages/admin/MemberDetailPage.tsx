@@ -308,9 +308,9 @@ export default function MemberDetailPage() {
   }
 
   const currentPath = `/${tenantSlug}/admin/members`;
-  const memberTerm = currentTenant.terminology?.member || '회원';
-  const donationTerm = currentTenant.terminology?.donation || '봉헌/보시';
-  const prayerTerm = currentTenant.terminology?.prayer || '메시지';
+  const memberTerm = currentTenant.terminology?.member || (currentTenant.religionType === 'buddhist' ? '불자' : currentTenant.religionType === 'protestant' ? '성도' : currentTenant.religionType === 'catholic' ? '교우' : '회원');
+  const donationTerm = currentTenant.terminology?.donation || (currentTenant.religionType === 'buddhist' ? '보시' : currentTenant.religionType === 'protestant' ? '헌금' : currentTenant.religionType === 'catholic' ? '봉헌' : '후원');
+  const prayerTerm = currentTenant.terminology?.prayer || (currentTenant.religionType === 'buddhist' ? '발원문' : currentTenant.religionType === 'protestant' ? '기도제목' : currentTenant.religionType === 'catholic' ? '미사지향' : '메시지');
 
   const getTitleLabel = () => {
     if (currentTenant.religionType === 'catholic') return '세례명';

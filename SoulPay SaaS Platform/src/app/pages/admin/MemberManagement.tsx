@@ -158,8 +158,8 @@ export default function MemberManagement() {
   }
 
   const currentPath = `/${tenantSlug}/admin/members`;
-  const memberTerm = currentTenant.terminology?.member || '회원';
-  const donationTerm = currentTenant.terminology?.donation || '봉헌/보시';
+  const memberTerm = currentTenant.terminology?.member || (currentTenant.religionType === 'buddhist' ? '불자' : currentTenant.religionType === 'protestant' ? '성도' : currentTenant.religionType === 'catholic' ? '교우' : '회원');
+  const donationTerm = currentTenant.terminology?.donation || (currentTenant.religionType === 'buddhist' ? '보시' : currentTenant.religionType === 'protestant' ? '헌금' : currentTenant.religionType === 'catholic' ? '봉헌' : '후원');
 
   const getTitleLabel = () => {
     if (currentTenant.religionType === 'catholic') return '세례명';
