@@ -210,12 +210,12 @@ export default function TenantDetailPage() {
           setEnableTossPay(cfg.enableTossPay === true || cfg.providerConfigs?.tosspay?.isEnabled === true);
 
           const billingCfg = cfg.providerConfigs?.billing || {};
-          setBillMid(billingCfg.mid || cfg.mid || '');
-          setBillApiKey(billingCfg.apiKey || cfg.apiKey || '');
-          setBillSecretKey(billingCfg.secretKey || cfg.secretKey || '');
-          setBillLoginId(billingCfg.loginId || cfg.loginId || '');
-          setBillIv(billingCfg.iv || cfg.iv || '');
-          setBillVer(billingCfg.ver || cfg.ver || '240000005');
+          setBillMid(billingCfg.mid || '');
+          setBillApiKey(billingCfg.apiKey || '');
+          setBillSecretKey(billingCfg.secretKey || '');
+          setBillLoginId(billingCfg.loginId || '');
+          setBillIv(billingCfg.iv || '');
+          setBillVer(billingCfg.ver || '240000005');
 
           setEnableCard(cfg.enableCard !== undefined ? cfg.enableCard : true);
           setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? cfg.enableEasyPayment : true);
