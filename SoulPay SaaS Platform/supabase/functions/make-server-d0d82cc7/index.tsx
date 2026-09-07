@@ -516,20 +516,32 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       }
     }
 
-    // 나노페이 PG 결제 취소 연동
+    // 결제 유형에 따른 가맹점 정보 분기 (정기/빌링 결제 vs 일반 인증/수기 결제)
+    const isRecurring = donation.isRecurring || Boolean(donation.subscriptionId);
+    const billingCfg = config?.providerConfigs?.billing;
+
     let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
     
-    if (config) {
+    if (isRecurring && billingCfg) {
+      // 빌링키 정기결제 취소건
+      if (billingCfg.apiKey) NANO_API_KEY = billingCfg.apiKey;
+      if (billingCfg.mid) shopcode = billingCfg.mid;
+      if (billingCfg.loginId) loginId = billingCfg.loginId;
+      if (billingCfg.ver) ver = billingCfg.ver;
+    } else if (config) {
+      // 일반 인증/수기 결제 취소건
       if (config.apiKey) NANO_API_KEY = config.apiKey;
       if (config.mid) shopcode = config.mid;
       if (config.loginId) loginId = config.loginId;
       if (config.ver) ver = config.ver;
     }
     
-    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
+    const isTest = config?.devMode !== undefined 
+      ? Boolean(config.devMode) 
+      : (shopcode === "240000006" || shopcode === "240000005" || ver === "smbtest");
     const NANO_API_URL = isTest
       ? "https://dev3.nanopay.co.kr/api/payment/cancel.io"
       : "https://pay.nanopay.co.kr/api/payment/cancel.io";
@@ -677,21 +689,21 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
     // DB에서 테넌트 결제 설정 조회
     const config = await db.getPaymentConfig(tenantId);
     
-    // 기본 테스트 계정 정보 (기본값)
-    let NANO_API_KEY = "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2";
-    let NANO_ENC_KEY = "Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6";
-    let NANO_IV = "Nx5Lq7Kv4W8Jp6Mu";
+    // 일반 인증/수기 결제 전용 정보 (Smallbee 테스트 계정 기본값)
+    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    let NANO_ENC_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
+    let NANO_IV = "vgqTyX5tBqnMXB68";
     let shopcode = "240000006";
     let loginId = "smbtestshop";
     let ver = "smbtest";
     
     if (config && config.pgProvider === 'nanopay' && config.isActive) {
-      NANO_API_KEY = config.apiKey || NANO_API_KEY;
-      NANO_ENC_KEY = config.secretKey || NANO_ENC_KEY;
-      NANO_IV = config.iv || NANO_IV;
-      shopcode = config.mid || shopcode;
-      loginId = config.loginId || loginId;
-      ver = config.ver || ver;
+      if (config.apiKey) NANO_API_KEY = config.apiKey;
+      if (config.secretKey) NANO_ENC_KEY = config.secretKey;
+      if (config.iv) NANO_IV = config.iv;
+      if (config.mid) shopcode = config.mid;
+      if (config.loginId) loginId = config.loginId;
+      if (config.ver) ver = config.ver;
     }
 
     const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
@@ -1161,18 +1173,18 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     
     const isTest = config?.devMode !== undefined 
       ? Boolean(config.devMode) 
-      : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || config?.ver === "smbtest" || billingCfg?.mid === "240000005");
+      : (!billingCfg?.apiKey || billingCfg?.mid === "240000005" || billingCfg?.ver === "240000005" || config?.mid === "240000006");
 
-    // 정기결제(빌링)는 일반결제(240000006)와 상점코드가 다름. 빌링전용 설정(billingCfg)이 있으면 사용하고, 테스트 모드에서는 240000005 테스트 계정 적용
-    const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : config?.apiKey);
-    const shopcode = billingCfg?.mid || (isTest ? "240000005" : config?.mid);
-    const loginId = billingCfg?.loginId || (isTest ? "shoptest" : config?.loginId);
-    const ver = billingCfg?.ver || (isTest ? "240000005" : (config?.ver || "240000005"));
+    // 정기결제(빌링키)는 일반 인증결제(240000006)와 상점코드 및 키가 다름. 오직 빌링전용 설정(billingCfg)만 사용
+    const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : undefined);
+    const shopcode = billingCfg?.mid || (isTest ? "240000005" : undefined);
+    const loginId = billingCfg?.loginId || (isTest ? "shoptest" : undefined);
+    const ver = billingCfg?.ver || (isTest ? "240000005" : "240000005");
 
     if (!NANO_API_KEY || !shopcode || !loginId) {
       return c.json({ 
         success: false, 
-        error: "나노페이 결제 설정(API Key, 상점코드, 로그인 ID)이 올바르지 않습니다." 
+        error: "나노페이 정기결제(빌링키) 전용 설정(API Key, 상점코드, 로그인 ID)이 등록되지 않았습니다." 
       }, 400);
     }
 
@@ -2400,14 +2412,15 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           const billingCfg = config?.providerConfigs?.billing;
           const isTest = config?.devMode !== undefined 
             ? Boolean(config.devMode) 
-            : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || billingCfg?.mid === "240000005");
+            : (!billingCfg?.apiKey || billingCfg?.mid === "240000005" || billingCfg?.ver === "240000005" || config?.mid === "240000006");
           const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
           const BILLPAY_URL = `${baseUrl}/api/payment/recure/billpay.io`;
 
-          const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : config?.apiKey);
-          const shopcode = billingCfg?.mid || (isTest ? "240000005" : config?.mid);
-          const loginId = billingCfg?.loginId || (isTest ? "shoptest" : config?.loginId);
-          const ver = billingCfg?.ver || (isTest ? "240000005" : (config?.ver || "240000005"));
+          // 빌링 결제는 빌링 전용 설정(billingCfg)만 사용
+          const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : undefined);
+          const shopcode = billingCfg?.mid || (isTest ? "240000005" : undefined);
+          const loginId = billingCfg?.loginId || (isTest ? "shoptest" : undefined);
+          const ver = billingCfg?.ver || (isTest ? "240000005" : "240000005");
 
           if (NANO_API_KEY && shopcode && loginId) {
             const timestamp = Date.now().toString();

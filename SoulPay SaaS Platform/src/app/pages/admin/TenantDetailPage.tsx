@@ -1349,8 +1349,8 @@ export default function TenantDetailPage() {
                       <div className="p-3.5 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 rounded-xl flex items-start gap-2.5 text-xs text-purple-900 dark:text-purple-200">
                         <Info className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-bold block mb-0.5">🟣 나노PG (Nanopay / 스몰비) 가맹점 원장 교차검증 모드</span>
-                          나노PG 상점식별코드(<code className="bg-white/80 dark:bg-zinc-800 px-1 rounded font-mono font-bold text-purple-700">shopcode</code>) 기반으로 가동됩니다. 지정된 수수료율 및 정산 주기는 나노PG 일별 대장과 1:1 교차 검증(Audit) 용도로 활용됩니다.
+                          <span className="font-bold block mb-0.5">🟣 일반 인증결제 및 수기결제 가맹점 설정 (Nanopay / Smallbee)</span>
+                          일반 인증결제창 및 카드 수기결제 시 사용되는 가맹점 정보(상점코드: 240000006)입니다. 정기결제(빌링키)와는 완전히 분리되어 별도 관리됩니다.
                         </div>
                       </div>
                     )}
@@ -1358,7 +1358,7 @@ export default function TenantDetailPage() {
                     <div className="space-y-2">
                       <Label htmlFor="mid" className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4" />
-                        {pgProvider === 'nanopay' ? '가맹점 코드 (shopcode)' : '가맹점 식별번호 (MID)'} <span className="text-red-500">*</span>
+                        {pgProvider === 'nanopay' ? '일반 결제 가맹점 코드 (shopcode)' : '가맹점 식별번호 (MID)'} <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="mid"
@@ -1381,8 +1381,8 @@ export default function TenantDetailPage() {
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
                         >
-                          🟣 나노PG 테스트 가맹점코드 채우기
-                          <span className="text-[10px] font-normal text-purple-500">(MID · API Key · Secret · loginId · IV · ver)</span>
+                          🟣 일반 인증/수기결제 테스트 계정 채우기
+                          <span className="text-[10px] font-normal text-purple-500">(MID 240000006 · smbtestshop)</span>
                         </button>
                       )}
                       {(pgProvider === 'tosspayments' || pgProvider === 'toss') && (
