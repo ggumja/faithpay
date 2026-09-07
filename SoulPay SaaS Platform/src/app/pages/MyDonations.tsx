@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import TaxReceiptModal from '../components/TaxReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
 import { openDaumPostcode } from '../utils/daumPostcode';
+import { useTenantTerms } from '../hooks/useTenantTerms';
 
 export interface HistoryItem {
   id: string;
