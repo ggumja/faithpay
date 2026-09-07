@@ -237,7 +237,10 @@ export default function MyDonations() {
         const userPhone = res.data.phone || '010-0000-0000';
         setPhoneNumber(userPhone);
 
-        const matched: HistoryItem[] = (res.data.donations || []).map(d => ({
+        const completedDonations = (res.data.donations || []).filter(
+          (d: any) => !d.paymentStatus || d.paymentStatus === 'completed'
+        );
+        const matched: HistoryItem[] = completedDonations.map((d: any) => ({
           id: d.id,
           itemId: d.itemId,
           itemName: d.itemName,
@@ -252,7 +255,7 @@ export default function MyDonations() {
           paymentMethod: cleanPaymentMethod(d.paymentMethod),
         }));
         setHistory(matched);
-        loadSavedProfile(userPhone.replace(/[^0-9]/g, ''), res.data.donations || []);
+        loadSavedProfile(userPhone.replace(/[^0-9]/g, ''), completedDonations);
         toast.success(`이메일 로그인 성공! ${res.data.donorName || '신도'}님의 마이페이지입니다.`);
       } else {
         setIsAuthenticated(true);
@@ -305,7 +308,10 @@ export default function MyDonations() {
       const dbRes = await donationAPI.getByTenant(currentTenant.id);
       let matchedRaw: any[] = [];
       if (dbRes.success && Array.isArray(dbRes.data)) {
-        matchedRaw = dbRes.data.filter(d => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone);
+        matchedRaw = dbRes.data.filter(d => 
+          (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone &&
+          (!d.paymentStatus || d.paymentStatus === 'completed')
+        );
       }
 
       const matched: HistoryItem[] = matchedRaw.map(d => ({
@@ -425,7 +431,10 @@ export default function MyDonations() {
         setSubscriptions(res.data.subscriptions || []);
 
         if (res.data.donations && res.data.donations.length > 0) {
-          const matched: HistoryItem[] = res.data.donations.map(d => ({
+          const completedDonations = res.data.donations.filter(
+            (d: any) => !d.paymentStatus || d.paymentStatus === 'completed'
+          );
+          const matched: HistoryItem[] = completedDonations.map((d: any) => ({
             id: d.id,
             itemId: d.itemId,
             itemName: d.itemName,
@@ -440,7 +449,7 @@ export default function MyDonations() {
             paymentMethod: cleanPaymentMethod(d.paymentMethod),
           }));
           setHistory(matched);
-          loadSavedProfile(cleanedInputPhone, res.data.donations);
+          loadSavedProfile(cleanedInputPhone, completedDonations);
         } else {
           setHistory([]);
           loadSavedProfile(cleanedInputPhone, []);
@@ -451,7 +460,10 @@ export default function MyDonations() {
         setIsAuthenticated(true);
         const dbRes = await donationAPI.getByTenant(currentTenant.id);
         if (dbRes.success && dbRes.data) {
-          const matchedRaw = dbRes.data.filter(d => (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone);
+          const matchedRaw = dbRes.data.filter(d => 
+            (d.donorPhone || '').replace(/[^0-9]/g, '') === cleanedInputPhone &&
+            (!d.paymentStatus || d.paymentStatus === 'completed')
+          );
           const matched: HistoryItem[] = matchedRaw.map(d => ({
             id: d.id,
             itemId: d.itemId,
