@@ -160,7 +160,7 @@ function normalizeDonation(d: any) {
 
   // 6. Payment Status handling
   const rawStatus = d.paymentStatus ?? d.payment_status ?? d.status;
-  let paymentStatus = (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'completed';
+  let paymentStatus = (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'pending';
 
   // 신용카드/간편결제 등 즉시 결제 수단에서 30분 이상 경과한 'pending'(대기중) 건은 결제 미완료/이탈(failed)로 정리
   if (paymentStatus === 'pending') {
@@ -195,6 +195,13 @@ function normalizeDonation(d: any) {
     deviceType = String(rawDevice) as any;
   }
 
+  // 11. Failure and Cancellation fields
+  const failureReason = d.failureReason ?? d.failure_reason ?? undefined;
+  const cancelReason = d.cancelReason ?? d.cancel_reason ?? undefined;
+  const cancelTransactionId = d.cancelTransactionId ?? d.cancel_transaction_id ?? undefined;
+  const cancelApprovedAt = d.cancelApprovedAt ?? d.cancel_approved_at ?? undefined;
+  const cancelFailureReason = d.cancelFailureReason ?? d.cancel_failure_reason ?? undefined;
+
   return {
     ...d,
     id,
@@ -207,6 +214,11 @@ function normalizeDonation(d: any) {
     paymentStatus,
     prayerText,
     deviceType,
+    failureReason,
+    cancelReason,
+    cancelTransactionId,
+    cancelApprovedAt,
+    cancelFailureReason,
   };
 }
 
@@ -271,7 +283,10 @@ export default function DonationHistory() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [recurringCancelModalDonation, setRecurringCancelModalDonation] = useState<any | null>(null);
+  const [cancelModalDonation, setCancelModalDonation] = useState<any | null>(null);
+  const [cancelReasonType, setCancelReasonType] = useState<string>('신도 단순 환불 요청');
+  const [customCancelReason, setCustomCancelReason] = useState<string>('');
+  const [recurringCancelScope, setRecurringCancelScope] = useState<'once' | 'all'>('once');
 
 
 
@@ -524,7 +539,7 @@ export default function DonationHistory() {
       return;
     }
 
-    const headers = ['봉헌번호', '일시', '접수기기', '봉헌자', '연락처', '봉헌항목', '금액', '결제방법', '결제상태', '기도제목/메모'];
+    const headers = ['봉헌번호', '일시', '접수기기', '봉헌자', '연락처', '봉헌항목', '금액', '결제방법', '결제상태', '실패/취소사유', '기도제목/메모'];
     
     const rows = filteredDonations.map(d => {
       const createdDate = d.createdAt ? new Date(d.createdAt).toLocaleString() : `${d.date || ''} ${d.time || ''}`;
@@ -534,6 +549,7 @@ export default function DonationHistory() {
         : d.paymentStatus === 'cancel_failed' ? '취소실패'
         : d.paymentStatus === 'failed' ? '결제실패' : (d.paymentStatus || d.status);
       
+      const failureOrCancelReason = (d.failureReason || d.cancelReason || d.cancelFailureReason || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""');
       const cleanPrayer = (d.prayerText || d.prayer || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""');
       const donorPhoneFormatted = d.donorPhone ? formatPhoneNumber(d.donorPhone) : (d.phone ? formatPhoneNumber(d.phone) : '');
       const deviceStr = d.deviceType === 'KIOSK' ? '키오스크' : '모바일/웹';
@@ -548,6 +564,7 @@ export default function DonationHistory() {
         d.amount || 0,
         `"${d.paymentMethod || d.method || '신용카드'}"`,
         `"${statusKorean}"`,
+        `"${failureOrCancelReason}"`,
         `"${cleanPrayer}"`
       ].join(',');
     });
@@ -613,30 +630,28 @@ export default function DonationHistory() {
       return;
     }
 
-    if (checkIsRecurring(targetDonation)) {
-      setRecurringCancelModalDonation(targetDonation);
-    } else {
-      if (window.confirm(`[${targetDonation.donorName || '무기명'}] 님의 결제(${(targetDonation.amount || 0).toLocaleString()}원)를 취소하시겠습니까?`)) {
-        executeCancelPayment(targetDonation, false);
-      }
-    }
+    setCancelModalDonation(targetDonation);
+    setCancelReasonType('신도 단순 환불 요청');
+    setCustomCancelReason('');
+    setRecurringCancelScope('once');
   };
 
-  const executeCancelPayment = async (donationOrId: any, cancelSubscriptionAlso: boolean = false) => {
+  const executeCancelPayment = async (donationOrId: any, cancelSubscriptionAlso: boolean = false, cancelReason?: string) => {
     const targetDonation = typeof donationOrId === 'string' ? donations.find(d => d.id === donationOrId || d.originalId === donationOrId) : donationOrId;
     const donationId = targetDonation?.id || donationOrId;
     const backendId = targetDonation?.originalId || targetDonation?.id || donationOrId;
+    const effectiveReason = cancelReason || (cancelReasonType === '기타 직접 입력' ? (customCancelReason.trim() || '기타 사유') : cancelReasonType);
 
     setIsCancelling(true);
     try {
-      const res = await paymentAPI.cancelPayment(currentTenant.id, backendId);
+      const res = await paymentAPI.cancelPayment(currentTenant.id, backendId, effectiveReason);
       if (res.success) {
-        if (cancelSubscriptionAlso && recurringCancelModalDonation) {
-          let subId = recurringCancelModalDonation.subscriptionId || recurringCancelModalDonation.subscription_id || recurringCancelModalDonation.subId;
+        if (cancelSubscriptionAlso && targetDonation) {
+          let subId = targetDonation.subscriptionId || targetDonation.subscription_id || targetDonation.subId;
 
           // 1. Check local subscriptions state if subId not on donation object directly
-          if (!subId && recurringCancelModalDonation.donorPhone) {
-            const cleanPhone = String(recurringCancelModalDonation.donorPhone).replace(/[^0-9]/g, '');
+          if (!subId && targetDonation.donorPhone) {
+            const cleanPhone = String(targetDonation.donorPhone).replace(/[^0-9]/g, '');
             const foundSub = subscriptions.find((s) => s.status !== 'cancelled' && String(s.donorPhone || '').replace(/[^0-9]/g, '') === cleanPhone);
             if (foundSub) {
               subId = foundSub.id;
@@ -644,9 +659,9 @@ export default function DonationHistory() {
           }
 
           // 2. Fallback: Query backend for active subscriptions by phone
-          if (!subId && recurringCancelModalDonation.donorPhone) {
+          if (!subId && targetDonation.donorPhone) {
             try {
-              const subRes = await subscriptionAPI.getByPhone(recurringCancelModalDonation.donorPhone);
+              const subRes = await subscriptionAPI.getByPhone(targetDonation.donorPhone);
               if (subRes.success && subRes.data && subRes.data.length > 0) {
                 const activeSub = subRes.data.find((s) => s.status === 'active' || s.status !== 'cancelled');
                 if (activeSub) {
@@ -667,7 +682,13 @@ export default function DonationHistory() {
 
         // Update local state to cancelled immediately
         setDonations((prev) =>
-          prev.map((d) => (d.id === donationId || d.originalId === backendId ? { ...d, paymentStatus: 'cancelled', cancelFailureReason: undefined } : d))
+          prev.map((d) => (d.id === donationId || d.originalId === backendId ? {
+            ...d,
+            paymentStatus: 'cancelled',
+            cancelReason: effectiveReason,
+            cancelApprovedAt: new Date().toISOString(),
+            cancelFailureReason: undefined
+          } : d))
         );
 
         toast.success(
@@ -676,7 +697,7 @@ export default function DonationHistory() {
             : '해당 결제건이 결제취소 처리되었습니다.'
         );
         setSelectedDonation(null);
-        setRecurringCancelModalDonation(null);
+        setCancelModalDonation(null);
 
         // refresh data from server
         const refreshRes = await donationAPI.getByTenant(currentTenant.id);
@@ -1124,6 +1145,16 @@ export default function DonationHistory() {
                                   <TableCell>
                                     <div className="flex flex-col items-start gap-1">
                                       {getStatusBadge(donation.paymentStatus)}
+                                      {donation.paymentStatus === 'failed' && donation.failureReason && (
+                                        <span className="text-[10px] text-red-600 font-semibold bg-red-50 border border-red-200 px-1.5 py-0.5 rounded max-w-[130px] truncate" title={`결제실패 사유: ${donation.failureReason}`}>
+                                          ⚠️ {donation.failureReason}
+                                        </span>
+                                      )}
+                                      {donation.paymentStatus === 'cancelled' && donation.cancelReason && (
+                                        <span className="text-[10px] text-slate-500 font-medium bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded max-w-[130px] truncate" title={`취소 사유: ${donation.cancelReason}`}>
+                                          취소: {donation.cancelReason}
+                                        </span>
+                                      )}
                                       {donation.cancelFailureReason && (
                                         <span className="text-[10px] text-red-600 font-semibold bg-red-50 border border-red-200 px-1.5 py-0.5 rounded max-w-[130px] truncate" title={`취소실패 사유: ${donation.cancelFailureReason}`}>
                                           ⚠️ {donation.cancelFailureReason}
@@ -1322,6 +1353,32 @@ export default function DonationHistory() {
                       </div>
                     )}
 
+                    {selectedDonation.failureReason && (
+                      <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
+                        <span className="font-bold shrink-0">❌ 결제 실패 사유:</span>
+                        <span className="font-semibold">{selectedDonation.failureReason}</span>
+                      </div>
+                    )}
+
+                    {selectedDonation.cancelReason && selectedDonation.paymentStatus === 'cancelled' && (
+                      <div className="p-3.5 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs text-slate-700 dark:text-zinc-300 flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold">ℹ️ 결제 취소 사유:</span>
+                          {selectedDonation.cancelApprovedAt && (
+                            <span className="text-slate-400 dark:text-zinc-500 text-[11px]">
+                              취소일시: {new Date(selectedDonation.cancelApprovedAt).toLocaleString('ko-KR')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-medium text-slate-800 dark:text-zinc-200 pl-1">{selectedDonation.cancelReason}</p>
+                        {selectedDonation.cancelTransactionId && (
+                          <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono mt-0.5">
+                            취소 거래키: {selectedDonation.cancelTransactionId}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {isExpiredForCancel(selectedDonation) && selectedDonation.paymentStatus !== 'cancelled' && (
                       <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
                         <span className="font-bold shrink-0">⚠️ 결제 취소 불가:</span>
@@ -1365,26 +1422,28 @@ export default function DonationHistory() {
               </div>
             )}
 
-            {/* Recurring Payment Cancel Options Modal */}
-            {recurringCancelModalDonation && (
+            {/* Payment Cancel Modal */}
+            {cancelModalDonation && (
               <div
                 className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4"
-                onClick={() => setRecurringCancelModalDonation(null)}
+                onClick={() => !isCancelling && setCancelModalDonation(null)}
               >
                 <Card
-                  className="max-w-md w-full rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
+                  className="max-w-lg w-full rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-amber-100 dark:bg-amber-950/60 text-amber-600 rounded-xl">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-red-100 dark:bg-red-950/60 text-red-600 rounded-xl">
                           <RotateCcw className="h-5 w-5" />
                         </div>
                         <div>
-                          <CardTitle className="text-base font-bold">정기결제 취소 범위 선택</CardTitle>
+                          <CardTitle className="text-base font-bold text-slate-900 dark:text-zinc-100">
+                            결제 승인 취소 (환불 요청)
+                          </CardTitle>
                           <CardDescription className="text-xs">
-                            {recurringCancelModalDonation.id} ({recurringCancelModalDonation.donorName || '무기명'})
+                            {cancelModalDonation.id} · {cancelModalDonation.donorName || '무기명'}
                           </CardDescription>
                         </div>
                       </div>
@@ -1392,7 +1451,8 @@ export default function DonationHistory() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-full"
-                        onClick={() => setRecurringCancelModalDonation(null)}
+                        disabled={isCancelling}
+                        onClick={() => setCancelModalDonation(null)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -1400,66 +1460,155 @@ export default function DonationHistory() {
                   </CardHeader>
 
                   <CardContent className="pt-4 space-y-4">
-                    <p className="text-xs text-slate-600 dark:text-zinc-400 font-medium">
-                      선택하신 수납건은 <span className="font-bold text-indigo-600 dark:text-indigo-400">정기 자동 결제</span> 내역입니다. 처리할 취소 방식을 선택해 주세요.
-                    </p>
-
-                    <div className="space-y-3">
-                      {/* Option 1: Only current transaction */}
-                      <button
-                        type="button"
-                        disabled={isCancelling}
-                        onClick={() => executeCancelPayment(recurringCancelModalDonation.id, false)}
-                        className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-all cursor-pointer group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            <RefreshCw className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-bold text-sm text-slate-900 dark:text-zinc-100 flex items-center justify-between">
-                              <span>이번 1건만 결제 취소</span>
-                              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">스케줄 유지</span>
-                            </div>
-                            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                              이번 달 발생한 결제건({(recurringCancelModalDonation.amount || 0).toLocaleString()}원)만 취소하고, 다음 달 정기결제 스케줄은 그대로 유지합니다.
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* Option 2: Current + Future Schedule Cancel */}
-                      <button
-                        type="button"
-                        disabled={isCancelling}
-                        onClick={() => executeCancelPayment(recurringCancelModalDonation.id, true)}
-                        className="w-full text-left p-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/20 hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all cursor-pointer group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-red-100 dark:bg-red-950/60 text-red-600 rounded-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
-                            <CalendarX className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-bold text-sm text-red-900 dark:text-red-300 flex items-center justify-between">
-                              <span>이번 건 취소 + 정기결제 해지</span>
-                              <span className="text-xs text-red-600 font-semibold">스케줄 완전 해지</span>
-                            </div>
-                            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                              이번 결제건을 취소함과 동시에 앞으로 예정된 정기결제(구독) 스케줄도 함께 해지(취소) 처리합니다.
-                            </p>
-                          </div>
-                        </div>
-                      </button>
+                    {/* Summary Info */}
+                    <div className="p-3.5 bg-slate-50 dark:bg-zinc-800/60 rounded-xl border border-slate-200/80 dark:border-zinc-700/80 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-500 dark:text-zinc-400">결제 금액</span>
+                        <p className="font-bold text-slate-900 dark:text-zinc-100 text-sm mt-0.5">
+                          {(cancelModalDonation.amount || 0).toLocaleString()}원
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 dark:text-zinc-400">결제 수단</span>
+                        <p className="font-semibold text-slate-800 dark:text-zinc-200 mt-0.5">
+                          {cancelModalDonation.paymentMethod || '신용카드'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 dark:text-zinc-400">결제 일시</span>
+                        <p className="font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
+                          {new Date(cancelModalDonation.createdAt || Date.now()).toLocaleDateString('ko-KR')}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 dark:text-zinc-400">승인 거래번호</span>
+                        <p className="font-mono text-[11px] text-slate-600 dark:text-zinc-400 mt-0.5 truncate" title={cancelModalDonation.transactionId || '-'}>
+                          {cancelModalDonation.transactionId || '-'}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="pt-2 flex justify-end">
+                    {/* If Recurring Donation: Scope selection */}
+                    {checkIsRecurring(cancelModalDonation) && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                          <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />
+                          정기결제 취소 범위 선택
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setRecurringCancelScope('once')}
+                            className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
+                              recurringCancelScope === 'once'
+                                ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 shadow-xs'
+                                : 'border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            <div className="font-bold text-xs">이번 1건만 취소</div>
+                            <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">다음 결제 스케줄 유지</div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRecurringCancelScope('all')}
+                            className={`p-3 text-left rounded-xl border transition-all cursor-pointer ${
+                              recurringCancelScope === 'all'
+                                ? 'border-red-600 bg-red-50/70 dark:bg-red-950/40 text-red-900 dark:text-red-200 shadow-xs'
+                                : 'border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            <div className="font-bold text-xs">이번 건 취소 + 구독 해지</div>
+                            <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">향후 정기결제 전체 해지</div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cancel Reason Selection */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center justify-between">
+                        <span>취소 사유 선택 (필수)</span>
+                        <span className="text-[11px] text-slate-400 font-normal">PG사 및 결제원장에 기록됩니다</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['신도 단순 환불 요청', '금액 착오 결제', '중복 결제', '기타 직접 입력'].map((reason) => (
+                          <button
+                            key={reason}
+                            type="button"
+                            onClick={() => setCancelReasonType(reason)}
+                            className={`p-2.5 text-left rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                              cancelReasonType === reason
+                                ? 'border-red-500 bg-red-50/60 dark:bg-red-950/30 text-red-700 dark:text-red-300 font-semibold shadow-xs'
+                                : 'border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            {reason}
+                          </button>
+                        ))}
+                      </div>
+
+                      {cancelReasonType === '기타 직접 입력' && (
+                        <div className="mt-2">
+                          <textarea
+                            value={customCancelReason}
+                            onChange={(e) => setCustomCancelReason(e.target.value)}
+                            placeholder="구체적인 취소 사유를 입력해 주세요 (예: 봉헌 항목 착오로 인한 재결제 요청 등)"
+                            rows={2}
+                            className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-red-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Warning Notice */}
+                    <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
+                      <div className="font-bold flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        승인 취소 시 주의사항
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-amber-700 dark:text-amber-400">
+                        승인 취소 요청 즉시 PG사(토스/나노페이)를 통해 실시간 결제 취소가 진행되며, 파트너 수수료 정산 원장도 자동으로 취소 처리됩니다. 취소 완료 후에는 복구할 수 없습니다.
+                      </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="pt-2 flex items-center justify-end gap-2">
                       <Button
-                        variant="ghost"
+                        type="button"
+                        variant="outline"
                         size="sm"
-                        onClick={() => setRecurringCancelModalDonation(null)}
-                        className="text-xs text-slate-500"
+                        disabled={isCancelling}
+                        onClick={() => setCancelModalDonation(null)}
+                        className="text-xs"
                       >
                         닫기
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={isCancelling}
+                        onClick={() => {
+                          const isRec = checkIsRecurring(cancelModalDonation);
+                          const cancelSub = isRec && recurringCancelScope === 'all';
+                          const finalReason = cancelReasonType === '기타 직접 입력'
+                            ? (customCancelReason.trim() || '기타 사유')
+                            : cancelReasonType;
+                          executeCancelPayment(cancelModalDonation, cancelSub, finalReason);
+                        }}
+                        className="text-xs font-bold gap-1.5 cursor-pointer bg-red-600 hover:bg-red-700"
+                      >
+                        {isCancelling ? (
+                          <>
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            승인 취소 처리 중...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            결제 취소 확정
+                          </>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -1600,12 +1749,22 @@ export default function DonationHistory() {
                         </span>
                       </div>
                       {receiptDonation.paymentStatus === 'cancelled' && (
-                        <div className="grid grid-cols-3 py-2 border-b border-zinc-100 bg-red-50/70 p-2 rounded-lg">
-                          <span className="text-red-700 font-bold">취소 승인번호</span>
-                          <span className="col-span-2 font-mono font-bold text-red-700">
-                            {receiptDonation.cancelTransactionId || receiptDonation.cancelApproveNo || `TC-${receiptDonation.id?.slice(-8) || 'CANCEL-OK'}`}
-                          </span>
-                        </div>
+                        <>
+                          <div className="grid grid-cols-3 py-2 border-b border-zinc-100 bg-red-50/70 p-2 rounded-lg">
+                            <span className="text-red-700 font-bold">취소 승인번호</span>
+                            <span className="col-span-2 font-mono font-bold text-red-700">
+                              {receiptDonation.cancelTransactionId || receiptDonation.cancelApproveNo || '-'}
+                            </span>
+                          </div>
+                          {receiptDonation.cancelReason && (
+                            <div className="grid grid-cols-3 py-2 border-b border-zinc-100 bg-red-50/40 p-2 rounded-lg">
+                              <span className="text-red-700 font-bold">취 소 사 유</span>
+                              <span className="col-span-2 font-medium text-red-700">
+                                {receiptDonation.cancelReason}
+                              </span>
+                            </div>
+                          )}
+                        </>
                       )}
                       <div className={`grid grid-cols-3 py-3 p-3 rounded-xl border items-center ${receiptDonation.paymentStatus === 'cancelled' ? 'bg-red-50/80 border-red-200' : 'bg-indigo-50/70 border-indigo-100'}`}>
                         <span className={`font-bold ${receiptDonation.paymentStatus === 'cancelled' ? 'text-red-900' : 'text-indigo-900'}`}>
@@ -1636,7 +1795,7 @@ export default function DonationHistory() {
                         {receiptDonation.paymentStatus === 'cancelled' ? (
                           <>
                             위 봉헌/결제건은 승인 취소가 완료되었음을 확인합니다.<br />
-                            (취소 처리 일시: {new Date(receiptDonation.updatedAt || receiptDonation.createdAt || Date.now()).toLocaleDateString('ko-KR')})
+                            (취소 처리 일시: {new Date(receiptDonation.cancelApprovedAt || receiptDonation.updatedAt || receiptDonation.createdAt || Date.now()).toLocaleString('ko-KR')})
                           </>
                         ) : (
                           <>

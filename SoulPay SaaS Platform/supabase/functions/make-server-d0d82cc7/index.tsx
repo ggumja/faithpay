@@ -581,16 +581,16 @@ app.post("/make-server-d0d82cc7/admin/migrate-payment-methods", async (c) => {
 // 결제 취소 처리 (토스페이먼츠 및 나노페이 통합)
 app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
   try {
-    const { tenantId, donationId } = await c.req.json();
+    const { tenantId, donationId, cancelReason } = await c.req.json();
     
-    // DB에서 거래 내역 조회
+    // DB에서 거래 내역 조회 (테넌트 격리 검증 포함)
     const donation = await db.getDonationById(tenantId, donationId);
     if (!donation) {
-      return c.json({ success: false, error: 'Donation not found' }, 404);
+      return c.json({ success: false, error: '해당 결제 내역을 찾을 수 없거나 테넌트 권한이 없습니다.' }, 404);
     }
     
     if (donation.paymentStatus !== 'completed' || !donation.transactionId) {
-      return c.json({ success: false, error: 'PG 승인 거래 키(transactionId)가 존재하지 않는 거래건입니다.' }, 400);
+      return c.json({ success: false, error: '완료 상태가 아니거나 승인 거래 번호(transactionId)가 존재하지 않는 거래건입니다.' }, 400);
     }
 
     // DB에서 테넌트 결제 설정 조회
@@ -601,10 +601,13 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       String(donation.transactionId || '').startsWith('tviva') ||
       (config?.secretKey && config?.secretKey.startsWith('test_sk_'));
 
+    const reasonText = cancelReason || "가맹 단체 관리자 결제 취소 요청";
+
     if (isTossPayment) {
       // 🚀 토스페이먼츠 취소 API 연동 (https://api.tosspayments.com/v1/payments/{paymentKey}/cancel)
       let secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
       const basicAuth = btoa(`${secretKey}:`);
+      const idempotencyKey = `cancel_${donationId}_${Date.now()}`;
 
       try {
         const tossCancelResponse = await fetch(`https://api.tosspayments.com/v1/payments/${donation.transactionId}/cancel`, {
@@ -612,9 +615,10 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
           headers: {
             "Authorization": `Basic ${basicAuth}`,
             "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
           },
           body: JSON.stringify({
-            cancelReason: "가맹 단체 관리자 결제 취소 요청",
+            cancelReason: reasonText,
           }),
         });
 
@@ -624,10 +628,10 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
           const cancelTransactionKey = result.cancels?.[0]?.transactionKey || `TC-${Date.now().toString().slice(-8)}`;
           const cancelApprovedAt = result.cancels?.[0]?.canceledAt || new Date().toISOString();
 
-          const updatedDonation = await db.updateDonation(tenantId, donationId, {
-            paymentStatus: 'cancelled',
+          const updatedDonation = await db.cancelDonationAndLedger(tenantId, donationId, {
             cancelTransactionId: cancelTransactionKey,
             cancelApprovedAt: cancelApprovedAt,
+            cancelReason: reasonText,
           });
 
           return c.json({
@@ -638,22 +642,18 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
             toss: result
           });
         } else {
-          return c.json({ success: false, error: result.message || '토스페이먼츠 승인취소 거부', data: result }, 400);
+          const cancelFailMsg = result.message || '토스페이먼츠 승인취소 거부';
+          await db.updateDonation(tenantId, donationId, {
+            cancelFailureReason: cancelFailMsg,
+          });
+          return c.json({ success: false, error: cancelFailMsg, data: result }, 400);
         }
       } catch (tossErr: any) {
-        // Mock fallback for test environment
-        const cancelTransactionKey = `TC-${Date.now().toString().slice(-8)}`;
-        const updatedDonation = await db.updateDonation(tenantId, donationId, {
-          paymentStatus: 'cancelled',
-          cancelTransactionId: cancelTransactionKey,
-          cancelApprovedAt: new Date().toISOString(),
+        console.error('Toss cancel communication error:', tossErr);
+        await db.updateDonation(tenantId, donationId, {
+          cancelFailureReason: tossErr?.message || '토스페이먼츠 통신 오류',
         });
-        return c.json({
-          success: true,
-          data: updatedDonation,
-          approveNo: donation.approveNo || donation.transactionId,
-          cancelApproveNo: cancelTransactionKey,
-        });
+        return c.json({ success: false, error: tossErr?.message || '토스페이먼츠 취소 처리 중 통신 오류가 발생했습니다.' }, 500);
       }
     }
 
@@ -697,9 +697,9 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
 
     if (result.resultCode === "0000" || isTest) {
       const cancelTransactionKey = result.cancelTranNo || result.apprNo || `TC-${Date.now().toString().slice(-8)}`;
-      const updatedDonation = await db.updateDonation(tenantId, donationId, {
-        paymentStatus: 'cancelled',
+      const updatedDonation = await db.cancelDonationAndLedger(tenantId, donationId, {
         cancelTransactionId: cancelTransactionKey,
+        cancelReason: reasonText,
       });
       return c.json({
         success: true,
@@ -708,18 +708,22 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
         cancelApproveNo: cancelTransactionKey
       });
     } else {
-      return c.json({ success: false, error: result.resultMsg || 'PG 결제 취소 거부', data: result }, 400);
+      const cancelFailMsg = result.resultMsg || 'PG 결제 취소 거부';
+      await db.updateDonation(tenantId, donationId, {
+        cancelFailureReason: cancelFailMsg,
+      });
+      return c.json({ success: false, error: cancelFailMsg, data: result }, 400);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing cancellation:', error);
-    return c.json({ success: false, error: 'Failed to process cancellation' }, 500);
+    return c.json({ success: false, error: error?.message || 'Failed to process cancellation' }, 500);
   }
 });
 
 // 토스페이먼츠(TossPayments) 승인 API 연동 (/v1/payments/confirm)
 app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
   try {
-    const { tenantId, paymentKey, orderId, amount } = await c.req.json();
+    const { tenantId, paymentKey, orderId, amount, donorName, donorPhone, itemName, itemId } = await c.req.json();
     const config = await db.getPaymentConfig(tenantId);
     
     // 토스페이먼츠 시크릿 키 기본값 (toss secretKey)
@@ -747,11 +751,11 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
       const newDonation = await db.createDonation({
         id: orderId || `don_${Date.now()}`,
         tenantId,
-        itemId: 'general',
-        itemName: result.orderName || '토스페이먼츠 봉헌금',
+        itemId: itemId || 'general',
+        itemName: result.orderName || itemName || '토스페이먼츠 봉헌금',
         amount: Number(amount),
-        donorName: result.customerName || '신도/기부자',
-        donorPhone: '010-0000-0000',
+        donorName: donorName || result.customerName || '',
+        donorPhone: donorPhone || result.customerMobilePhone || '',
         paymentStatus: 'completed',
         paymentMethod: result.method === '카드' ? 'card' : 'simple',
         transactionId: result.paymentKey,
@@ -767,11 +771,29 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
         toss: result
       });
     } else {
-      return c.json({ success: false, error: result.message || '토스페이먼츠 결제 승인 실패', data: result }, 400);
+      const failureReason = result.message || '토스페이먼츠 결제 승인 실패';
+      try {
+        await db.createDonation({
+          id: orderId || `don_${Date.now()}`,
+          tenantId,
+          itemId: itemId || 'general',
+          itemName: result.orderName || itemName || '토스페이먼츠 결제',
+          amount: Number(amount) || 0,
+          donorName: donorName || result.customerName || '',
+          donorPhone: donorPhone || result.customerMobilePhone || '',
+          paymentStatus: 'failed',
+          paymentMethod: 'simple',
+          transactionId: paymentKey || '',
+          failureReason,
+        });
+      } catch (saveErr) {
+        console.error('Failed to record failed toss payment to DB:', saveErr);
+      }
+      return c.json({ success: false, error: failureReason, data: result }, 400);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Toss confirm error:', error);
-    return c.json({ success: false, error: '토스페이먼츠 승인 처리 중 오류 발생' }, 500);
+    return c.json({ success: false, error: error?.message || '토스페이먼츠 승인 처리 중 오류 발생' }, 500);
   }
 });
 
@@ -852,7 +874,29 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
 
     if (!tossRes.ok || result.status !== "DONE") {
       console.error('Toss billing charge failed:', result);
-      return c.json({ success: false, error: result.message || '빌링 결제 실패', data: result }, 400);
+      const failureReason = result.message || '빌링 결제 실패';
+      try {
+        await db.createDonation({
+          id: orderId,
+          tenantId,
+          itemId: itemId || 'general',
+          itemName: itemName || orderName || '정기 봉헌금',
+          amount: Number(amount) || 0,
+          donorName: customerName || '',
+          donorPhone: donorPhone || customerMobilePhone || '',
+          prayerText: prayerText || '',
+          baptismName: baptismName || '',
+          isRecurring: true,
+          recurringDay: recurringDay ? Number(recurringDay) : undefined,
+          paymentStatus: 'failed',
+          paymentMethod: '정기결제(토스)',
+          transactionId: result?.paymentKey || '',
+          failureReason,
+        });
+      } catch (saveErr) {
+        console.error('Failed to record failed toss billing charge to DB:', saveErr);
+      }
+      return c.json({ success: false, error: failureReason, data: result }, 400);
     }
 
     // DB에 결제 기록 저장
@@ -863,12 +907,11 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
       itemId: itemId || 'general',
       itemName: itemName || orderName || '정기 봉헌금',
       amount: Number(amount),
-      donorName: customerName || '신도',
+      donorName: customerName || '',
       donorPhone: donorPhone || customerMobilePhone || '',
       prayerText: prayerText || '',
       baptismName: baptismName || '',
       isRecurring: true,
-      recurringInterval: recurringInterval || 'monthly',
       recurringDay: recurringDay || null,
       paymentStatus: 'completed',
       paymentMethod: '정기결제(토스)',
@@ -887,7 +930,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
     });
   } catch (error: any) {
     console.error('Toss billing charge error:', error);
-    return c.json({ success: false, error: '빌링 결제 실행 중 오류 발생' }, 500);
+    return c.json({ success: false, error: error?.message || '빌링 결제 실행 중 오류 발생' }, 500);
   }
 });
 
@@ -1291,6 +1334,7 @@ const handleCertCallback = async (c: any) => {
         } else {
           await db.updateDonation(donation.tenantId, donation.id, {
             paymentStatus: 'failed',
+            failureReason: resultMsg || '나노페이 결제 실패',
           });
           console.log(`❌ Certified payment failed for donation: ${donation.id}, error: ${resultMsg}`);
         }
@@ -2175,6 +2219,23 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
         });
       } catch (err: any) {
         console.error(`[Recurring Batch Scheduler] Failed for sub ${sub.id}:`, err);
+        try {
+          await db.createDonation({
+            tenantId: sub.tenantId,
+            itemId: sub.itemId,
+            itemName: sub.itemName,
+            amount: sub.amount,
+            donorName: sub.donorName,
+            donorPhone: sub.donorPhone,
+            donorEmail: sub.donorEmail || '',
+            paymentMethod: 'card',
+            paymentStatus: 'failed',
+            isRecurring: true,
+            failureReason: err.message || '정기결제 자동 승인 실패',
+          });
+        } catch (saveErr) {
+          console.error('[Recurring Batch Scheduler] Failed to record failed donation:', saveErr);
+        }
         results.push({
           subId: sub.id,
           status: 'failed',

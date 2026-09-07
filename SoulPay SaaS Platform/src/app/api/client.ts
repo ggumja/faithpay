@@ -32,6 +32,13 @@ interface Donation {
   paymentStatus: 'pending' | 'completed' | 'failed' | 'cancelled';
   paymentMethod?: string;
   transactionId?: string;
+  approveNo?: string;
+  receiptUrl?: string;
+  failureReason?: string;
+  cancelReason?: string;
+  cancelTransactionId?: string;
+  cancelApprovedAt?: string;
+  cancelFailureReason?: string;
   deviceType?: 'KIOSK' | 'WEB_MOBILE';
   createdAt: string;
   updatedAt: string;
@@ -306,10 +313,10 @@ export const paymentAPI = {
     });
   },
 
-  async cancelPayment(tenantId: string, donationId: string): Promise<APIResponse<any>> {
+  async cancelPayment(tenantId: string, donationId: string, cancelReason?: string): Promise<APIResponse<any>> {
     return fetchAPI<any>('/payment/cancel', {
       method: 'POST',
-      body: JSON.stringify({ tenantId, donationId }),
+      body: JSON.stringify({ tenantId, donationId, cancelReason }),
     });
   },
 

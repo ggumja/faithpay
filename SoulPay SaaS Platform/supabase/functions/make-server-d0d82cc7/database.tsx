@@ -130,6 +130,13 @@ export interface Donation {
   paymentStatus: 'pending' | 'completed' | 'failed' | 'cancelled';
   paymentMethod?: string;
   transactionId?: string;
+  approveNo?: string;
+  receiptUrl?: string;
+  failureReason?: string;
+  cancelReason?: string;
+  cancelTransactionId?: string;
+  cancelApprovedAt?: string;
+  cancelFailureReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -775,6 +782,35 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
   }
 }
 
+function rowToDonation(data: any): Donation {
+  return {
+    id: data.id,
+    tenantId: data.tenant_id,
+    itemId: data.item_id,
+    itemName: data.item_name,
+    amount: data.amount,
+    donorName: data.donor_name,
+    donorPhone: data.donor_phone,
+    prayerText: data.prayer_text,
+    familyMembers: data.family_members,
+    baptismName: data.baptism_name,
+    isRecurring: data.is_recurring,
+    recurringDay: data.recurring_day,
+    paymentStatus: data.payment_status,
+    paymentMethod: data.payment_method,
+    transactionId: data.transaction_id,
+    approveNo: data.approve_no,
+    receiptUrl: data.receipt_url,
+    failureReason: data.failure_reason,
+    cancelReason: data.cancel_reason,
+    cancelTransactionId: data.cancel_transaction_id,
+    cancelApprovedAt: data.cancel_approved_at,
+    cancelFailureReason: data.cancel_failure_reason,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
 export async function createDonation(donation: Omit<Donation, 'createdAt' | 'updatedAt'>): Promise<Donation> {
   const now = new Date().toISOString();
   const sb = pgClient();
@@ -799,6 +835,12 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
     payment_method: normalizedMethod,
     transaction_id: finalTransactionId,
     approve_no: finalApproveNo,
+    receipt_url: donation.receiptUrl ?? null,
+    failure_reason: donation.failureReason ?? null,
+    cancel_reason: donation.cancelReason ?? null,
+    cancel_transaction_id: donation.cancelTransactionId ?? null,
+    cancel_approved_at: donation.cancelApprovedAt ?? null,
+    cancel_failure_reason: donation.cancelFailureReason ?? null,
     device_type: (donation as any).deviceType ?? null,
     pg_provider: (donation as any).pgProvider ?? null,
     created_at: now,
@@ -814,20 +856,13 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
     console.error('createDonation DB upsert failed:', error.message);
     // fallback: return in-memory object
     const fallback: Donation = { ...donation, paymentMethod: normalizedMethod, transactionId: finalTransactionId, createdAt: now, updatedAt: now };
-    if (!fallback.paymentStatus || fallback.paymentStatus === 'completed') await recordDonationToLedger(fallback);
+    if (fallback.paymentStatus === 'completed') await recordDonationToLedger(fallback);
     return fallback;
   }
 
-  const newDonation: Donation = {
-    id: data.id, tenantId: data.tenant_id, itemId: data.item_id, itemName: data.item_name,
-    amount: data.amount, donorName: data.donor_name, donorPhone: data.donor_phone,
-    prayerText: data.prayer_text, familyMembers: data.family_members, baptismName: data.baptism_name,
-    isRecurring: data.is_recurring, recurringDay: data.recurring_day,
-    paymentStatus: data.payment_status, paymentMethod: data.payment_method,
-    transactionId: data.transaction_id, createdAt: data.created_at, updatedAt: data.updated_at,
-  };
+  const newDonation: Donation = rowToDonation(data);
 
-  if (!newDonation.paymentStatus || newDonation.paymentStatus === 'completed') {
+  if (newDonation.paymentStatus === 'completed') {
     await recordDonationToLedger(newDonation);
   }
   return newDonation;
@@ -837,14 +872,17 @@ export async function getDonationById(tenantId: string, id: string): Promise<Don
   const sb = pgClient();
   const { data } = await sb.from('donations').select('*').eq('id', id).maybeSingle();
   if (!data) return null;
-  return {
-    id: data.id, tenantId: data.tenant_id, itemId: data.item_id, itemName: data.item_name,
-    amount: data.amount, donorName: data.donor_name, donorPhone: data.donor_phone,
-    prayerText: data.prayer_text, familyMembers: data.family_members, baptismName: data.baptism_name,
-    isRecurring: data.is_recurring, recurringDay: data.recurring_day,
-    paymentStatus: data.payment_status, paymentMethod: data.payment_method,
-    transactionId: data.transaction_id, createdAt: data.created_at, updatedAt: data.updated_at,
-  };
+
+  if (tenantId) {
+    const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+    const tid = tenant?.id ?? tenantId;
+    if (data.tenant_id !== tid && data.tenant_id !== tenantId) {
+      console.warn(`Tenant boundary mismatch: donation ${id} belongs to ${data.tenant_id}, requested by ${tenantId}`);
+      return null;
+    }
+  }
+
+  return rowToDonation(data);
 }
 
 export async function getDonationsByTenant(tenantId: string): Promise<Donation[]> {
@@ -857,27 +895,13 @@ export async function getDonationsByTenant(tenantId: string): Promise<Donation[]
     .select('*')
     .eq('tenant_id', tid)
     .order('created_at', { ascending: false });
-  return (data ?? []).map((r: any) => ({
-    id: r.id, tenantId: r.tenant_id, itemId: r.item_id, itemName: r.item_name,
-    amount: r.amount, donorName: r.donor_name, donorPhone: r.donor_phone,
-    prayerText: r.prayer_text, familyMembers: r.family_members, baptismName: r.baptism_name,
-    isRecurring: r.is_recurring, recurringDay: r.recurring_day,
-    paymentStatus: r.payment_status, paymentMethod: r.payment_method,
-    transactionId: r.transaction_id, createdAt: r.created_at, updatedAt: r.updated_at,
-  }));
+  return (data ?? []).map(rowToDonation);
 }
 
 export async function getAllDonations(): Promise<Donation[]> {
   const sb = pgClient();
   const { data } = await sb.from('donations').select('*').order('created_at', { ascending: false });
-  return (data ?? []).map((r: any) => ({
-    id: r.id, tenantId: r.tenant_id, itemId: r.item_id, itemName: r.item_name,
-    amount: r.amount, donorName: r.donor_name, donorPhone: r.donor_phone,
-    prayerText: r.prayer_text, familyMembers: r.family_members, baptismName: r.baptism_name,
-    isRecurring: r.is_recurring, recurringDay: r.recurring_day,
-    paymentStatus: r.payment_status, paymentMethod: r.payment_method,
-    transactionId: r.transaction_id, createdAt: r.created_at, updatedAt: r.updated_at,
-  }));
+  return (data ?? []).map(rowToDonation);
 }
 
 export async function updateDonation(tenantId: string, id: string, updates: Partial<Donation>): Promise<Donation | null> {
@@ -887,16 +911,64 @@ export async function updateDonation(tenantId: string, id: string, updates: Part
   if (updates.paymentMethod !== undefined) row.payment_method = updates.paymentMethod;
   if (updates.transactionId !== undefined) row.transaction_id = updates.transactionId;
   if (updates.prayerText    !== undefined) row.prayer_text    = updates.prayerText;
+  if (updates.approveNo     !== undefined) row.approve_no     = updates.approveNo;
+  if (updates.receiptUrl    !== undefined) row.receipt_url    = updates.receiptUrl;
+  if (updates.failureReason !== undefined) row.failure_reason = updates.failureReason;
+  if (updates.cancelReason  !== undefined) row.cancel_reason  = updates.cancelReason;
+  if (updates.cancelTransactionId !== undefined) row.cancel_transaction_id = updates.cancelTransactionId;
+  if (updates.cancelApprovedAt !== undefined) row.cancel_approved_at = updates.cancelApprovedAt;
+  if (updates.cancelFailureReason !== undefined) row.cancel_failure_reason = updates.cancelFailureReason;
+
   const { data, error } = await sb.from('donations').update(row).eq('id', id).select('*').maybeSingle();
   if (error || !data) { console.error('updateDonation failed:', error?.message); return null; }
-  return {
-    id: data.id, tenantId: data.tenant_id, itemId: data.item_id, itemName: data.item_name,
-    amount: data.amount, donorName: data.donor_name, donorPhone: data.donor_phone,
-    prayerText: data.prayer_text, familyMembers: data.family_members, baptismName: data.baptism_name,
-    isRecurring: data.is_recurring, recurringDay: data.recurring_day,
-    paymentStatus: data.payment_status, paymentMethod: data.payment_method,
-    transactionId: data.transaction_id, createdAt: data.created_at, updatedAt: data.updated_at,
+  return rowToDonation(data);
+}
+
+export async function cancelDonationAndLedger(
+  tenantId: string,
+  donationId: string,
+  cancelData: {
+    cancelTransactionId?: string;
+    cancelApprovedAt?: string;
+    cancelReason?: string;
+  }
+): Promise<Donation | null> {
+  const sb = pgClient();
+  const now = new Date().toISOString();
+  const row: Record<string, any> = {
+    payment_status: 'cancelled',
+    cancel_transaction_id: cancelData.cancelTransactionId ?? null,
+    cancel_approved_at: cancelData.cancelApprovedAt || now,
+    cancel_reason: cancelData.cancelReason ?? null,
+    updated_at: now,
   };
+
+  const { data, error } = await sb
+    .from('donations')
+    .update(row)
+    .eq('id', donationId)
+    .select('*')
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('cancelDonationAndLedger failed to update donation:', error?.message);
+    return null;
+  }
+
+  // 파트너 수수료 원장 동기화: 취소 건에 대해 정산 상태를 cancelled로 변경하여 이중 지급 방지
+  try {
+    const { error: commError } = await sb
+      .from('partner_commissions')
+      .update({ settlement_status: 'cancelled', updated_at: now })
+      .eq('donation_id', donationId);
+    if (commError) {
+      console.warn('cancelDonationAndLedger warning: partner_commissions update error:', commError.message);
+    }
+  } catch (err: any) {
+    console.warn('cancelDonationAndLedger error updating partner_commissions:', err?.message || err);
+  }
+
+  return rowToDonation(data);
 }
 
 export async function deleteDonation(id: string): Promise<boolean> {
