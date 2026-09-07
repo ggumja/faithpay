@@ -1247,8 +1247,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     }
 
     const cleanPhone = (donationData?.phone || "").replace(/[^0-9]/g, '');
-    const tenantPrefix = (tenantId || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
-    const userId = cleanPhone ? `t${tenantPrefix}_${cleanPhone}` : `t${tenantPrefix}_${Date.now()}`;
+    const userId = cleanPhone ? `u${cleanPhone}` : `u${Date.now().toString().slice(-10)}`;
     const timestamp = Date.now().toString();
     const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
 
@@ -1981,9 +1980,13 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       return;
     }
 
-    // 5. 생년월일 검증 (6자리 또는 10자리)
+    // 5. 생년월일 검증 (6자리 또는 10자리 사업자번호)
     if (b) b.value = b.value.replace(/[^0-9]/g, '');
-    if (!b || !b.value || b.value.length < 6) {
+    if (b && b.value.length === 8) {
+      // 8자리(19880520)로 입력한 경우 앞 2자리(19) 제거하여 6자리(880520)로 자동 보정
+      b.value = b.value.slice(-6);
+    }
+    if (!b || !b.value || (b.value.length !== 6 && b.value.length !== 10)) {
       showError("생년월일(YYMMDD 6자리) 또는 사업자번호(10자리)를 입력해주세요.", b);
       return;
     }
