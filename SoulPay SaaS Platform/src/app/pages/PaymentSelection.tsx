@@ -496,7 +496,7 @@ export default function PaymentSelection() {
               navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
             } else {
               setIsProcessing(false);
-              toast.error(event.data.resultMsg || '카드 등록에 실패했습니다.');
+              toast.error(event.data.resultMsg || '카드 등록에 실패했습니다. 입력 정보를 확인해주세요.', { duration: 6000 });
             }
           }
         };

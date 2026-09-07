@@ -1247,7 +1247,8 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     }
 
     const cleanPhone = (donationData?.phone || "").replace(/[^0-9]/g, '');
-    const userId = cleanPhone ? `${tenantId}_${cleanPhone}` : `${tenantId}_${Date.now()}`;
+    const tenantPrefix = (tenantId || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    const userId = cleanPhone ? `t${tenantPrefix}_${cleanPhone}` : `t${tenantPrefix}_${Date.now()}`;
     const timestamp = Date.now().toString();
     const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
 
@@ -1605,6 +1606,21 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     color: #64748B;
     font-weight: 600;
   }
+  .sp-form-guide {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.55;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+  .sp-form-guide strong {
+    color: #1E293B;
+  }
 </style>
 `;
 
@@ -1650,38 +1666,47 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
   </div>
 </div>
 `;
+    // 미끼(decoy) 인풋은 form 바깥에 배치하여 브라우저 비밀번호 관리자를 유인하되, form POST 시 서버로 전송되지 않도록 name 속성 배제
     const decoyInputs = `
 <div style="display:none !important; position:absolute; left:-9999px; top:-9999px; opacity:0; pointer-events:none;" aria-hidden="true">
-  <input type="text" name="fake_username_autofill_decoy" tabindex="-1" autocomplete="off" />
-  <input type="password" name="fake_password_autofill_decoy" tabindex="-1" autocomplete="new-password" />
-  <input type="hidden" id="_scan_raw_exp_yy" name="_scan_raw_exp_yy" />
+  <input type="text" tabindex="-1" autocomplete="off" />
+  <input type="password" tabindex="-1" autocomplete="new-password" />
 </div>
+<input type="hidden" id="_scan_raw_exp_yy" />
 `;
-    // form 태그에 autocomplete="off" 부여 및 미끼(decoy) 인풋 주입하여 브라우저 비밀번호 관리자의 자동완성 가로채기 방지
+    // form 태그에 autocomplete="off" 부여 및 미끼(decoy) 인풋은 form 바깥에 주입 (form submit 시 불필요 파라미터 전송 원천 차단)
     formattedHtml = formattedHtml.replace(
       /(<form[^>]*id=["\x27]payForm["\x27][^>]*)>/i,
-      `${summaryCardHtml}\n$1 autocomplete="off">\n${decoyInputs}\n<div class="sp-form-title">💳 신용카드 정기결제 등록</div><div class="sp-form-desc">안전하고 투명한 금융 거래를 위해 공식 결제대행사(스마트로)를 통해 암호화 등록됩니다.</div>`
+      `${summaryCardHtml}\n${decoyInputs}\n$1 autocomplete="off">\n<div class="sp-form-title">💳 신용카드 정기결제 등록</div><div class="sp-form-desc">안전하고 투명한 금융 거래를 위해 공식 결제대행사(스마트로)를 통해 암호화 등록됩니다.</div>`
     );
 
-    // 4. 버튼 문구 개선 및 보안 인증 마크 추가
+    // 4. 버튼 문구 개선, 보안 인증 마크 및 필수 입력 상세 가이드 추가
+    const formGuideHtml = `
+<div class="sp-form-guide">
+  📌 <strong>카드 등록 필수 확인</strong><br>
+  • <strong>비밀번호</strong>: 카드 비밀번호 <strong>앞 2자리</strong>를 입력해주세요.<br>
+  • <strong>생년월일</strong>: 카드 명의자의 <strong>생년월일 6자리 (YYMMDD)</strong>를 입력해주세요. (법인카드는 사업자번호 10자리)<br>
+  • <strong>안내</strong>: 카드사 실제 본인 인증 절차가 진행되므로, <strong>실제 유효한 본인 카드</strong> 정보와 정확한 비밀번호/생년월일을 입력하셔야 정상 등록됩니다.
+</div>
+`;
     formattedHtml = formattedHtml.replace(
       /<button[^>]*class=["\x27]pay-btn["\x27][^>]*>.*?<\/button>/i,
-      `<button type="button" class="pay-btn" onclick="chkPayment()">🔒 ${formattedAmount}원 정기결제 카드 등록하기</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
+      `${formGuideHtml}<button type="button" class="pay-btn" onclick="chkPayment()">🔒 ${formattedAmount}원 정기결제 카드 등록하기</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
     );
 
-    // 5. 카드번호/비밀번호/생년월일에 브라우저 자동완성 방지 속성 부여
+    // 5. 카드번호/비밀번호/생년월일에 브라우저 자동완성 방지 속성 및 직관적 placeholder 부여
     formattedHtml = formattedHtml
       .replace(
         /id=["\x27]cardno["\x27]/i,
-        'id="cardno" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
+        'id="cardno" placeholder="카드번호 15~16자리 (\x27-\x27 제외)" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
       )
       .replace(
         /name=["\x27]card_passwd["\x27]/i,
-        'name="card_passwd" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
+        'name="card_passwd" placeholder="앞 2자리" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
       )
       .replace(
         /name=["\x27]card_birthday["\x27]/i,
-        'name="card_birthday" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
+        'name="card_birthday" placeholder="생년월일 6자리 (YYMMDD)" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other"'
       );
 
     // 6. 나노솔루션 공식 카드 스캔(OCR 카메라) 버튼 및 스크립트 연동
@@ -2079,6 +2104,15 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       }
     }
 
+    // 직관적이고 친절한 오류/성공 안내 메시지 구성
+    const userFriendlyMsg = resultMsg || (
+      isSuccess 
+        ? "정기결제 카드가 정상적으로 등록되었습니다." 
+        : (resultCode === "99" 
+            ? "카드사 승인 또는 본인 인증에 실패했습니다. (오류코드: 99)\n비밀번호 앞 2자리 및 생년월일 6자리가 카드 명의자 정보와 일치하는지 확인해주세요." 
+            : `카드 등록에 실패했습니다. (오류코드: ${resultCode || '알 수 없음'})`)
+    );
+
     // 사용자 팝업 창에 응답할 안내 화면 및 postMessage 스크립트 반환
     const html = `<!DOCTYPE html>
 <html>
@@ -2086,52 +2120,133 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
   <meta charset="utf-8">
   <title>${isSuccess ? '카드 등록 완료' : '카드 등록 실패'}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body {
-      margin: 0;
-      padding: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-      background: #f8fafc;
+      padding: 24px 16px;
+      background: #F8FAFC;
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      box-sizing: border-box;
-      color: #0f172a;
+      color: #0F172A;
     }
     .card {
       background: white;
-      border-radius: 16px;
+      border-radius: 20px;
       padding: 32px 24px;
-      max-width: 400px;
+      max-width: 420px;
       width: 100%;
       text-align: center;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-      border: 1px solid #e2e8f0;
+      border: 1px solid #E2E8F0;
     }
     .icon {
-      width: 56px;
-      height: 56px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 16px;
-      font-size: 28px;
+      margin: 0 auto 18px;
+      font-size: 30px;
+      font-weight: 800;
     }
-    .icon.success { background: #ecfdf5; color: #10b981; }
-    .icon.fail { background: #fef2f2; color: #ef4444; }
-    h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
-    p { font-size: 14px; color: #64748b; margin: 0 0 20px; line-height: 1.5; }
-    .footer { font-size: 12px; color: #94a3b8; }
+    .icon.success { background: #ECFDF5; color: #10B981; }
+    .icon.fail { background: #FEF2F2; color: #EF4444; }
+    h2 { font-size: 20px; font-weight: 800; margin: 0 0 10px; letter-spacing: -0.02em; }
+    p.desc { font-size: 14.5px; color: #475569; margin: 0 0 20px; line-height: 1.55; white-space: pre-line; font-weight: 500; }
+    .err-box {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 14px;
+      padding: 16px 18px;
+      text-align: left;
+      margin-bottom: 22px;
+    }
+    .err-header {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #92400E;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .err-list {
+      padding-left: 18px;
+      font-size: 12.5px;
+      color: #78350F;
+      line-height: 1.6;
+    }
+    .err-list li {
+      margin-bottom: 4px;
+    }
+    .err-list strong {
+      color: #451A03;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn-retry {
+      flex: 1;
+      height: 48px;
+      background: #3D47B8;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-retry:active {
+      transform: scale(0.98);
+    }
+    .btn-close {
+      width: 100px;
+      height: 48px;
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .footer { font-size: 13px; color: #64748B; font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="icon ${isSuccess ? 'success' : 'fail'}">${isSuccess ? '✓' : '✕'}</div>
     <h2>${isSuccess ? '카드 등록이 완료되었습니다' : '카드 등록에 실패했습니다'}</h2>
-    <p>${resultMsg || (isSuccess ? '정기결제 카드가 정상적으로 등록되었습니다.' : '카드 등록 중 오류가 발생했습니다.')}</p>
+    <p class="desc">${userFriendlyMsg}</p>
+    
+    ${!isSuccess ? `
+    <div class="err-box">
+      <div class="err-header">🔍 등록 실패 원인 점검</div>
+      <ul class="err-list">
+        <li><strong>비밀번호 앞 2자리</strong> 또는 <strong>생년월일 6자리(YYMMDD)</strong> 불일치</li>
+        <li>테스트(개발) 환경에서도 카드사 연동을 위해 <strong>실제 유효한 개인 카드</strong>와 <strong>실제 카드 비밀번호/생년월일</strong> 입력 필수</li>
+        <li>체크카드 또는 법인카드의 경우 정기 자동결제(빌키 발급) 미지원 카드일 수 있습니다.</li>
+      </ul>
+      <div class="btn-group">
+        <button type="button" class="btn-retry" onclick="window.history.back()">🔄 다시 시도하기</button>
+        <button type="button" class="btn-close" onclick="window.close()">창 닫기</button>
+      </div>
+    </div>
+    ` : `
     <div class="footer">잠시 후 결제 완료 화면으로 자동 이동합니다...</div>
+    `}
   </div>
   <script>
     try {
@@ -2139,7 +2254,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
         window.opener.postMessage({
           type: 'SOULPAY_BILLKEY_RESULT',
           resultCode: ${JSON.stringify(resultCode || (isSuccess ? "0000" : "9999"))},
-          resultMsg: ${JSON.stringify(resultMsg || '')},
+          resultMsg: ${JSON.stringify(userFriendlyMsg)},
           billKey: ${JSON.stringify(billKey || '')},
           userId: ${JSON.stringify(userId || '')},
           cardNo: ${JSON.stringify(cardNo || '')},
@@ -2151,9 +2266,13 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     } catch (e) {
       console.error('postMessage error:', e);
     }
+    ${isSuccess ? `
     setTimeout(function() {
       window.close();
     }, 1500);
+    ` : `
+    // 실패 시 팝업창을 즉시 닫지 않고 사용자가 원인을 확인하고 [다시 시도하기] 버튼을 누를 수 있도록 대기
+    `}
   </script>
 </body>
 </html>`;
