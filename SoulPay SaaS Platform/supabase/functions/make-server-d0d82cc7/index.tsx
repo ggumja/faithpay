@@ -462,6 +462,9 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
           result = { message: tossText.startsWith('<') ? `토스페이먼츠 통신 오류 (HTTP ${tossCancelResponse.status})` : tossText };
         }
 
+        const isAlreadyCancelled = result.code === 'ALREADY_CANCELED_PAYMENT' ||
+          (typeof result.message === 'string' && (result.message.includes('이미 취소') || result.message.includes('취소된 결제')));
+
         if (tossCancelResponse.ok && (result.status === "CANCELED" || result.status === "PARTIAL_CANCELED" || result.cancels)) {
           const cancelTransactionKey = result.cancels?.[0]?.transactionKey || `TC-${Date.now().toString().slice(-8)}`;
           const cancelApprovedAt = result.cancels?.[0]?.canceledAt || new Date().toISOString();
@@ -477,6 +480,24 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
             data: updatedDonation,
             approveNo: donation.approveNo || donation.transactionId,
             cancelApproveNo: cancelTransactionKey,
+            toss: result
+          });
+        } else if (isAlreadyCancelled) {
+          // PG사에서 이미 전액 취소 완료된 거래건인 경우 DB 원장 상태를 동기화
+          const cancelApprovedAt = new Date().toISOString();
+          const updatedDonation = await db.cancelDonationAndLedger(tenantId, donationId, {
+            cancelTransactionId: donation.transactionId,
+            cancelApprovedAt: cancelApprovedAt,
+            cancelReason: reasonText,
+          });
+
+          return c.json({
+            success: true,
+            data: updatedDonation,
+            approveNo: donation.approveNo || donation.transactionId,
+            cancelApproveNo: donation.transactionId,
+            cancelApprovedAt: cancelApprovedAt,
+            syncedFromPg: true,
             toss: result
           });
         } else {
@@ -544,8 +565,11 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       };
     }
 
-    if (result.resultCode === "0000") {
-      const cancelTransactionKey = result.apprNo || result.cancelTranNo || result.apprTranNo || `TC-${Date.now().toString().slice(-8)}`;
+    const isNanoAlreadyCancelled = result.resultMsg === "중복취소" ||
+      (typeof result.resultMsg === "string" && (result.resultMsg.includes("이미 취소") || result.resultMsg.includes("취소완료")));
+
+    if (result.resultCode === "0000" || isNanoAlreadyCancelled) {
+      const cancelTransactionKey = result.apprNo || result.cancelTranNo || result.apprTranNo || donation.transactionId;
       const cancelApprovedAt = result.cancelDate && result.cancelTime
         ? `${result.cancelDate.slice(0, 4)}-${result.cancelDate.slice(4, 6)}-${result.cancelDate.slice(6, 8)}T${result.cancelTime.slice(0, 2)}:${result.cancelTime.slice(2, 4)}:${result.cancelTime.slice(4, 6)}+09:00`
         : new Date().toISOString();
@@ -560,7 +584,8 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
         data: updatedDonation,
         approveNo: donation.approveNo || donation.transactionId,
         cancelApproveNo: cancelTransactionKey,
-        cancelApprovedAt: cancelApprovedAt
+        cancelApprovedAt: cancelApprovedAt,
+        syncedFromPg: isNanoAlreadyCancelled
       });
     } else {
       const cancelFailMsg = result.resultMsg || `PG 결제 취소 거부 (${result.resultCode || response.status})`;
