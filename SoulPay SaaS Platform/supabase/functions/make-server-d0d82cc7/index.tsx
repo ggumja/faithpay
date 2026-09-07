@@ -1774,12 +1774,12 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     // 1. 4자리 값 직접 선택 시도
     y.value = fullYear;
 
-    // 2. 미선택 시 옵션 순회하여 매칭
+    // 2. 미선택 시 옵션 순회하여 매칭 (text의 '35 (2035년)' 형태도 매칭)
     if (!y.value || y.selectedIndex <= 0) {
       for (var j = 0; j < y.options.length; j++) {
         var optVal = y.options[j].value;
         var optText = y.options[j].text;
-        if (optVal === fullYear || optVal === shortYear || optVal.endsWith(shortYear) || optText.endsWith(shortYear)) {
+        if (optVal === fullYear || optVal === shortYear || optVal.endsWith(shortYear) || optText.indexOf(shortYear) !== -1) {
           y.selectedIndex = j;
           break;
         }
@@ -1809,7 +1809,8 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
               var short = sVal.length === 4 ? sVal.slice(-2) : sVal;
               for (var i = 0; i < this.options.length; i++) {
                 var oVal = this.options[i].value;
-                if (oVal === targetVal || oVal.endsWith(short) || this.options[i].text.endsWith(short)) {
+                var oText = this.options[i].text;
+                if (oVal === targetVal || oVal.endsWith(short) || oText.indexOf(short) !== -1) {
                   this.selectedIndex = i;
                   break;
                 }
@@ -1893,7 +1894,16 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 `;
     formattedHtml = formattedHtml.replace("</body>", `${scanScriptHtml}\n</body>`);
 
-    // 7. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
+    // 7. 연도 셀렉트 박스 옵션 표시 문구를 '35 (2035년)' 형태로 가독성 개선 (value="2035"는 그대로 유지)
+    formattedHtml = formattedHtml.replace(
+      /<option\s+value=["\x27](20\d{2})["\x27][^>]*>\s*20\d{2}\s*<\/option>/gi,
+      (_match, fullYear) => {
+        const shortYear = fullYear.slice(-2);
+        return `<option value="${fullYear}">${shortYear} (${fullYear}년)</option>`;
+      }
+    );
+
+    // 8. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
     formattedHtml = formattedHtml
       .replace(/value=["\x27]4890168342495918["\x27]/g, 'value=""')
       .replace(/value=["\x27]35["\x27]/g, 'value=""')
