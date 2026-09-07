@@ -418,6 +418,7 @@ export async function setPaymentConfig(config: Omit<PaymentConfig, 'updatedAt'>)
     enable_easy_payment:  config.enableEasyPayment ?? true,
     enable_vbank:         config.enableVBank ?? true,
     is_active:            config.isActive ?? true,
+    provider_configs:     config.providerConfigs ?? {},
     updated_at:           now,
   };
 

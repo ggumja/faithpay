@@ -130,6 +130,8 @@ export default function TenantDetailPage() {
   const [billMid, setBillMid] = useState('');
   const [billApiKey, setBillApiKey] = useState('');
   const [billSecretKey, setBillSecretKey] = useState('');
+  const [billLoginId, setBillLoginId] = useState('');
+  const [billIv, setBillIv] = useState('');
   const [billVer, setBillVer] = useState('240000005');
 
   const [enableCard, setEnableCard] = useState(true);
@@ -148,6 +150,7 @@ export default function TenantDetailPage() {
   const [showIv, setShowIv] = useState(false);
   const [showBillApiKey, setShowBillApiKey] = useState(false);
   const [showBillSecretKey, setShowBillSecretKey] = useState(false);
+  const [showBillIv, setShowBillIv] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -206,6 +209,14 @@ export default function TenantDetailPage() {
           setTossPayMode(cfg.tossPayMode || cfg.providerConfigs?.tosspay?.mode || 'test');
           setEnableTossPay(cfg.enableTossPay === true || cfg.providerConfigs?.tosspay?.isEnabled === true);
 
+          const billingCfg = cfg.providerConfigs?.billing || {};
+          setBillMid(billingCfg.mid || cfg.mid || '');
+          setBillApiKey(billingCfg.apiKey || cfg.apiKey || '');
+          setBillSecretKey(billingCfg.secretKey || cfg.secretKey || '');
+          setBillLoginId(billingCfg.loginId || cfg.loginId || '');
+          setBillIv(billingCfg.iv || cfg.iv || '');
+          setBillVer(billingCfg.ver || cfg.ver || '240000005');
+
           setEnableCard(cfg.enableCard !== undefined ? cfg.enableCard : true);
           setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? cfg.enableEasyPayment : true);
           setEnableVBank(cfg.enableVBank !== undefined ? cfg.enableVBank : true);
@@ -223,6 +234,12 @@ export default function TenantDetailPage() {
           setLoginId('');
           setIv('');
           setVer('');
+          setBillMid('');
+          setBillApiKey('');
+          setBillSecretKey('');
+          setBillLoginId('');
+          setBillIv('');
+          setBillVer('240000005');
           setEnableKakaoPay(false);
           setEnableNaverPay(false);
           setEnableTossPay(false);
@@ -408,6 +425,47 @@ export default function TenantDetailPage() {
             enableEasyPayment,
             enableVBank,
             isActive: true,
+            providerConfigs: {
+              ...(paymentConfig?.providerConfigs || {}),
+              tosspay: {
+                providerCode: 'tosspay',
+                providerName: '토스페이',
+                providerType: 'easypay',
+                merchantId: tossPayMid,
+                clientKey: tossPayApiKey,
+                secretKey: tossPaySecretKey,
+                mode: tossPayMode,
+                isEnabled: enableTossPay,
+              },
+              naverpay: {
+                providerCode: 'naverpay',
+                providerName: '네이버페이',
+                providerType: 'easypay',
+                merchantId: naverPartnerId,
+                clientKey: naverClientId,
+                secretKey: naverClientSecret,
+                mode: naverMode,
+                isEnabled: enableNaverPay,
+              },
+              kakaopay: {
+                providerCode: 'kakaopay',
+                providerName: '카카오페이',
+                providerType: 'easypay',
+                merchantId: kakaoCid,
+                secretKey: kakaoSecretKey,
+                mode: kakaoMode,
+                isEnabled: enableKakaoPay,
+              },
+              billing: {
+                providerCode: pgProvider,
+                mid: billMid,
+                apiKey: billApiKey,
+                secretKey: billSecretKey,
+                loginId: billLoginId,
+                iv: billIv,
+                ver: billVer,
+              },
+            },
           }),
         }
       );
@@ -468,7 +526,16 @@ export default function TenantDetailPage() {
             secretKey: kakaoSecretKey,
             mode: kakaoMode,
             isEnabled: enableKakaoPay,
-          }
+          },
+          billing: {
+            providerCode: pgProvider,
+            mid: billMid,
+            apiKey: billApiKey,
+            secretKey: billSecretKey,
+            loginId: billLoginId,
+            iv: billIv,
+            ver: billVer,
+          },
         },
         enableCard,
         enableEasyPayment,
@@ -1597,19 +1664,63 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="billLoginId" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                        <User className="h-4 w-4 text-amber-600" />
+                        정기결제 상점 로그인 ID (loginId)
+                      </Label>
+                      <Input
+                        id="billLoginId"
+                        value={billLoginId}
+                        onChange={(e) => setBillLoginId(e.target.value)}
+                        placeholder="예: shoptest"
+                        className="bg-white dark:bg-zinc-900 font-semibold"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="billVer" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        정기결제 API 버전 (ver)
+                      </Label>
+                      <Input
+                        id="billVer"
+                        value={billVer}
+                        onChange={(e) => setBillVer(e.target.value)}
+                        placeholder="기본값: 240000005"
+                        className="bg-white dark:bg-zinc-900 font-semibold"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="billVer" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                      정기결제 API 버전 (ver)
+                    <Label htmlFor="billIv" className="flex items-center gap-2 font-bold text-amber-950 dark:text-amber-200">
+                      <Lock className="h-4 w-4 text-amber-600" />
+                      정기결제 암호화 벡터 (IV)
                     </Label>
-                    <Input
-                      id="billVer"
-                      value={billVer}
-                      onChange={(e) => setBillVer(e.target.value)}
-                      placeholder="기본값: 240000005"
-                      className="bg-white dark:bg-zinc-900 font-semibold"
-                      autoComplete="off"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="billIv"
+                        type={showBillIv ? 'text' : 'password'}
+                        value={billIv}
+                        onChange={(e) => setBillIv(e.target.value)}
+                        placeholder="예: Nx5Lq7Kv4W8Jp6Mu"
+                        className="pr-10 bg-white dark:bg-zinc-900 font-semibold"
+                        autoComplete="new-password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowBillIv(!showBillIv)}
+                      >
+                        {showBillIv ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="flex justify-end pt-2">
@@ -1617,12 +1728,14 @@ export default function TenantDetailPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100"
+                      className="bg-white border-amber-300 text-amber-800 hover:bg-amber-100 cursor-pointer"
                       onClick={() => {
-                        setBillMid('240000005');
-                        setBillApiKey('2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL');
-                        setBillSecretKey('Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6');
                         setBillVer('240000005');
+                        setBillMid('240000005');
+                        setBillLoginId('shoptest');
+                        setBillApiKey('R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2');
+                        setBillSecretKey('Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6');
+                        setBillIv('Nx5Lq7Kv4W8Jp6Mu');
                         toast.info('나노PG 빌링결제 v2.2.1 테스트 계정 정보가 채워졌습니다.');
                       }}
                     >

@@ -1157,15 +1157,16 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       return c.json({ success: false, error: "tenantId is required" }, 400);
     }
     const config = await db.getPaymentConfig(tenantId);
+    const billingCfg = config?.providerConfigs?.billing;
     
     const isTest = config?.devMode !== undefined 
       ? Boolean(config.devMode) 
-      : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || config?.ver === "smbtest");
+      : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || config?.ver === "smbtest" || billingCfg?.mid === "240000005");
 
-    const NANO_API_KEY = config?.apiKey || (isTest ? "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL" : "");
-    const shopcode = config?.mid || (isTest ? "240000005" : "");
-    const loginId = config?.loginId || (isTest ? "shoptest" : "");
-    const ver = config?.ver || (isTest ? "240000005" : "240000005");
+    const NANO_API_KEY = billingCfg?.apiKey || config?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : "");
+    const shopcode = billingCfg?.mid || config?.mid || (isTest ? "240000005" : "");
+    const loginId = billingCfg?.loginId || config?.loginId || (isTest ? "shoptest" : "");
+    const ver = billingCfg?.ver || config?.ver || (isTest ? "240000005" : "240000005");
 
     if (!NANO_API_KEY || !shopcode || !loginId) {
       return c.json({ 
@@ -2387,16 +2388,17 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
         
         if (sub.billKey) {
           const config = await db.getPaymentConfig(sub.tenantId);
+          const billingCfg = config?.providerConfigs?.billing;
           const isTest = config?.devMode !== undefined 
             ? Boolean(config.devMode) 
-            : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006");
+            : (!config?.apiKey || config?.mid === "240000005" || config?.mid === "240000006" || billingCfg?.mid === "240000005");
           const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
           const BILLPAY_URL = `${baseUrl}/api/payment/recure/billpay.io`;
 
-          const NANO_API_KEY = config?.apiKey || (isTest ? "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL" : "");
-          const shopcode = config?.mid || (isTest ? "240000005" : "");
-          const loginId = config?.loginId || (isTest ? "shoptest" : "");
-          const ver = config?.ver || (isTest ? "240000005" : "240000005");
+          const NANO_API_KEY = billingCfg?.apiKey || config?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : "");
+          const shopcode = billingCfg?.mid || config?.mid || (isTest ? "240000005" : "");
+          const loginId = billingCfg?.loginId || config?.loginId || (isTest ? "shoptest" : "");
+          const ver = billingCfg?.ver || config?.ver || (isTest ? "240000005" : "240000005");
 
           if (NANO_API_KEY && shopcode && loginId) {
             const timestamp = Date.now().toString();
