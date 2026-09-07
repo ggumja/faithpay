@@ -43,6 +43,7 @@ interface PaymentConfig {
   apiKey: string;
   secretKey: string;
   mid: string;
+  devMode?: boolean;
   loginId?: string;
   iv?: string;
   ver?: string;

@@ -74,6 +74,7 @@ export interface PaymentConfig {
   apiKey: string;
   secretKey: string;
   mid: string;
+  devMode?: boolean;
   loginId?: string;
   iv?: string;
   ver?: string;
@@ -188,6 +189,7 @@ function rowToTenant(r: any, paymentCfg?: any): Tenant {
       loginId: paymentCfg.login_id || '',
       iv: paymentCfg.iv || '',
       ver: paymentCfg.ver || '',
+      devMode: paymentCfg.dev_mode !== undefined ? paymentCfg.dev_mode : (paymentCfg.devMode ?? true),
       enableCard: paymentCfg.enable_card ?? true,
       enableEasyPayment: paymentCfg.enable_easy_payment ?? true,
       enableVBank: paymentCfg.enable_vbank ?? true,
@@ -396,6 +398,7 @@ export async function setPaymentConfig(config: Omit<PaymentConfig, 'updatedAt'>)
     api_key:              config.apiKey ?? null,
     secret_key:           config.secretKey ?? null,
     mid:                  config.mid ?? null,
+    dev_mode:             config.devMode ?? true,
     login_id:             config.loginId ?? null,
     iv:                   config.iv ?? null,
     ver:                  config.ver ?? null,
@@ -438,6 +441,7 @@ export async function getPaymentConfig(tenantIdOrSlug: string): Promise<PaymentC
       loginId: data.login_id || '',
       iv: data.iv || '',
       ver: data.ver || '',
+      devMode: data.dev_mode !== undefined ? data.dev_mode : (data.devMode ?? true),
       enableCard: data.enable_card ?? true,
       enableEasyPayment: data.enable_easy_payment ?? true,
       enableVBank: data.enable_vbank ?? true,

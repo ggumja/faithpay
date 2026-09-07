@@ -333,6 +333,7 @@ export default function PartnerTenantCreate() {
         apiKey: 'test_ck_docs',
         secretKey: 'test_sk_docs',
         mid: 'toss_test_mid',
+        devMode: true,
         isActive: true,
         updatedAt: new Date().toISOString(),
       },

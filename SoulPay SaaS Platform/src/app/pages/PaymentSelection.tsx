@@ -422,9 +422,13 @@ export default function PaymentSelection() {
         const popupOpenedAt = Date.now(); // 팝업 열린 시각 기록
 
         const isMobile = window.innerWidth <= 768;
+        const isTestMode = currentTenant?.paymentConfig?.devMode !== undefined 
+          ? Boolean(currentTenant.paymentConfig.devMode)
+          : (shopcode === '240000006' || shopcode === 'shoptest' || !apiKey);
+        const nanoBaseUrl = isTestMode ? 'https://dev3.nanopay.co.kr' : 'https://pay.nanopay.co.kr';
         const nanoUrl = isMobile 
-          ? 'https://dev3.nanopay.co.kr/api/billkey/mobile/request.io'
-          : 'https://dev3.nanopay.co.kr/api/billkey/pc/request.io';
+          ? `${nanoBaseUrl}/api/billkey/mobile/request.io`
+          : `${nanoBaseUrl}/api/billkey/pc/request.io`;
 
         const hashRawString = `${shopcode}${ediDate}${loginId}${apiKey}`;
         const msgBuffer = new TextEncoder().encode(hashRawString);
@@ -589,9 +593,13 @@ export default function PaymentSelection() {
         const hashValue = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 
         const isMobile = window.innerWidth <= 768;
+        const isTestMode = currentTenant?.paymentConfig?.devMode !== undefined 
+          ? Boolean(currentTenant.paymentConfig.devMode)
+          : (shopcode === '240000006' || shopcode === 'shoptest' || !apiKey);
+        const nanoBaseUrl = isTestMode ? 'https://dev3.nanopay.co.kr' : 'https://pay.nanopay.co.kr';
         const nanoUrl = isMobile 
-          ? 'https://dev3.nanopay.co.kr/api/payment/cert/mobile/request.io'
-          : 'https://dev3.nanopay.co.kr/api/payment/cert/pc/request';
+          ? `${nanoBaseUrl}/api/payment/cert/mobile/request.io`
+          : `${nanoBaseUrl}/api/payment/cert/pc/request.io`;
 
         // 3. 팝업 창에 나노페이 전용 POST Form 자동 전송 HTML 주입
         const payFormHtml = `

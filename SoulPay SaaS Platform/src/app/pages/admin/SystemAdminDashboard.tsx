@@ -374,11 +374,23 @@ export default function SystemAdminDashboard() {
                       </TableCell>
                       <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
                       <TableCell className={S.td}>
-                        {t.paymentConfig?.pgProvider === 'toss' || t.paymentConfig?.pgProvider === 'tosspayments'
-                          ? <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
-                          : t.paymentConfig?.pgProvider === 'nanopay'
-                          ? <span className={S.chip('bg-purple-50','text-purple-700','border-purple-200')}>나노PG</span>
-                          : <span className="text-[11px] text-slate-400 font-medium font-sans">미지정</span>}
+                        {t.paymentConfig?.pgProvider === 'toss' || t.paymentConfig?.pgProvider === 'tosspayments' ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={S.chip('bg-blue-50','text-blue-700','border-blue-200')}>토스페이먼츠</span>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border inline-block ${t.paymentConfig?.devMode !== false ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                              {t.paymentConfig?.devMode !== false ? 'Dev (테스트)' : 'Prod (실운영)'}
+                            </span>
+                          </div>
+                        ) : t.paymentConfig?.pgProvider === 'nanopay' ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={S.chip('bg-purple-50','text-purple-700','border-purple-200')}>나노PG</span>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border inline-block ${t.paymentConfig?.devMode !== false ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                              {t.paymentConfig?.devMode !== false ? 'Dev (테스트)' : 'Prod (실운영)'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium font-sans">미지정</span>
+                        )}
                       </TableCell>
                       <TableCell className={`${S.td} font-mono text-[11.5px] font-bold text-slate-700 dark:text-zinc-300`}>
                         {t.paymentConfig?.mid && t.paymentConfig.mid !== '-' ? t.paymentConfig.mid : <span className="text-slate-400 font-sans font-normal">-</span>}

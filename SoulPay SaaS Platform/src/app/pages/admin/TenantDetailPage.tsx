@@ -37,9 +37,9 @@ import {
   Clock,
   Zap,
   FileText,
-  Upload,
   X,
   Info,
+  Sliders,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
@@ -52,6 +52,7 @@ interface PaymentConfig {
   apiKey: string;
   secretKey: string;
   mid: string;
+  devMode?: boolean;
   contractRate?: number;
   payoutCycle?: string;
   loginId?: string;
@@ -92,6 +93,7 @@ export default function TenantDetailPage() {
 
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [pgProvider, setPgProvider] = useState('');
+  const [devMode, setDevMode] = useState<boolean>(true);
   const [mid, setMid] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -178,6 +180,7 @@ export default function TenantDetailPage() {
         if (cfg && (cfg.pgProvider || cfg.kakaoCid || cfg.apiKey || cfg.mid)) {
           setPaymentConfig(cfg);
           setPgProvider(cfg.pgProvider || 'toss');
+          setDevMode(cfg.devMode !== undefined ? Boolean(cfg.devMode) : true);
           setMid(cfg.mid || '');
           setApiKey(cfg.apiKey || '');
           setSecretKey(cfg.secretKey || '');
@@ -211,6 +214,7 @@ export default function TenantDetailPage() {
           // 결제 미설정/미지정 단체인 경우 깨끗하게 공란 및 비활성화로 유지
           setPaymentConfig(null);
           setPgProvider('');
+          setDevMode(true);
           setMid('');
           setApiKey('');
           setSecretKey('');
@@ -308,6 +312,7 @@ export default function TenantDetailPage() {
         }
         setPaymentConfig(null);
         setPgProvider('');
+        setDevMode(true);
         setMid('');
         setApiKey('');
         setSecretKey('');
@@ -375,6 +380,7 @@ export default function TenantDetailPage() {
           },
           body: JSON.stringify({
             pgProvider,
+            devMode,
             mid,
             apiKey,
             secretKey,
@@ -409,6 +415,7 @@ export default function TenantDetailPage() {
       const newConfig = {
         tenantId: targetId,
         pgProvider,
+        devMode,
         mid,
         apiKey,
         secretKey,
@@ -1074,22 +1081,34 @@ export default function TenantDetailPage() {
                 </CardDescription>
               </div>
               {paymentConfig && (
-                <Badge
-                  variant={isActive ? 'default' : 'secondary'}
-                  className={isActive ? 'bg-green-600' : ''}
-                >
-                  {isActive ? (
-                    <>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      활성화
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      비활성화
-                    </>
-                  )}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      devMode
+                        ? 'bg-amber-50 text-amber-700 border-amber-300 font-semibold text-xs'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-300 font-semibold text-xs'
+                    }
+                  >
+                    {devMode ? '🧪 Dev (테스트)' : '🚀 Prod (실운영)'}
+                  </Badge>
+                  <Badge
+                    variant={isActive ? 'default' : 'secondary'}
+                    className={isActive ? 'bg-green-600' : ''}
+                  >
+                    {isActive ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        활성화
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        비활성화
+                      </>
+                    )}
+                  </Badge>
+                </div>
               )}
             </div>
           </CardHeader>
@@ -1166,6 +1185,79 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {pgProvider && pgProvider !== 'none' && (
+                  <div className="p-4 bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/90 dark:border-zinc-800 rounded-2xl space-y-3 animate-fade-in shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sliders className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        <span className="font-bold text-slate-900 dark:text-zinc-100 text-sm">
+                          PG 연동 운영 환경 (Mode)
+                        </span>
+                        <span className="text-red-500 text-xs">*</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          devMode
+                            ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 font-bold text-xs py-0.5 px-2.5'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 font-bold text-xs py-0.5 px-2.5'
+                        }
+                      >
+                        {devMode ? '🧪 개발/테스트 모드 (Dev)' : '🚀 실운영 라이브 모드 (Prod)'}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 dark:bg-zinc-800 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setDevMode(true)}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          devMode
+                            ? 'bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 shadow-xs border border-amber-200/80 dark:border-amber-900/60'
+                            : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                        }`}
+                      >
+                        <span>🧪 개발/테스트 모드 (Dev Mode)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDevMode(false)}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          !devMode
+                            ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 shadow-xs border border-emerald-200/80 dark:border-emerald-900/60'
+                            : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                        }`}
+                      >
+                        <span>🚀 실운영 모드 (Prod Mode)</span>
+                      </button>
+                    </div>
+
+                    <div className="text-[11.5px] leading-relaxed text-slate-600 dark:text-zinc-400 bg-white dark:bg-zinc-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-zinc-800/80">
+                      {devMode ? (
+                        <div className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
+                          <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                          <div>
+                            <strong className="block font-bold">테스트 환경이 적용됩니다</strong>
+                            {pgProvider === 'nanopay'
+                              ? '나노PG 개발 샌드박스 망(https://dev3.nanopay.co.kr)으로 통신하며, 실제 카드 승인이나 결제 청구가 발생하지 않는 안전 모드입니다.'
+                              : '토스페이먼츠 가상 테스트 키 망으로 통신하며, 실결제가 발생하지 않습니다.'}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 text-emerald-800 dark:text-emerald-300">
+                          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
+                          <div>
+                            <strong className="block font-bold">실제 라이브 결제 망이 적용됩니다</strong>
+                            {pgProvider === 'nanopay'
+                              ? '나노PG 실결제 승인 및 정산 망(https://pay.nanopay.co.kr)으로 직접 통신합니다. 회원의 실물 카드로 청구 및 승인이 이루어집니다.'
+                              : '토스페이먼츠 실운영 상용 키 망으로 직접 결제 및 정산이 진행됩니다.'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {!pgProvider || pgProvider === 'none' ? (
                   <div className="py-10 px-6 text-center bg-slate-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 space-y-2 animate-fade-in">

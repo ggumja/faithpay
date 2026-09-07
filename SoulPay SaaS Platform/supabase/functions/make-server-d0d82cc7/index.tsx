@@ -502,9 +502,9 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
       ver = config.ver || ver;
     }
 
-    const isTest = shopcode === "240000006" || ver === "smbtest";
+    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
     const NANO_API_URL = isTest 
-      ? "http://dev3.nanopay.co.kr/api/payment/approval.io"
+      ? "https://dev3.nanopay.co.kr/api/payment/approval.io"
       : "https://pay.nanopay.co.kr/api/payment/approval.io";
     
     // 카드 정보 암호화
@@ -670,9 +670,9 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       if (config.ver) ver = config.ver;
     }
     
-    const isTest = shopcode === "240000006" || ver === "smbtest";
+    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
     const NANO_API_URL = isTest
-      ? "http://dev3.nanopay.co.kr/api/payment/cancel.io"
+      ? "https://dev3.nanopay.co.kr/api/payment/cancel.io"
       : "https://pay.nanopay.co.kr/api/payment/cancel.io";
     
     const payload = {
@@ -958,14 +958,14 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     if (config?.secretKey && config.secretKey.length >= 10) NANO_SECRET_KEY = config.secretKey;
     if (config?.iv && config.iv.length >= 8) NANO_IV = config.iv;
 
-    const isTest = shopcode === "240000006" || ver === "smbtest";
+    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     
     const isMobile = deviceType === 'mobile';
     // 나노페이 PG 웹 결제창 표준 요청 URL
     const NANO_API_URL = isMobile
-      ? `${baseUrl}/payment/cert/mobile/request.io`
-      : `${baseUrl}/payment/cert/pc/request.io`;
+      ? `${baseUrl}/api/payment/cert/mobile/request.io`
+      : `${baseUrl}/api/payment/cert/pc/request.io`;
       
     // 임시 거래 내역 생성 (pending 상태)
     const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();
@@ -1108,7 +1108,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       recurringDay: donationData.recurringDay || 10,
     });
 
-    const isTest = !config?.apiKey;
+    const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (!config?.apiKey || shopcode === "240000006" || ver === "smbtest");
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     const NANO_REQKEY_URL = `${baseUrl}/api/payment/recure/reqkey.io`;
 

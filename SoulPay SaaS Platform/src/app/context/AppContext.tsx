@@ -127,6 +127,7 @@ export interface Tenant {
     apiKey: string;
     secretKey: string;
     mid: string;
+    devMode?: boolean;
     kakaoCid?: string;
     kakaoSecretKey?: string;
     kakaoMode?: 'test' | 'live';

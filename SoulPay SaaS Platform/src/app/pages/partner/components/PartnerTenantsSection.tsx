@@ -142,6 +142,11 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
                           <Badge variant="outline" className={t.paymentConfig?.pgProvider === 'toss' ? 'bg-blue-50 text-blue-700 border-blue-200 text-[9.5px]' : t.paymentConfig?.pgProvider === 'nanopay' ? 'bg-purple-50 text-purple-700 border-purple-200 text-[9.5px]' : 'bg-slate-50 text-slate-400 border-slate-200 text-[9.5px]'}>
                             {t.paymentConfig?.pgProvider === 'toss' ? '토스페이먼츠' : t.paymentConfig?.pgProvider === 'nanopay' ? '나노PG' : '미지정'}
                           </Badge>
+                          {t.paymentConfig?.pgProvider && (
+                            <Badge variant="outline" className={t.paymentConfig?.devMode !== false ? 'bg-amber-50 text-amber-700 border-amber-200 text-[9px]' : 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px]'}>
+                              {t.paymentConfig?.devMode !== false ? 'Dev' : 'Prod'}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     <div className="flex items-center gap-2">
