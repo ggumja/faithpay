@@ -362,7 +362,7 @@ export default function DonationComplete() {
                 [`${terms.donation} 항목`, formData.itemName || `${tenant.name} ${terms.donation}`],
                 ['받은 기관', tenant.name],
                 [`${terms.receiptDonorLabel.replace(/\s+/g, '')} 성명`, formData.name || '무기명'],
-                ...(formData.baptismName ? [['세례명', formData.baptismName]] : []),
+                ...(formData.baptismName ? [[tenant.religionType === 'protestant' ? '직분' : tenant.religionType === 'buddhist' ? '법명' : '세례명', formData.baptismName]] : []),
                 ['연락처', formData.phone || '-'],
                 ...(formData.isRecurring ? [['결제 주기', (() => {
                   const interval = formData.recurringInterval;

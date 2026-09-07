@@ -51,21 +51,41 @@ export default function DonationFlow() {
     return true;
   });
 
-  // 💾 저장된 교인 성명 및 전화번호 자동 불러오기
+  // 💾 저장된 교인 성명 및 전화번호, 직분정보 자동 불러오기
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedName = localStorage.getItem('soulpay_saved_donor_name') || localStorage.getItem('faithpay_saved_donor_name');
       const savedPhone = localStorage.getItem('soulpay_saved_donor_phone') || localStorage.getItem('faithpay_saved_donor_phone');
+      const savedTitle = localStorage.getItem('soulpay_saved_donor_title') || 
+                         localStorage.getItem('faithpay_saved_donor_title') ||
+                         localStorage.getItem('soulpay_saved_donor_baptism_name') ||
+                         localStorage.getItem('faithpay_saved_donor_baptism_name');
       if (savedName && !name) {
         setName(savedName);
       }
       if (savedPhone && !phone) {
         setPhone(savedPhone);
       }
+      if (savedTitle && !baptismName) {
+        setBaptismName(savedTitle);
+      }
     }
   }, []);
 
-  // 💾 성명 및 전화번호 실시간 기기 저장 동기화
+  // 개신교 테넌트일 때 직분 기본값 설정 (저장된 직분 없으면 '성도')
+  useEffect(() => {
+    if (currentTenant?.religionType === 'protestant' && !baptismName) {
+      const savedTitle = typeof window !== 'undefined'
+        ? (localStorage.getItem('soulpay_saved_donor_title') || 
+           localStorage.getItem('faithpay_saved_donor_title') ||
+           localStorage.getItem('soulpay_saved_donor_baptism_name') ||
+           localStorage.getItem('faithpay_saved_donor_baptism_name'))
+        : null;
+      setBaptismName(savedTitle || '성도');
+    }
+  }, [currentTenant?.religionType, baptismName]);
+
+  // 💾 성명, 전화번호 및 직분정보 실시간 기기 저장 동기화
   useEffect(() => {
     if (saveDonorInfo && typeof window !== 'undefined') {
       if (name) {
@@ -76,8 +96,12 @@ export default function DonationFlow() {
         localStorage.setItem('soulpay_saved_donor_phone', phone);
         localStorage.setItem('faithpay_saved_donor_phone', phone);
       }
+      if (baptismName) {
+        localStorage.setItem('soulpay_saved_donor_title', baptismName);
+        localStorage.setItem('faithpay_saved_donor_title', baptismName);
+      }
     }
-  }, [name, phone, saveDonorInfo]);
+  }, [name, phone, baptismName, saveDonorInfo]);
 
   const handleSaveDonorInfoToggle = (checked: boolean) => {
     setSaveDonorInfo(checked);
@@ -93,6 +117,10 @@ export default function DonationFlow() {
           localStorage.setItem('soulpay_saved_donor_phone', phone);
           localStorage.setItem('faithpay_saved_donor_phone', phone);
         }
+        if (baptismName) {
+          localStorage.setItem('soulpay_saved_donor_title', baptismName);
+          localStorage.setItem('faithpay_saved_donor_title', baptismName);
+        }
       } else {
         localStorage.removeItem('soulpay_save_donor_info_enabled');
         localStorage.removeItem('faithpay_save_donor_info_enabled');
@@ -100,6 +128,10 @@ export default function DonationFlow() {
         localStorage.removeItem('faithpay_saved_donor_name');
         localStorage.removeItem('soulpay_saved_donor_phone');
         localStorage.removeItem('faithpay_saved_donor_phone');
+        localStorage.removeItem('soulpay_saved_donor_title');
+        localStorage.removeItem('faithpay_saved_donor_title');
+        localStorage.removeItem('soulpay_saved_donor_baptism_name');
+        localStorage.removeItem('faithpay_saved_donor_baptism_name');
       }
     }
   };
@@ -229,8 +261,15 @@ export default function DonationFlow() {
       if (!name || !phone) { toast.error('이름과 전화번호를 입력해주세요'); return; }
       if (saveDonorInfo && typeof window !== 'undefined') {
         localStorage.setItem('soulpay_save_donor_info_enabled', 'true');
+        localStorage.setItem('faithpay_save_donor_info_enabled', 'true');
         localStorage.setItem('soulpay_saved_donor_name', name);
+        localStorage.setItem('faithpay_saved_donor_name', name);
         localStorage.setItem('soulpay_saved_donor_phone', phone);
+        localStorage.setItem('faithpay_saved_donor_phone', phone);
+        if (baptismName) {
+          localStorage.setItem('soulpay_saved_donor_title', baptismName);
+          localStorage.setItem('faithpay_saved_donor_title', baptismName);
+        }
       }
     }
     if (step < totalSteps) setStep(step + 1);
@@ -436,6 +475,32 @@ export default function DonationFlow() {
                     type="tel" 
                   />
 
+                  {/* ⛪ 기독교 교회 특화 서식 (전화번호 바로 아래 배치) */}
+                  {currentTenant.religionType === 'protestant' && (
+                    <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-3">
+                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                        🏛️ 교회 직분 정보
+                      </span>
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+                          교회 직분 선택
+                        </label>
+                        <select 
+                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150 cursor-pointer"
+                          value={baptismName || '성도'}
+                          onChange={(e) => setBaptismName(e.target.value)}
+                        >
+                          <option value="성도">성도</option>
+                          <option value="집사">집사</option>
+                          <option value="권사">권사</option>
+                          <option value="장로">장로</option>
+                          <option value="청년/학생">청년/학생</option>
+                          <option value="목회자/교역자">목회자/교역자</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
                   {/* 💾 이 기기에 내 정보 저장 체크박스 */}
                   <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-zinc-850 rounded-xl border border-slate-200 dark:border-zinc-700/60 transition-colors hover:bg-slate-100/70">
                     <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-700 dark:text-zinc-300 select-none flex-1">
@@ -445,9 +510,11 @@ export default function DonationFlow() {
                         onChange={(e) => handleSaveDonorInfoToggle(e.target.checked)}
                         className="w-4 h-4 rounded text-[#3182F6] accent-[#3182F6] focus:ring-[#3182F6] cursor-pointer"
                       />
-                      <span>💾 다음에도 이 기기에서 내 정보(성명·전화번호) 사용하기</span>
+                      <span>
+                        💾 다음에도 이 기기에서 내 정보(성명·전화번호{currentTenant.religionType === 'protestant' ? '·직분정보' : currentTenant.religionType === 'catholic' ? '·세례명' : ''}) 사용하기
+                      </span>
                     </label>
-                    {saveDonorInfo && (name || phone) && (
+                    {saveDonorInfo && (name || phone || baptismName) && (
                       <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                         ✓ 기기 저장됨
                       </span>
@@ -511,31 +578,6 @@ export default function DonationFlow() {
                           <option value="life">생미사 (건강 / 은혜 / 축복 지향)</option>
                           <option value="memorial">위령미사 (영가 안식 지향)</option>
                           <option value="thanks">감사미사 (감사 지향)</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ⛪ 기독교 교회 특화 서식 */}
-                  {currentTenant.religionType === 'protestant' && (
-                    <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-3 mt-1">
-                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                        ⛪ 교회 직분 정보
-                      </span>
-                      <div>
-                        <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
-                          교회 직분 선택
-                        </label>
-                        <select 
-                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150"
-                          defaultValue="member"
-                        >
-                          <option value="member">성도</option>
-                          <option value="deacon">집사</option>
-                          <option value="senior_deacon">권사</option>
-                          <option value="elder">장로</option>
-                          <option value="youth">청년/학생</option>
-                          <option value="pastor">목회자/교역자</option>
                         </select>
                       </div>
                     </div>
