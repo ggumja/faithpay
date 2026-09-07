@@ -990,7 +990,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const timestamp = `${pad(kstDate.getUTCHours())}${pad(kstDate.getUTCMinutes())}${pad(kstDate.getUTCSeconds())}${pad(kstDate.getUTCMilliseconds(), 3)}`;
     const reqPayAmt = donationData.amount.toString();
     const realDonorName = donationData?.name || donationData?.donorName || "신도";
-    const donorPhone = (donationData?.phone || donationData?.donorPhone || "01000000000").replace(/[^0-9]/g, '');
+    const donorPhone = (donationData?.phone || donationData?.donorPhone || "").replace(/[^0-9]/g, '');
     const donorEmail = donationData?.email || "donator@soulpay.kr";
 
     // Smallbee 검증 완료 공식 해시: sha256(ver + loginId + shopcode + reqPayAmt + timestamp + apiKey + "NANO")
@@ -1065,8 +1065,8 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     const loginId = config?.loginId || "smbtestshop";
     const ver = config?.ver || "smbtest";
 
-    const cleanPhone = (donationData?.phone || "01000000000").replace(/[^0-9]/g, '');
-    const userId = `${tenantId}_${cleanPhone}`;
+    const cleanPhone = (donationData?.phone || "").replace(/[^0-9]/g, '');
+    const userId = cleanPhone ? `${tenantId}_${cleanPhone}` : `${tenantId}_${Date.now()}`;
     const timestamp = Date.now().toString();
     const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
 
@@ -1139,7 +1139,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
 
       const tenantId = meta.tenantId || donationData.tenantId || "default";
       const donorName = donationData.name || meta.donorName || "신도";
-      const donorPhone = (donationData.phone || meta.donorPhone || "01000000000").replace(/[^0-9]/g, '');
+      const donorPhone = (donationData.phone || meta.donorPhone || "").replace(/[^0-9]/g, '');
       const itemId = donationData.itemId || meta.itemId || "recurring";
       const itemName = donationData.itemName || meta.itemName || "정기 봉헌금";
       const amount = Number(donationData.amount || meta.amount || 10000);

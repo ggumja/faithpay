@@ -2441,8 +2441,8 @@ export async function seed800kLedger(): Promise<boolean> {
   const supabase = pgClient();
   await resetTestDonationsAndLedger();
 
-  // 각원사 10만원 3건 + 50만원 1건 생성 (하동현 01071404795 기록 포함)
-  await createTestDonationWithSplit('gakwonsa', 100000, '하동현 성도', '신용카드', '01071404795', '청련');
+  // 각원사 10만원 3건 + 50만원 1건 생성
+  await createTestDonationWithSplit('gakwonsa', 100000, '테스트 성도', '신용카드', '01011112222', '청련');
   await createTestDonationWithSplit('gakwonsa', 100000, '김미선 집사', '카카오페이', '01022223333');
   await createTestDonationWithSplit('gakwonsa', 100000, '무명 성도', '토스페이');
   await createTestDonationWithSplit('gakwonsa', 500000, '특별 보시 성도', '신용카드', '01034567890');

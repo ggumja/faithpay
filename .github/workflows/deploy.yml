@@ -38,6 +38,10 @@ jobs:
         working-directory: "SoulPay SaaS Platform"
         run: pnpm install --frozen-lockfile
 
+      - name: Check Zero Hardcoding Policy
+        working-directory: "SoulPay SaaS Platform"
+        run: pnpm run check:hardcoding
+
       - name: Build
         working-directory: "SoulPay SaaS Platform"
         run: pnpm run build

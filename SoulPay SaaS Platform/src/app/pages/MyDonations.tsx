@@ -234,7 +234,7 @@ export default function MyDonations() {
       const res = await memberAPI.loginWithEmail(currentTenant.id, loginEmail, loginPassword);
       if (res.success && res.data && res.data.found) {
         setIsAuthenticated(true);
-        const userPhone = res.data.phone || '010-0000-0000';
+        const userPhone = res.data.phone || '';
         setPhoneNumber(userPhone);
 
         const completedDonations = (res.data.donations || []).filter(
