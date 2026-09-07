@@ -1485,6 +1485,8 @@ app.post("/make-server-d0d82cc7/kakaopay/ready", async (c) => {
   try {
     const { partner_order_id, partner_user_id, item_name, total_amount, approval_url, cancel_url, fail_url } = await c.req.json();
 
+    const origin = c.req.header("origin") || c.req.header("referer")?.replace(/\/$/, '') || "https://soulpay.kr";
+
     const payload = {
       cid: "TC0ONETIME",
       partner_order_id: partner_order_id || `SP-ORDER-${Date.now()}`,
@@ -1493,9 +1495,9 @@ app.post("/make-server-d0d82cc7/kakaopay/ready", async (c) => {
       quantity: 1,
       total_amount: Number(total_amount) || 10000,
       tax_free_amount: 0,
-      approval_url: approval_url || "http://localhost:5173/kakaopay/approve",
-      cancel_url: cancel_url || "http://localhost:5173/kakaopay/cancel",
-      fail_url: fail_url || "http://localhost:5173/kakaopay/fail",
+      approval_url: approval_url || `${origin}/kakaopay/approve`,
+      cancel_url: cancel_url || `${origin}/kakaopay/cancel`,
+      fail_url: fail_url || `${origin}/kakaopay/fail`,
     };
 
     try {
@@ -1517,7 +1519,7 @@ app.post("/make-server-d0d82cc7/kakaopay/ready", async (c) => {
     }
 
     const mockTid = `T${Date.now()}${Math.floor(100 + Math.random() * 900)}`;
-    const redirectUrl = `http://localhost:5173/kakaopay/sandbox?tid=${mockTid}&partner_order_id=${payload.partner_order_id}&partner_user_id=${payload.partner_user_id}&amount=${payload.total_amount}&item_name=${encodeURIComponent(payload.item_name)}`;
+    const redirectUrl = `${origin}/kakaopay/sandbox?tid=${mockTid}&partner_order_id=${payload.partner_order_id}&partner_user_id=${payload.partner_user_id}&amount=${payload.total_amount}&item_name=${encodeURIComponent(payload.item_name)}`;
 
     return c.json({
       success: true,
@@ -1651,8 +1653,11 @@ app.get("/make-server-d0d82cc7/admin", async (c) => {
 
 
 
-// DB 80만원 (4건: 10만원 3건 + 50만원 1건) 정밀 재정립
+// DB 80만원 (4건: 10만원 3건 + 50만원 1건) 정밀 재정립 (개발/테스트 전용)
 app.post("/make-server-d0d82cc7/admin/seed-800k", async (c) => {
+  if (Deno.env.get("ENVIRONMENT") === "production" || Deno.env.get("NODE_ENV") === "production") {
+    return c.json({ success: false, error: "상용(Production) 환경에서는 시드 엔드포인트를 실행할 수 없습니다." }, 403);
+  }
   try {
     await db.seed800kLedger();
     return c.json({ success: true, message: 'DB가 80만원 (4건) 실데이터로 정밀 리셋되었습니다.' });

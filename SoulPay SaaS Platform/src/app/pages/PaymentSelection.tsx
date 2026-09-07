@@ -10,7 +10,7 @@ import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
 import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { paymentAPI, donationAPI, kakaoPayAPI, subscriptionAPI } from '../api/client';
+import { paymentAPI, donationAPI, kakaoPayAPI, subscriptionAPI, API_BASE_URL } from '../api/client';
 import { generateTransactionId } from '../utils/transactionId';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
@@ -253,16 +253,16 @@ export default function PaymentSelection() {
       toast.info('💛 카카오페이(TC0ONETIME) 개발자 샌드박스 결제 창을 호출합니다...');
 
       const partnerOrderId = `FP-${Date.now()}`;
-      const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
-      const partnerUserId = `USER-${cleanPhone}`;
+      const cleanPhone = (donationFormData.phone || '').replace(/[^0-9]/g, '');
+      const partnerUserId = cleanPhone ? `USER-${cleanPhone}` : `USER-${Date.now()}`;
       const itemName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
-      const amount = donationFormData.amount || 50000;
+      const amount = donationFormData.amount || 0;
 
       sessionStorage.setItem('soulpay_kakaopay_pending', JSON.stringify({
         tenantId: currentTenant.id,
         tenantSlug: tenantSlug,
         amount: amount,
-        donorName: donationFormData.name || '홍길동 성도',
+        donorName: donationFormData.name || '익명',
         donorPhone: cleanPhone,
         baptismName: donationFormData.baptismName || '',
         itemId: donationFormData.itemId || 'general',
@@ -338,7 +338,7 @@ export default function PaymentSelection() {
         const orderName = donationFormData.itemName || `${currentTenant.name} 봉헌금`;
         const amount = donationFormData.amount || 10000;
         const customerName = donationFormData.name || '무기명';
-        const cleanPhone = (donationFormData.phone || '01000000000').replace(/[^0-9]/g, '');
+        const cleanPhone = (donationFormData.phone || '').replace(/[^0-9]/g, '');
         const customerKey = `customer_${currentTenant.id}_${cleanPhone || Date.now()}`;
 
         // 💾 리다이렉트 후 복구를 위한 스냅샷 저장
@@ -436,7 +436,7 @@ export default function PaymentSelection() {
         const ediDate = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
         const tempDonationId = generateTransactionId();
         const donorName = donationFormData.name || "신도";
-        const donorPhone = (donationFormData.phone || "01000000000").replace(/[^0-9]/g, '');
+        const donorPhone = (donationFormData.phone || "").replace(/[^0-9]/g, '');
         const popupOpenedAt = Date.now(); // 팝업 열린 시각 기록
 
         const isMobile = window.innerWidth <= 768;
@@ -479,7 +479,7 @@ export default function PaymentSelection() {
               <input type="hidden" name="orderEmail" value="donator@soulpay.kr" />
               <input type="hidden" name="payWay" value="card" />
               <input type="hidden" name="goodsName" value="${donationFormData.itemName || 'SoulPay 정기 봉헌금'}" />
-              <input type="hidden" name="receiveUrl" value="https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback" />
+              <input type="hidden" name="receiveUrl" value="${API_BASE_URL}/payment/process/billkey/callback" />
               <input type="hidden" name="compOrderNo" value="${tempDonationId}" />
               <input type="hidden" name="compOrderMem" value="${donorName}" />
               <input type="hidden" name="ediDate" value="${ediDate}" />

@@ -104,14 +104,18 @@ export default function RecurringPendingPage() {
   const subscriptionMasters = useMemo<SubscriptionMaster[]>(() => {
     const map: Record<string, SubscriptionMaster> = {};
 
-    donations.forEach((d, idx) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+
+    donations.forEach((d) => {
       const isRecurring = d.isRecurring || d.is_recurring;
       if (isRecurring) {
-        const phone = d.donorPhone || d.donor_phone || `010-1234-${1000 + idx}`;
+        const phone = d.donorPhone || d.donor_phone || '-';
         const key = `${d.donorName || '무기명'}_${phone}_${d.itemName || '기본'}`;
 
         if (!map[key]) {
-          const subId = `SUB-2026-${String(Object.keys(map).length + 1).padStart(4, '0')}`;
+          const subId = `SUB-${currentYear}-${String(Object.keys(map).length + 1).padStart(4, '0')}`;
           const date = new Date(d.createdAt || d.created_at || Date.now());
           const recurringDay = date.getDate() || 15;
           const status = masterStatuses[subId] || 'active';
@@ -121,12 +125,12 @@ export default function RecurringPendingPage() {
             donorName: d.donorName || '무기명',
             donorPhone: phone,
             itemName: d.itemName || '일반후원',
-            amount: Number(d.amount) || 50000,
+            amount: Number(d.amount) || 0,
             recurringDay,
             paymentMethod: d.paymentMethod || '신용카드 빌링',
             status,
             startDate: date.toISOString().slice(0, 10),
-            nextBillingDate: `2026-09-${String(recurringDay).padStart(2, '0')}`,
+            nextBillingDate: `${currentYear}-${currentMonth}-${String(recurringDay).padStart(2, '0')}`,
           };
         }
       }
@@ -138,7 +142,8 @@ export default function RecurringPendingPage() {
   // 2. ⚡ Tab 2: 스케줄러 결제 실행 대기열 생성 (해지건 제외)
   const scheduledExecutions = useMemo(() => {
     return subscriptionMasters.filter(sub => sub.status !== 'cancelled').map((sub, idx) => {
-      const schId = `SCH-202608${String(sub.recurringDay).padStart(2, '0')}-${String(idx + 1).padStart(3, '0')}`;
+      const schDateStr = sub.nextBillingDate.replace(/-/g, '');
+      const schId = `SCH-${schDateStr}-${String(idx + 1).padStart(3, '0')}`;
       const status = scheduleStatuses[schId] || (sub.status === 'paused' ? 'skipped' : 'pending');
 
       return {

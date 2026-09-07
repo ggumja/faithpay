@@ -2126,15 +2126,38 @@ export async function getAdminSettlementStatements(month: string): Promise<{
 }> {
   try {
     const tenants = await getAllTenants('active');
+    const supabase = pgClient();
+
+    // 1. 해당 월 완료된 실 기부금 내역 조회
+    const { data: donations } = await supabase
+      .from('donations')
+      .select('tenant_id, amount, payment_status, created_at')
+      .eq('payment_status', 'completed');
+
+    const tenantStatsMap: Record<string, { gross: number; count: number }> = {};
+    if (donations) {
+      donations.forEach((d: any) => {
+        const dMonth = (d.created_at || '').slice(0, 7);
+        if (dMonth === month) {
+          if (!tenantStatsMap[d.tenant_id]) {
+            tenantStatsMap[d.tenant_id] = { gross: 0, count: 0 };
+          }
+          tenantStatsMap[d.tenant_id].gross += Number(d.amount) || 0;
+          tenantStatsMap[d.tenant_id].count += 1;
+        }
+      });
+    }
+
     const tenantStatements = tenants.map((t: any, idx: number) => {
-      const gross = t.slug === 'gakwonsa' ? 100000 : 0;
+      const stats = tenantStatsMap[t.id] || { gross: 0, count: 0 };
+      const gross = stats.gross;
       const pgFee = Math.round(gross * 0.015);
       return {
         id: `ST-${month.replace('-', '')}-${String(idx + 1).padStart(3, '0')}`,
         month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
         tenantId: t.id,
         name: t.name,
-        totalCount: gross > 0 ? 1 : 0,
+        totalCount: stats.count,
         grossAmount: gross,
         pgFee,
         netPayout: gross - pgFee,
@@ -2142,24 +2165,50 @@ export async function getAdminSettlementStatements(month: string): Promise<{
       };
     });
 
-    const partnerStatements = [
-      {
-        id: `TAX-${month.replace('-', '')}-01`,
-        month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
-        partnerName: '한국종교솔루션(주)',
-        partnerRole: 'master_agency',
-        businessType: 'corporation',
-        isCorporate: true,
-        grossCommission: 500,
-        vatAmount: 50,
-        withholdingTax: 0,
-        netPayout: 550,
-        status: 'ISSUED',
-        bankName: '신한은행',
-        accountNumber: '100-032-456789',
-        accountHolder: '한국종교솔루션',
-      },
-    ];
+    // 2. 해당 월 파트너 정산 내역 조회 (실제 수수료 원장 기반)
+    const { data: commissions } = await supabase
+      .from('partner_commissions')
+      .select('*');
+
+    const partnerMap: Record<string, any> = {};
+    if (commissions) {
+      commissions.forEach((c: any) => {
+        const cMonth = (c.created_at || '').slice(0, 7);
+        if (cMonth === month && c.partner_id) {
+          if (!partnerMap[c.partner_id]) {
+            partnerMap[c.partner_id] = {
+              grossCommission: 0,
+              vatAmount: 0,
+              withholdingTax: 0,
+              netPayout: 0,
+              partnerName: c.partner_name || '파트너',
+              partnerRole: c.partner_role || 'agent',
+            };
+          }
+          partnerMap[c.partner_id].grossCommission += Number(c.commission_amount) || 0;
+          partnerMap[c.partner_id].vatAmount += Number(c.vat_amount) || 0;
+          partnerMap[c.partner_id].netPayout += Number(c.net_amount) || 0;
+        }
+      });
+    }
+
+    const partnerStatements = Object.entries(partnerMap).map(([pid, pdata], idx) => ({
+      id: `TAX-${month.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
+      month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
+      partnerId: pid,
+      partnerName: pdata.partnerName,
+      partnerRole: pdata.partnerRole,
+      businessType: 'individual',
+      isCorporate: false,
+      grossCommission: pdata.grossCommission,
+      vatAmount: pdata.vatAmount,
+      withholdingTax: pdata.withholdingTax,
+      netPayout: pdata.netPayout,
+      status: 'ISSUED',
+      bankName: '',
+      accountNumber: '',
+      accountHolder: pdata.partnerName,
+    }));
 
     return {
       tenantStatements,

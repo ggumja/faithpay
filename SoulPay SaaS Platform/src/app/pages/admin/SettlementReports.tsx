@@ -322,22 +322,51 @@ export default function SettlementReports() {
   // 🏛️ 국세청 연말정산 간소화 제출용 전산매체(.txt) 파일 자동 생성 및 다운로드
   const handleGenerateNTSFile = () => {
     const year = new Date().getFullYear();
-    const bizNo = '1208200000'; // 단체 고유번호/사업자번호
-    const tenantName = currentTenant?.name || '각원사';
+    const bizNo = currentTenant?.businessNumber?.replace(/[^0-9]/g, '') || '';
+    const tenantName = currentTenant?.name || '';
+
+    if (!bizNo) {
+      toast.error('단체 고유번호(사업자등록번호)가 등록되지 않았습니다. 단체 설정에서 등록해 주세요.');
+      return;
+    }
+
+    // 1. 완료된 기부 내역 실데이터 기부자별 집계
+    const completedDonations = dbDonations.filter(
+      (d) => !d.paymentStatus || d.paymentStatus === 'completed'
+    );
+
+    if (completedDonations.length === 0) {
+      toast.info('제출할 완료된 기부금 내역이 없습니다.');
+      return;
+    }
+
+    const donorMap: Record<string, { name: string; rno: string; amount: number; count: number }> = {};
+    completedDonations.forEach((d) => {
+      const donorName = d.donorName || d.donor_name || '기부자';
+      const key = `${donorName}_${d.donorPhone || d.donor_phone || ''}`;
+      if (!donorMap[key]) {
+        donorMap[key] = {
+          name: donorName,
+          rno: d.rno || d.residentNumber || '0000000000000',
+          amount: 0,
+          count: 0,
+        };
+      }
+      donorMap[key].amount += Number(d.amount) || 0;
+      donorMap[key].count += 1;
+    });
+
+    const donors = Object.values(donorMap);
+    const totalAmount = donors.reduce((sum, d) => sum + d.amount, 0);
+    const totalCount = donors.length;
 
     // 1. 헤더 레코드 (소득세법 제160조의3 표준 규격)
-    let fileContent = `H${year}${bizNo.padEnd(10, ' ')}${tenantName.padEnd(40, ' ')}000003000179915000\n`;
+    let fileContent = `H${year}${bizNo.padEnd(10, ' ')}${tenantName.padEnd(40, ' ')}${String(totalCount).padStart(6, '0')}${String(totalAmount).padStart(12, '0')}\n`;
 
     // 2. 데이터 레코드 (기부자별 연간 합산 명단)
-    const donors = [
-      { name: '홍길동', rno: '880101-1234567', amount: 3600000, count: 12 },
-      { name: '김철수', rno: '750512-1987654', amount: 1200000, count: 12 },
-      { name: '이영희', rno: '920320-2345678', amount: 500000, count: 5 },
-    ];
-
     donors.forEach((d) => {
       // D + 기부코드(41:지정기부금) + 성명 + 주민번호 + 연간금액 + 건수
-      fileContent += `D41${d.name.padEnd(20, ' ')}${d.rno.replace('-', '')}${String(d.amount).padStart(10, '0')}${String(d.count).padStart(3, '0')}\n`;
+      fileContent += `D41${d.name.padEnd(20, ' ')}${d.rno.replace(/[^0-9]/g, '').padEnd(13, '0')}${String(d.amount).padStart(10, '0')}${String(d.count).padStart(3, '0')}\n`;
     });
 
     // 3. 브라우저 파일 다운로드 수행 (.txt)
@@ -351,7 +380,7 @@ export default function SettlementReports() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast.success(`[${year}년 국세청 연말정산 전산제출 파일(.txt)]이 생성되었습니다! 홈택스에 바로 업로드하실 수 있습니다.`);
+    toast.success(`[${year}년 국세청 연말정산 전산제출 파일(.txt)]이 생성되었습니다! (${totalCount}명, ${totalAmount.toLocaleString()}원)`);
   };
 
   return (

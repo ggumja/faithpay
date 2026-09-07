@@ -94,7 +94,7 @@ export function PartnerMyInfoSection({
         timestamp: '2026-07-01 09:00:00',
         category: '프로필 생성',
         beforeVal: '신규 신청',
-        afterVal: `연락처: ${editPhone || '010-9876-5432'} · 이메일: ${editEmail || partner.email}`,
+        afterVal: `연락처: ${partner.phone || '미등록'} · 이메일: ${partner.email || '미등록'}`,
         modifiedBy: '시스템 관리자',
       },
     ];
