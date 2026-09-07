@@ -162,7 +162,8 @@ export default function PaymentSelection() {
       if (event.data?.type === 'SOULPAY_PAYMENT_RESULT') {
         if (event.data.success) {
           toast.success('결제가 완료되었습니다.');
-          navigate(`/${tenantSlug}/complete`);
+          const donParam = event.data.donationId ? `?donId=${event.data.donationId}` : '';
+          navigate(`/${tenantSlug}/complete${donParam}`);
         } else {
           toast.error(event.data.resultMsg || '결제에 실패하였습니다.');
           setIsProcessing(false);
@@ -221,7 +222,7 @@ export default function PaymentSelection() {
             if (donation.paymentStatus === 'completed') {
               clearInterval(interval);
               toast.success('결제가 완료되었습니다.');
-              navigate(`/${tenantSlug}/complete`);
+              navigate(`/${tenantSlug}/complete?donId=${donationId}`);
             } else if (donation.paymentStatus === 'failed') {
               clearInterval(interval);
               toast.error('결제에 실패하였습니다.');

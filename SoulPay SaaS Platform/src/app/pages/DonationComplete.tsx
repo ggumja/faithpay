@@ -27,9 +27,9 @@ export default function DonationComplete() {
   const authKeyParam = searchParams.get('authKey') || '';     // Toss 빌링키 인증 후 전달
   const customerKeyParam = searchParams.get('customerKey') || ''; // Toss 빌링키 발급 시 사용
 
-  // 영수증 ID 생성 (쿼리 파라미터가 있으면 우선 사용, 없으면 새 포맷으로 생성)
+  // 영수증 ID (쿼리 파라미터가 있으면 그대로 사용, 없으면 새 포맷으로 생성)
   const [receiptId] = useState(() => {
-    if (donIdParam) return formatTransactionId(donIdParam);  // 구형 포맷도 새 포맷으로 변환
+    if (donIdParam) return donIdParam;
     return generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
   });
 
@@ -184,10 +184,31 @@ export default function DonationComplete() {
     }
   }, [formData]);
 
-  // Supabase DB 기록 (1회만 실행)
+  // Supabase DB 기록 (서버에서 미생성된 거래만 1회 생성)
   useEffect(() => {
     if (tenant && formData && !hasRecordedRef.current) {
       hasRecordedRef.current = true;
+
+      // 이미 서버(PG사 콜백, Toss confirm 등)를 통해 donIdParam으로 DB에 생성된 경우 중복 INSERT 방지
+      if (donIdParam) {
+        console.log('[DonationComplete] Server already recorded donation:', donIdParam);
+        donationAPI.getByTenant(tenant.id).then(res => {
+          if (res.success && res.data) {
+            const found = res.data.find(d => d.id === donIdParam);
+            if (found) {
+              setFormData(prev => ({
+                ...prev,
+                itemName: found.itemName || prev.itemName,
+                amount: found.amount || prev.amount,
+                name: found.donorName || prev.name,
+                phone: found.donorPhone || prev.phone,
+                paymentMethod: found.paymentMethod || prev.paymentMethod,
+              }));
+            }
+          }
+        }).catch(err => console.warn('Failed to fetch existing donation:', err));
+        return;
+      }
 
       // phone 필드가 비어있는 경우 customerPhone 또는 sessionStorage에서 fallback
       const resolvedPhone = (

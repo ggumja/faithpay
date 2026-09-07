@@ -899,6 +899,16 @@ export async function updateDonation(tenantId: string, id: string, updates: Part
   };
 }
 
+export async function deleteDonation(id: string): Promise<boolean> {
+  const sb = pgClient();
+  const { error } = await sb.from('donations').delete().eq('id', id);
+  if (error) {
+    console.error('deleteDonation failed:', error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function migrateNormalizeExistingDonations(): Promise<{ totalChecked: number; totalUpdated: number }> {
   let totalChecked = 0;
   let totalUpdated = 0;

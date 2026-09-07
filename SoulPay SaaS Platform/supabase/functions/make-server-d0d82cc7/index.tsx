@@ -1463,6 +1463,18 @@ app.put("/make-server-d0d82cc7/donations/:tenantId/:id", async (c) => {
   }
 });
 
+// 봉헌 삭제
+app.delete("/make-server-d0d82cc7/donations/:tenantId/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const success = await db.deleteDonation(id);
+    return c.json({ success });
+  } catch (error) {
+    console.error('Error deleting donation:', error);
+    return c.json({ success: false, error: 'Failed to delete donation' }, 500);
+  }
+});
+
 // ==================== KAKAO PAY SANDBOX TEST API (CID: TC0ONETIME) ====================
 
 // 1. Kakao Pay Ready (결제 준비 - TC0ONETIME)
