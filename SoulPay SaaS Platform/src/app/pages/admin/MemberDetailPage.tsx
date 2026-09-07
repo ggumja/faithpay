@@ -227,12 +227,12 @@ export default function MemberDetailPage() {
                 date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
                 title: String(d.prayerText),
                 category: d.itemName || currentTenant.terminology?.prayer || '메시지',
-                beneficiaryName: d.donorName || rawMatch.donorName || '신도',
+                beneficiaryName: d.donorName || rawMatch.donorName || (currentTenant.terminology?.member || '신도'),
               }));
 
             const loadedMem: MemberDetailData = {
               id: memberId,
-              name: rawMatch.donorName || '익명 보시/후원자',
+              name: rawMatch.donorName || '무기명',
               baptismName: rawMatch.baptismName || '',
               phone: digitsKey,
               email: rawMatch.donorEmail || '',

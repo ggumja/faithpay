@@ -632,7 +632,7 @@ export default function DonationHistory() {
     }
 
     setCancelModalDonation(targetDonation);
-    setCancelReasonType('신도 단순 환불 요청');
+    setCancelReasonType(`${terms.donor} 단순 환불 요청`);
     setCustomCancelReason('');
     setRecurringCancelScope('once');
   };
@@ -1383,7 +1383,7 @@ export default function DonationHistory() {
                     {isExpiredForCancel(selectedDonation) && selectedDonation.paymentStatus !== 'cancelled' && (
                       <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
                         <span className="font-bold shrink-0">⚠️ 결제 취소 불가:</span>
-                        <span>결제일로부터 45일이 경과한 결제건은 PG 자동 승인 취소가 불가능합니다. (후원자 계좌로 수동 입금 환불 필요)</span>
+                        <span>결제일로부터 45일이 경과한 결제건은 PG 자동 승인 취소가 불가능합니다. ({terms.donor} 계좌로 수동 입금 환불 필요)</span>
                       </div>
                     )}
 
@@ -1532,7 +1532,7 @@ export default function DonationHistory() {
                         <span className="text-[11px] text-slate-400 font-normal">PG사 및 결제원장에 기록됩니다</span>
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {['신도 단순 환불 요청', '금액 착오 결제', '중복 결제', '기타 직접 입력'].map((reason) => (
+                        {[`${terms.donor} 단순 환불 요청`, '금액 착오 결제', '중복 결제', '기타 직접 입력'].map((reason) => (
                           <button
                             key={reason}
                             type="button"

@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
 import { donationAPI, donationItemsAPI, DonationItem, kakaoPayAPI } from '../api/client';
+import { useTenantTerms } from '../hooks/useTenantTerms';
 import { Badge } from '../components/ui/badge';
 import {
   CreditCard,
@@ -138,6 +139,7 @@ export default function TenantKiosk() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { currentTenant } = useApp();
+  const terms = useTenantTerms(currentTenant);
 
   // Kiosk State
   const [step, setStep] = useState<KioskStep>('MODE_SELECT');
@@ -297,10 +299,10 @@ export default function TenantKiosk() {
 
       if (res.success && res.data && res.data.found) {
         setIsMatchedMember(true);
-        setDonorName(res.data.donorName || '성도');
+        setDonorName(res.data.donorName || terms.donor);
         setBaptismName(res.data.baptismName || '');
         setMatchedCount(res.data.count || 1);
-        toast.success(`환영합니다, ${res.data.donorName}님! 교인 정보가 연동되었습니다.`);
+        toast.success(`환영합니다, ${res.data.donorName}님! ${terms.donor} 정보가 연동되었습니다.`);
         return;
       }
     } catch {
@@ -310,7 +312,7 @@ export default function TenantKiosk() {
     setIsMatchedMember(false);
     setDonorName('');
     setBaptismName('');
-    toast.info('신규 기부자님 반갑습니다! 성함을 입력해 주세요.');
+    toast.info(`처음 오신 ${terms.donor}님 반갑습니다! 성함을 입력해 주세요.`);
   };
 
   // Select Fast Anonymous Mode
@@ -551,16 +553,16 @@ export default function TenantKiosk() {
                     📱
                   </div>
                   <span className="bg-[#E8F3FF] text-[#1B64DA] text-sm font-black px-4 py-1.5 rounded-full border border-[#CEE4FE]">
-                    교인 / 성도용
+                    {terms.donor} 전용
                   </span>
                 </div>
 
                 <div className="space-y-3">
                   <h2 className="text-3xl font-black text-[#191F28] group-hover:text-[#3182F6] transition-colors">
-                    전화번호로 봉헌 (이력 연동)
+                    전화번호로 {terms.donation} (이력 연동)
                   </h2>
                   <p className="text-sm sm:text-base text-[#4E5968] font-medium leading-relaxed">
-                    휴대폰 번호 11자리를 터치하면 교인 성함이 자동 연결되고 **마이페이지 & 알림톡**이 발송됩니다.
+                    휴대폰 번호 11자리를 터치하면 {terms.donor} 성함이 자동 연결되고 **마이페이지 & 알림톡**이 발송됩니다.
                   </p>
                 </div>
 
@@ -1213,15 +1215,15 @@ export default function TenantKiosk() {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-3xl sm:text-4xl font-black text-[#191F28]">봉헌이 감사히 완료되었습니다!</h2>
+              <h2 className="text-3xl sm:text-4xl font-black text-[#191F28]">{terms.donation}이 감사히 완료되었습니다!</h2>
               <p className="text-base text-[#3182F6] font-extrabold">
-                {donorName || '성도'}님의 정성이 소중히 전달되었습니다.
+                {donorName || terms.donor}님의 정성이 소중히 전달되었습니다.
               </p>
             </div>
 
             <div className="bg-[#F9FAFB] border border-[#E5E8EB] p-6 rounded-2xl text-sm sm:text-base space-y-2.5 text-[#4E5968] font-mono text-left">
               <div className="flex justify-between"><span>승인 번호:</span> <span className="text-[#191F28] font-bold">{approvalNo}</span></div>
-              <div className="flex justify-between"><span>봉헌 항목:</span> <span className="text-[#191F28] font-bold">{selectedItem?.name || (ft.placeNoun === '사찰' ? '불전함 / 보시금' : '주일 헌금')}</span></div>
+              <div className="flex justify-between"><span>{terms.donation} 항목:</span> <span className="text-[#191F28] font-bold">{selectedItem?.name || (ft.placeNoun === '사찰' ? '불전함 / 보시금' : ft.placeNoun === '성당' ? '주일 봉헌금' : '주일 헌금')}</span></div>
               <div className="flex justify-between"><span>결제 금액:</span> <span className="text-[#3182F6] font-black text-lg">{amount.toLocaleString()}원</span></div>
               <div className="flex justify-between"><span>결제 수단:</span> <span className="text-[#1B64DA] font-extrabold">{paymentType === 'CARD' ? '신용·체크카드 / 삼성·애플페이' : paymentType === 'KAKAO_PAY' ? '카카오페이 (QR/바코드)' : '네이버페이 (QR/바코드)'}</span></div>
               {phone && (

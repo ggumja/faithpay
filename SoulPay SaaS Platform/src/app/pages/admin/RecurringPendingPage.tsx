@@ -56,7 +56,7 @@ export default function RecurringPendingPage() {
   const { tenantSlug } = useParams();
   const location = useLocation();
   const { tenants, currentTenant, setCurrentTenant } = useApp();
-  const terms = useTenantTerms(currentTenant?.orgType);
+  const terms = useTenantTerms(currentTenant);
 
   const [activeTab, setActiveTab] = useState<'master' | 'schedule'>('master');
   const [donations, setDonations] = useState<any[]>([]);
@@ -269,7 +269,7 @@ export default function RecurringPendingPage() {
                 </Badge>
               </div>
               <p className="text-slate-500 dark:text-zinc-400 text-sm">
-                후원자별 정기 약정 계약(마스터)과 자동 결제 스케줄러 실행 대기열을 명확히 구분하여 관리합니다
+                {terms.donor}별 정기 약정 계약(마스터)과 자동 결제 스케줄러 실행 대기열을 명확히 구분하여 관리합니다
               </p>
             </div>
 
@@ -377,7 +377,7 @@ export default function RecurringPendingPage() {
                     정기 약정 마스터 계약 명세 ({filteredMasters.length}건)
                   </CardTitle>
                   <CardDescription>
-                    후원자별 지속 정기 결제 계약 정보입니다. 결제일 변경, 일시중지, 해지 관리를 수행합니다.
+                    {terms.donor}별 지속 정기 결제 계약 정보입니다. 결제일 변경, 일시중지, 해지 관리를 수행합니다.
                   </CardDescription>
                 </div>
 

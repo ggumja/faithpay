@@ -269,7 +269,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
                 86<span style={{ fontSize: 14, fontWeight: 600, color: NEO.textSub }}>명</span>
               </div>
               <div style={{ fontSize: 11, color: NEO.textSub, marginTop: 7, fontWeight: 600 }}>
-                참여 성도
+                참여 {currentTenant.terminology?.member || (currentTenant.religionType === 'buddhist' ? '불자' : currentTenant.religionType === 'catholic' ? '교우' : currentTenant.religionType === 'protestant' ? '성도' : '후원자')}
               </div>
             </div>
 

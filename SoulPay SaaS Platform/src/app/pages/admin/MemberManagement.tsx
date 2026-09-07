@@ -95,7 +95,7 @@ export default function MemberManagement() {
             if (!map.has(digitsKey)) {
               map.set(digitsKey, {
                 id: d.id,
-                name: d.donorName || '익명 보시/후원자',
+                name: d.donorName || '무기명',
                 baptismName: d.baptismName || '',
                 phone: digitsKey,
                 email: d.donorEmail || '',
@@ -112,7 +112,7 @@ export default function MemberManagement() {
                 existing.totalDonation += d.amount || 0;
                 if (d.isRecurring) existing.recurringCount += 1;
               }
-              if (existing.name === '익명 보시/후원자' && d.donorName) existing.name = d.donorName;
+              if (existing.name === '무기명' && d.donorName) existing.name = d.donorName;
               if (!existing.email && d.donorEmail) existing.email = d.donorEmail;
             }
           });

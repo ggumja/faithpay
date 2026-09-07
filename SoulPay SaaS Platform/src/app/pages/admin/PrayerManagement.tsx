@@ -36,7 +36,7 @@ export default function PrayerManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-  const terms = useTenantTerms(currentTenant?.orgType);
+  const terms = useTenantTerms(currentTenant);
 
   const [prayers, setPrayers] = useState<PrayerItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -478,7 +478,7 @@ export default function PrayerManagement() {
                 {terms.prayer} 관리 센터
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                후원자분들이 작성하신 {terms.prayer} 내역을 대한민국 표준 라벨지 서식으로 즉시 출력합니다.
+                {terms.donor}분들이 작성하신 {terms.prayer} 내역을 대한민국 표준 라벨지 서식으로 즉시 출력합니다.
               </p>
             </div>
             <Button variant="outline" onClick={handleExport} className="gap-2 cursor-pointer self-start md:self-auto">

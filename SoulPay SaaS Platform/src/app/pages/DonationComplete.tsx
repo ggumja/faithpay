@@ -72,7 +72,7 @@ export default function DonationComplete() {
       itemId: 'default',
       itemName: '봉헌금',
       amount: amountParam || 10000,
-      name: '성도',
+      name: '무기명',
       phone: '',
       prayerText: '',
       isRecurring: typeParam === 'toss_billing' || typeParam === 'nano_billing',
@@ -350,10 +350,10 @@ export default function DonationComplete() {
             <div className="flex flex-col gap-3">
               {[
                 ['영수증 번호', receiptId],
-                ['봉헌 일시', formattedDate],
-                [`${tenant.terminology?.donation || '헌금'} 항목`, formData.itemName || `${tenant.name} 봉헌금`],
+                [`${tenant.terminology?.donation || '납부'} 일시`, formattedDate],
+                [`${tenant.terminology?.donation || '납부'} 항목`, formData.itemName || `${tenant.name} ${tenant.terminology?.donation || '기부금'}`],
                 ['받은 기관', tenant.name],
-                ['봉헌자 성명', formData.name || '성도'],
+                [`${tenant.religionType === 'buddhist' ? '보시자' : tenant.religionType === 'charity' ? '후원자' : '봉헌자'} 성명`, formData.name || '무기명'],
                 ...(formData.baptismName ? [['세례명', formData.baptismName]] : []),
                 ['연락처', formData.phone || '-'],
                 ...(formData.isRecurring ? [['결제 주기', (() => {
@@ -464,11 +464,11 @@ export default function DonationComplete() {
           tenant={tenant}
           data={{
             receiptId: receiptId,
-            donorName: formData.name || '성도',
+            donorName: formData.name || '무기명',
             donorPhone: formData.phone || '',
             donorIdNumber: '880101-1******',
             amount: formData.amount,
-            itemName: formData.itemName || `${tenant.name} 봉헌금`,
+            itemName: formData.itemName || `${tenant.name} ${tenant.terminology?.donation || '기부금'}`,
             date: formattedDate,
           }}
           onClose={() => setShowTaxReceipt(false)}

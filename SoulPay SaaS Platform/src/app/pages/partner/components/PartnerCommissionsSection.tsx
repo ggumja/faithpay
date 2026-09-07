@@ -620,7 +620,7 @@ export function PartnerCommissionsSection({
                       <TableCell>
                         <div className="font-mono text-[11px] text-[var(--hm-ink-3)]">{c.donationId}</div>
                         {c.donorName ? (
-                          <div className="text-[11px] font-medium text-slate-700 mt-0.5">{c.donorName} 성도</div>
+                          <div className="text-[11px] font-medium text-slate-700 mt-0.5">{c.donorName} 님</div>
                         ) : null}
                       </TableCell>
                       <TableCell className="text-[11px]">

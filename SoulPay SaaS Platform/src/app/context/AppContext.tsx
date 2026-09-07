@@ -408,9 +408,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       description: newTenantData.description || '새로운 단체입니다.',
       schedule: newTenantData.schedule || [],
       terminology: {
-        donation: newTenantData.terminology?.donation || (newTenantData.religionType === 'protestant' ? '헌금' : newTenantData.religionType === 'buddhist' ? '보시' : '봉헌'),
-        member: newTenantData.terminology?.member || (newTenantData.religionType === 'protestant' ? '성도' : newTenantData.religionType === 'buddhist' ? '불자' : '교우'),
-        prayer: newTenantData.terminology?.prayer || (newTenantData.religionType === 'protestant' ? '기도제목' : newTenantData.religionType === 'buddhist' ? '발원문' : '미사지향'),
+        donation: newTenantData.terminology?.donation || (newTenantData.religionType === 'protestant' ? '헌금' : newTenantData.religionType === 'buddhist' ? '보시' : newTenantData.religionType === 'charity' ? '후원금' : newTenantData.religionType === 'general' ? '기부금' : '봉헌'),
+        member: newTenantData.terminology?.member || (newTenantData.religionType === 'protestant' ? '성도' : newTenantData.religionType === 'buddhist' ? '불자' : newTenantData.religionType === 'charity' ? '후원자' : newTenantData.religionType === 'general' ? '기부자' : '교우'),
+        prayer: newTenantData.terminology?.prayer || (newTenantData.religionType === 'protestant' ? '기도제목' : newTenantData.religionType === 'buddhist' ? '발원문' : (newTenantData.religionType === 'charity' || newTenantData.religionType === 'general') ? '응원 메시지' : '미사지향'),
       },
       ...newTenantData,
     };

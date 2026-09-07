@@ -278,9 +278,9 @@ export default function PartnerTenantCreate() {
         ? '사랑과 나눔이 함께하는 따뜻한 공동체입니다.'
         : '은혜와 나눔이 넘치는 따뜻한 공동체입니다.'),
       terminology: {
-        donation: isBuddhist ? '보시' : isCharity ? '후원금' : isGeneral ? '기부금' : '헌금',
+        donation: isBuddhist ? '보시' : isCatholic ? '봉헌' : isCharity ? '후원금' : isGeneral ? '기부금' : '헌금',
         member: isBuddhist ? '불자' : isCatholic ? '교우' : isCharity ? '후원자' : isGeneral ? '기부자' : '성도',
-        prayer: isBuddhist ? '축원문' : (isCharity || isGeneral) ? '응원 메시지' : '기도문',
+        prayer: isBuddhist ? '축원문' : isCatholic ? '미사지향' : (isCharity || isGeneral) ? '응원 메시지' : '기도문',
       },
       bannerImages: [],
       contact: {
