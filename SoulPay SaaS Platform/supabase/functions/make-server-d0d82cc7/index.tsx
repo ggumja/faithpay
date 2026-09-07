@@ -1262,6 +1262,26 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       } catch (e) {}
     }
 
+    // 테넌트 정보 및 결제 내역 조회 (SoulPay 결제 화면과 일관된 UI 구성용)
+    const tenant = (await db.getTenantById(tenantId)) || (await db.getTenantBySlug(tenantId));
+    const tenantName = tenant?.name || 'SoulPay';
+    const amountNum = Number(donationData?.amount || 0);
+    const formattedAmount = amountNum ? amountNum.toLocaleString('ko-KR') : '0';
+    const itemName = donationData?.itemName || '정기 봉헌금';
+    const donorName = donationData?.name || donationData?.donorName || '후원자';
+
+    const interval = donationData?.recurringInterval || 'monthly';
+    let intervalText = '정기 결제 (매월 10일)';
+    if (interval === 'daily') {
+      intervalText = '정기 결제 (매일)';
+    } else if (interval === 'weekly') {
+      const day = donationData?.recurringDayOfWeek || '일';
+      intervalText = `정기 결제 (매주 ${day}요일)`;
+    } else if (interval === 'monthly') {
+      const day = donationData?.recurringDay || 10;
+      intervalText = `정기 결제 (매월 ${day}일)`;
+    }
+
     let formattedHtml = nanoText;
     if (formattedHtml.includes("<head>")) {
       formattedHtml = formattedHtml.replace("<head>", `<head>\n\t\t<base href="${baseUrl}/">`);
@@ -1270,6 +1290,306 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     formattedHtml = formattedHtml
       .replaceAll('href="/', `href="${baseUrl}/`)
       .replaceAll('src="/', `src="${baseUrl}/`);
+
+    // SoulPay 결제 수단 선택 화면(헤더 배너, 최종 봉헌 내역 카드, 인풋 스타일)과 100% 일관된 모던 디자인 주입
+    const customStyles = `
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body {
+    background-color: #F8FAFC !important;
+    color: #0F172A;
+    min-height: 100vh;
+    padding-bottom: 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* Hero Top Banner */
+  .sp-hero {
+    background: linear-gradient(135deg, #1E2A78 0%, #2A338F 60%, #1A2068 100%);
+    padding: 30px 24px 44px;
+    color: #FFFFFF;
+    text-align: left;
+  }
+  .sp-hero-inner {
+    max-width: 460px;
+    margin: 0 auto;
+  }
+  .sp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    backdrop-filter: blur(4px);
+  }
+  .sp-hero h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .sp-hero p {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* Main Container */
+  .wrap03 {
+    width: 100% !important;
+    max-width: 480px !important;
+    margin: -24px auto 0 !important;
+    padding: 0 16px !important;
+    background: transparent !important;
+    min-height: auto !important;
+  }
+
+  /* Hide default plain header */
+  .pay-header {
+    display: none !important;
+  }
+
+  /* Summary Card (matches SoulPay PaymentSelection screen) */
+  .sp-summary-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  }
+  .sp-summary-header {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0F172A;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #F1F5F9;
+    margin-bottom: 14px;
+  }
+  .sp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+  }
+  .sp-row:last-child {
+    margin-bottom: 0;
+  }
+  .sp-row-label {
+    color: #64748B;
+    font-weight: 500;
+  }
+  .sp-row-val {
+    color: #1E293B;
+    font-weight: 700;
+  }
+  .sp-row-val.highlight {
+    color: #4338CA;
+  }
+  .sp-divider {
+    height: 1px;
+    background: #F1F5F9;
+    margin: 14px 0;
+  }
+  .sp-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sp-total-label {
+    font-size: 15px;
+    font-weight: 800;
+    color: #475569;
+  }
+  .sp-total-amount {
+    font-size: 26px;
+    font-weight: 900;
+    color: #3D47B8;
+    letter-spacing: -0.02em;
+  }
+
+  /* Form Card */
+  form#payForm {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    padding: 24px 22px;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  }
+  .sp-form-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 4px;
+  }
+  .sp-form-desc {
+    font-size: 12px;
+    color: #64748B;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #F1F5F9;
+  }
+
+  /* Form Controls */
+  .form-group {
+    margin-bottom: 18px !important;
+  }
+  .form-label {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #1E293B !important;
+    margin-bottom: 7px !important;
+  }
+  .form-label .req {
+    color: #EF4444 !important;
+    margin-left: 2px;
+  }
+  .form-control {
+    width: 100% !important;
+    height: 48px !important;
+    border: 1.5px solid #CBD5E1 !important;
+    border-radius: 12px !important;
+    padding: 0 14px !important;
+    font-size: 15px !important;
+    color: #0F172A !important;
+    background-color: #FFFFFF !important;
+    transition: all 0.2s ease !important;
+    outline: none !important;
+    font-weight: 500 !important;
+  }
+  .form-control:focus {
+    border-color: #3D47B8 !important;
+    box-shadow: 0 0 0 4px rgba(61, 71, 184, 0.12) !important;
+  }
+  .form-row {
+    display: flex !important;
+    gap: 10px !important;
+  }
+  .form-row select {
+    flex: 1 !important;
+    cursor: pointer !important;
+  }
+  .form-inline {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+  .form-inline input.short {
+    width: 90px !important;
+    text-align: center !important;
+    letter-spacing: 4px !important;
+    font-size: 18px !important;
+  }
+  .form-hint {
+    font-size: 12px !important;
+    color: #64748B !important;
+    font-weight: 500 !important;
+  }
+
+  /* Action Button */
+  .pay-btn {
+    width: 100% !important;
+    height: 52px !important;
+    background: linear-gradient(135deg, #3D47B8 0%, #2A338F 100%) !important;
+    color: #FFFFFF !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    border-radius: 14px !important;
+    border: none !important;
+    cursor: pointer !important;
+    margin-top: 16px !important;
+    box-shadow: 0 4px 14px rgba(61, 71, 184, 0.35) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .pay-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(61, 71, 184, 0.45) !important;
+  }
+  .pay-btn:active {
+    transform: translateY(0) !important;
+  }
+
+  /* Security Trust Badge */
+  .sp-security {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: #94A3B8;
+    line-height: 1.5;
+  }
+  .sp-security strong {
+    color: #64748B;
+    font-weight: 600;
+  }
+</style>
+`;
+
+    // 1. 헤더에 커스텀 스타일 주입
+    if (formattedHtml.includes("</head>")) {
+      formattedHtml = formattedHtml.replace("</head>", `${customStyles}\n</head>`);
+    } else {
+      formattedHtml = `${customStyles}\n${formattedHtml}`;
+    }
+
+    // 2. 바디 상단에 테넌트 결제 헤더 배너 주입
+    const heroBannerHtml = `
+<div class="sp-hero">
+  <div class="sp-hero-inner">
+    <div class="sp-badge">🛡️ SoulPay 안전 정기 결제</div>
+    <h1>결제 수단 선택 · 정기결제</h1>
+    <p>${tenantName} 봉헌을 위한 카드 등록</p>
+  </div>
+</div>
+`;
+    formattedHtml = formattedHtml.replace(/<body[^>]*>/i, `<body>\n${heroBannerHtml}`);
+
+    // 3. 결제 폼 직전에 최종 봉헌 내역 요약 카드 주입
+    const summaryCardHtml = `
+<div class="sp-summary-card">
+  <div class="sp-summary-header">최종 봉헌 내역</div>
+  <div class="sp-row">
+    <span class="sp-row-label">봉헌 항목</span>
+    <span class="sp-row-val">${itemName}</span>
+  </div>
+  <div class="sp-row">
+    <span class="sp-row-label">성명</span>
+    <span class="sp-row-val">${donorName}</span>
+  </div>
+  <div class="sp-row">
+    <span class="sp-row-label">결제 유형</span>
+    <span class="sp-row-val highlight">${intervalText}</span>
+  </div>
+  <div class="sp-divider"></div>
+  <div class="sp-total-row">
+    <span class="sp-total-label">총 결제 금액</span>
+    <span class="sp-total-amount">${formattedAmount}원</span>
+  </div>
+</div>
+`;
+    formattedHtml = formattedHtml.replace(/(<form[^>]*id=["\x27]payForm["\x27][^>]*>)/i, `${summaryCardHtml}\n$1\n<div class="sp-form-title">💳 신용카드 정기결제 등록</div><div class="sp-form-desc">안전하고 투명한 금융 거래를 위해 공식 결제대행사(스마트로)를 통해 암호화 등록됩니다.</div>`);
+
+    // 4. 버튼 문구 개선 및 보안 인증 마크 추가
+    formattedHtml = formattedHtml.replace(
+      /<button[^>]*class=["\x27]pay-btn["\x27][^>]*>.*?<\/button>/i,
+      `<button type="button" class="pay-btn" onclick="chkPayment()">🔒 ${formattedAmount}원 정기결제 카드 등록하기</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
+    );
+
+    // 5. 테스트 프리셋 카드번호를 빈값으로 정리하여 사용자 편의성 제공
+    formattedHtml = formattedHtml
+      .replace('value="4890168342495918"', 'value=""')
+      .replace('value="35"', 'value=""')
+      .replace('value="950716"', 'value=""');
 
     return c.json({
       success: true,

@@ -419,7 +419,7 @@ export default function PaymentSelection() {
       toast.info('정기결제 카드 등록창을 연결하고 있습니다...');
       
       try {
-        const paymentWindow = window.open('about:blank', 'NanopayBillKey', 'width=650,height=700,scrollbars=yes,resizable=yes');
+        const paymentWindow = window.open('about:blank', 'NanopayBillKey', 'width=520,height=860,scrollbars=yes,resizable=yes');
         if (!paymentWindow) {
           toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
           setIsProcessing(false);
