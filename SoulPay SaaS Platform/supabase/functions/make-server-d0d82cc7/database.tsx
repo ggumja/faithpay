@@ -22,6 +22,7 @@ export interface Tenant {
   bannerImages: string[];
   description: string;
   address: string;
+  templateId?: string;
   uniqueNumber?: string;              // 종교/비영리 단체 고유번호증 번호 (예: 240-82-12345)
   businessRegistrationNumber?: string; // 수익사업용 사업자등록번호 (선택사항, 바자회/물품 판매용)
   businessInfo?: {
@@ -241,6 +242,7 @@ function rowToTenant(r: any, paymentCfg?: any): Tenant {
     registeredByReferralCode: r.registered_by_referral_code ?? undefined,
     referralCode: r.registered_by_referral_code ?? undefined,
     businessRegistrationNumber: r.business_registration_number ?? undefined,
+    templateId: r.template_id ?? 'classic',
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     paymentConfig,
@@ -268,6 +270,9 @@ function tenantToRow(t: Partial<Tenant>): Record<string, any> {
   if (t.appliedAt     !== undefined) row.applied_at     = t.appliedAt;
   if (t.approvedAt    !== undefined) row.approved_at    = t.approvedAt;
   if (t.contractRate  !== undefined) row.contract_rate  = Number(t.contractRate);
+  if (t.templateId !== undefined || (t as any).template_id !== undefined) {
+    row.template_id = t.templateId || (t as any).template_id || 'classic';
+  }
   if (t.registrationSource !== undefined) row.registration_source = t.registrationSource;
   if (t.registeredByPartnerId !== undefined) {
     row.registered_by_partner_id = (t.registeredByPartnerId && typeof t.registeredByPartnerId === 'string' && t.registeredByPartnerId.trim())
