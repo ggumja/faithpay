@@ -77,7 +77,7 @@ export default function SettlementReports() {
     pgFee: 0,
     finalDeposit: 0,
     currentMonthName: `${new Date().getFullYear()}년 ${String(new Date().getMonth() + 1).padStart(2, '0')}월`,
-    settlementDateStr: `익월 5일 (자동 입금)`
+    settlementDateStr: '-'
   });
 
   // PG 계약 수수료율 (단체별 설정값 반영, 기본 3.0%)
@@ -193,10 +193,6 @@ export default function SettlementReports() {
             }
           });
 
-          if (Object.keys(monthlyMap).length === 0) {
-            monthlyMap[curMonthKey] = { total: 0, cancelled: 0 };
-          }
-
           // 3. 🔵 일별/건별 정산 명세 데이터 생성 (DB 정산주기 반영)
           const daysToAdd = currentSettlementCycle === 'D+1' ? 1 : currentSettlementCycle === 'D+2' ? 2 : currentSettlementCycle === 'D+3' ? 3 : 1;
 
@@ -233,51 +229,55 @@ export default function SettlementReports() {
 
           const sortedMonths = Object.keys(monthlyMap).sort((a, b) => b.localeCompare(a));
 
-          const processedMonthly = sortedMonths.map((mKey) => {
-            const data = monthlyMap[mKey];
-            const totalDonations = data.total;
-            const pgFees = Math.round(totalDonations * (currentContractRate / 100));
-            const netAmount = Math.max(0, totalDonations - pgFees);
-            
-            const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
-            const yearNum = parseInt(yStr, 10);
-            const monthNum = parseInt(mStr, 10);
-            const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
+          const processedMonthly = sortedMonths
+            .map((mKey) => {
+              const data = monthlyMap[mKey];
+              const totalDonations = data.total;
+              const pgFees = Math.round(totalDonations * (currentContractRate / 100));
+              const netAmount = Math.max(0, totalDonations - pgFees);
+              
+              const [yStr, mStr] = mKey.replace('년', '').replace('월', '').trim().split(' ');
+              const yearNum = parseInt(yStr, 10);
+              const monthNum = parseInt(mStr, 10);
+              const isPast = yearNum < now.getFullYear() || (yearNum === now.getFullYear() && monthNum < now.getMonth() + 1);
 
-            let settlementDate = '';
-            let statusStr = '';
-            
-            if (currentSettlementCycle === 'MONTHLY') {
-              let nextY = yearNum;
-              let nextM = monthNum + 1;
-              if (nextM > 12) { nextY += 1; nextM = 1; }
-              settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
-              statusStr = isPast ? '완료' : '정산 예정';
-            } else {
-              settlementDate = isPast ? `${currentSettlementCycle} 입금 완료` : `매일 ${currentSettlementCycle} 순차 입금`;
-              statusStr = isPast ? '지급 완료' : '순차 입금 진행 중';
-            }
+              let settlementDate = '-';
+              let statusStr = '내역 없음';
+              
+              if (totalDonations > 0) {
+                if (currentSettlementCycle === 'MONTHLY') {
+                  let nextY = yearNum;
+                  let nextM = monthNum + 1;
+                  if (nextM > 12) { nextY += 1; nextM = 1; }
+                  settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
+                  statusStr = isPast ? '정산 완료' : '정산 예정';
+                } else {
+                  settlementDate = isPast ? `${currentSettlementCycle} 입금 완료` : `매일 ${currentSettlementCycle} 순차 입금`;
+                  statusStr = isPast ? '입금 완료' : '정산 진행 중';
+                }
+              }
 
-            return {
-              month: mKey,
-              totalDonations,
-              pgFees,
-              cancelledAmount: data.cancelled,
-              netAmount,
-              settlementDate,
-              status: statusStr,
-            };
-          });
+              return {
+                month: mKey,
+                totalDonations,
+                pgFees,
+                cancelledAmount: data.cancelled,
+                netAmount,
+                settlementDate,
+                status: statusStr,
+              };
+            })
+            .filter((item) => item.totalDonations > 0 || item.cancelledAmount > 0);
 
           setMonthlySettlement(processedMonthly);
 
-          const latestMonthData = processedMonthly[0] || { totalDonations: 0, pgFees: 0, netAmount: 0, settlementDate: `${currentSettlementCycle} 순차 입금` };
+          const latestMonthData = processedMonthly[0];
           setSummaryStats({
-            monthlyTotal: latestMonthData.totalDonations,
-            pgFee: latestMonthData.pgFees,
-            finalDeposit: latestMonthData.netAmount,
-            currentMonthName: periodSelection.label || latestMonthData.month,
-            settlementDateStr: latestMonthData.settlementDate,
+            monthlyTotal: latestMonthData?.totalDonations || 0,
+            pgFee: latestMonthData?.pgFees || 0,
+            finalDeposit: latestMonthData?.netAmount || 0,
+            currentMonthName: periodSelection.label || (latestMonthData ? latestMonthData.month : curMonthKey),
+            settlementDateStr: latestMonthData && latestMonthData.totalDonations > 0 ? latestMonthData.settlementDate : '-',
           });
         }
       } catch (err) {
@@ -624,7 +624,9 @@ export default function SettlementReports() {
               <Card>
                 <CardHeader>
                   <CardTitle>월별 정산 내역</CardTitle>
-                  <CardDescription>최근 3개월 정산 현황</CardDescription>
+                  <CardDescription>
+                    {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '실제 결제 원장 기반 월별 정산 현황'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -640,46 +642,62 @@ export default function SettlementReports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {monthlySettlement.map((record) => (
-                        <TableRow key={record.month}>
-                          <TableCell className="font-medium">{record.month}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {record.totalDonations.toLocaleString()}원
-                          </TableCell>
-                          <TableCell className="text-right text-orange-600">
-                            -{record.pgFees.toLocaleString()}원
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-green-600">
-                            {record.netAmount.toLocaleString()}원
-                          </TableCell>
-                          <TableCell>{record.settlementDate}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={record.status === '완료' ? 'default' : 'secondary'}
-                            >
-                              {record.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadReport(record.month)}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadReceipt(record.month)}
-                              >
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                            </div>
+                      {monthlySettlement.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-slate-500 font-medium">
+                            선택한 기간 내 승인 완료된 정산 내역이 없습니다.
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        monthlySettlement.map((record) => (
+                          <TableRow key={record.month}>
+                            <TableCell className="font-medium">{record.month}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {record.totalDonations.toLocaleString()}원
+                            </TableCell>
+                            <TableCell className="text-right text-orange-600">
+                              -{record.pgFees.toLocaleString()}원
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-green-600">
+                              {record.netAmount.toLocaleString()}원
+                            </TableCell>
+                            <TableCell>{record.settlementDate}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  record.status === '정산 완료' || record.status === '입금 완료'
+                                    ? 'default'
+                                    : record.status === '내역 없음'
+                                    ? 'outline'
+                                    : 'secondary'
+                                }
+                              >
+                                {record.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={record.totalDonations === 0}
+                                  onClick={() => handleDownloadReport(record.month)}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={record.totalDonations === 0}
+                                  onClick={() => handleDownloadReceipt(record.month)}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
