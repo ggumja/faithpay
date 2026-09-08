@@ -72,11 +72,13 @@ export function PeriodRangePicker({
       end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       label = `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월 ${end.getDate()}일`;
     } else if (newUnit === 'weekly') {
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      const weekStart = Math.ceil(start.getDate() / 7);
-      const weekEnd = Math.ceil(end.getDate() / 7);
-      label = `${start.getFullYear()}년 ${weekStart}주차 ~ ${start.getFullYear()}년 ${weekEnd}주차`;
+      const currentWeekNum = Math.ceil(now.getDate() / 7);
+      const startDay = (currentWeekNum - 1) * 7 + 1;
+      const daysCount = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const endDay = Math.min(startDay + 6, daysCount);
+      start = new Date(now.getFullYear(), now.getMonth(), startDay, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), endDay, 23, 59, 59, 999);
+      label = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${currentWeekNum}주차`;
     } else if (newUnit === 'monthly') {
       start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
@@ -101,8 +103,16 @@ export function PeriodRangePicker({
   // Reset temp dates
   const handleReset = () => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    let start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    let end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    if (unit === 'weekly') {
+      const currentWeekNum = Math.ceil(now.getDate() / 7);
+      const startDay = (currentWeekNum - 1) * 7 + 1;
+      const daysCount = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const endDay = Math.min(startDay + 6, daysCount);
+      start = new Date(now.getFullYear(), now.getMonth(), startDay, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), endDay, 23, 59, 59, 999);
+    }
     setTempStartDate(start);
     setTempEndDate(end);
     setSelectingMode('start');
@@ -126,7 +136,10 @@ export function PeriodRangePicker({
     } else if (unit === 'weekly') {
       const wStart = Math.ceil(start.getDate() / 7);
       const wEnd = Math.ceil(end.getDate() / 7);
-      label = `${start.getFullYear()}년 ${wStart}주차 ~ ${end.getFullYear()}년 ${wEnd}주차`;
+      const isSame = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth() && wStart === wEnd;
+      label = isSame
+        ? `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${wStart}주차`
+        : `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${wStart}주차 ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월 ${wEnd}주차`;
     } else if (unit === 'monthly') {
       label = `${start.getFullYear()}년 ${start.getMonth() + 1}월 ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월`;
     } else if (unit === 'yearly') {

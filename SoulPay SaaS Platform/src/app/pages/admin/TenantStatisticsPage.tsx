@@ -1403,14 +1403,20 @@ export default function TenantStatisticsPage() {
                       <>
                         <span className="text-amber-600 dark:text-amber-400">[{selectedPeriodKey}]</span> 간편결제 페이별 분석
                       </>
+                    ) : periodUnit === 'weekly' ? (
+                      <>
+                        <span className="text-amber-600 dark:text-amber-400">[{periodSelection.label}]</span> 간편결제 세부 분석
+                      </>
                     ) : (
-                      '간편결제 전체 기간 세부 분석 명세'
+                      `[${periodSelection.label}] 간편결제 세부 분석 명세`
                     )}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-slate-500 mt-0.5">
                     {selectedPeriodKey
                       ? `${selectedPeriodKey} (${periodUnit === 'daily' ? '일별' : periodUnit === 'weekly' ? '주별' : periodUnit === 'yearly' ? '년별' : '월별'}) 발생한 간편결제의 페이별 건수, 수납 금액 및 비중 현황입니다.`
-                      : `선택 조회 기간(${periodSelection.startDate.toLocaleDateString()} ~ ${periodSelection.endDate.toLocaleDateString()}) 동안 접수된 카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 상세 현황입니다.`}
+                      : periodUnit === 'weekly'
+                      ? `최상위 기간에서 선택된 주(${periodSelection.label}) 동안 접수된 카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 상세 현황입니다.`
+                      : `선택 조회 기간(${periodSelection.label}) 동안 접수된 카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 상세 현황입니다.`}
                   </DialogDescription>
                 </div>
               </div>
@@ -1421,7 +1427,7 @@ export default function TenantStatisticsPage() {
                   onClick={() => setSelectedPeriodKey(null)}
                   className="text-xs text-slate-600 hover:text-slate-900 h-8"
                 >
-                  전체 기간 보기
+                  {periodUnit === 'weekly' ? `${periodSelection.label} 전체 보기` : '전체 기간 보기'}
                 </Button>
               )}
             </div>
@@ -1433,7 +1439,11 @@ export default function TenantStatisticsPage() {
               <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
                 <CardContent className="p-4">
                   <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                    {selectedPeriodKey ? `${selectedPeriodKey} 간편결제액` : '총 간편결제 수납액'}
+                    {selectedPeriodKey
+                      ? `${selectedPeriodKey} 간편결제액`
+                      : periodUnit === 'weekly'
+                      ? '선택된 주 간편결제액'
+                      : '총 간편결제 수납액'}
                   </p>
                   <p className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">
                     {modalEasyPayStats.totalAmount.toLocaleString()}원
@@ -1441,6 +1451,8 @@ export default function TenantStatisticsPage() {
                   <p className="text-[11px] text-amber-600/80 mt-1">
                     {selectedPeriodKey
                       ? `${selectedPeriodKey} 수납 기준`
+                      : periodUnit === 'weekly'
+                      ? `${periodSelection.label} 수납 기준`
                       : `전체 수납액의 ${overviewStats.totalAmount > 0 ? ((modalEasyPayStats.totalAmount / overviewStats.totalAmount) * 100).toFixed(1) : '0'}%`}
                   </p>
                 </CardContent>
@@ -1448,13 +1460,21 @@ export default function TenantStatisticsPage() {
 
               <Card className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                 <CardContent className="p-4">
-                  <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400">간편결제 거래 건수</p>
+                  <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                    {selectedPeriodKey
+                      ? `${selectedPeriodKey} 거래 건수`
+                      : periodUnit === 'weekly'
+                      ? '선택된 주 거래 건수'
+                      : '간편결제 거래 건수'}
+                  </p>
                   <p className="text-2xl font-black text-slate-800 dark:text-zinc-100 mt-1">
                     {modalEasyPayStats.totalCount}건
                   </p>
                   <p className="text-[11px] text-slate-500 mt-1">
                     {selectedPeriodKey
                       ? `${selectedPeriodKey} 거래 기준`
+                      : periodUnit === 'weekly'
+                      ? `${periodSelection.label} 거래 기준`
                       : `전체 거래의 ${overviewStats.totalCount > 0 ? ((modalEasyPayStats.totalCount / overviewStats.totalCount) * 100).toFixed(1) : '0'}%`}
                   </p>
                 </CardContent>
@@ -1477,6 +1497,8 @@ export default function TenantStatisticsPage() {
                 <span>
                   {selectedPeriodKey
                     ? `[${selectedPeriodKey}] 페이별 건수 · 금액 · 비중 분석`
+                    : periodUnit === 'weekly'
+                    ? `1. [선택된 주: ${periodSelection.label}] 페이별 건수 · 금액 · 비중 집계`
                     : '1. 간편결제 세부 수단별 집계'}
                 </span>
                 <span className="text-xs font-normal text-slate-500">카카오페이 · 네이버페이 · 토스페이 · 실시간 계좌이체 등</span>
@@ -1497,6 +1519,8 @@ export default function TenantStatisticsPage() {
                         <TableCell colSpan={4} className="text-center py-6 text-slate-400">
                           {selectedPeriodKey
                             ? `${selectedPeriodKey}에 발생한 간편결제 수납 내역이 없습니다 (0건)`
+                            : periodUnit === 'weekly'
+                            ? `선택된 주(${periodSelection.label}) 내 간편결제 수납 내역이 없습니다 (0건)`
                             : '조회 기간 내 간편결제 수납 내역이 없습니다 (0건)'}
                         </TableCell>
                       </TableRow>
@@ -1544,7 +1568,11 @@ export default function TenantStatisticsPage() {
             {!selectedPeriodKey && (
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center justify-between">
-                  <span>2. 간편결제 상세 거래 명세 (전체 기간 최신순)</span>
+                  <span>
+                    {periodUnit === 'weekly'
+                      ? `2. 선택된 주(${periodSelection.label}) 간편결제 상세 거래 명세 (최신순)`
+                      : `2. 간편결제 상세 거래 명세 (${periodSelection.label} 최신순)`}
+                  </span>
                   <span className="text-xs font-normal text-slate-500">총 {modalEasyPayDonations.length}건</span>
                 </h4>
                 <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto">
@@ -1563,7 +1591,9 @@ export default function TenantStatisticsPage() {
                       {modalEasyPayDonations.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-slate-400">
-                            조회 기간 내 간편결제 거래 내역이 없습니다 (0건)
+                            {periodUnit === 'weekly'
+                              ? `선택된 주(${periodSelection.label}) 내 간편결제 거래 내역이 없습니다 (0건)`
+                              : '조회 기간 내 간편결제 거래 내역이 없습니다 (0건)'}
                           </TableCell>
                         </TableRow>
                       ) : (
