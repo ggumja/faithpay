@@ -2328,15 +2328,18 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       }
     }
 
+    const smartroCode = body.resultCode || body.ResultCode || body.res_cd || body.code || (isSuccess ? "0000" : "99");
+    const smartroMsg = body.resultMsg || body.ResultMsg || body.res_msg || body.errorMsg || body.msg || body.resMsg || "";
+
     // 직관적이고 친절한 오류/성공 안내 메시지 구성
-    const userFriendlyMsg = resultMsg || (
+    const userFriendlyMsg = smartroMsg || (
       isSuccess 
         ? (chargeImmediate
             ? `정기결제 카드 등록 및 1회차 ${Number(donationData?.amount || 0).toLocaleString()}원 결제가 완료되었습니다.`
             : `정기결제 카드가 등록되었습니다. (첫 결제 예정일: ${nextPaymentDate || '지정일'})`)
-        : (resultCode === "99" 
-            ? "카드사 승인 또는 본인 인증에 실패했습니다. (오류코드: 99)\n스마트로 공용 테스트 환경에서는 국민카드·하나카드·체크카드가 지원되지 않으므로, 신한·현대·삼성·BC·롯데 신용카드로 테스트해주세요." 
-            : `카드 등록에 실패했습니다. (오류코드: ${resultCode || '알 수 없음'})`)
+        : (smartroCode === "99" 
+            ? "카드사 승인 또는 본인 인증에 실패했습니다. (오류코드: 99)\n입력하신 카드정보(생년월일 6자리 YYMMDD, 비밀번호 앞 2자리, 유효기간)를 확인해주세요." 
+            : `카드 등록에 실패했습니다. (오류코드: ${smartroCode || '알 수 없음'})`)
     );
 
     // 사용자 팝업 창에 응답할 안내 화면 및 postMessage 스크립트 반환
@@ -2479,12 +2482,13 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       if (window.opener) {
         window.opener.postMessage({
           type: 'SOULPAY_BILLKEY_RESULT',
-          resultCode: ${JSON.stringify(resultCode || (isSuccess ? "0000" : "9999"))},
+          resultCode: ${JSON.stringify(smartroCode || (isSuccess ? "0000" : "9999"))},
           resultMsg: ${JSON.stringify(userFriendlyMsg)},
           billKey: ${JSON.stringify(billKey || '')},
           userId: ${JSON.stringify(userId || '')},
           cardNo: ${JSON.stringify(cardNo || '')},
           cardName: ${JSON.stringify(cardName || '')},
+          rawBody: ${JSON.stringify(body || {})},
           subscriptionId: ${JSON.stringify(newSub?.id || '')},
           donationId: ${JSON.stringify(donationRecord?.id || '')},
           firstPaymentCharged: ${JSON.stringify(Boolean(firstPaymentCharged))},
