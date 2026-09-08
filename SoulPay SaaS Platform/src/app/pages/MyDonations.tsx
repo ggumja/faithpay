@@ -80,6 +80,11 @@ export default function MyDonations() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
 
+  // ⚡ 해지되지 않은 실제 유지/이용 중인 정기결제 건수만 카운트 (해지 완료 건 제외)
+  const activeSubscriptionsCount = useMemo(() => {
+    return subscriptions.filter(s => s.status !== 'cancelled').length;
+  }, [subscriptions]);
+
   // 👤 회원 프로필 정보 수정 상태 (이메일, 주소, 세례명/법명/직분, 성명, 비밀번호, 우편번호, 상세주소)
   const [profileName, setProfileName] = useState('');
   const [profileBaptismName, setProfileBaptismName] = useState('');
@@ -804,9 +809,9 @@ export default function MyDonations() {
                 }`}
               >
                 <span>정기결제</span>
-                {subscriptions.length > 0 && (
+                {activeSubscriptionsCount > 0 && (
                   <Badge className="ml-0.5 text-[10px] bg-indigo-600 text-white px-1.5 py-0 font-bold">
-                    {subscriptions.length}
+                    {activeSubscriptionsCount}
                   </Badge>
                 )}
               </button>
