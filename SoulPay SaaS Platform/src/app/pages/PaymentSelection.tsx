@@ -296,6 +296,7 @@ export default function PaymentSelection() {
   };
 
   const handlePayment = async () => {
+    const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
     const activePg = (pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay').toLowerCase();
     const isToss = activePg.includes('toss');
     const isNanopay = !isToss;
@@ -498,7 +499,6 @@ export default function PaymentSelection() {
         const tempDonationId = generateTransactionId();
         const donorPhone = (donationFormData.phone || "").replace(/[^0-9]/g, '');
         const popupOpenedAt = Date.now();
-        const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
 
         // 나노페이 v2.2.1 정기결제 빌키 발급 요청 (서버사이드에서 reqkey.io 호출 후 Smartro 카드 등록창 HTML 수신)
         const res = await paymentAPI.processBillKeyRequest({
@@ -735,7 +735,7 @@ export default function PaymentSelection() {
 
     try {
       const response = await paymentAPI.processManual({
-        tenantId: currentTenant.id,
+        tenantId: targetTenantId || currentTenant?.id || '',
         donationData: {
           ...donationFormData,
           recurringInterval: donationFormData.isRecurring ? recurringInterval : undefined,
