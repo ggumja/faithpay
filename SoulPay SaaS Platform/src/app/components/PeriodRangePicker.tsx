@@ -80,13 +80,13 @@ export function PeriodRangePicker({
       end = new Date(now.getFullYear(), now.getMonth(), endDay, 23, 59, 59, 999);
       label = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${currentWeekNum}주차`;
     } else if (newUnit === 'monthly') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      label = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+    } else if (newUnit === 'yearly') {
       start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-      label = `${start.getFullYear()}년 1월 ~ ${start.getFullYear()}년 12월`;
-    } else if (newUnit === 'yearly') {
-      start = new Date(now.getFullYear() - 2, 0, 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-      label = `${now.getFullYear() - 2}년 ~ ${now.getFullYear()}년`;
+      label = `${now.getFullYear()}년`;
     }
 
     setTempStartDate(start);
@@ -112,6 +112,12 @@ export function PeriodRangePicker({
       const endDay = Math.min(startDay + 6, daysCount);
       start = new Date(now.getFullYear(), now.getMonth(), startDay, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), endDay, 23, 59, 59, 999);
+    } else if (unit === 'monthly') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (unit === 'yearly') {
+      start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
     setTempStartDate(start);
     setTempEndDate(end);
@@ -141,9 +147,15 @@ export function PeriodRangePicker({
         ? `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${wStart}주차`
         : `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${wStart}주차 ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월 ${wEnd}주차`;
     } else if (unit === 'monthly') {
-      label = `${start.getFullYear()}년 ${start.getMonth() + 1}월 ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월`;
+      const isSameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+      label = isSameMonth
+        ? `${start.getFullYear()}년 ${start.getMonth() + 1}월`
+        : `${start.getFullYear()}년 ${start.getMonth() + 1}월 ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월`;
     } else if (unit === 'yearly') {
-      label = `${start.getFullYear()}년 ~ ${end.getFullYear()}년`;
+      const isSameYear = start.getFullYear() === end.getFullYear();
+      label = isSameYear
+        ? `${start.getFullYear()}년`
+        : `${start.getFullYear()}년 ~ ${end.getFullYear()}년`;
     }
 
     onSelectionChange({
