@@ -324,12 +324,7 @@ export default function AdminLogin() {
             <Building2 className="h-7 w-7" />
           </div>
           <div>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">SoulPay</span>
-              <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[11px] font-bold px-2 py-0.5 rounded-md">
-                가맹 단체 포털
-              </span>
-            </div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">SoulPay</h1>
             <p className="text-xs text-slate-500 mt-1 font-medium">
               교회 · 사찰 · 성당 · 비영리단체 수납 &amp; 관리 시스템
             </p>
