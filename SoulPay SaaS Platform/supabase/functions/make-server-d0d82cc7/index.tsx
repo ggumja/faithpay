@@ -2599,6 +2599,17 @@ app.post("/make-server-d0d82cc7/subscriptions/:id/status", async (c) => {
   }
 });
 
+// 정기결제 약정 삭제
+app.delete("/make-server-d0d82cc7/subscriptions/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const ok = await db.deleteSubscription(id);
+    return c.json({ success: ok });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message }, 500);
+  }
+});
+
 // 인증결제 콜백 결과 처리 (Nanopay / Mainpay POST/GET 처리)
 const handleCertCallback = async (c: any) => {
   try {

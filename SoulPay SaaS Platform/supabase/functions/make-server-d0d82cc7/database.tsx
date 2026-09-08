@@ -1411,6 +1411,12 @@ export async function updateSubscriptionStatus(id: string, status: 'active' | 'p
   };
 }
 
+export async function deleteSubscription(id: string): Promise<boolean> {
+  const sb = pgClient();
+  const { error } = await sb.from('subscriptions').delete().eq('id', id);
+  return !error;
+}
+
 export async function getAllActiveSubscriptions(): Promise<Subscription[]> {
   const sb = pgClient();
   const { data } = await sb.from('subscriptions').select('*').eq('status', 'active').order('created_at', { ascending: false });
