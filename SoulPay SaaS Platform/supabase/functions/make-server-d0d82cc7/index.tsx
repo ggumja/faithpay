@@ -2710,13 +2710,36 @@ const handleGetSubscriptionsByPhone = async (c: any) => {
 app.get("/make-server-d0d82cc7/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
 app.get("/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
 
-// 비회원 정기결제 중단/일시정지 상태 변경
+// 비회원 정기결제 중단/일시정지/재개 상태 변경
 const handleUpdateSubscriptionStatus = async (c: any) => {
   try {
     const id = c.req.param("id");
     const { status } = await c.req.json(); // 'active' | 'paused' | 'cancelled'
-    const updated = await db.updateSubscriptionStatus(id, status);
+    let updated = await db.updateSubscriptionStatus(id, status);
     if (!updated) return c.json({ success: false, error: "Subscription not found" }, 404);
+
+    // 재개(active) 시 기존 결제 예정일이 이미 지난 경우, 다음 도래 결제일로 자동 갱신
+    if (status === 'active') {
+      const nowKstStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      if (updated.nextPaymentDate && updated.nextPaymentDate < nowKstStr) {
+        const nextDate = calculateNextPaymentDate(
+          updated.recurringInterval || 'monthly',
+          updated.recurringDayOfWeek,
+          updated.recurringDay,
+          false
+        );
+        try {
+          await db.pgClient()
+            .from('subscriptions')
+            .update({ next_payment_date: nextDate, updated_at: new Date().toISOString() })
+            .eq('id', id);
+          updated.nextPaymentDate = nextDate;
+        } catch (recalcErr) {
+          console.error('[UpdateSubStatus] Failed to refresh past next_payment_date:', recalcErr);
+        }
+      }
+    }
+
     return c.json({ success: true, data: updated, subscription: updated });
   } catch (error) {
     return c.json({ success: false, error: "Failed to update subscription status" }, 500);
