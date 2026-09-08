@@ -473,6 +473,26 @@ export default function TenantStatisticsPage() {
     return Object.values(map).sort((a, b) => a.sortTime - b.sortTime);
   }, [dailySnapshots, periodUnit]);
 
+  // 마감 스냅샷 DB 재집계 실행
+  const handleRefreshBatch = async () => {
+    if (!currentTenant) return;
+    setIsLoading(true);
+    try {
+      const res = await statisticsAPI.runClosingBatch(currentTenant.id);
+      if (res.success) {
+        toast.success('전일 마감 스냅샷 DB 재집계가 완료되었습니다.');
+        await fetchData(currentTenant.id);
+      } else {
+        toast.error('마감 재집계 중 오류가 발생했습니다.');
+      }
+    } catch (e) {
+      console.error('Failed to run batch closing:', e);
+      toast.error('마감 재집계 요청에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // CSV Export
   const handleExportCSV = async () => {
     if (!currentTenant) return;
