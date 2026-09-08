@@ -322,7 +322,8 @@ export const paymentAPI = {
     return fetchAPI<any>('/payment/cancel', {
       method: 'POST',
       body: JSON.stringify({ tenantId, donationId, cancelReason }),
-    });
+      silentFail: true,
+    } as any);
   },
 
   async processBillKeyRequest(payload: { tenantId: string; donationData: any }): Promise<APIResponse<any>> {

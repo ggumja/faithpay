@@ -451,7 +451,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     }
     
     if (donation.paymentStatus !== 'completed' || !donation.transactionId) {
-      return c.json({ success: false, error: '완료 상태가 아니거나 승인 거래 번호(transactionId)가 존재하지 않는 거래건입니다.' }, 400);
+      return c.json({ success: false, error: '완료 상태가 아니거나 승인 거래 번호(transactionId)가 존재하지 않는 거래건입니다.' }, 200);
     }
 
     // DB에서 테넌트 결제 설정 조회
@@ -522,7 +522,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
           await db.updateDonation(tenantId, donationId, {
             cancelFailureReason: cancelFailMsg,
           });
-          return c.json({ success: false, error: cancelFailMsg, data: result }, 400);
+          return c.json({ success: false, error: cancelFailMsg, data: result }, 200);
         }
       } catch (tossErr: any) {
         console.error('Toss cancel communication error:', tossErr);
@@ -621,7 +621,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
       await db.updateDonation(tenantId, donationId, {
         cancelFailureReason: cancelFailMsg,
       });
-      return c.json({ success: false, error: cancelFailMsg, data: result }, 400);
+      return c.json({ success: false, error: cancelFailMsg, data: result }, 200);
     }
   } catch (error: any) {
     console.error('Error processing cancellation:', error);
