@@ -349,7 +349,6 @@ export default function AdminLogin() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@example.org"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -487,7 +486,6 @@ export default function AdminLogin() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">가맹 단체명 또는 담당자 성명</Label>
                 <Input
-                  placeholder="예: 각원사 / 홍길동"
                   value={searchOrgName}
                   onChange={(e) => setSearchOrgName(e.target.value)}
                   className="h-11 rounded-xl bg-slate-50 border-slate-200 text-sm font-semibold"
@@ -497,7 +495,6 @@ export default function AdminLogin() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">담당자 휴대폰 번호</Label>
                 <Input
-                  placeholder="010-1234-5678"
                   value={searchPhone}
                   onChange={(e) => setSearchPhone(e.target.value)}
                   className="h-11 rounded-xl bg-slate-50 border-slate-200 text-sm font-semibold"
@@ -560,7 +557,6 @@ export default function AdminLogin() {
                 <Label className="text-xs font-bold text-slate-700">등록된 담당자 이메일 *</Label>
                 <Input
                   type="email"
-                  placeholder="admin@example.org"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   required
@@ -571,7 +567,6 @@ export default function AdminLogin() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">담당자 연락처 *</Label>
                 <Input
-                  placeholder="010-1234-5678"
                   value={resetPhone}
                   onChange={(e) => setResetPhone(e.target.value)}
                   required
