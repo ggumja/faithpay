@@ -3,549 +3,433 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SoulPay (소울페이) | 차세대 종교·비영리 헌금 및 기부 통합 핀테크 SaaS</title>
-  <meta name="description" content="클라우드플레어 기반 4대 독립 도메인 아키텍처로 완성된 차세대 종교 및 비영리 기부·헌금 통합 핀테크 SaaS 플랫폼 SoulPay 소개서입니다." />
+  <title>SoulPay (소울페이) — 차세대 종교·비영리 헌금 및 기부 통합 핀테크 SaaS</title>
+  <meta name="description" content="Cloudflare 기반 4대 독립 서브도메인 격리 아키텍처로 설계된 종교 및 비영리 모바일 헌금·기부 통합 SaaS 플랫폼 SoulPay 기술 소개서입니다." />
   
-  <!-- Typography (Pretendard & Outfit) -->
-  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <!-- Typography Pairing: Space Grotesk (Display) + Pretendard (Body) + JetBrains Mono (Technical) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
   <style>
+    /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+    /* Hallmark · genre: modern-minimal · macrostructure: Bento Grid · theme: Cobalt · nav: N5 · footer: Ft2 */
+    
     :root {
-      --bg-primary: #f8fafc;
-      --bg-secondary: #ffffff;
-      --bg-card: #ffffff;
-      --bg-card-hover: #ffffff;
-      --border-color: #e2e8f0;
-      --border-accent: rgba(99, 102, 241, 0.25);
+      /* Locked Tokens — Cool Engineered Near-White & Deep Cobalt */
+      --color-paper: #f8fafc;
+      --color-surface: #ffffff;
+      --color-surface-subtle: #f1f5f9;
+      --color-border: #e2e8f0;
+      --color-border-subtle: #edf2f7;
+      --color-border-focus: #1d4ed8;
       
-      --accent-primary: #4f46e5;
-      --accent-indigo: #4338ca;
-      --accent-cyan: #0284c7;
-      --accent-emerald: #059669;
-      --accent-amber: #d97706;
+      --color-ink: #090d16;
+      --color-ink-muted: #475569;
+      --color-ink-dim: #94a3b8;
       
-      --text-main: #0f172a;
-      --text-muted: #475569;
-      --text-dim: #64748b;
+      --color-cobalt: #1d4ed8;
+      --color-cobalt-light: #eff6ff;
+      --color-cobalt-border: #bfdbfe;
       
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
-      --radius-xl: 28px;
+      --color-emerald: #047857;
+      --color-emerald-light: #f0fdf4;
+      --color-emerald-border: #bbf7d0;
       
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
-      --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
-      --shadow-hover: 0 20px 35px -10px rgba(79, 70, 229, 0.12), 0 1px 3px rgba(0,0,0,0.05);
-      --shadow-btn: 0 4px 14px rgba(79, 70, 229, 0.3);
+      --color-amber: #b45309;
+      --color-amber-light: #fffbeb;
+      --color-amber-border: #fde68a;
+
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 36px;
+      --space-2xl: 64px;
+
+      --shadow-subtle: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.02);
+      --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+      --shadow-hover: 0 12px 28px -6px rgba(29, 78, 216, 0.08), 0 2px 4px rgba(15, 23, 42, 0.03);
     }
 
-    * {
-      box-sizing: border-box;
+    /* Reset & Core Setup */
+    html, body {
       margin: 0;
       padding: 0;
-    }
-
-    body {
-      font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg-primary);
-      color: var(--text-main);
-      line-height: 1.6;
-      overflow-x: hidden;
+      background-color: var(--color-paper);
+      color: var(--color-ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      overflow-x: clip;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Ambient Background Gradients (Soft & Bright) */
-    .ambient-glow {
-      position: fixed;
-      width: 700px;
-      height: 700px;
-      border-radius: 50%;
-      filter: blur(150px);
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.55;
+    *, *::before, *::after {
+      box-sizing: border-box;
     }
-    .glow-1 { top: -150px; left: 5%; background: radial-gradient(circle, rgba(199, 210, 254, 0.7), transparent 70%); }
-    .glow-2 { top: 35%; right: -200px; background: radial-gradient(circle, rgba(186, 230, 253, 0.6), transparent 70%); }
-    .glow-3 { bottom: -100px; left: 15%; background: radial-gradient(circle, rgba(233, 213, 255, 0.6), transparent 70%); }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
 
     .container {
-      max-width: 1240px;
+      max-width: 1180px;
       margin: 0 auto;
       padding: 0 24px;
-      position: relative;
-      z-index: 1;
     }
 
-    /* Header & Navigation (White Frosted Glass) */
-    header {
+    /* Nav Archetype: N5 Floating Pill */
+    .nav-wrapper {
       position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(16px);
-      background: rgba(255, 255, 255, 0.88);
-      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-      transition: all 0.3s ease;
+      top: 20px;
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--space-xl);
     }
-    .nav-inner {
+    .nav-pill {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      height: 76px;
+      gap: var(--space-lg);
+      padding: 8px 18px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-subtle);
     }
-    .brand-logo {
+    .nav-brand {
       display: flex;
       align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      color: var(--text-main);
+      gap: 10px;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-ink);
     }
-    .logo-badge {
-      width: 42px;
-      height: 42px;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      border-radius: 12px;
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      background: var(--color-ink);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
-    }
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-    }
-    .brand-name {
-      font-family: 'Outfit', sans-serif;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #1e1b4b;
-    }
-    .brand-sub {
+      color: #ffffff;
       font-size: 11px;
-      color: var(--text-dim);
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      font-weight: 700;
+      font-family: var(--font-mono);
     }
     .nav-links {
       display: flex;
-      gap: 32px;
+      gap: 20px;
       list-style: none;
+      margin: 0;
+      padding: 0;
     }
     .nav-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 600;
-      transition: color 0.2s;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-ink-muted);
+      transition: color 0.15s ease;
     }
     .nav-links a:hover {
-      color: var(--accent-primary);
+      color: var(--color-cobalt);
     }
-    .nav-cta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .badge-status {
+    .nav-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      border-radius: 20px;
-      color: #065f46;
+      padding: 4px 10px;
+      background: var(--color-emerald-light);
+      border: 1px solid var(--color-emerald-border);
+      border-radius: var(--radius-full);
+      color: var(--color-emerald);
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 600;
+      font-family: var(--font-mono);
     }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      background: #10b981;
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--color-emerald);
       border-radius: 50%;
-      box-shadow: 0 0 8px #10b981;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.3); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.8; }
     }
 
-    /* Hero Section */
-    .hero-section {
-      padding: 80px 0 50px;
-      text-align: center;
+    /* Hero Section — Modern Minimal Two-Column Split */
+    .hero {
+      padding: 48px 0 56px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--space-2xl);
     }
-    .hero-tagline {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 18px;
-      background: #eef2ff;
-      border: 1px solid #c7d2fe;
-      border-radius: 30px;
-      color: #4338ca;
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 24px;
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 48px;
+      align-items: end;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-cobalt);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .hero-title {
-      font-family: 'Plus Jakarta Sans', 'Pretendard', sans-serif;
-      font-size: 48px;
-      font-weight: 800;
-      line-height: 1.25;
-      letter-spacing: -1.2px;
-      color: #0f172a;
-      margin-bottom: 24px;
+      font-family: var(--font-display);
+      font-size: clamp(34px, 4.2vw, 52px);
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+      color: var(--color-ink);
+      margin: 0;
     }
-    .gradient-text {
-      background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #9333ea 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .hero-desc {
-      max-width: 760px;
-      margin: 0 auto 36px;
-      font-size: 18px;
-      color: var(--text-muted);
-      line-height: 1.75;
-    }
-    .hero-buttons {
+    .hero-right {
       display: flex;
-      justify-content: center;
-      gap: 16px;
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 6px;
+    }
+    .hero-lead {
+      font-size: 17px;
+      color: var(--color-ink-muted);
+      line-height: 1.7;
+      margin: 0;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       flex-wrap: wrap;
     }
-    .btn {
+    .btn-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 14px 28px;
-      border-radius: var(--radius-md);
-      font-size: 15px;
-      font-weight: 700;
-      text-decoration: none;
+      padding: 11px 22px;
+      border-radius: var(--radius-full);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.15s ease;
       cursor: pointer;
-      transition: all 0.25s ease;
     }
     .btn-primary {
-      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      background: var(--color-ink);
       color: #ffffff;
-      box-shadow: var(--shadow-btn);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid var(--color-ink);
     }
     .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
-      background: linear-gradient(135deg, #4338ca, #3730a3);
+      background: var(--color-cobalt);
+      border-color: var(--color-cobalt);
     }
     .btn-secondary {
-      background: #ffffff;
-      color: #334155;
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow-sm);
+      background: var(--color-surface);
+      color: var(--color-ink);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-subtle);
     }
     .btn-secondary:hover {
-      background: #f8fafc;
-      color: var(--accent-primary);
+      background: var(--color-surface-subtle);
       border-color: #cbd5e1;
-      transform: translateY(-2px);
     }
 
     /* Section Headers */
-    .section-header {
-      text-align: center;
-      margin-bottom: 50px;
+    .section-head {
+      margin-bottom: var(--space-xl);
     }
-    .section-badge {
+    .section-kicker {
+      font-family: var(--font-mono);
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 600;
+      color: var(--color-cobalt);
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--accent-primary);
+      letter-spacing: 0.05em;
       margin-bottom: 8px;
       display: block;
     }
     .section-title {
-      font-size: 34px;
-      font-weight: 800;
-      letter-spacing: -0.8px;
-      color: #0f172a;
-      margin-bottom: 14px;
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--color-ink);
+      margin: 0 0 10px 0;
     }
     .section-desc {
-      color: var(--text-muted);
-      max-width: 680px;
-      margin: 0 auto;
-      font-size: 16px;
+      font-size: 15px;
+      color: var(--color-ink-muted);
+      margin: 0;
+      max-width: 620px;
     }
 
-    /* 4 Pillars Cards (Crisp White on Light Gray) */
-    .pillar-grid {
+    /* Macrostructure: Bento Grid (Asymmetric Modular Tiles) */
+    .bento-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
-      margin-bottom: 70px;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+      margin-bottom: var(--space-2xl);
     }
-    .pillar-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
+    .tile {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
-      padding: 32px 26px;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      position: relative;
-      overflow: hidden;
+      padding: 32px;
       display: flex;
       flex-direction: column;
-      box-shadow: var(--shadow-card);
+      box-shadow: var(--shadow-subtle);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .pillar-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: var(--pillar-color);
-      opacity: 0.9;
-    }
-    .pillar-card:hover {
-      transform: translateY(-6px);
-      border-color: var(--pillar-color);
+    .tile:hover {
+      border-color: var(--color-border-focus);
       box-shadow: var(--shadow-hover);
     }
-    .pillar-header {
+
+    /* Grid Span Configurations */
+    .span-8 { grid-column: span 8; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-12 { grid-column: span 12; }
+
+    .tile-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 20px;
     }
-    .pillar-icon-box {
-      width: 52px;
-      height: 52px;
-      border-radius: 14px;
-      background: var(--pillar-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--pillar-color);
-    }
-    .domain-tag {
-      font-family: 'Outfit', monospace;
+    .tile-domain {
+      font-family: var(--font-mono);
       font-size: 13px;
-      font-weight: 700;
-      color: var(--pillar-color);
-      background: var(--pillar-bg);
-      border: 1px solid var(--pillar-border);
+      font-weight: 600;
       padding: 4px 10px;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-subtle);
+      border: 1px solid var(--color-border);
+      color: var(--color-ink);
     }
-    .pillar-title {
-      font-size: 20px;
-      font-weight: 800;
-      color: #0f172a;
-      margin-bottom: 10px;
-      letter-spacing: -0.4px;
+    .tile-domain.cobalt { color: var(--color-cobalt); background: var(--color-cobalt-light); border-color: var(--color-cobalt-border); }
+    .tile-domain.emerald { color: var(--color-emerald); background: var(--color-emerald-light); border-color: var(--color-emerald-border); }
+    .tile-domain.amber { color: var(--color-amber); background: var(--color-amber-light); border-color: var(--color-amber-border); }
+
+    .tile-tag {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-ink-dim);
     }
-    .pillar-desc {
+    .tile-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-ink);
+      margin: 0 0 10px 0;
+    }
+    .tile-desc {
       font-size: 14px;
-      color: var(--text-muted);
+      color: var(--color-ink-muted);
+      margin: 0 0 24px 0;
       line-height: 1.65;
-      margin-bottom: 22px;
-      flex-grow: 1;
     }
-    .pillar-specs {
+
+    /* Honest Feature Rows (No Invented Stats) */
+    .tile-specs {
       list-style: none;
-      border-top: 1px solid #f1f5f9;
-      padding-top: 18px;
+      margin: 0;
+      padding: 16px 0 0 0;
+      border-top: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       margin-top: auto;
     }
-    .pillar-specs li {
-      font-size: 13px;
-      color: #334155;
+    .tile-specs li {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--color-ink-muted);
     }
-    .check-icon {
-      width: 15px;
-      height: 15px;
-      color: var(--pillar-color);
+    .tile-specs strong {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+    .bullet-square {
+      width: 5px;
+      height: 5px;
+      background: var(--color-cobalt);
+      border-radius: 1px;
       flex-shrink: 0;
     }
 
-    /* Custom Color Accents per Pillar (Bright Theme) */
-    .pillar-pay { 
-      --pillar-color: #0284c7; 
-      --pillar-bg: #f0f9ff; 
-      --pillar-border: #bae6fd; 
+    /* Embedded Architecture Diagram Block (No Fake Chrome) */
+    .arch-canvas {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
     }
-    .pillar-admin { 
-      --pillar-color: #4f46e5; 
-      --pillar-bg: #eef2ff; 
-      --pillar-border: #c7d2fe; 
-    }
-    .pillar-partner { 
-      --pillar-color: #059669; 
-      --pillar-bg: #ecfdf5; 
-      --pillar-border: #a7f3d0; 
-    }
-    .pillar-ops { 
-      --pillar-color: #ea580c; 
-      --pillar-bg: #fff7ed; 
-      --pillar-border: #fed7aa; 
-    }
-
-    /* Interactive Showcase (Clean Card Layout) */
-    .showcase-box {
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: var(--radius-xl);
-      padding: 44px;
-      margin-bottom: 90px;
-      box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.08);
-    }
-    .showcase-tabs {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 32px;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 16px;
-      overflow-x: auto;
-    }
-    .tab-btn {
-      padding: 10px 22px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      background: #f8fafc;
-      color: var(--text-muted);
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-    .tab-btn:hover {
-      background: #eef2ff;
-      color: var(--accent-primary);
-    }
-    .tab-btn.active {
-      background: #e0e7ff;
-      border-color: #a5b4fc;
-      color: #312e81;
-    }
-    .tab-content {
-      display: none;
-      animation: fadeIn 0.35s ease forwards;
-    }
-    .tab-content.active {
+    .arch-flow-grid {
       display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 36px;
-      align-items: center;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 24px;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .tab-info h3 {
-      font-size: 26px;
-      font-weight: 800;
-      color: #0f172a;
-      margin-bottom: 14px;
-    }
-    .tab-info p {
-      color: var(--text-muted);
-      font-size: 15px;
-      line-height: 1.75;
-      margin-bottom: 24px;
-    }
-    .feature-points {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 28px;
-    }
-    .point-item {
-      background: #f8fafc;
-      padding: 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid #e2e8f0;
-    }
-    .point-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #1e293b;
-      margin-bottom: 4px;
-    }
-    .point-desc {
-      font-size: 12px;
-      color: var(--text-dim);
-    }
-    .preview-frame {
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
+    .arch-node {
+      background: var(--color-surface-subtle);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
-      overflow: hidden;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-    }
-    .browser-bar {
-      height: 38px;
-      background: #f1f5f9;
-      display: flex;
-      align-items: center;
-      padding: 0 14px;
-      gap: 8px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .dot { width: 10px; height: 10px; border-radius: 50%; }
-    .dot-red { background: #ef4444; }
-    .dot-yellow { background: #f59e0b; }
-    .dot-green { background: #10b981; }
-    .address-bar {
-      margin-left: 10px;
-      height: 24px;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      flex-grow: 1;
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
-      font-family: 'Outfit', monospace;
-      font-size: 12px;
-      color: #475569;
-    }
-    .preview-body {
-      padding: 28px 24px;
-      min-height: 280px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      background: #fafafa;
+      gap: 8px;
+    }
+    .arch-node-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+    .arch-node-desc {
+      font-size: 12px;
+      color: var(--color-ink-muted);
+      line-height: 1.6;
+    }
+    .arch-node-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-cobalt);
+      margin-top: auto;
     }
 
-    /* Comparison Table */
-    .comparison-section {
-      margin-bottom: 90px;
-    }
-    .table-container {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
+    /* Honest Infrastructure Comparison Matrix */
+    .matrix-wrapper {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: var(--shadow-card);
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
     }
     table {
       width: 100%;
@@ -553,678 +437,350 @@
       text-align: left;
     }
     th, td {
-      padding: 18px 24px;
-      border-bottom: 1px solid #f1f5f9;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--color-border-subtle);
       font-size: 14px;
     }
     th {
-      background: #f8fafc;
-      color: #475569;
-      font-weight: 700;
-      text-transform: uppercase;
+      background: var(--color-surface-subtle);
+      color: var(--color-ink-muted);
       font-size: 12px;
-      letter-spacing: 0.8px;
-      border-bottom: 1px solid #e2e8f0;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--color-border);
     }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f8fafc; }
-    .badge-win {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      background: #eef2ff;
-      border: 1px solid #c7d2fe;
-      color: #3730a3;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
+    td strong { color: var(--color-ink); font-weight: 600; }
+    .cell-highlight {
+      color: var(--color-cobalt);
+      font-weight: 600;
     }
 
-    /* Tech Stack Badges */
-    .tech-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 80px;
-    }
-    .tech-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: var(--radius-md);
-      padding: 22px 18px;
-      text-align: center;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-    }
-    .tech-card:hover {
-      border-color: #cbd5e1;
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-card);
-    }
-    .tech-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 4px;
-    }
-    .tech-sub {
-      font-size: 12px;
-      color: var(--text-dim);
-    }
-
-    /* CTA Section (Luminous Gradient) */
-    .cta-box {
-      background: linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%);
-      border: 1px solid #c7d2fe;
-      border-radius: var(--radius-xl);
-      padding: 60px 40px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-      margin-bottom: 80px;
-      box-shadow: 0 15px 35px -5px rgba(79, 70, 229, 0.08);
-    }
-    .cta-title {
-      font-size: 36px;
-      font-weight: 800;
-      letter-spacing: -0.8px;
-      color: #1e1b4b;
-      margin-bottom: 16px;
-    }
-    .cta-desc {
-      color: #475569;
-      font-size: 17px;
-      max-width: 620px;
-      margin: 0 auto 32px;
-    }
-
-    /* Footer */
-    footer {
-      border-top: 1px solid #e2e8f0;
-      background: #ffffff;
-      padding: 40px 0;
-      color: var(--text-dim);
-      font-size: 13px;
-    }
-    .footer-inner {
+    /* CTA Bar */
+    .cta-bar {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 20px;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
+    }
+    .cta-text h3 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-ink);
+      margin: 0 0 6px 0;
+    }
+    .cta-text p {
+      font-size: 14px;
+      color: var(--color-ink-muted);
+      margin: 0;
     }
 
-    /* Responsive */
-    @media (max-width: 860px) {
-      .hero-title { font-size: 34px; }
-      .tab-content.active { grid-template-columns: 1fr; }
-      .feature-points { grid-template-columns: 1fr; }
-      .nav-links { display: none; }
+    /* Footer Archetype: Ft2 Inline Single Line */
+    footer {
+      border-top: 1px solid var(--color-border);
+      padding: 28px 0;
+      font-size: 13px;
+      color: var(--color-ink-dim);
+    }
+    .footer-flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .footer-brand {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+    .footer-right {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-ink-dim);
+    }
+
+    /* Responsiveness — Verified at 768 / 414 / 375 / 320 px */
+    @media (max-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+      .span-8, .span-4, .span-6, .span-12 {
+        grid-column: span 1;
+      }
+      .arch-flow-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .cta-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+    @media (max-width: 540px) {
+      .arch-flow-grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-pill {
+        padding: 6px 14px;
+        gap: 12px;
+      }
+      .nav-links {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Ambient Background Gradients (Soft & Clean) -->
-  <div class="ambient-glow glow-1"></div>
-  <div class="ambient-glow glow-2"></div>
-  <div class="ambient-glow glow-3"></div>
-
-  <!-- Header -->
-  <header>
-    <div class="container nav-inner">
-      <a href="#hero" class="brand-logo" id="header-logo-link">
-        <div class="logo-badge">
-          <!-- Cross / Heart Geometric Icon -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-          </svg>
-        </div>
-        <div class="brand-text">
-          <span class="brand-name">SoulPay</span>
-          <span class="brand-sub">SaaS Platform Architecture</span>
-        </div>
+  <!-- Nav Archetype: N5 Floating Pill -->
+  <div class="container nav-wrapper">
+    <nav class="nav-pill" aria-label="Main Navigation">
+      <a href="#hero" class="nav-brand">
+        <span class="brand-mark">SP</span>
+        SoulPay
       </a>
-
       <ul class="nav-links">
-        <li><a href="#domains">4대 도메인 격리</a></li>
-        <li><a href="#showcase">서비스별 상세</a></li>
-        <li><a href="#comparison">인프라 아키텍처</a></li>
-        <li><a href="#security">보안 및 WAF</a></li>
+        <li><a href="#domains">도메인 격리</a></li>
+        <li><a href="#architecture">인프라 토폴로지</a></li>
+        <li><a href="#matrix">기술 사양</a></li>
       </ul>
-
-      <div class="nav-cta">
-        <span class="badge-status">
-          <span class="status-dot"></span>
-          Ready for Launch v1.0
-        </span>
-      </div>
-    </div>
-  </header>
-
-  <!-- Hero Section -->
-  <section class="hero-section" id="hero">
-    <div class="container">
-      <div class="hero-tagline">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        차세대 종교 & 비영리 헌금·기부 통합 핀테크 SaaS
-      </div>
-      <h1 class="hero-title">
-        단 한 건의 결제 단절도 없는<br>
-        <span class="gradient-text">완전 격리형 멀티 테넌트 도메인 아키텍처</span>
-      </h1>
-      <p class="hero-desc">
-        SoulPay(소울페이)는 보유 도메인(<code>soulpay.kr</code>, <code>soulpay.co.kr</code>)과 Cloudflare 글로벌 에지 인프라를 결합하여,
-        기부자 결제 코어와 단체 관리자·파트너·시스템 운영 센터를 물리적으로 완전 격리함으로써 **99.99% 무중단 SLA**와 **초고속 1초 로딩**을 달성합니다.
-      </p>
-      <div class="hero-buttons">
-        <a href="#domains" class="btn btn-primary" id="btn-explore-domains">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>
-          4대 도메인 아키텍처 살펴보기
-        </a>
-        <a href="#comparison" class="btn btn-secondary" id="btn-infra-spec">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-          Cloudflare 선정 및 기술 스펙
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- The 4 Pillars (Domains) -->
-  <section class="container" id="domains" style="padding-top: 30px;">
-    <div class="section-header">
-      <span class="section-badge">Service Isolation Architecture</span>
-      <h2 class="section-title">서비스 성격별 4대 독립 서브도메인 체계</h2>
-      <p class="section-desc">
-        관리자 페이지의 기능 추가 및 버그 수정 배포 시에도 기부자의 결제 엔진에는 영향이 전혀 발생하지 않도록 물리 분리되었습니다.
-      </p>
-    </div>
-
-    <div class="pillar-grid">
-      <!-- Card 1: Pay -->
-      <div class="pillar-card pillar-pay">
-        <div class="pillar-header">
-          <div class="pillar-icon-box">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-          </div>
-          <span class="domain-tag">pay.soulpay.kr</span>
-        </div>
-        <h3 class="pillar-title">기부자 결제 & 현장 키오스크</h3>
-        <p class="pillar-desc">
-          성도와 기부자를 위한 모바일 웹 헌금 및 현장 스마트 키오스크 PWA 전용 엔진입니다.
-        </p>
-        <ul class="pillar-specs">
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            <strong>초경량 번들 &lt; 300KB</strong> (초고속 1초 로딩)
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            카카오페이 · 네이버페이 · 토스페이 · 카드결제
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            정기구독 헌금 및 전자 기부금 영수증 센터
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            <strong>Zero Blast Radius</strong> (관리자 배포 영향 0%)
-          </li>
-        </ul>
-      </div>
-
-      <!-- Card 2: Admin -->
-      <div class="pillar-card pillar-admin">
-        <div class="pillar-header">
-          <div class="pillar-icon-box">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </div>
-          <span class="domain-tag">admin.soulpay.kr</span>
-        </div>
-        <h3 class="pillar-title">단체 목회자 / 관리자 포털</h3>
-        <p class="pillar-desc">
-          개별 교회, 성당, 사찰의 목회자와 실무자를 위한 헌금 수납 및 교인 통합 관리 대시보드입니다.
-        </p>
-        <ul class="pillar-specs">
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            실시간 헌금 내역 및 당일 자동 마감 집계
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            종교별 맞춤 용어 동적 일치화 (헌금/보시/봉헌)
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            교인 명부 연계 및 연말정산 기부금영수증 발행
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            테넌트별 안전한 세션 격리 (Role Guard)
-          </li>
-        </ul>
-      </div>
-
-      <!-- Card 3: Partner -->
-      <div class="pillar-card pillar-partner">
-        <div class="pillar-header">
-          <div class="pillar-icon-box">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <span class="domain-tag">partner.soulpay.kr</span>
-        </div>
-        <h3 class="pillar-title">총판 / 대리점 파트너 센터</h3>
-        <p class="pillar-desc">
-          전국 영업망 구축을 위한 총판, 대리점, 영업 에이전트 전용 실적 분석 및 정산 포털입니다.
-        </p>
-        <ul class="pillar-specs">
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            가맹 단체(교회/사찰 등) 원클릭 신규 등록
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            총판-대리점 계층형 유치 실적 실시간 트래킹
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            PG 결제 수수료 쉐어링 및 월별 정산 내역
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            단체 관리자 데이터 접근 원천 차단 (보안 격리)
-          </li>
-        </ul>
-      </div>
-
-      <!-- Card 4: Ops -->
-      <div class="pillar-card pillar-ops">
-        <div class="pillar-header">
-          <div class="pillar-icon-box">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          </div>
-          <span class="domain-tag">ops.soulpay.kr</span>
-        </div>
-        <h3 class="pillar-title">최고 시스템 운영 센터</h3>
-        <p class="pillar-desc">
-          SoulPay 본사 전용 최고 보안 관제 센터로 가맹 심사 및 다자간 정산 원장을 총괄합니다.
-        </p>
-        <ul class="pillar-specs">
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            <strong>Cloudflare Zero Trust 보호</strong> (IP / OTP 제한)
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            신규 가맹 테넌트 서류 검토 및 최종 승인 심사
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            다자간 복합 정산 원장 (Multi-Party Ledger)
-          </li>
-          <li>
-            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            플랫폼 수수료 요율 및 시스템 정책 제어
-          </li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- Interactive Architecture Showcase -->
-  <section class="container" id="showcase">
-    <div class="showcase-box">
-      <div class="showcase-tabs">
-        <button class="tab-btn active" data-tab="tab-pay" id="tab-btn-pay">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-          pay.soulpay.kr (기부자)
-        </button>
-        <button class="tab-btn" data-tab="tab-admin" id="tab-btn-admin">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          admin.soulpay.kr (단체)
-        </button>
-        <button class="tab-btn" data-tab="tab-partner" id="tab-btn-partner">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          partner.soulpay.kr (파트너)
-        </button>
-        <button class="tab-btn" data-tab="tab-ops" id="tab-btn-ops">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          ops.soulpay.kr (운영)
-        </button>
-      </div>
-
-      <!-- Tab Content 1: Pay -->
-      <div class="tab-content active" id="tab-pay">
-        <div class="tab-info">
-          <h3>초고속 결제 전환율을 위한 기부 코어</h3>
-          <p>
-            기부자가 스마트폰으로 QR코드를 스캔하거나 현장 키오스크를 터치했을 때, 무거운 관리자 코드 없이 <strong>순수 결제 UI만 0.8초 내로 즉각 렌더링</strong>됩니다.
-            생체인증 간편결제(카카오/네이버/토스)와 카드 스캔 기술을 결합하여 이탈률을 최소화합니다.
-          </p>
-          <div class="feature-points">
-            <div class="point-item">
-              <div class="point-title">초경량 PWA & 캐싱</div>
-              <div class="point-desc">Cloudflare 서울 에지 캐싱으로 번들 다운로드 시간 단축</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">동적 종교 테마 자동 적용</div>
-              <div class="point-desc">기독교(십일조), 불교(인등/축원), 가톨릭(미사지향) 맞춤 UI</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">안전한 무인증 기부 플로우</div>
-              <div class="point-desc">복잡한 회원가입 없이 휴대폰 번호 OTP로 납부내역 조회</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">정기구독 자동결제 엔진</div>
-              <div class="point-desc">매월 약정 헌금 배치 자동 출금 및 결제 성공 알림</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="preview-frame">
-          <div class="browser-bar">
-            <span class="dot dot-red"></span>
-            <span class="dot dot-yellow"></span>
-            <span class="dot dot-green"></span>
-            <div class="address-bar">https://pay.soulpay.kr/dream/donate</div>
-          </div>
-          <div class="preview-body" style="background: #ffffff; text-align: center; border-radius: 0 0 12px 12px;">
-            <div style="font-size: 13px; color: #4f46e5; margin-bottom: 6px; font-weight: 700;">꿈의교회 온라인 헌금함</div>
-            <div style="font-size: 30px; font-weight: 800; color: #0f172a; margin-bottom: 20px; letter-spacing: -0.5px;">₩ 100,000</div>
-            <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;">
-              <span style="background: #fee500; color: #191919; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">카카오페이</span>
-              <span style="background: #03c75a; color: #ffffff; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">네이버페이</span>
-              <span style="background: #0064ff; color: #ffffff; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">토스페이</span>
-            </div>
-            <div style="font-size: 13px; color: #64748b; background: #f8fafc; padding: 10px 16px; border-radius: 8px; border: 1px dashed #cbd5e1; display: inline-block;">
-              기도제목: 항상 주님의 은혜가 함께하기를 소망합니다
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab Content 2: Admin -->
-      <div class="tab-content" id="tab-admin">
-        <div class="tab-info">
-          <h3>교회 재정 실무와 교인 행정을 하나로</h3>
-          <p>
-            예배 후 봉헌된 헌금 봉투를 일일이 수기 계수하던 시대는 끝났습니다.
-            온라인 및 키오스크 수납 건수가 실시간으로 마감 집계 테이블에 기록되며, 교적부 연동을 통해 연말정산 기부금 영수증이 국세청 홈택스 양식으로 원클릭 출력됩니다.
-          </p>
-          <div class="feature-points">
-            <div class="point-item">
-              <div class="point-title">일일 마감 스냅샷 엔진</div>
-              <div class="point-desc">PostgreSQL 기반 결측치 없는 투명한 회계 장부 자동 생성</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">교인 / 성도 상세 관리</div>
-              <div class="point-desc">직분, 구역, 생년월일 및 역대 헌금 통계 원스톱 열람</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">기도제목 및 심방 메모</div>
-              <div class="point-desc">헌금 시 동봉된 기부자의 기도제목을 목회자에게 즉각 전달</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">정산 내역서 및 엑셀 다운로드</div>
-              <div class="point-desc">PG사 입금 예정액과 은행 실입금액의 자동 대사 기능</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="preview-frame">
-          <div class="browser-bar">
-            <span class="dot dot-red"></span>
-            <span class="dot dot-yellow"></span>
-            <span class="dot dot-green"></span>
-            <div class="address-bar">https://admin.soulpay.kr/dream/admin/donations</div>
-          </div>
-          <div class="preview-body" style="background: #ffffff;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
-              <span style="font-size: 14px; font-weight: 700; color: #0f172a;">당일 헌금 수납 현황</span>
-              <span style="font-size: 12px; color: #0284c7; font-weight: 700;">실측 DB 100% 연동</span>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-              <div style="background: #f0fdf4; padding: 14px; border-radius: 8px; border: 1px solid #bbf7d0;">
-                <div style="font-size: 12px; color: #166534; font-weight: 600;">온라인 수납 총액</div>
-                <div style="font-size: 20px; font-weight: 800; color: #15803d;">₩ 14,850,000</div>
-              </div>
-              <div style="background: #eef2ff; padding: 14px; border-radius: 8px; border: 1px solid #c7d2fe;">
-                <div style="font-size: 12px; color: #3730a3; font-weight: 600;">키오스크 현장 수납</div>
-                <div style="font-size: 20px; font-weight: 800; color: #4338ca;">₩ 3,240,000</div>
-              </div>
-            </div>
-            <div style="font-size: 12px; color: #64748b; text-align: right;">최종 동기화: 실시간 자동 반영</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab Content 3: Partner -->
-      <div class="tab-content" id="tab-partner">
-        <div class="tab-info">
-          <h3>전국 영업 확장을 견인하는 파트너십 생태계</h3>
-          <p>
-            총판과 대리점, 영업 에이전트가 자신만의 계정으로 접속하여 유치한 단체 목록과 결제 발생액, 그리고 그에 따른 <strong>수수료 배분 내역(Fee Sharing)을 실시간으로 확인</strong>할 수 있습니다.
-          </p>
-          <div class="feature-points">
-            <div class="point-item">
-              <div class="point-title">가맹 단체 원클릭 인입</div>
-              <div class="point-desc">영업 현장에서 태블릿으로 단체 정보 및 서류 즉시 업로드</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">수수료 정산 투명성</div>
-              <div class="point-desc">결제 건당 총판/대리점 쉐어링 요율 자동 계산 및 명세서</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="preview-frame">
-          <div class="browser-bar">
-            <span class="dot dot-red"></span>
-            <span class="dot dot-yellow"></span>
-            <span class="dot dot-green"></span>
-            <div class="address-bar">https://partner.soulpay.kr/dashboard</div>
-          </div>
-          <div class="preview-body" style="background: #ffffff;">
-            <div style="font-size: 14px; font-weight: 700; color: #047857; margin-bottom: 12px;">경기남부 총판 파트너 대시보드</div>
-            <div style="background: #f0fdf4; padding: 18px; border-radius: 8px; border: 1px solid #a7f3d0; margin-bottom: 12px;">
-              <div style="font-size: 12px; color: #065f46; font-weight: 600;">유치 가맹 단체 수</div>
-              <div style="font-size: 24px; font-weight: 800; color: #047857;">48 개 단체 (활성)</div>
-            </div>
-            <div style="font-size: 13px; color: #334155; font-weight: 600;">이번 달 누적 정산 수수료: <span style="color: #047857; font-weight: 800;">₩ 3,420,000</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab Content 4: Ops -->
-      <div class="tab-content" id="tab-ops">
-        <div class="tab-info">
-          <h3>Cloudflare Zero Trust 기반의 최고 보안 통제</h3>
-          <p>
-            금융 및 결제 사고를 방지하기 위해 <code>ops.soulpay.kr</code>은 공공 인터넷에 그대로 노출되지 않습니다.
-            <strong>사내 승인 IP 또는 2단계 이메일 핀코드 인증</strong>을 통과한 본사 최고 관리자만 진입할 수 있습니다.
-          </p>
-          <div class="feature-points">
-            <div class="point-item">
-              <div class="point-title">가맹 승인 심사 데스크</div>
-              <div class="point-desc">사업자등록증, 고유번호증, 대표자 본인확인 일괄 검수</div>
-            </div>
-            <div class="point-item">
-              <div class="point-title">다자간 정산 원장 (Ledger)</div>
-              <div class="point-desc">PG사 원천수수료, 본사 마진, 파트너 커미션의 무오차 분배</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="preview-frame">
-          <div class="browser-bar">
-            <span class="dot dot-red"></span>
-            <span class="dot dot-yellow"></span>
-            <span class="dot dot-green"></span>
-            <div class="address-bar">https://ops.soulpay.kr/system/admin/settlement-center</div>
-          </div>
-          <div class="preview-body" style="background: #ffffff;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <span style="background: #ea580c; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 800;">ZERO TRUST</span>
-              <span style="font-size: 13px; color: #9a3412; font-weight: 700;">본사 마스터 정산 관제실</span>
-            </div>
-            <div style="background: #fff7ed; padding: 16px; border-radius: 8px; border: 1px solid #fed7aa;">
-              <div style="font-size: 12px; color: #9a3412; font-weight: 600;">승인 대기 단체: 3건 (심사 진행중)</div>
-              <div style="font-size: 14px; color: #c2410c; margin-top: 4px; font-weight: 800;">금일 전체 플랫폼 결제 회전액: ₩ 142,500,000</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Comparison & Infrastructure Specs -->
-  <section class="container comparison-section" id="comparison">
-    <div class="section-header">
-      <span class="section-badge">Infrastructure Reliability</span>
-      <h2 class="section-title">왜 Cloudflare 글로벌 에지 인프라인가?</h2>
-      <p class="section-desc">
-        타 호스팅 대비 압도적인 가용성과 무제한 대역폭, 엔터프라이즈 보안으로 헌금 결제의 연속성을 보장합니다.
-      </p>
-    </div>
-
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>비교 항목</th>
-            <th>기존 단일 모놀리식 (Vercel)</th>
-            <th>SoulPay 완성 아키텍처 (Cloudflare Pages)</th>
-            <th>운영상 이점</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>배포 장애 격리 (Blast Radius)</strong></td>
-            <td>관리자 UI 수정 시 결제 엔진 전체 재배포</td>
-            <td><span class="badge-win">4대 도메인 100% 완전 격리</span></td>
-            <td>결제 엔진 무중단 보장 (장애 전파 0%)</td>
-          </tr>
-          <tr>
-            <td><strong>트래픽 & 대역폭 비용</strong></td>
-            <td>트래픽 급증 시 대역폭 추가 과금 위험</td>
-            <td><span class="badge-win">무제한 대역폭 (Bandwidth Unlimited)</span></td>
-            <td>성탄/부활절 트래픽 몰림에도 추가 비용 0원</td>
-          </tr>
-          <tr>
-            <td><strong>결제 보안 (DDoS & WAF)</strong></td>
-            <td>기본 보안만 제공 (고급 WAF 고가)</td>
-            <td><span class="badge-win">글로벌 1위 엔터프라이즈 WAF 기본 내장</span></td>
-            <td>악의적 결제 시도 및 디도스 실시간 차단</td>
-          </tr>
-          <tr>
-            <td><strong>최고 관리자 보호 (`ops`)</strong></td>
-            <td>IP 화이트리스트 불가 (인터넷 노출)</td>
-            <td><span class="badge-win">Cloudflare Zero Trust (IP/OTP 제어)</span></td>
-            <td>사내 인가자 외 프론트엔드 접속 원천 봉쇄</td>
-          </tr>
-          <tr>
-            <td><strong>비상 롤백 시간</strong></td>
-            <td>재빌드 및 DNS 전파 대기 (10~30분)</td>
-            <td><span class="badge-win">Cloudflare 프록시 CNAME 즉각 전환 (1분)</span></td>
-            <td>장애 발생 시 즉시 이전 버전 원클릭 복구</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Technology Badges -->
-  <section class="container" id="security">
-    <div class="section-header" style="margin-bottom: 30px;">
-      <span class="section-badge">Technology Stack</span>
-      <h2 class="section-title">신뢰할 수 있는 엔터프라이즈 기술 스택</h2>
-    </div>
-
-    <div class="tech-grid">
-      <div class="tech-card">
-        <div class="tech-title">Cloudflare Pages</div>
-        <div class="tech-sub">글로벌 에지 정적 호스팅</div>
-      </div>
-      <div class="tech-card">
-        <div class="tech-title">Supabase & Edge</div>
-        <div class="tech-sub">PostgreSQL & Deno API</div>
-      </div>
-      <div class="tech-card">
-        <div class="tech-title">Vite & React.lazy</div>
-        <div class="tech-sub">멀티 타겟 최적화 빌드</div>
-      </div>
-      <div class="tech-card">
-        <div class="tech-title">Multi-PG Hub</div>
-        <div class="tech-sub">카카오/네이버/토스/나노</div>
-      </div>
-      <div class="tech-card">
-        <div class="tech-title">Zero-Hardcoding</div>
-        <div class="tech-sub">100% 실측 DB 연동 검증</div>
-      </div>
-      <div class="tech-card">
-        <div class="tech-title">Cloudflare Zero Trust</div>
-        <div class="tech-sub">사내 관리자 IP 통제</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA Box -->
-  <div class="container">
-    <div class="cta-box">
-      <h2 class="cta-title">디지털 헌금 문화의 새로운 표준, SoulPay</h2>
-      <p class="cta-desc">
-        완벽하게 격리된 4대 도메인 인프라와 강력한 보안, 직관적인 관리자 기능을 통해 귀 단체의 재정 투명성과 편의성을 극대화하세요.
-      </p>
-      <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
-        <a href="mailto:contact@soulpay.kr" class="btn btn-primary" id="btn-contact-inquiry">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-          가맹 및 제휴 문의하기
-        </a>
-        <a href="https://soulpay.kr" target="_blank" class="btn btn-secondary" id="btn-visit-landing">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
-          soulpay.kr 공식 사이트
-        </a>
-      </div>
-    </div>
+      <span class="nav-badge">
+        <span class="live-dot"></span>
+        v1.1 Architecture
+      </span>
+    </nav>
   </div>
 
-  <!-- Footer -->
-  <footer>
-    <div class="container footer-inner">
-      <div>
-        <strong>SoulPay Inc.</strong> (주식회사 소울페이) | 대표 도메인: <code>soulpay.kr</code> / <code>soulpay.co.kr</code>
-        <div style="margin-top: 4px; font-size: 12px;">© 2026 SoulPay. All rights reserved. 본 문서는 아키텍처 승인 및 소개용 정식 웹 브로슈어입니다.</div>
+  <!-- Hero Section (Modern Minimal Two-Column Split) -->
+  <main class="container">
+    <section class="hero" id="hero">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <span class="eyebrow">Enterprise Multi-Tenant Infrastructure</span>
+          <h1 class="hero-title">
+            단 한 건의 결제 단절도 없는<br>
+            완전 격리형 SaaS 아키텍처.
+          </h1>
+        </div>
+        <div class="hero-right">
+          <p class="hero-lead">
+            SoulPay(소울페이)는 보유 도메인(<code>soulpay.kr</code>, <code>soulpay.co.kr</code>)과 Cloudflare 에지 인프라를 바탕으로 결제 코어와 관리자 포털을 물리 분리하여 <strong>Zero Blast Radius</strong>와 <strong>99.99% 무중단 가용성</strong>을 실현합니다.
+          </p>
+          <div class="hero-actions">
+            <a href="#domains" class="btn-pill btn-primary">4대 독립 서브도메인 검토</a>
+            <a href="#matrix" class="btn-pill btn-secondary">Cloudflare 인프라 사양</a>
+          </div>
+        </div>
       </div>
-      <div style="display: flex; gap: 16px;">
-        <span style="color: #64748b;">Architecture Plan: v1.1.0 (Cloudflare Integrated)</span>
+    </section>
+
+    <!-- Bento Grid Section: The 4 Isolated Subdomains -->
+    <section id="domains" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">01 · Domain Separation</span>
+        <h2 class="section-title">서비스 성격별 4대 독립 서브도메인 명세</h2>
+        <p class="section-desc">
+          관리자 페이지나 정산 모듈의 릴리즈 작업이 기부자의 결제 엔진에 0.1%의 장애 영향도 주지 않도록 빌드 산출물과 배포 파이프라인을 완전 격리하였습니다.
+        </p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Tile 1: Pay Core (Dominant 8-column card) -->
+        <article class="tile span-8">
+          <div class="tile-header">
+            <span class="tile-domain cobalt">pay.soulpay.kr</span>
+            <span class="tile-tag">SLA 99.99% Guaranteed</span>
+          </div>
+          <h3 class="tile-title">기부자 모바일 웹 결제 & 현장 키오스크 코어</h3>
+          <p class="tile-desc">
+            성도 및 기부자를 위한 실시간 헌금·기부 전용 경량화 엔진입니다. 관리자 분석 도구나 통계 라이브러리를 완전히 배제하여 첫 화면 로딩 시간을 0.8초대로 단축하고, 생체인증 간편결제 및 카드 스캔을 지원합니다.
+          </p>
+          <ul class="tile-specs">
+            <li><span class="bullet-square"></span> <strong>번들 크기:</strong> 300KB 미만 초경량 최적화 (초고속 인입 보장)</li>
+            <li><span class="bullet-square"></span> <strong>지원 수단:</strong> 카카오페이, 네이버페이, 토스페이, 신용카드, 카드 스캔 연동</li>
+            <li><span class="bullet-square"></span> <strong>장애 격리:</strong> 단체 관리자 및 파트너 배포 작업과 물리적으로 무관 (Zero Blast Radius)</li>
+            <li><span class="bullet-square"></span> <strong>연계 기능:</strong> 무회원 휴대폰 OTP 납부 내역 조회, 정기구독 헌금, 모바일 영수증</li>
+          </ul>
+        </article>
+
+        <!-- Tile 2: Ops Portal (4-column card) -->
+        <article class="tile span-4">
+          <div class="tile-header">
+            <span class="tile-domain amber">ops.soulpay.kr</span>
+            <span class="tile-tag">Zero Trust Protected</span>
+          </div>
+          <h3 class="tile-title">최고 시스템 운영 센터</h3>
+          <p class="tile-desc">
+            본사 관리자 전용 관제 포털로 공공 인터넷에 직접 노출되지 않으며, Cloudflare Zero Trust로 완벽히 보호됩니다.
+          </p>
+          <ul class="tile-specs">
+            <li><span class="bullet-square"></span> <strong>보안 정책:</strong> 사내 공인 IP 및 관리자 2단계 이메일 핀코드 인증</li>
+            <li><span class="bullet-square"></span> <strong>원장 관리:</strong> 다자간 정산 원장 (Multi-Party Ledger) 총괄</li>
+            <li><span class="bullet-square"></span> <strong>가맹 심사:</strong> 단체 고유번호증 및 서류 검토 승인 데스크</li>
+          </ul>
+        </article>
+
+        <!-- Tile 3: Admin Portal (6-column card) -->
+        <article class="tile span-6">
+          <div class="tile-header">
+            <span class="tile-domain cobalt">admin.soulpay.kr</span>
+            <span class="tile-tag">Tenant Role Guard</span>
+          </div>
+          <h3 class="tile-title">단체 목회자 / 관리자 포털</h3>
+          <p class="tile-desc">
+            개별 교회, 성당, 사찰의 재정 담당자와 목회자를 위한 통합 수납 관리 화면입니다. 당일 수납액 자동 마감 집계와 교인 명부 연계를 지원합니다.
+          </p>
+          <ul class="tile-specs">
+            <li><span class="bullet-square"></span> <strong>당일 마감 집계:</strong> PostgreSQL 기반 결측치 없는 일일 스냅샷 장부 생성</li>
+            <li><span class="bullet-square"></span> <strong>종교별 맞춤 용어:</strong> 기독교(헌금/십일조), 천주교(봉헌/미사), 불교(보시/인등)</li>
+            <li><span class="bullet-square"></span> <strong>교인 행정:</strong> 성도별 연간 기부 총액 및 홈택스 기부금 영수증 연동</li>
+          </ul>
+        </article>
+
+        <!-- Tile 4: Partner Portal (6-column card) -->
+        <article class="tile span-6">
+          <div class="tile-header">
+            <span class="tile-domain emerald">partner.soulpay.kr</span>
+            <span class="tile-tag">Commission Ledger</span>
+          </div>
+          <h3 class="tile-title">총판 / 대리점 파트너 센터</h3>
+          <p class="tile-desc">
+            전국 지사 및 영업 파트너를 위한 가맹 단체 유치 현황과 PG 결제 수수료 분배(Fee Sharing) 대시보드입니다.
+          </p>
+          <ul class="tile-specs">
+            <li><span class="bullet-square"></span> <strong>가맹 단체 등록:</strong> 영업 현장 태블릿을 통한 즉각적인 신규 단체 인입</li>
+            <li><span class="bullet-square"></span> <strong>실시간 정산 내역:</strong> 결제 건당 요율 기반의 파트너 수수료 자동 배분</li>
+            <li><span class="bullet-square"></span> <strong>권한 격리:</strong> 타 단체의 상세 교인 명부 및 내부 회계 데이터 접근 차단</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Architecture Flow Canvas (Spatial Diagram, No Re-drawn Chrome) -->
+    <section id="architecture" class="arch-canvas">
+      <div class="section-head" style="margin-bottom: 20px;">
+        <span class="section-kicker">02 · System Topology</span>
+        <h2 class="section-title">글로벌 에지 인프라 라우팅 토폴로지</h2>
+        <p class="section-desc">
+          DNS 인입부터 에지 보안 필터링, 4개 독립 Pages 배포 산출물, 그리고 PostgreSQL 백엔드까지의 무중단 데이터 흐름입니다.
+        </p>
+      </div>
+
+      <div class="arch-flow-grid">
+        <div class="arch-node">
+          <span class="arch-node-title">1. DNS Ingress</span>
+          <span class="arch-node-desc"><code>soulpay.kr</code> 네임서버 위임 및 서브도메인 CNAME 프록시 바인딩</span>
+          <span class="arch-node-meta">Cloudflare Anycast DNS</span>
+        </div>
+        <div class="arch-node">
+          <span class="arch-node-title">2. Edge Security</span>
+          <span class="arch-node-desc">결제 트래픽 DDoS 방어, Bot Fight Mode, <code>ops</code> Zero Trust IP 검증</span>
+          <span class="arch-node-meta">WAF & Access Rules</span>
+        </div>
+        <div class="arch-node">
+          <span class="arch-node-title">3. Isolated Pages</span>
+          <span class="arch-node-desc">4개 독립 빌드 산출물(<code>dist/pay</code>, <code>dist/admin</code> 등) 개별 호스팅</span>
+          <span class="arch-node-meta">Cloudflare Pages (ICN PoP)</span>
+        </div>
+        <div class="arch-node">
+          <span class="arch-node-title">4. Ledger Engine</span>
+          <span class="arch-node-desc">Supabase Edge Functions 검증 및 PostgreSQL 다자간 정산 원장 기록</span>
+          <span class="arch-node-meta">Row Level Security</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technical Specification Matrix -->
+    <section id="matrix" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">03 · Technical Evaluation</span>
+        <h2 class="section-title">인프라 아키텍처 비교 명세</h2>
+        <p class="section-desc">
+          기존 단일 모놀리식 구조 대비 Cloudflare 통합 기반 분리 아키텍처의 엔지니어링 팩트 비교입니다.
+        </p>
+      </div>
+
+      <div class="matrix-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 24%;">검토 항목</th>
+              <th style="width: 38%;">기존 단일 모놀리식 (Vercel)</th>
+              <th style="width: 38%;">SoulPay 확정 아키텍처 (Cloudflare Pages)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>장애 전파 범위 (Blast Radius)</strong></td>
+              <td>관리자 UI 수정 시 결제 엔진 전체 재배포</td>
+              <td class="cell-highlight">4대 서브도메인 100% 완전 격리 (결제 위험도 0%)</td>
+            </tr>
+            <tr>
+              <td><strong>트래픽 및 대역폭 비용</strong></td>
+              <td>성탄절/주일 트래픽 몰림 시 대역폭 초과 과금 리스크</td>
+              <td class="cell-highlight">무제한 대역폭 & 무제한 요청수 (비용 폭탄 0원)</td>
+            </tr>
+            <tr>
+              <td><strong>결제 유입 경로 보안</strong></td>
+              <td>기본적인 SSL만 제공 (엔터프라이즈 WAF 고가)</td>
+              <td class="cell-highlight">글로벌 1위 엔터프라이즈 WAF & DDoS 완화 기본 탑재</td>
+            </tr>
+            <tr>
+              <td><strong>운영 센터 (<code>ops</code>) 보호</strong></td>
+              <td>IP 화이트리스트 불가 (인터넷 전체에 화면 노출)</td>
+              <td class="cell-highlight">Cloudflare Zero Trust 연동 (사내 IP / 이메일 OTP 통제)</td>
+            </tr>
+            <tr>
+              <td><strong>비상 롤백 전파 시간</strong></td>
+              <td>전체 재빌드 및 DNS 전파 대기 (10~30분 소요)</td>
+              <td class="cell-highlight">Cloudflare 프록시 CNAME 즉각 전환 (1분 이내 롤백)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CTA Bar -->
+    <section class="cta-bar">
+      <div class="cta-text">
+        <h3>디지털 헌금 문화의 신뢰할 수 있는 표준</h3>
+        <p>물리적으로 완전 분리된 4대 도메인 인프라를 바탕으로 무중단 결제와 투명한 회계 정산을 지원합니다.</p>
+      </div>
+      <div>
+        <a href="mailto:contact@soulpay.kr" class="btn-pill btn-primary">도입 및 가맹 문의</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer Archetype: Ft2 Inline Single Line -->
+  <footer>
+    <div class="container footer-flex">
+      <div class="footer-left">
+        <span class="footer-brand">SoulPay Inc.</span>
+        <span>주식회사 소울페이 · 대표 도메인: <code>soulpay.kr</code> / <code>soulpay.co.kr</code></span>
+      </div>
+      <div class="footer-right">
+        <span>Architecture: Modern Minimal (Cobalt) · 2026</span>
       </div>
     </div>
   </footer>
 
-  <!-- Interactive Script for Tab Switching -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const tabs = document.querySelectorAll('.tab-btn');
-      const contents = document.querySelectorAll('.tab-content');
-
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          const target = tab.getAttribute('data-tab');
-
-          // Reset tabs
-          tabs.forEach(t => t.classList.remove('active'));
-          contents.forEach(c => c.classList.remove('active'));
-
-          // Activate
-          tab.classList.add('active');
-          const targetContent = document.getElementById(target);
-          if (targetContent) {
-            targetContent.classList.add('active');
-          }
-        });
-      });
-    });
-  </script>
 </body>
 </html>
