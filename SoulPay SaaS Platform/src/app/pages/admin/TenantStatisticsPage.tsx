@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
-import { donationAPI } from '../../api/client';
+import { statisticsAPI, DailyClosingSummary } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -39,13 +39,42 @@ import { useTenantTerms } from '../../hooks/useTenantTerms';
 // 색상 팔레트
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
 
+function formatDateToYMD(d: Date | null): string {
+  if (!d || isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getSnapshotPeriodKey(closingDate: string, unit: PeriodUnit): string {
+  const parts = (closingDate || '').split('-').map(Number);
+  if (parts.length < 3) return '';
+  const [year, month, day] = parts;
+  if (unit === 'daily') {
+    return `${month}/${day}`;
+  } else if (unit === 'weekly') {
+    const weekNum = Math.ceil(day / 7);
+    return `${month}월 ${weekNum}주`;
+  } else if (unit === 'yearly') {
+    return `${year}년`;
+  } else {
+    return `${year}.${String(month).padStart(2, '0')}`;
+  }
+}
+
 export default function TenantStatisticsPage() {
   const { tenantSlug } = useParams();
   const location = useLocation();
   const { currentTenant, setCurrentTenant, tenants } = useApp();
   const terms = useTenantTerms(currentTenant);
 
-  const [donations, setDonations] = useState<any[]>([]);
+  // 🔴 DB 영구 적재 일별 마감 스냅샷 및 종합 통계 상태 (Full Scan 제거)
+  const [dailySnapshots, setDailySnapshots] = useState<DailyClosingSummary[]>([]);
+  const [snapshotSummary, setSnapshotSummary] = useState<any>(null);
+  const [closedTransactions, setClosedTransactions] = useState<any[]>([]);
+  const [totalTransactionCount, setTotalTransactionCount] = useState<number>(0);
+
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'method' | 'device' | 'item' | 'subscription'>('overview');
   const [isEasyPayModalOpen, setIsEasyPayModalOpen] = useState(false);
@@ -87,6 +116,53 @@ export default function TenantStatisticsPage() {
     });
   }, [yesterdayCutoff]);
 
+  const fetchData = async (targetTenantId: string) => {
+    setIsLoading(true);
+    try {
+      const startDateStr = formatDateToYMD(periodSelection.startDate);
+      const endDateStr = formatDateToYMD(periodSelection.endDate);
+
+      const [snapRes, txRes] = await Promise.all([
+        statisticsAPI.getClosingSnapshots(targetTenantId, {
+          startDate: startDateStr,
+          endDate: endDateStr,
+        }),
+        statisticsAPI.getClosingTransactions(targetTenantId, {
+          startDate: startDateStr,
+          endDate: endDateStr,
+          page: currentPage,
+          pageSize,
+          search: searchTerm,
+        }),
+      ]);
+
+      if (snapRes.success && snapRes.data) {
+        setDailySnapshots(snapRes.data.snapshots || []);
+        setSnapshotSummary(snapRes.data.summary);
+      } else {
+        setDailySnapshots([]);
+        setSnapshotSummary(null);
+      }
+
+      if (txRes.success && txRes.data) {
+        setClosedTransactions(assignSequentialDonationIds(txRes.data.items || []));
+        setTotalTransactionCount(txRes.data.totalCount || 0);
+      } else {
+        setClosedTransactions([]);
+        setTotalTransactionCount(0);
+      }
+    } catch (e: any) {
+      console.error('Failed to fetch statistics data from DB:', e);
+      toast.error('통계 데이터를 불러오는 중 오류가 발생했습니다.');
+      setDailySnapshots([]);
+      setSnapshotSummary(null);
+      setClosedTransactions([]);
+      setTotalTransactionCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
     const tenant = tenants.find(
@@ -104,135 +180,47 @@ export default function TenantStatisticsPage() {
     if (targetKey) {
       fetchData(targetKey);
     }
-  }, [tenantSlug, tenants, setCurrentTenant, currentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant, currentTenant, periodSelection, currentPage, searchTerm]);
 
-  const fetchData = async (targetTenantId: string) => {
-    setIsLoading(true);
-    try {
-      let res = await donationAPI.getByTenant(targetTenantId);
-      if ((!res.success || !res.data || res.data.length === 0) && tenantSlug && tenantSlug !== targetTenantId) {
-        const altRes = await donationAPI.getByTenant(tenantSlug);
-        if (altRes.success && Array.isArray(altRes.data) && altRes.data.length > 0) {
-          res = altRes;
-        }
-      }
-      if (res.success && Array.isArray(res.data)) {
-        const list = assignSequentialDonationIds(res.data);
-        setDonations(list);
-      } else {
-        setDonations([]);
-      }
-    } catch (e: any) {
-      console.error('Failed to fetch statistics data from DB:', e);
-      toast.error('통계 데이터를 불러오는 중 오류가 발생했습니다.');
-      setDonations([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 🔴 선택된 기간 선택(periodSelection) 조건 및 전일 23:59:59 마감 스냅샷 기준 100% DB 데이터 필터링
-  const snapshotDonations = useMemo(() => {
-    const startLimit = periodSelection.startDate;
-    // 마감통계 기준: 전일 23:59:59 스냅샷 시점을 초과할 수 없음 (당일 실시간 데이터 철저 배제)
-    const endLimit = new Date(Math.min(periodSelection.endDate.getTime(), yesterdayCutoff.getTime()));
-
-    return donations.filter((d) => {
-      const created = new Date(d.createdAt || d.created_at || d.date || 0);
-      if (isNaN(created.getTime())) return false;
-
-      // 1. 선택 기간 범위 및 전일 23:59:59 마감 시점 이내 (당일/미래 실시간 데이터 제외)
-      if (created > endLimit || created > yesterdayCutoff) return false;
-      if (created < startLimit) return false;
-
-      // 2. 정상 승인 완료건(completed/paid/success/approved)만
-      const rawStatus = String(d.paymentStatus || d.payment_status || d.status || 'completed').toLowerCase();
-      const isCompleted =
-        rawStatus === 'completed' ||
-        rawStatus === 'success' ||
-        rawStatus === 'paid' ||
-        rawStatus === 'approved' ||
-        rawStatus === '결제완료' ||
-        rawStatus === '승인완료';
-      return isCompleted;
-    });
-  }, [donations, periodSelection, yesterdayCutoff]);
-
-  // 마감 승인 성공률 (실제 DB 데이터 기준 계산: 선택 기간 내 마감 시점까지의 전체 시도 건 중 정상 승인 건 비율)
+  // 마감 승인 성공률 (DB 영구 스냅샷 집계 데이터)
   const approvalSuccessRate = useMemo(() => {
-    const startLimit = periodSelection.startDate;
-    const endLimit = new Date(Math.min(periodSelection.endDate.getTime(), yesterdayCutoff.getTime()));
+    return snapshotSummary?.approvalSuccessRate || '0.0%';
+  }, [snapshotSummary]);
 
-    const periodTotalAttempts = donations.filter((d) => {
-      const created = new Date(d.createdAt || d.created_at || d.date || 0);
-      if (isNaN(created.getTime())) return false;
-      if (created > endLimit || created > yesterdayCutoff) return false;
-      if (created < startLimit) return false;
-      return true;
-    });
+  // 마감 상세 목록 페이징 및 필터
+  const totalPages = Math.max(1, Math.ceil(totalTransactionCount / pageSize));
+  const pagedSnapshotList = closedTransactions;
 
-    if (periodTotalAttempts.length === 0) return '0.0%';
-    const successCount = snapshotDonations.length;
-    const totalCount = periodTotalAttempts.length;
-    return `${((successCount / totalCount) * 100).toFixed(1)}%`;
-  }, [donations, snapshotDonations, periodSelection, yesterdayCutoff]);
-
-  // 마감 상세 목록 검색 및 페이징
-  const filteredSnapshotList = useMemo(() => {
-    return snapshotDonations.filter((d) => {
-      if (!searchTerm) return true;
-      const term = searchTerm.trim().toLowerCase();
-      const donor = String(d.donorName || '').toLowerCase();
-      const id = String(d.id || '').toLowerCase();
-      const item = String(d.itemName || '').toLowerCase();
-      const method = String(d.paymentMethod || '').toLowerCase();
-      return donor.includes(term) || id.includes(term) || item.includes(term) || method.includes(term);
-    });
-  }, [snapshotDonations, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredSnapshotList.length / pageSize));
-  const pagedSnapshotList = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredSnapshotList.slice(start, start + pageSize);
-  }, [filteredSnapshotList, currentPage, pageSize]);
-
-  // 1. 종합 통계 (Overview) - 과거 -> 현재(오름차순 시간순) 정렬
+  // 1. 종합 통계 (Overview) - DB 영구 스냅샷 기준 시간 오름차순
   const overviewStats = useMemo(() => {
-    const totalAmount = snapshotDonations.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
-    const totalCount = snapshotDonations.length;
-    const avgAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
+    const totalAmount = snapshotSummary?.totalAmount || 0;
+    const totalCount = snapshotSummary?.totalCount || 0;
+    const avgAmount = snapshotSummary?.avgTicketAmount || 0;
 
     const trendMap: Record<string, { sortTime: number; key: string; amount: number }> = {};
 
-    snapshotDonations.forEach((d) => {
-      const date = new Date(d.createdAt || d.created_at || d.date);
-      if (!isNaN(date.getTime())) {
-        let key = '';
-        let sortTime = date.getTime();
+    dailySnapshots.forEach((s) => {
+      const parts = (s.closingDate || '').split('-').map(Number);
+      if (parts.length < 3) return;
+      const [year, month, day] = parts;
+      const date = new Date(year, month - 1, day);
 
-        if (periodUnit === 'daily') {
-          key = `${date.getMonth() + 1}/${date.getDate()}`;
-          sortTime = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-        } else if (periodUnit === 'weekly') {
-          const weekNum = Math.ceil(date.getDate() / 7);
-          key = `${date.getMonth() + 1}월 ${weekNum}주`;
-          sortTime = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-        } else if (periodUnit === 'yearly') {
-          key = `${date.getFullYear()}년`;
-          sortTime = new Date(date.getFullYear(), 0, 1).getTime();
-        } else {
-          key = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}`;
-          sortTime = new Date(date.getFullYear(), date.getMonth(), 1).getTime();
-        }
+      const key = getSnapshotPeriodKey(s.closingDate, periodUnit);
+      if (!key) return;
 
-        if (!trendMap[key]) {
-          trendMap[key] = { sortTime, key, amount: 0 };
-        }
-        trendMap[key].amount += Number(d.amount) || 0;
+      let sortTime = date.getTime();
+      if (periodUnit === 'yearly') {
+        sortTime = new Date(year, 0, 1).getTime();
+      } else if (periodUnit === 'monthly') {
+        sortTime = new Date(year, month - 1, 1).getTime();
       }
+
+      if (!trendMap[key]) {
+        trendMap[key] = { sortTime, key, amount: 0 };
+      }
+      trendMap[key].amount += s.totalAmount || 0;
     });
 
-    // 🔴 과거(Past) -> 현재(Present) 시간 오름차순 정렬 (차트 왼쪽: 과거, 오른쪽: 현재)
     const monthlyTrend = Object.values(trendMap)
       .sort((a, b) => a.sortTime - b.sortTime)
       .map((item) => ({ month: item.key, amount: item.amount }));
@@ -243,7 +231,7 @@ export default function TenantStatisticsPage() {
       avgAmount,
       monthlyTrend,
     };
-  }, [snapshotDonations, periodUnit]);
+  }, [dailySnapshots, snapshotSummary, periodUnit]);
 
   // 2. 결제 수단별 통계 (Method)
   const getMethodCategory = (rawMethod?: string): string => {
@@ -251,12 +239,10 @@ export default function TenantStatisticsPage() {
     const m = String(rawMethod).trim();
     const lower = m.toLowerCase();
 
-    // 1. 가상계좌
     if (m.includes('가상') || lower.includes('virtual')) {
       return '가상계좌';
     }
 
-    // 2. 간편결제 (카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 통합)
     if (
       m.includes('카카오') || lower.includes('kakao') ||
       m.includes('네이버') || lower.includes('naver') ||
@@ -268,23 +254,24 @@ export default function TenantStatisticsPage() {
       return '간편결제';
     }
 
-    // 3. 신용카드 (카드, PG 일반 결제, 토스페이먼츠 카드결제 등 기본값)
     return '신용카드';
   };
 
   const methodStats = useMemo(() => {
     const map: Record<string, { amount: number; count: number }> = {
-      '신용카드': { amount: 0, count: 0 },
-      '간편결제': { amount: 0, count: 0 },
-      '가상계좌': { amount: 0, count: 0 },
+      '신용카드': {
+        amount: snapshotSummary?.methodMatrix?.['신용카드']?.amount || 0,
+        count: snapshotSummary?.methodMatrix?.['신용카드']?.count || 0,
+      },
+      '간편결제': {
+        amount: snapshotSummary?.methodMatrix?.['간편결제']?.amount || 0,
+        count: snapshotSummary?.methodMatrix?.['간편결제']?.count || 0,
+      },
+      '가상계좌': {
+        amount: snapshotSummary?.methodMatrix?.['가상계좌']?.amount || 0,
+        count: snapshotSummary?.methodMatrix?.['가상계좌']?.count || 0,
+      },
     };
-
-    snapshotDonations.forEach((d) => {
-      const method = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
-      if (!map[method]) map[method] = { amount: 0, count: 0 };
-      map[method].amount += Number(d.amount) || 0;
-      map[method].count += 1;
-    });
 
     const CATEGORIES = ['신용카드', '간편결제', '가상계좌'];
     const summaryList = CATEGORIES.map((name) => ({
@@ -293,101 +280,53 @@ export default function TenantStatisticsPage() {
       count: map[name]?.count || 0,
     }));
 
-    // 파이차트에는 실제 수납액이 있는 항목만 표출
     const chartData = summaryList.filter((item) => item.value > 0);
-
     return { map, summaryList, chartData };
-  }, [snapshotDonations]);
-
-  // 간편결제 세부 수단 파싱 함수
-  const getEasyPaySubMethod = (rawMethod?: string): string => {
-    if (!rawMethod) return '기타 간편결제';
-    const m = String(rawMethod).trim();
-    const lower = m.toLowerCase();
-
-    if (m.includes('카카오') || lower.includes('kakao')) return '카카오페이';
-    if (m.includes('네이버') || lower.includes('naver')) return '네이버페이';
-    if (m.includes('토스') || lower.includes('toss')) return '토스페이';
-    if (m.includes('페이코') || lower.includes('payco')) return '페이코';
-    if (m.includes('엘페이') || lower.includes('lpay')) return '엘페이';
-    if (m.includes('국민앱카드') || lower.includes('kb')) return '국민앱카드';
-    if (m.includes('계좌') || m.includes('이체') || lower.includes('transfer') || lower.includes('dbank')) return '실시간 계좌이체';
-    return '기타 간편결제';
-  };
-
-  // 결제 데이터의 기간별 그룹화 키 산출 공통 함수
-  const getDonationPeriodKey = (d: any, unit: PeriodUnit): string => {
-    const date = new Date(d.createdAt || d.created_at || d.date);
-    if (isNaN(date.getTime())) return '';
-    if (unit === 'daily') {
-      return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-    } else if (unit === 'weekly') {
-      const weekNum = Math.ceil(date.getDate() / 7);
-      return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${weekNum}주차`;
-    } else if (unit === 'yearly') {
-      return `${date.getFullYear()}년`;
-    } else {
-      return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }
-  };
-
-  // 선택 기간 내 실제 간편결제 거래 내역 필터링
-  const easyPayDonations = useMemo(() => {
-    return snapshotDonations.filter((d) => {
-      const cat = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
-      return cat === '간편결제';
-    });
-  }, [snapshotDonations]);
-
-  // 팝업 모달용 간편결제 대상 목록 (selectedPeriodKey가 지정되어 있으면 해당 일/주/월/년만, 없으면 전체 기간)
-  const modalEasyPayDonations = useMemo(() => {
-    return easyPayDonations.filter((d) => {
-      if (!selectedPeriodKey) return true;
-      return getDonationPeriodKey(d, periodUnit) === selectedPeriodKey;
-    });
-  }, [easyPayDonations, selectedPeriodKey, periodUnit]);
+  }, [snapshotSummary]);
 
   // 팝업 모달용 간편결제 세부 페이별 통계 집계 (건수, 금액, 비중 %)
   const modalEasyPayStats = useMemo(() => {
-    const map: Record<string, { amount: number; count: number }> = {};
-    modalEasyPayDonations.forEach((d) => {
-      const sub = getEasyPaySubMethod(d.paymentMethod || d.payment_method || d.method);
-      if (!map[sub]) map[sub] = { amount: 0, count: 0 };
-      map[sub].amount += Number(d.amount) || 0;
-      map[sub].count += 1;
+    const targetSnapshots = selectedPeriodKey
+      ? dailySnapshots.filter((s) => getSnapshotPeriodKey(s.closingDate, periodUnit) === selectedPeriodKey)
+      : dailySnapshots;
+
+    const map: Record<string, { amount: number; count: number }> = {
+      '카카오페이': { amount: 0, count: 0 },
+      '네이버페이': { amount: 0, count: 0 },
+      '토스페이': { amount: 0, count: 0 },
+      '기타 간편결제': { amount: 0, count: 0 },
+    };
+
+    targetSnapshots.forEach((s) => {
+      const breakdown = s.methodMatrix?.['간편결제']?.breakdown || {};
+      for (const [k, v] of Object.entries(breakdown)) {
+        if (!map[k]) map[k] = { amount: 0, count: 0 };
+        map[k].amount += v.amount || 0;
+        map[k].count += v.count || 0;
+      }
     });
 
-    const totalAmount = modalEasyPayDonations.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
-    const totalCount = modalEasyPayDonations.length;
+    const totalAmount = Object.values(map).reduce((sum, v) => sum + v.amount, 0);
+    const totalCount = Object.values(map).reduce((sum, v) => sum + v.count, 0);
 
-    const list = Object.entries(map).map(([name, stat]) => ({
-      name,
-      amount: stat.amount,
-      count: stat.count,
-      ratio: totalAmount > 0 ? ((stat.amount / totalAmount) * 100).toFixed(1) : '0',
-    })).sort((a, b) => b.amount - a.amount);
+    const list = Object.entries(map)
+      .map(([name, stat]) => ({
+        name,
+        amount: stat.amount,
+        count: stat.count,
+        ratio: totalAmount > 0 ? ((stat.amount / totalAmount) * 100).toFixed(1) : '0',
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
     return { totalAmount, totalCount, list };
-  }, [modalEasyPayDonations]);
+  }, [dailySnapshots, selectedPeriodKey, periodUnit]);
 
   // 3. 기기/채널별 통계 (Device)
   const deviceStats = useMemo(() => {
-    let kioskAmount = 0;
-    let kioskCount = 0;
-    let webAmount = 0;
-    let webCount = 0;
-
-    snapshotDonations.forEach((d) => {
-      const isKiosk = d.deviceType === 'KIOSK' || String(d.id || '').toUpperCase().includes('KIOSK');
-      const amt = Number(d.amount) || 0;
-      if (isKiosk) {
-        kioskAmount += amt;
-        kioskCount += 1;
-      } else {
-        webAmount += amt;
-        webCount += 1;
-      }
-    });
+    const kioskAmount = snapshotSummary?.deviceMatrix?.kioskAmount || 0;
+    const kioskCount = snapshotSummary?.deviceMatrix?.kioskCount || 0;
+    const webAmount = snapshotSummary?.deviceMatrix?.webAmount || 0;
+    const webCount = snapshotSummary?.deviceMatrix?.webCount || 0;
 
     const totalAmt = kioskAmount + webAmount;
     const kioskRatio = totalAmt > 0 ? ((kioskAmount / totalAmt) * 100).toFixed(1) : '0';
@@ -405,24 +344,21 @@ export default function TenantStatisticsPage() {
         { name: '📱 모바일/웹(WEB_MOBILE)', amount: webAmount, count: webCount },
       ],
     };
-  }, [snapshotDonations]);
+  }, [snapshotSummary]);
 
   // 4. 봉헌 항목별 통계 (Item)
   const itemStats = useMemo(() => {
-    const map: Record<string, { amount: number; count: number }> = {};
-    snapshotDonations.forEach((d) => {
-      const item = d.itemName || d.item_name || '일반헌금/보시';
-      if (!map[item]) map[item] = { amount: 0, count: 0 };
-      map[item].amount += Number(d.amount) || 0;
-      map[item].count += 1;
-    });
-
-    const sortedList = Object.keys(map)
-      .map((name) => ({ name, amount: map[name].amount, count: map[name].count }))
+    const items = snapshotSummary?.itemMatrix || {};
+    const sortedList = Object.entries(items)
+      .map(([name, stat]: [string, any]) => ({
+        name,
+        amount: Number(stat.amount) || 0,
+        count: Number(stat.count) || 0,
+      }))
       .sort((a, b) => b.amount - a.amount);
 
     return sortedList;
-  }, [snapshotDonations]);
+  }, [snapshotSummary]);
 
   // 🏷️ 4. 봉헌 항목별 고유 목록 (테이블 컬럼 동적 분할용)
   const allItemNames = useMemo(() => {
@@ -432,33 +368,24 @@ export default function TenantStatisticsPage() {
 
   // 5. 정기 vs 1회성 통계 (Subscription)
   const subscriptionStats = useMemo(() => {
-    let recurringAmount = 0;
-    let recurringCount = 0;
-    let oneTimeAmount = 0;
-    let oneTimeCount = 0;
+    const recurringAmount = snapshotSummary?.subscriptionMatrix?.recurringAmount || 0;
+    const recurringCount = snapshotSummary?.subscriptionMatrix?.recurringCount || 0;
+    const oneTimeAmount = snapshotSummary?.subscriptionMatrix?.oneTimeAmount || 0;
+    const oneTimeCount = snapshotSummary?.subscriptionMatrix?.oneTimeCount || 0;
 
-    snapshotDonations.forEach((d) => {
-      const amt = Number(d.amount) || 0;
-      if (d.isRecurring) {
-        recurringAmount += amt;
-        recurringCount += 1;
-      } else {
-        oneTimeAmount += amt;
-        oneTimeCount += 1;
-      }
-    });
+    const totalAmt = recurringAmount + oneTimeAmount;
+    const recurringRatio = totalAmt > 0 ? ((recurringAmount / totalAmt) * 100).toFixed(1) : '0';
+    const oneTimeRatio = totalAmt > 0 ? ((oneTimeAmount / totalAmt) * 100).toFixed(1) : '0';
 
     return {
       recurringAmount,
       recurringCount,
+      recurringRatio,
       oneTimeAmount,
       oneTimeCount,
-      chartData: [
-        { name: '🗓️ 정기 결제', amount: recurringAmount, count: recurringCount },
-        { name: '⚡ 1회성 결제', amount: oneTimeAmount, count: oneTimeCount },
-      ],
+      oneTimeRatio,
     };
-  }, [snapshotDonations]);
+  }, [snapshotSummary]);
 
   // 🔴 5개 탭별 기간(일/주/월/년) 교차 집계 매트릭스 계산 - 과거 -> 현재(오름차순 시간순) 정렬
   const periodMatrixList = useMemo(() => {
@@ -479,22 +406,20 @@ export default function TenantStatisticsPage() {
       oneTimeCount: number;
     }> = {};
 
-    snapshotDonations.forEach((d) => {
-      const date = new Date(d.createdAt || d.created_at || d.date);
-      if (isNaN(date.getTime())) return;
+    dailySnapshots.forEach((s) => {
+      const parts = (s.closingDate || '').split('-').map(Number);
+      if (parts.length < 3) return;
+      const [year, month, day] = parts;
+      const date = new Date(year, month - 1, day);
 
-      const key = getDonationPeriodKey(d, periodUnit);
+      const key = getSnapshotPeriodKey(s.closingDate, periodUnit);
       if (!key) return;
 
       let sortTime = date.getTime();
-      if (periodUnit === 'daily') {
-        sortTime = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-      } else if (periodUnit === 'weekly') {
-        sortTime = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-      } else if (periodUnit === 'yearly') {
-        sortTime = new Date(date.getFullYear(), 0, 1).getTime();
-      } else {
-        sortTime = new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+      if (periodUnit === 'yearly') {
+        sortTime = new Date(year, 0, 1).getTime();
+      } else if (periodUnit === 'monthly') {
+        sortTime = new Date(year, month - 1, 1).getTime();
       }
 
       if (!map[key]) {
@@ -516,40 +441,32 @@ export default function TenantStatisticsPage() {
         };
       }
 
-      const amt = Number(d.amount) || 0;
-      map[key].totalAmount += amt;
-      map[key].totalCount += 1;
+      map[key].totalAmount += s.totalAmount || 0;
+      map[key].totalCount += s.totalCount || 0;
 
       // 1. 수단별
-      const method = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
-      if (!map[key].methods[method]) map[key].methods[method] = { amount: 0, count: 0 };
-      map[key].methods[method].amount += amt;
-      map[key].methods[method].count += 1;
+      for (const [mKey, mVal] of Object.entries(s.methodMatrix || {})) {
+        if (!map[key].methods[mKey]) map[key].methods[mKey] = { amount: 0, count: 0 };
+        map[key].methods[mKey].amount += mVal.amount || 0;
+        map[key].methods[mKey].count += mVal.count || 0;
+      }
 
       // 2. 기기별
-      const isKiosk = d.deviceType === 'KIOSK' || String(d.id || '').toUpperCase().includes('KIOSK');
-      if (isKiosk) {
-        map[key].kioskAmount += amt;
-        map[key].kioskCount += 1;
-      } else {
-        map[key].webAmount += amt;
-        map[key].webCount += 1;
+      if (s.deviceMatrix) {
+        map[key].kioskAmount += s.deviceMatrix.kioskAmount || 0;
+        map[key].kioskCount += s.deviceMatrix.kioskCount || 0;
+        map[key].webAmount += s.deviceMatrix.webAmount || 0;
+        map[key].webCount += s.deviceMatrix.webCount || 0;
       }
 
       // 3. 항목별
-      const item = d.itemName || d.item_name || '일반헌금/보시';
-      if (!map[key].items[item]) map[key].items[item] = { amount: 0, count: 0 };
-      map[key].items[item].amount += amt;
-      map[key].items[item].count += 1;
+      for (const [iKey, iVal] of Object.entries(s.itemMatrix || {})) {
+        if (!map[key].items[iKey]) map[key].items[iKey] = { amount: 0, count: 0 };
+        map[key].items[iKey].amount += iVal.amount || 0;
+        map[key].items[iKey].count += iVal.count || 0;
+      }
 
       // 4. 정기/일시
-      if (d.isRecurring) {
-        map[key].recurringAmount += amt;
-        map[key].recurringCount += 1;
-      } else {
-        map[key].oneTimeAmount += amt;
-        map[key].oneTimeCount += 1;
-      }
     });
 
     // 🔴 과거(Past/Left) -> 현재(Present/Right) 시간 오름차순 정렬
@@ -637,7 +554,7 @@ export default function TenantStatisticsPage() {
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                onClick={() => currentTenant && fetchData(currentTenant.id)}
+                onClick={handleRefreshBatch}
                 className="gap-2 text-xs font-semibold"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -929,10 +846,10 @@ export default function TenantStatisticsPage() {
                   </Table>
 
                   {/* Pagination Controls */}
-                  {filteredSnapshotList.length > 0 && (
+                  {totalTransactionCount > 0 && (
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
                       <p className="text-xs text-slate-500">
-                        총 <span className="font-bold text-slate-800 dark:text-zinc-200">{filteredSnapshotList.length}</span>건 중 {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, filteredSnapshotList.length)}건 표시 (페이지 {currentPage} / {totalPages})
+                        총 <span className="font-bold text-slate-800 dark:text-zinc-200">{totalTransactionCount}</span>건 중 {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalTransactionCount)}건 표시 (페이지 {currentPage} / {totalPages})
                       </p>
                       <div className="flex items-center gap-2">
                         <Button

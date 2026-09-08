@@ -3092,6 +3092,66 @@ app.get("/make-server-d0d82cc7/donations/:tenantId", async (c) => {
   }
 });
 
+// ==================== DAILY CLOSING SNAPSHOTS API ====================
+
+// 1. 특정 단체 마감 스냅샷 조회 (DB 영구 적재 데이터 조회 및 누락 일자 자동 생성)
+const handleGetClosingSnapshots = async (c: any) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+    const result = await db.getDailyClosingSnapshots(tenantId, startDate, endDate);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error fetching closing snapshots:', error);
+    return c.json({ success: false, error: error?.message || 'Failed to fetch closing snapshots' }, 500);
+  }
+};
+app.get("/make-server-d0d82cc7/statistics/closing-snapshots/:tenantId", handleGetClosingSnapshots);
+app.get("/statistics/closing-snapshots/:tenantId", handleGetClosingSnapshots);
+
+// 2. 마감 스냅샷 배치 실행 (전일 또는 지정일 마감 스냅샷 일괄 생성/갱신)
+const handleRunClosingBatch = async (c: any) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { targetDate, tenantId } = body;
+    const result = await db.runDailyClosingBatch(targetDate, tenantId);
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error running closing snapshot batch:', error);
+    return c.json({ success: false, error: error?.message || 'Failed to run closing snapshot batch' }, 500);
+  }
+};
+app.post("/make-server-d0d82cc7/statistics/closing-snapshots/batch-run", handleRunClosingBatch);
+app.post("/statistics/closing-snapshots/batch-run", handleRunClosingBatch);
+
+// 3. 마감 기준일(전일 23:59:59) 이내의 상세 수납 원장 서버 페이징 조회
+const handleGetClosedTransactions = async (c: any) => {
+  try {
+    const tenantId = c.req.param('tenantId');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+    const page = parseInt(c.req.query('page') || '1', 10);
+    const pageSize = parseInt(c.req.query('pageSize') || '10', 10);
+    const search = c.req.query('search') || '';
+
+    const result = await db.getClosedTransactionsPaged(tenantId, {
+      startDate,
+      endDate,
+      page,
+      pageSize,
+      search,
+    });
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error fetching closed transactions:', error);
+    return c.json({ success: false, error: error?.message || 'Failed to fetch closed transactions' }, 500);
+  }
+};
+app.get("/make-server-d0d82cc7/statistics/closing-transactions/:tenantId", handleGetClosedTransactions);
+app.get("/statistics/closing-transactions/:tenantId", handleGetClosedTransactions);
+
+
 // 봉헌 생성
 app.post("/make-server-d0d82cc7/donations", async (c) => {
   try {

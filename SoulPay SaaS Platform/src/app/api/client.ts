@@ -1077,3 +1077,102 @@ export const tenantAdminAPI = {
     });
   },
 };
+
+// ==================== DAILY CLOSING SNAPSHOT STATISTICS API ====================
+
+export interface DailyClosingSummary {
+  id: string;
+  tenantId: string;
+  closingDate: string; // YYYY-MM-DD
+  cutoffTimestamp: string;
+  totalAmount: number;
+  totalCount: number;
+  successfulCount: number;
+  failedCount: number;
+  avgTicketAmount: number;
+  methodMatrix: Record<string, {
+    amount: number;
+    count: number;
+    breakdown?: Record<string, { amount: number; count: number }>;
+  }>;
+  deviceMatrix: {
+    kioskAmount: number;
+    kioskCount: number;
+    webAmount: number;
+    webCount: number;
+  };
+  itemMatrix: Record<string, { amount: number; count: number }>;
+  subscriptionMatrix: {
+    recurringAmount: number;
+    recurringCount: number;
+    oneTimeAmount: number;
+    oneTimeCount: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClosingSnapshotResponse {
+  snapshots: DailyClosingSummary[];
+  summary: {
+    totalAmount: number;
+    totalCount: number;
+    successfulCount: number;
+    failedCount: number;
+    avgTicketAmount: number;
+    approvalSuccessRate: string;
+    methodMatrix: Record<string, { amount: number; count: number; breakdown?: Record<string, { amount: number; count: number }> }>;
+    deviceMatrix: { kioskAmount: number; kioskCount: number; webAmount: number; webCount: number };
+    itemMatrix: Record<string, { amount: number; count: number }>;
+    subscriptionMatrix: { recurringAmount: number; recurringCount: number; oneTimeAmount: number; oneTimeCount: number };
+  };
+  cutoffDateStr: string;
+}
+
+export interface ClosingTransactionsResponse {
+  items: Donation[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const statisticsAPI = {
+  /** DB 영구 적재된 일별 마감 스냅샷 및 종합 통계 조회 */
+  async getClosingSnapshots(
+    tenantId: string,
+    params?: { startDate?: string; endDate?: string }
+  ): Promise<APIResponse<ClosingSnapshotResponse>> {
+    const searchParams = new URLSearchParams();
+    if (params?.startDate) searchParams.append('startDate', params.startDate);
+    if (params?.endDate) searchParams.append('endDate', params.endDate);
+    const qs = searchParams.toString();
+    return fetchAPI<ClosingSnapshotResponse>(`/statistics/closing-snapshots/${tenantId}${qs ? `?${qs}` : ''}`);
+  },
+
+  /** 마감 기준일(전일 23:59:59) 이내의 상세 원장 서버 페이징 조회 */
+  async getClosingTransactions(
+    tenantId: string,
+    params?: { startDate?: string; endDate?: string; page?: number; pageSize?: number; search?: string }
+  ): Promise<APIResponse<ClosingTransactionsResponse>> {
+    const searchParams = new URLSearchParams();
+    if (params?.startDate) searchParams.append('startDate', params.startDate);
+    if (params?.endDate) searchParams.append('endDate', params.endDate);
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.pageSize) searchParams.append('pageSize', String(params.pageSize));
+    if (params?.search) searchParams.append('search', params.search);
+    const qs = searchParams.toString();
+    return fetchAPI<ClosingTransactionsResponse>(`/statistics/closing-transactions/${tenantId}${qs ? `?${qs}` : ''}`);
+  },
+
+  /** 전일(또는 특정일) 마감 스냅샷 일괄 생성/재집계 배치 실행 */
+  async runClosingBatch(
+    tenantId?: string,
+    targetDate?: string
+  ): Promise<APIResponse<{ processedTenants: number; processedDate: string }>> {
+    return fetchAPI('/statistics/closing-snapshots/batch-run', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId, targetDate }),
+    });
+  },
+};

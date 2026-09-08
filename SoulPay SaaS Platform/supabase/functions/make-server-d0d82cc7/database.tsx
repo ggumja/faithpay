@@ -2797,8 +2797,573 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
 
   return null;
 }
+// ==================== DAILY CLOSING SNAPSHOTS ====================
 
+export interface DailyClosingSummary {
+  id: string;
+  tenantId: string;
+  closingDate: string; // YYYY-MM-DD
+  cutoffTimestamp: string;
+  totalAmount: number;
+  totalCount: number;
+  successfulCount: number;
+  failedCount: number;
+  avgTicketAmount: number;
+  methodMatrix: Record<string, {
+    amount: number;
+    count: number;
+    breakdown?: Record<string, { amount: number; count: number }>;
+  }>;
+  deviceMatrix: {
+    kioskAmount: number;
+    kioskCount: number;
+    webAmount: number;
+    webCount: number;
+  };
+  itemMatrix: Record<string, { amount: number; count: number }>;
+  subscriptionMatrix: {
+    recurringAmount: number;
+    recurringCount: number;
+    oneTimeAmount: number;
+    oneTimeCount: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
+function rowToDailyClosingSummary(row: any): DailyClosingSummary {
+  const closingDate = String(row.closing_date || row.closingDate || '');
+  return {
+    id: String(row.id || ''),
+    tenantId: String(row.tenant_id || row.tenantId || ''),
+    closingDate,
+    cutoffTimestamp: String(row.cutoff_timestamp || row.cutoffTimestamp || ''),
+    totalAmount: Number(row.total_amount ?? row.totalAmount ?? 0),
+    totalCount: Number(row.total_count ?? row.totalCount ?? 0),
+    successfulCount: Number(row.successful_count ?? row.successfulCount ?? 0),
+    failedCount: Number(row.failed_count ?? row.failedCount ?? 0),
+    avgTicketAmount: Number(row.avg_ticket_amount ?? row.avgTicketAmount ?? 0),
+    methodMatrix: typeof row.method_matrix === 'object' && row.method_matrix ? row.method_matrix : (typeof row.methodMatrix === 'object' && row.methodMatrix ? row.methodMatrix : {}),
+    deviceMatrix: typeof row.device_matrix === 'object' && row.device_matrix ? row.device_matrix : (typeof row.deviceMatrix === 'object' && row.deviceMatrix ? row.deviceMatrix : {
+      kioskAmount: 0,
+      kioskCount: 0,
+      webAmount: 0,
+      webCount: 0,
+    }),
+    itemMatrix: typeof row.item_matrix === 'object' && row.item_matrix ? row.item_matrix : (typeof row.itemMatrix === 'object' && row.itemMatrix ? row.itemMatrix : {}),
+    subscriptionMatrix: typeof row.subscription_matrix === 'object' && row.subscription_matrix ? row.subscription_matrix : (typeof row.subscriptionMatrix === 'object' && row.subscriptionMatrix ? row.subscriptionMatrix : {
+      recurringAmount: 0,
+      recurringCount: 0,
+      oneTimeAmount: 0,
+      oneTimeCount: 0,
+    }),
+    createdAt: String(row.created_at || row.createdAt || ''),
+    updatedAt: String(row.updated_at || row.updatedAt || ''),
+  };
+}
 
+function classifyPaymentMethod(rawMethod?: string): { category: string; easyPayDetail?: string } {
+  if (!rawMethod) return { category: '신용카드' };
+  const m = String(rawMethod).trim();
+  const lower = m.toLowerCase();
+
+  if (m.includes('가상') || lower.includes('virtual')) {
+    return { category: '가상계좌' };
+  }
+
+  if (
+    m.includes('카카오') || lower.includes('kakao') ||
+    m.includes('네이버') || lower.includes('naver') ||
+    m.includes('토스페이') || lower.includes('tosspay') ||
+    (m.includes('토스') && !m.includes('토스페이먼츠') && !m.includes('토스뱅크')) ||
+    m.includes('간편') || lower.includes('simple') || lower.includes('easy') ||
+    m.includes('계좌') || m.includes('이체') || lower.includes('transfer')
+  ) {
+    let easyPayDetail = '기타 간편결제';
+    if (m.includes('카카오') || lower.includes('kakao')) easyPayDetail = '카카오페이';
+    else if (m.includes('네이버') || lower.includes('naver')) easyPayDetail = '네이버페이';
+    else if (m.includes('토스') || lower.includes('toss')) easyPayDetail = '토스페이';
+    return { category: '간편결제', easyPayDetail };
+  }
+
+  return { category: '신용카드' };
+}
+
+/**
+ * 특정 단체 및 특정 일자의 마감 스냅샷을 DB 원장으로부터 집계하여 daily_closing_summaries 테이블에 영구 저장(UPSERT)합니다.
+ */
+export async function generateAndSaveDailyClosingSnapshot(
+  tenantId: string,
+  targetDateStr: string
+): Promise<DailyClosingSummary | null> {
+  const sb = pgClient();
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
+
+  // KST 기준 00:00:00 ~ 23:59:59.999
+  const dayStart = new Date(`${targetDateStr}T00:00:00+09:00`).toISOString();
+  const dayEnd = new Date(`${targetDateStr}T23:59:59.999+09:00`).toISOString();
+
+  let query = sb
+    .from('donations')
+    .select('*')
+    .gte('created_at', dayStart)
+    .lte('created_at', dayEnd);
+
+  if (tenant?.slug && tenant.id !== tenant.slug) {
+    query = query.in('tenant_id', [tenant.id, tenant.slug]);
+  } else {
+    query = query.eq('tenant_id', tid);
+  }
+
+  const { data: rows, error } = await query;
+  if (error) {
+    console.error(`generateAndSaveDailyClosingSnapshot query error for ${tid} on ${targetDateStr}:`, error.message);
+    return null;
+  }
+
+  const donations = rows || [];
+  let totalAmount = 0;
+  let successfulCount = 0;
+  let failedCount = 0;
+
+  const methodMatrix: Record<string, {
+    amount: number;
+    count: number;
+    breakdown?: Record<string, { amount: number; count: number }>;
+  }> = {
+    '신용카드': { amount: 0, count: 0 },
+    '간편결제': {
+      amount: 0,
+      count: 0,
+      breakdown: {
+        '카카오페이': { amount: 0, count: 0 },
+        '네이버페이': { amount: 0, count: 0 },
+        '토스페이': { amount: 0, count: 0 },
+        '기타 간편결제': { amount: 0, count: 0 },
+      },
+    },
+    '가상계좌': { amount: 0, count: 0 },
+  };
+
+  const deviceMatrix = {
+    kioskAmount: 0,
+    kioskCount: 0,
+    webAmount: 0,
+    webCount: 0,
+  };
+
+  const itemMatrix: Record<string, { amount: number; count: number }> = {};
+  const subscriptionMatrix = {
+    recurringAmount: 0,
+    recurringCount: 0,
+    oneTimeAmount: 0,
+    oneTimeCount: 0,
+  };
+
+  for (const d of donations) {
+    const rawStatus = String(d.payment_status || d.status || 'completed').toLowerCase();
+    const isSuccess =
+      rawStatus === 'completed' ||
+      rawStatus === 'success' ||
+      rawStatus === 'paid' ||
+      rawStatus === 'approved' ||
+      rawStatus === '결제완료' ||
+      rawStatus === '승인완료';
+
+    if (!isSuccess) {
+      failedCount += 1;
+      continue;
+    }
+
+    successfulCount += 1;
+    const amt = Number(d.amount) || 0;
+    totalAmount += amt;
+
+    // 1. 수단별
+    const { category, easyPayDetail } = classifyPaymentMethod(d.payment_method);
+    if (!methodMatrix[category]) {
+      methodMatrix[category] = { amount: 0, count: 0 };
+    }
+    methodMatrix[category].amount += amt;
+    methodMatrix[category].count += 1;
+
+    if (category === '간편결제' && easyPayDetail) {
+      if (!methodMatrix['간편결제'].breakdown) {
+        methodMatrix['간편결제'].breakdown = {};
+      }
+      if (!methodMatrix['간편결제'].breakdown[easyPayDetail]) {
+        methodMatrix['간편결제'].breakdown[easyPayDetail] = { amount: 0, count: 0 };
+      }
+      methodMatrix['간편결제'].breakdown[easyPayDetail].amount += amt;
+      methodMatrix['간편결제'].breakdown[easyPayDetail].count += 1;
+    }
+
+    // 2. 기기별
+    const isKiosk = d.device_type === 'KIOSK' || String(d.id || '').toUpperCase().includes('KIOSK');
+    if (isKiosk) {
+      deviceMatrix.kioskAmount += amt;
+      deviceMatrix.kioskCount += 1;
+    } else {
+      deviceMatrix.webAmount += amt;
+      deviceMatrix.webCount += 1;
+    }
+
+    // 3. 항목별
+    const item = d.item_name || '일반헌금/보시';
+    if (!itemMatrix[item]) {
+      itemMatrix[item] = { amount: 0, count: 0 };
+    }
+    itemMatrix[item].amount += amt;
+    itemMatrix[item].count += 1;
+
+    // 4. 정기 vs 1회성
+    if (d.is_recurring) {
+      subscriptionMatrix.recurringAmount += amt;
+      subscriptionMatrix.recurringCount += 1;
+    } else {
+      subscriptionMatrix.oneTimeAmount += amt;
+      subscriptionMatrix.oneTimeCount += 1;
+    }
+  }
+
+  const avgTicket = successfulCount > 0 ? Math.round(totalAmount / successfulCount) : 0;
+
+  const summaryRecord = {
+    tenant_id: tid,
+    closing_date: targetDateStr,
+    cutoff_timestamp: dayEnd,
+    total_amount: totalAmount,
+    total_count: successfulCount,
+    successful_count: successfulCount,
+    failed_count: failedCount,
+    avg_ticket_amount: avgTicket,
+    method_matrix: methodMatrix,
+    device_matrix: deviceMatrix,
+    item_matrix: itemMatrix,
+    subscription_matrix: subscriptionMatrix,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: saved, error: saveErr } = await sb
+    .from('daily_closing_summaries')
+    .upsert(summaryRecord, { onConflict: 'tenant_id,closing_date' })
+    .select('*')
+    .maybeSingle();
+
+  if (saveErr || !saved) {
+    console.error(`Failed to upsert daily closing summary for ${tid} on ${targetDateStr}:`, saveErr?.message);
+    return null;
+  }
+
+  return rowToDailyClosingSummary(saved);
+}
+
+/**
+ * 특정 단체의 기간별 마감 스냅샷 목록을 DB에서 조회합니다.
+ * 아직 DB에 스냅샷이 쌓이지 않은 과거 일자(전일 23:59:59 이전)가 있다면 자동 집계 후 영구 적재(Backfill)합니다.
+ */
+export async function getDailyClosingSnapshots(
+  tenantId: string,
+  startDateStr?: string,
+  endDateStr?: string
+): Promise<{
+  snapshots: DailyClosingSummary[];
+  summary: {
+    totalAmount: number;
+    totalCount: number;
+    successfulCount: number;
+    failedCount: number;
+    avgTicketAmount: number;
+    approvalSuccessRate: string;
+    methodMatrix: Record<string, { amount: number; count: number; breakdown?: Record<string, { amount: number; count: number }> }>;
+    deviceMatrix: { kioskAmount: number; kioskCount: number; webAmount: number; webCount: number };
+    itemMatrix: Record<string, { amount: number; count: number }>;
+    subscriptionMatrix: { recurringAmount: number; recurringCount: number; oneTimeAmount: number; oneTimeCount: number };
+  };
+  cutoffDateStr: string;
+}> {
+  const sb = pgClient();
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
+
+  // 전일 23:59:59 KST 기준
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const maxClosingDateStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+  const cutoffTimestamp = new Date(`${maxClosingDateStr}T23:59:59.999+09:00`).toISOString();
+
+  // 1. 이미 DB에 적재된 스냅샷 조회
+  let q = sb
+    .from('daily_closing_summaries')
+    .select('*')
+    .eq('tenant_id', tid)
+    .lte('closing_date', maxClosingDateStr)
+    .order('closing_date', { ascending: true });
+
+  if (startDateStr) {
+    q = q.gte('closing_date', startDateStr);
+  }
+  if (endDateStr) {
+    const effectiveEnd = endDateStr < maxClosingDateStr ? endDateStr : maxClosingDateStr;
+    q = q.lte('closing_date', effectiveEnd);
+  }
+
+  const { data: existingRows } = await q;
+  const existingMap = new Map<string, any>();
+  for (const r of existingRows || []) {
+    existingMap.set(r.closing_date, r);
+  }
+
+  // 2. 과거 기부 원장 중 스냅샷이 누락된 일자가 있는지 확인하고 자동 영구 적재(Backfill)
+  let dateQuery = sb
+    .from('donations')
+    .select('created_at')
+    .lte('created_at', cutoffTimestamp);
+
+  if (tenant?.slug && tenant.id !== tenant.slug) {
+    dateQuery = dateQuery.in('tenant_id', [tenant.id, tenant.slug]);
+  } else {
+    dateQuery = dateQuery.eq('tenant_id', tid);
+  }
+
+  if (startDateStr) {
+    dateQuery = dateQuery.gte('created_at', new Date(`${startDateStr}T00:00:00+09:00`).toISOString());
+  }
+  if (endDateStr) {
+    const effectiveEnd = endDateStr < maxClosingDateStr ? endDateStr : maxClosingDateStr;
+    dateQuery = dateQuery.lte('created_at', new Date(`${effectiveEnd}T23:59:59.999+09:00`).toISOString());
+  }
+
+  const { data: dateRows } = await dateQuery;
+  const missingDates = new Set<string>();
+
+  for (const r of dateRows || []) {
+    if (!r.created_at) continue;
+    const dStr = new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+    if (dStr <= maxClosingDateStr && !existingMap.has(dStr)) {
+      missingDates.add(dStr);
+    }
+  }
+
+  // 누락 일자 스냅샷 생성 및 DB 저장
+  if (missingDates.size > 0) {
+    for (const dStr of Array.from(missingDates).sort()) {
+      const generated = await generateAndSaveDailyClosingSnapshot(tid, dStr);
+      if (generated) {
+        existingMap.set(dStr, generated);
+      }
+    }
+  }
+
+  // 3. 최종 정렬된 스냅샷 목록 변환
+  const snapshots: DailyClosingSummary[] = Array.from(existingMap.values())
+    .map(rowToDailyClosingSummary)
+    .sort((a, b) => (a.closingDate || '').localeCompare(b.closingDate || ''));
+
+  // 4. 기간 종합 요약(Overall Summary) 산출 (스냅샷 합산)
+  let sumAmount = 0;
+  let sumSuccessCount = 0;
+  let sumFailedCount = 0;
+
+  const aggMethodMatrix: Record<string, { amount: number; count: number; breakdown?: Record<string, { amount: number; count: number }> }> = {
+    '신용카드': { amount: 0, count: 0 },
+    '간편결제': {
+      amount: 0,
+      count: 0,
+      breakdown: {
+        '카카오페이': { amount: 0, count: 0 },
+        '네이버페이': { amount: 0, count: 0 },
+        '토스페이': { amount: 0, count: 0 },
+        '기타 간편결제': { amount: 0, count: 0 },
+      },
+    },
+    '가상계좌': { amount: 0, count: 0 },
+  };
+
+  const aggDeviceMatrix = { kioskAmount: 0, kioskCount: 0, webAmount: 0, webCount: 0 };
+  const aggItemMatrix: Record<string, { amount: number; count: number }> = {};
+  const aggSubscriptionMatrix = { recurringAmount: 0, recurringCount: 0, oneTimeAmount: 0, oneTimeCount: 0 };
+
+  for (const s of snapshots) {
+    sumAmount += s.totalAmount;
+    sumSuccessCount += s.successfulCount;
+    sumFailedCount += s.failedCount;
+
+    // 수단별
+    for (const [mKey, mVal] of Object.entries(s.methodMatrix || {})) {
+      if (!aggMethodMatrix[mKey]) aggMethodMatrix[mKey] = { amount: 0, count: 0 };
+      aggMethodMatrix[mKey].amount += mVal.amount || 0;
+      aggMethodMatrix[mKey].count += mVal.count || 0;
+      if (mVal.breakdown) {
+        if (!aggMethodMatrix[mKey].breakdown) aggMethodMatrix[mKey].breakdown = {};
+        for (const [bKey, bVal] of Object.entries(mVal.breakdown)) {
+          if (!aggMethodMatrix[mKey].breakdown![bKey]) {
+            aggMethodMatrix[mKey].breakdown![bKey] = { amount: 0, count: 0 };
+          }
+          aggMethodMatrix[mKey].breakdown![bKey].amount += bVal.amount || 0;
+          aggMethodMatrix[mKey].breakdown![bKey].count += bVal.count || 0;
+        }
+      }
+    }
+
+    // 기기별
+    if (s.deviceMatrix) {
+      aggDeviceMatrix.kioskAmount += s.deviceMatrix.kioskAmount || 0;
+      aggDeviceMatrix.kioskCount += s.deviceMatrix.kioskCount || 0;
+      aggDeviceMatrix.webAmount += s.deviceMatrix.webAmount || 0;
+      aggDeviceMatrix.webCount += s.deviceMatrix.webCount || 0;
+    }
+
+    // 항목별
+    for (const [iKey, iVal] of Object.entries(s.itemMatrix || {})) {
+      if (!aggItemMatrix[iKey]) aggItemMatrix[iKey] = { amount: 0, count: 0 };
+      aggItemMatrix[iKey].amount += iVal.amount || 0;
+      aggItemMatrix[iKey].count += iVal.count || 0;
+    }
+
+    // 정기 vs 1회성
+    if (s.subscriptionMatrix) {
+      aggSubscriptionMatrix.recurringAmount += s.subscriptionMatrix.recurringAmount || 0;
+      aggSubscriptionMatrix.recurringCount += s.subscriptionMatrix.recurringCount || 0;
+      aggSubscriptionMatrix.oneTimeAmount += s.subscriptionMatrix.oneTimeAmount || 0;
+      aggSubscriptionMatrix.oneTimeCount += s.subscriptionMatrix.oneTimeCount || 0;
+    }
+  }
+
+  const totalAttempts = sumSuccessCount + sumFailedCount;
+  const approvalRate = totalAttempts > 0 ? `${((sumSuccessCount / totalAttempts) * 100).toFixed(1)}%` : '0.0%';
+  const avgTicket = sumSuccessCount > 0 ? Math.round(sumAmount / sumSuccessCount) : 0;
+
+  return {
+    snapshots,
+    summary: {
+      totalAmount: sumAmount,
+      totalCount: sumSuccessCount,
+      successfulCount: sumSuccessCount,
+      failedCount: sumFailedCount,
+      avgTicketAmount: avgTicket,
+      approvalSuccessRate: approvalRate,
+      methodMatrix: aggMethodMatrix,
+      deviceMatrix: aggDeviceMatrix,
+      itemMatrix: aggItemMatrix,
+      subscriptionMatrix: aggSubscriptionMatrix,
+    },
+    cutoffDateStr: `${maxClosingDateStr} 23:59:59`,
+  };
+}
+
+/**
+ * 전체 또는 특정 단체에 대해 전일 마감 스냅샷 일괄 생성 배치 실행
+ */
+export async function runDailyClosingBatch(targetDateStr?: string, targetTenantId?: string): Promise<{
+  processedTenants: number;
+  processedDate: string;
+}> {
+  const sb = pgClient();
+  const dateStr = targetDateStr || (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+  })();
+
+  let tenantIds: string[] = [];
+  if (targetTenantId) {
+    const t = await getTenantById(targetTenantId) || await getTenantBySlug(targetTenantId);
+    tenantIds = [t?.id ?? targetTenantId];
+  } else {
+    const tenants = await getAllTenants();
+    tenantIds = tenants.map((t) => t.id);
+  }
+
+  let count = 0;
+  for (const tid of tenantIds) {
+    try {
+      await generateAndSaveDailyClosingSnapshot(tid, dateStr);
+      count += 1;
+    } catch (e) {
+      console.error(`Batch closing error for tenant ${tid}:`, e);
+    }
+  }
+
+  return { processedTenants: count, processedDate: dateStr };
+}
+
+/**
+ * 마감 기준일(전일 23:59:59) 이내의 상세 수납 원장 서버 페이징 조회
+ */
+export async function getClosedTransactionsPaged(
+  tenantId: string,
+  options: {
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }
+): Promise<{
+  items: Donation[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}> {
+  const sb = pgClient();
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
+
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const maxClosingDateStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+  const cutoffTimestamp = new Date(`${maxClosingDateStr}T23:59:59.999+09:00`).toISOString();
+
+  const page = Math.max(1, options.page || 1);
+  const pageSize = Math.min(100, Math.max(1, options.pageSize || 10));
+  const offset = (page - 1) * pageSize;
+
+  let q = sb
+    .from('donations')
+    .select('*', { count: 'exact' })
+    .lte('created_at', cutoffTimestamp)
+    .order('created_at', { ascending: false });
+
+  if (tenant?.slug && tenant.id !== tenant.slug) {
+    q = q.in('tenant_id', [tenant.id, tenant.slug]);
+  } else {
+    q = q.eq('tenant_id', tid);
+  }
+
+  if (options.startDate) {
+    q = q.gte('created_at', new Date(`${options.startDate}T00:00:00+09:00`).toISOString());
+  }
+  if (options.endDate) {
+    const effectiveEnd = options.endDate < maxClosingDateStr ? options.endDate : maxClosingDateStr;
+    q = q.lte('created_at', new Date(`${effectiveEnd}T23:59:59.999+09:00`).toISOString());
+  }
+
+  if (options.search && options.search.trim()) {
+    const term = options.search.trim();
+    q = q.or(`donor_name.ilike.%${term}%,id.ilike.%${term}%,item_name.ilike.%${term}%,payment_method.ilike.%${term}%`);
+  }
+
+  q = q.range(offset, offset + pageSize - 1);
+
+  const { data, count, error } = await q;
+  if (error) {
+    console.error('getClosedTransactionsPaged query error:', error.message);
+    return { items: [], totalCount: 0, page, pageSize, totalPages: 0 };
+  }
+
+  const totalCount = count ?? 0;
+  const items = (data || []).map(rowToDonation);
+
+  return {
+    items,
+    totalCount,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+  };
+}
 
 

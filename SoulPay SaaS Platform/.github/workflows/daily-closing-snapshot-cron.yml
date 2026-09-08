@@ -1,0 +1,30 @@
+name: Daily Closing Statistics Snapshot Batch Scheduler
+
+on:
+  schedule:
+    # 매일 15:05 UTC = 00:05 KST (한국 표준시 매일 자정 5분 후 전일 23:59:59 마감 스냅샷 자동 DB 영구 적재)
+    - cron: '5 15 * * *'
+  workflow_dispatch: # 관리자 수동 즉시 실행 가능
+
+jobs:
+  run-closing-snapshot-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger SoulPay Daily Closing Snapshot Batch
+        run: |
+          echo "Triggering SoulPay Daily Closing Snapshot Batch Pipeline..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
+            "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/statistics/closing-snapshots/batch-run" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          
+          BODY=$(echo "$RESPONSE" | sed -e '$d')
+          STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d: -f2)
+
+          echo "HTTP Status: $STATUS"
+          echo "Response Body: $BODY"
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "::error::Daily closing snapshot batch failed with HTTP status $STATUS"
+            exit 1
+          fi
