@@ -1143,8 +1143,13 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const isTest = config?.devMode !== undefined ? Boolean(config.devMode) : (shopcode === "240000006" || ver === "smbtest");
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     
-    // 나노페이 PG 웹 결제창 표준 요청 URL (Smallbee 공식 검증: PC/Mobile 공통 mobile request.io 엔드포인트 사용)
-    const NANO_API_URL = `${baseUrl}/api/payment/cert/mobile/request.io`;
+    // 나노페이 PG 웹 결제창 표준 요청 URL (PC: /api/payment/cert/pc/request.io, Mobile: /api/payment/cert/mobile/request.io)
+    const reqDeviceType = deviceType ? String(deviceType).toLowerCase() : "";
+    const userAgent = c.req.header("user-agent") || "";
+    const isMobileClient = reqDeviceType === "mobile" || (!reqDeviceType && /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent));
+    const NANO_API_URL = isMobileClient
+      ? `${baseUrl}/api/payment/cert/mobile/request.io`
+      : `${baseUrl}/api/payment/cert/pc/request.io`;
       
     // 임시 거래 내역 생성 (pending 상태)
     const tempDonationId = Date.now().toString() + Math.floor(10000 + Math.random() * 90000).toString();

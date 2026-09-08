@@ -656,7 +656,7 @@ export default function PaymentSelection() {
 
         paymentWindow.document.write('<p style="text-align:center;padding-top:60px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;color:#334155;">나노페이 안전 결제창으로 연결 중입니다...</p>');
 
-        const isMobile = window.innerWidth <= 768;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth <= 768);
         let donorEmailToSend = donationFormData.email || '';
         if (!donorEmailToSend && donationFormData.phone) {
           const cleanP = donationFormData.phone.replace(/[^0-9]/g, '');
