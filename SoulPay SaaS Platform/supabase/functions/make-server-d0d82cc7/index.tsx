@@ -2240,6 +2240,8 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           cardNo: cardNo || "",
           cardName: cardName || "신용카드",
           recurringDay: recurringInterval === 'monthly' ? recurringDay : 10,
+          recurringInterval,
+          recurringDayOfWeek,
           nextPaymentDate,
           status: "active",
         });

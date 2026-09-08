@@ -1014,7 +1014,13 @@ export default function MyDonations() {
                             </Badge>
                           </div>
                           <div className="text-xs text-zinc-500 space-y-0.5">
-                            <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> ({sub.recurringInterval === 'daily' ? '매일 자동결제' : sub.recurringInterval === 'weekly' ? `매주 (${sub.recurringDayOfWeek || '일'})요일` : `매월 ${sub.recurringDay || 10}일`})</p>
+                            <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> ({
+                              (sub.recurringInterval || sub.recurring_interval) === 'daily'
+                                ? '매일 자동결제'
+                                : (sub.recurringInterval || sub.recurring_interval) === 'weekly'
+                                  ? `매주 (${['일','월','화','수','목','금','토'][Number(sub.recurringDayOfWeek ?? sub.recurring_day_of_week ?? 0)] || '일'})요일`
+                                  : `매월 ${sub.recurringDay || sub.recurring_day || 10}일`
+                            })</p>
                             <p>· 결제카드: {sub.cardName || '신용카드'} ({sub.cardNo || '****-****'})</p>
                             {(sub.nextPaymentDate || sub.next_payment_date) && (
                               <p>· 다음(첫) 결제 예정일: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{sub.nextPaymentDate || sub.next_payment_date}</span></p>

@@ -155,6 +155,8 @@ export interface Subscription {
   cardNo?: string;
   cardName?: string;
   recurringDay: number;
+  recurringInterval?: 'daily' | 'weekly' | 'monthly';
+  recurringDayOfWeek?: number;
   status: 'active' | 'paused' | 'cancelled';
   nextPaymentDate?: string;
   pausedUntil?: string;
@@ -1312,6 +1314,8 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
       card_no: sub.cardNo ?? null,
       card_name: sub.cardName ?? null,
       recurring_day: sub.recurringDay ?? 1,
+      recurring_interval: sub.recurringInterval ?? 'monthly',
+      recurring_day_of_week: sub.recurringDayOfWeek ?? null,
       status: 'active',
       next_payment_date: sub.nextPaymentDate ?? null,
       created_at: now, updated_at: now,
@@ -1324,7 +1328,10 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
     donorPhone: data.donor_phone, donorEmail: data.donor_email,
     itemId: data.item_id, itemName: data.item_name, amount: data.amount,
     userId: data.user_id, billKey: data.bill_key, cardNo: data.card_no, cardName: data.card_name,
-    recurringDay: data.recurring_day, status: data.status,
+    recurringDay: data.recurring_day,
+    recurringInterval: data.recurring_interval || 'monthly',
+    recurringDayOfWeek: data.recurring_day_of_week,
+    status: data.status,
     nextPaymentDate: data.next_payment_date, pausedUntil: data.paused_until,
     createdAt: data.created_at, updatedAt: data.updated_at,
   };
@@ -1343,7 +1350,10 @@ export async function getSubscriptionsByPhone(phone: string): Promise<Subscripti
     donorPhone: r.donor_phone, donorEmail: r.donor_email,
     itemId: r.item_id, itemName: r.item_name, amount: r.amount,
     userId: r.user_id, billKey: r.bill_key, cardNo: r.card_no, cardName: r.card_name,
-    recurringDay: r.recurring_day, status: r.status,
+    recurringDay: r.recurring_day,
+    recurringInterval: r.recurring_interval || 'monthly',
+    recurringDayOfWeek: r.recurring_day_of_week,
+    status: r.status,
     nextPaymentDate: r.next_payment_date, pausedUntil: r.paused_until,
     createdAt: r.created_at, updatedAt: r.updated_at,
   }));
@@ -1363,7 +1373,10 @@ export async function updateSubscriptionStatus(id: string, status: 'active' | 'p
     donorPhone: data.donor_phone, donorEmail: data.donor_email,
     itemId: data.item_id, itemName: data.item_name, amount: data.amount,
     userId: data.user_id, billKey: data.bill_key, cardNo: data.card_no, cardName: data.card_name,
-    recurringDay: data.recurring_day, status: data.status,
+    recurringDay: data.recurring_day,
+    recurringInterval: data.recurring_interval || 'monthly',
+    recurringDayOfWeek: data.recurring_day_of_week,
+    status: data.status,
     nextPaymentDate: data.next_payment_date, pausedUntil: data.paused_until,
     createdAt: data.created_at, updatedAt: data.updated_at,
   };
@@ -1377,7 +1390,10 @@ export async function getAllActiveSubscriptions(): Promise<Subscription[]> {
     donorPhone: r.donor_phone, donorEmail: r.donor_email,
     itemId: r.item_id, itemName: r.item_name, amount: r.amount,
     userId: r.user_id, billKey: r.bill_key, cardNo: r.card_no, cardName: r.card_name,
-    recurringDay: r.recurring_day, status: r.status,
+    recurringDay: r.recurring_day,
+    recurringInterval: r.recurring_interval || 'monthly',
+    recurringDayOfWeek: r.recurring_day_of_week,
+    status: r.status,
     nextPaymentDate: r.next_payment_date, pausedUntil: r.paused_until,
     createdAt: r.created_at, updatedAt: r.updated_at,
   }));
