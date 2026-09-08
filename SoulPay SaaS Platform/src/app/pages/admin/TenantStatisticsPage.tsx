@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
@@ -45,6 +46,7 @@ export default function TenantStatisticsPage() {
   const [donations, setDonations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'method' | 'device' | 'item' | 'subscription'>('overview');
+  const [isEasyPayModalOpen, setIsEasyPayModalOpen] = useState(false);
 
   const [periodUnit, setPeriodUnit] = useState<PeriodUnit>('daily');
   const [periodSelection, setPeriodSelection] = useState<PeriodSelection>(() => {
@@ -281,6 +283,53 @@ export default function TenantStatisticsPage() {
 
     return { map, summaryList, chartData };
   }, [snapshotDonations]);
+
+  // 간편결제 세부 수단 파싱 함수
+  const getEasyPaySubMethod = (rawMethod?: string): string => {
+    if (!rawMethod) return '기타 간편결제';
+    const m = String(rawMethod).trim();
+    const lower = m.toLowerCase();
+
+    if (m.includes('카카오') || lower.includes('kakao')) return '카카오페이';
+    if (m.includes('네이버') || lower.includes('naver')) return '네이버페이';
+    if (m.includes('토스') || lower.includes('toss')) return '토스페이';
+    if (m.includes('페이코') || lower.includes('payco')) return '페이코';
+    if (m.includes('엘페이') || lower.includes('lpay')) return '엘페이';
+    if (m.includes('국민앱카드') || lower.includes('kb')) return '국민앱카드';
+    if (m.includes('계좌') || m.includes('이체') || lower.includes('transfer') || lower.includes('dbank')) return '실시간 계좌이체';
+    return '기타 간편결제';
+  };
+
+  // 선택 기간 내 실제 간편결제 거래 내역 필터링
+  const easyPayDonations = useMemo(() => {
+    return snapshotDonations.filter((d) => {
+      const cat = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
+      return cat === '간편결제';
+    });
+  }, [snapshotDonations]);
+
+  // 간편결제 세부 수단별 통계 집계
+  const easyPaySubStats = useMemo(() => {
+    const map: Record<string, { amount: number; count: number }> = {};
+    easyPayDonations.forEach((d) => {
+      const sub = getEasyPaySubMethod(d.paymentMethod || d.payment_method || d.method);
+      if (!map[sub]) map[sub] = { amount: 0, count: 0 };
+      map[sub].amount += Number(d.amount) || 0;
+      map[sub].count += 1;
+    });
+
+    const totalAmount = easyPayDonations.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
+    const totalCount = easyPayDonations.length;
+
+    const list = Object.entries(map).map(([name, stat]) => ({
+      name,
+      amount: stat.amount,
+      count: stat.count,
+      ratio: totalAmount > 0 ? ((stat.amount / totalAmount) * 100).toFixed(1) : '0',
+    })).sort((a, b) => b.amount - a.amount);
+
+    return { totalAmount, totalCount, list };
+  }, [easyPayDonations]);
 
   // 3. 기기/채널별 통계 (Device)
   const deviceStats = useMemo(() => {
@@ -929,15 +978,36 @@ export default function TenantStatisticsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {methodStats.summaryList.map((item) => (
-                          <TableRow key={item.name}>
-                            <TableCell className="font-semibold">{item.name}</TableCell>
-                            <TableCell className="text-right font-medium">{item.count}건</TableCell>
-                            <TableCell className="text-right font-bold text-indigo-600">
-                              {item.value.toLocaleString()}원
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {methodStats.summaryList.map((item) => {
+                          const isEasyPay = item.name === '간편결제';
+                          return (
+                            <TableRow
+                              key={item.name}
+                              onClick={() => {
+                                if (isEasyPay) setIsEasyPayModalOpen(true);
+                              }}
+                              className={isEasyPay ? 'cursor-pointer hover:bg-amber-50/80 dark:hover:bg-amber-950/30 transition-colors group' : ''}
+                            >
+                              <TableCell className="font-semibold">
+                                <div className="flex items-center gap-2">
+                                  <span>{item.name}</span>
+                                  {isEasyPay && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10.5px] bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 group-hover:bg-amber-100 transition-colors font-bold px-1.5 py-0.5 flex items-center gap-1 shadow-xs"
+                                    >
+                                      세부 분석 🔍
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{item.count}건</TableCell>
+                              <TableCell className="text-right font-bold text-indigo-600">
+                                {item.value.toLocaleString()}원
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </CardContent>
@@ -956,7 +1026,13 @@ export default function TenantStatisticsPage() {
                       <TableRow>
                         <TableHead>조회 기간</TableHead>
                         <TableHead className="text-right">신용카드</TableHead>
-                        <TableHead className="text-right">간편결제</TableHead>
+                        <TableHead
+                          className="text-right text-amber-700 dark:text-amber-400 cursor-pointer hover:underline"
+                          onClick={() => setIsEasyPayModalOpen(true)}
+                          title="클릭하여 간편결제 상세 팝업 열기"
+                        >
+                          간편결제 🔍
+                        </TableHead>
                         <TableHead className="text-right">가상계좌</TableHead>
                         <TableHead className="text-right">총 수납액</TableHead>
                       </TableRow>
@@ -976,7 +1052,11 @@ export default function TenantStatisticsPage() {
                               <span className="font-bold text-slate-700">{(row.methods['신용카드']?.amount || 0).toLocaleString()}원</span>
                               <span className="text-slate-400 ml-1">({row.methods['신용카드']?.count || 0}건)</span>
                             </TableCell>
-                            <TableCell className="text-right text-xs">
+                            <TableCell
+                              className="text-right text-xs cursor-pointer hover:bg-amber-50/70 dark:hover:bg-amber-950/20 transition-colors"
+                              onClick={() => setIsEasyPayModalOpen(true)}
+                              title="클릭하여 간편결제 상세 팝업 열기"
+                            >
                               <span className="font-bold text-amber-700">{(row.methods['간편결제']?.amount || 0).toLocaleString()}원</span>
                               <span className="text-slate-400 ml-1">({row.methods['간편결제']?.count || 0}건)</span>
                             </TableCell>
@@ -1277,6 +1357,185 @@ export default function TenantStatisticsPage() {
           )}
         </div>
       </div>
+
+      {/* 🟢 간편결제 세부 내역 상세 팝업 (Easy Pay Detail Modal) */}
+      <Dialog open={isEasyPayModalOpen} onOpenChange={setIsEasyPayModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-6">
+          <DialogHeader className="pb-2 border-b border-slate-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600">
+                <Smartphone className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                  간편결제 세부 분석 명세
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  선택 조회 기간({periodSelection.startDate.toLocaleDateString()} ~ {periodSelection.endDate.toLocaleDateString()}) 동안 접수된 카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 상세 현황입니다
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6 pt-4">
+            {/* 요약 KPI 카드 3종 */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">총 간편결제 수납액</p>
+                  <p className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">
+                    {easyPaySubStats.totalAmount.toLocaleString()}원
+                  </p>
+                  <p className="text-[11px] text-amber-600/80 mt-1">
+                    전체 수납액의 {overviewStats.totalAmount > 0 ? ((easyPaySubStats.totalAmount / overviewStats.totalAmount) * 100).toFixed(1) : '0'}%
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400">간편결제 거래 건수</p>
+                  <p className="text-2xl font-black text-slate-800 dark:text-zinc-100 mt-1">
+                    {easyPaySubStats.totalCount}건
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    전체 거래의 {overviewStats.totalCount > 0 ? ((easyPaySubStats.totalCount / overviewStats.totalCount) * 100).toFixed(1) : '0'}%
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/40">
+                <CardContent className="p-4">
+                  <p className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">1회 평균 결제액</p>
+                  <p className="text-2xl font-black text-indigo-700 dark:text-indigo-400 mt-1">
+                    {(easyPaySubStats.totalCount > 0 ? Math.round(easyPaySubStats.totalAmount / easyPaySubStats.totalCount) : 0).toLocaleString()}원
+                  </p>
+                  <p className="text-[11px] text-indigo-600/80 mt-1">건당 평균 수납 금액</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 1. 세부 수단별 수납 비중 집계표 */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center justify-between">
+                <span>1. 간편결제 세부 수단별 집계</span>
+                <span className="text-xs font-normal text-slate-500">카카오페이 · 네이버페이 · 토스페이 · 실시간 계좌이체 등</span>
+              </h4>
+              <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 dark:bg-zinc-800/50">
+                      <TableHead>세부 결제 수단</TableHead>
+                      <TableHead className="text-right">결제 건수</TableHead>
+                      <TableHead className="text-right">점유 비중</TableHead>
+                      <TableHead className="text-right">총 수납 금액</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {easyPaySubStats.list.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-slate-400">
+                          조회 기간 내 간편결제 수납 내역이 없습니다 (0건)
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      easyPaySubStats.list.map((item) => {
+                        const getBadgeColor = (name: string) => {
+                          if (name.includes('카카오')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+                          if (name.includes('네이버')) return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                          if (name.includes('토스')) return 'bg-blue-100 text-blue-800 border-blue-300';
+                          if (name.includes('계좌') || name.includes('이체')) return 'bg-purple-100 text-purple-800 border-purple-300';
+                          return 'bg-amber-100 text-amber-800 border-amber-300';
+                        };
+                        return (
+                          <TableRow key={item.name}>
+                            <TableCell className="font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                              <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getBadgeColor(item.name)}`}>
+                                {item.name}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{item.count}건</TableCell>
+                            <TableCell className="text-right font-semibold text-slate-600 dark:text-zinc-400">
+                              {item.ratio}%
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-amber-700 dark:text-amber-400">
+                              {item.amount.toLocaleString()}원
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* 2. 간편결제 개별 거래 상세 명세 목록 */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center justify-between">
+                <span>2. 간편결제 상세 거래 명세 (최신순)</span>
+                <span className="text-xs font-normal text-slate-500">총 {easyPayDonations.length}건</span>
+              </h4>
+              <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-slate-50/90 dark:bg-zinc-800/90 backdrop-blur-sm z-10">
+                    <TableRow>
+                      <TableHead>결제일시</TableHead>
+                      <TableHead>세부수단</TableHead>
+                      <TableHead>성명</TableHead>
+                      <TableHead>{terms.donation}항목</TableHead>
+                      <TableHead className="text-right">금액</TableHead>
+                      <TableHead className="text-center">상태</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {easyPayDonations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-slate-400">
+                          조회 기간 내 간편결제 거래 내역이 없습니다 (0건)
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      easyPayDonations.map((d) => {
+                        const subMethod = getEasyPaySubMethod(d.paymentMethod || d.payment_method || d.method);
+                        return (
+                          <TableRow key={d.id}>
+                            <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                              {new Date(d.createdAt || d.created_at || d.date).toLocaleString('ko-KR', {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </TableCell>
+                            <TableCell className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                              {subMethod}
+                            </TableCell>
+                            <TableCell className="text-xs font-medium text-slate-900 dark:text-zinc-100">
+                              {d.donorName || '무기명'}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 dark:text-zinc-300">
+                              {d.itemName || d.item_name || '일반헌금/보시'}
+                            </TableCell>
+                            <TableCell className="text-right text-xs font-bold text-amber-700 dark:text-amber-400">
+                              {(Number(d.amount) || 0).toLocaleString()}원
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-[10px] px-1.5 py-0.5 font-semibold">
+                                결제완료
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
