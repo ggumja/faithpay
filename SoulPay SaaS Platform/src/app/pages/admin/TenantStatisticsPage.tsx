@@ -1392,7 +1392,10 @@ export default function TenantStatisticsPage() {
 
       {/* 🟢 간편결제 세부 내역 상세 팝업 (Easy Pay Detail Modal - Hallmark Design) */}
       <Dialog open={isEasyPayModalOpen} onOpenChange={setIsEasyPayModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-xl">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-xl"
+          style={{ fontFamily: 'var(--font-ui)' }}
+        >
           {/* 헤더 영역: 닫기 버튼과의 겹침 방지를 위해 pr-10 패딩 부여 */}
           <DialogHeader className="pb-4 border-b border-slate-100 dark:border-zinc-800/80 pr-10">
             <div className="flex items-start gap-3.5">
@@ -1444,7 +1447,7 @@ export default function TenantStatisticsPage() {
                     </span>
                   </div>
                   <div className="my-2.5">
-                    <span className="text-2xl font-black tracking-tight text-amber-700 dark:text-amber-400 font-mono">
+                    <span className="text-2xl font-black tracking-tight text-amber-700 dark:text-amber-400 tabular-nums">
                       {modalEasyPayStats.totalAmount.toLocaleString()}
                     </span>
                     <span className="text-sm font-bold text-amber-800 dark:text-amber-300 ml-1">원</span>
@@ -1466,7 +1469,7 @@ export default function TenantStatisticsPage() {
                     </span>
                   </div>
                   <div className="my-2.5">
-                    <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-zinc-100 font-mono">
+                    <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums">
                       {modalEasyPayStats.totalCount.toLocaleString()}
                     </span>
                     <span className="text-sm font-bold text-slate-700 dark:text-zinc-300 ml-1">건</span>
@@ -1488,7 +1491,7 @@ export default function TenantStatisticsPage() {
                     </span>
                   </div>
                   <div className="my-2.5">
-                    <span className="text-2xl font-black tracking-tight text-indigo-700 dark:text-indigo-400 font-mono">
+                    <span className="text-2xl font-black tracking-tight text-indigo-700 dark:text-indigo-400 tabular-nums">
                       {(modalEasyPayStats.totalCount > 0 ? Math.round(modalEasyPayStats.totalAmount / modalEasyPayStats.totalCount) : 0).toLocaleString()}
                     </span>
                     <span className="text-sm font-bold text-indigo-800 dark:text-indigo-300 ml-1">원</span>
@@ -1559,7 +1562,7 @@ export default function TenantStatisticsPage() {
                                 {item.name}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-mono font-medium text-slate-800 dark:text-zinc-200">
+                            <TableCell className="text-right font-medium text-slate-800 dark:text-zinc-200 tabular-nums">
                               {item.count.toLocaleString()}건
                             </TableCell>
                             <TableCell className="text-right font-medium text-slate-600 dark:text-zinc-400">
@@ -1570,10 +1573,10 @@ export default function TenantStatisticsPage() {
                                     style={{ width: `${Math.min(100, Math.max(0, Number(item.ratio)))}%` }}
                                   />
                                 </div>
-                                <span className="font-mono text-xs w-10 text-right">{item.ratio}%</span>
+                                <span className="text-xs w-10 text-right tabular-nums">{item.ratio}%</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-mono font-bold text-amber-700 dark:text-amber-400">
+                            <TableCell className="text-right font-bold text-amber-700 dark:text-amber-400 tabular-nums">
                               {item.amount.toLocaleString()}원
                             </TableCell>
                           </TableRow>
