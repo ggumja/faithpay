@@ -45,11 +45,15 @@
   --fp-dur-slow: 280ms;
 }
 
-body {
+html, body {
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   word-break: keep-all;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
 }
 
 @keyframes fp-fade-in {
