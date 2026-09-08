@@ -746,7 +746,7 @@ export default function MemberDetailPage() {
                 <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
                   <span className="text-xs font-bold text-slate-500 block">정기 결제 약정 현황</span>
                   <span className="text-base font-bold text-indigo-600 dark:text-indigo-400 mt-1.5 block">
-                    {member.recurringCount > 0 ? `${member.recurringCount}개 약정 유지 중` : '단발 전용'}
+                    {member.recurringCount > 0 ? `${member.recurringCount}개 약정 유지 중` : '1회성 전용'}
                   </span>
                 </div>
 
@@ -855,7 +855,7 @@ export default function MemberDetailPage() {
                             <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
                             <TableCell>
                               <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">
-                                {don.type === 'recurring' ? '🔄 정기' : '⚡ 단발'}
+                                {don.type === 'recurring' ? '🔄 정기' : '⚡ 1회성'}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs text-slate-600 font-medium">{don.paymentMethod}</TableCell>

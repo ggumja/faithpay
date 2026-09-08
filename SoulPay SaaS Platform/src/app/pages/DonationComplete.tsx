@@ -386,7 +386,7 @@ export default function DonationComplete() {
                     return `정기 결제 (매월 ${formData.recurringDay || '-'}일)`;
                   })()],
                   [isRegisteredOnly ? '첫 결제 예정일' : '다음 결제 예정일', nextDateParam || '지정 주기일'],
-                ] : [['결제 유형', '일회성 단발']]),
+                ] : [['결제 유형', '1회성 결제']]),
               ].map(([key, val]) => (
                 <div key={key} className="flex justify-between items-center text-xs">
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium">{key}</span>

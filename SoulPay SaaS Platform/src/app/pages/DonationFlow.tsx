@@ -696,7 +696,7 @@ export default function DonationFlow() {
                   <div className="flex flex-col gap-3">
                     <RecurringOption
                       id="onetime" 
-                      label={`일회성 단발 ${currentTenant.terminology.donation}`}
+                      label={`1회성 ${currentTenant.terminology.donation}`}
                       desc={`이번 한 번만 ${currentTenant.terminology.donation}을 완료합니다.`}
                       selected={!isRecurring} 
                       onClick={() => setIsRecurring(false)}
@@ -715,7 +715,7 @@ export default function DonationFlow() {
                 {/* 단건만 허용 */}
                 {selectedItem.allowOneTime && !selectedItem.allowRecurring && (
                   <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-600">
-                    일회성 단발 {currentTenant.terminology.donation}으로 진행됩니다.
+                    1회성 {currentTenant.terminology.donation}으로 진행됩니다.
                   </div>
                 )}
 

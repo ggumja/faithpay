@@ -527,7 +527,7 @@ export default function DonationMenuManagement() {
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-medium">
                       <Repeat className="h-3 w-3 text-slate-500" />
                       {[
-                        item.allowOneTime && '단발',
+                        item.allowOneTime && '1회성',
                         item.allowRecurring && '정기',
                       ]
                         .filter(Boolean)

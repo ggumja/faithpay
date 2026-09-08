@@ -446,7 +446,7 @@ export function MemberDetailModal({
             <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
               <span className="text-[11px] font-bold text-slate-500 block">정기 약정 수</span>
               <span className="text-sm font-bold text-indigo-600 mt-1 block">
-                {member.recurringCount > 0 ? `${member.recurringCount}개 정기 결제` : '단발 전용'}
+                {member.recurringCount > 0 ? `${member.recurringCount}개 정기 결제` : '1회성 전용'}
               </span>
             </div>
 
@@ -516,7 +516,7 @@ export function MemberDetailModal({
                       <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
                       <TableCell>
                         <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">
-                          {don.type === 'recurring' ? '🔄 정기' : '⚡ 단발'}
+                          {don.type === 'recurring' ? '🔄 정기' : '⚡ 1회성'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-slate-600">{don.paymentMethod}</TableCell>

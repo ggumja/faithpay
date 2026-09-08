@@ -428,7 +428,7 @@ export default function MemberManagement() {
                 <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1">
                   <TabsTrigger value="all" className="font-bold text-xs">전체 ({members.length}명)</TabsTrigger>
                   <TabsTrigger value="recurring" className="font-bold text-xs">정기 약정 ({recurringMembersCount}명)</TabsTrigger>
-                  <TabsTrigger value="once" className="font-bold text-xs">단발 전용 ({members.length - recurringMembersCount}명)</TabsTrigger>
+                  <TabsTrigger value="once" className="font-bold text-xs">1회성 전용 ({members.length - recurringMembersCount}명)</TabsTrigger>
                   <TabsTrigger value="new" className="font-bold text-xs">이번달 신규 ({newThisMonthCount}명)</TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -514,7 +514,7 @@ export default function MemberManagement() {
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-slate-500 border-slate-300 text-[11px]">
-                              ⚪ 단발 전용
+                              ⚪ 1회성 전용
                             </Badge>
                           )}
                         </TableCell>
