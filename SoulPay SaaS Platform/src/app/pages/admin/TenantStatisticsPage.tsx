@@ -131,17 +131,18 @@ export default function TenantStatisticsPage() {
     }
   };
 
-  // 🔴 선택된 기간 선택(periodSelection) 조건에 따라 100% DB 데이터 필터링
+  // 🔴 선택된 기간 선택(periodSelection) 조건 및 전일 23:59:59 마감 스냅샷 기준 100% DB 데이터 필터링
   const snapshotDonations = useMemo(() => {
     const startLimit = periodSelection.startDate;
-    const endLimit = periodSelection.endDate;
+    // 마감통계 기준: 전일 23:59:59 스냅샷 시점을 초과할 수 없음 (당일 실시간 데이터 철저 배제)
+    const endLimit = new Date(Math.min(periodSelection.endDate.getTime(), yesterdayCutoff.getTime()));
 
     return donations.filter((d) => {
       const created = new Date(d.createdAt || d.created_at || d.date || 0);
       if (isNaN(created.getTime())) return false;
 
-      // 1. 선택 기간 범위(시작일 ~ 종료일 23:59:59) 이내
-      if (created > endLimit) return false;
+      // 1. 선택 기간 범위 및 전일 23:59:59 마감 시점 이내 (당일/미래 실시간 데이터 제외)
+      if (created > endLimit || created > yesterdayCutoff) return false;
       if (created < startLimit) return false;
 
       // 2. 정상 승인 완료건(completed/paid/success/approved)만
@@ -155,15 +156,26 @@ export default function TenantStatisticsPage() {
         rawStatus === '승인완료';
       return isCompleted;
     });
-  }, [donations, periodSelection]);
+  }, [donations, periodSelection, yesterdayCutoff]);
 
-  // 마감 승인 성공률 (실제 DB 데이터 기준 계산)
+  // 마감 승인 성공률 (실제 DB 데이터 기준 계산: 선택 기간 내 마감 시점까지의 전체 시도 건 중 정상 승인 건 비율)
   const approvalSuccessRate = useMemo(() => {
-    if (donations.length === 0) return '0.0%';
+    const startLimit = periodSelection.startDate;
+    const endLimit = new Date(Math.min(periodSelection.endDate.getTime(), yesterdayCutoff.getTime()));
+
+    const periodTotalAttempts = donations.filter((d) => {
+      const created = new Date(d.createdAt || d.created_at || d.date || 0);
+      if (isNaN(created.getTime())) return false;
+      if (created > endLimit || created > yesterdayCutoff) return false;
+      if (created < startLimit) return false;
+      return true;
+    });
+
+    if (periodTotalAttempts.length === 0) return '0.0%';
     const successCount = snapshotDonations.length;
-    const totalCount = donations.length;
+    const totalCount = periodTotalAttempts.length;
     return `${((successCount / totalCount) * 100).toFixed(1)}%`;
-  }, [donations, snapshotDonations]);
+  }, [donations, snapshotDonations, periodSelection, yesterdayCutoff]);
 
   // 마감 상세 목록 검색 및 페이징
   const filteredSnapshotList = useMemo(() => {
@@ -649,10 +661,20 @@ export default function TenantStatisticsPage() {
           </div>
 
           {/* ℹ️ 집계 시점 안내 배너 */}
-          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl p-3.5 flex items-center gap-3 shadow-xs">
-            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <span className="font-bold text-xs text-amber-900 dark:text-amber-200">
-              🗓️ 조회 기간: {periodSelection.label} 기준 완료 데이터
+          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                <span className="font-bold text-amber-900 dark:text-amber-200">
+                  🗓️ 조회 기간: {periodSelection.label}
+                </span>
+                <span className="text-amber-700 dark:text-amber-400 font-medium">
+                  (마감 기준일: {cutoffDateStr} 스냅샷)
+                </span>
+              </div>
+            </div>
+            <span className="text-[11px] text-amber-700 dark:text-amber-400 font-medium whitespace-nowrap pl-6 sm:pl-0">
+              * 당일 실시간 수납 건은 익일 00:00 마감 스냅샷 생성 후 통계에 반영됩니다.
             </span>
           </div>
 
@@ -858,7 +880,9 @@ export default function TenantStatisticsPage() {
                       {pagedSnapshotList.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="text-center text-slate-400 py-8">
-                            선택된 기간 조건에 해당되는 마감 수납 내역이 없습니다.
+                            {periodSelection.startDate > yesterdayCutoff
+                              ? '선택하신 기간은 아직 마감(전일 23:59:59)되지 않아 마감 통계 데이터가 없습니다. (당일 거래는 익일 00:00 마감 후 반영)'
+                              : '선택된 기간 조건에 해당되는 마감 수납 내역이 없습니다.'}
                           </TableCell>
                         </TableRow>
                       ) : (
