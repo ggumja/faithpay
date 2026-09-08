@@ -182,10 +182,6 @@ export default function TenantStatisticsPage() {
     }
   }, [tenantSlug, tenants, setCurrentTenant, currentTenant, periodSelection, currentPage, searchTerm]);
 
-  // 마감 승인 성공률 (DB 영구 스냅샷 집계 데이터)
-  const approvalSuccessRate = useMemo(() => {
-    return snapshotSummary?.approvalSuccessRate || '0.0%';
-  }, [snapshotSummary]);
 
   // 마감 상세 목록 페이징 및 필터
   const totalPages = Math.max(1, Math.ceil(totalTransactionCount / pageSize));
@@ -703,7 +699,21 @@ export default function TenantStatisticsPage() {
                     <div className="text-3xl font-black text-indigo-600">
                       {overviewStats.totalAmount.toLocaleString()}원
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">마감 완료 건수: {overviewStats.totalCount}건</p>
+                    <p className="text-xs text-slate-400 mt-1">선택 기간 마감 완료 합계</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      총 마감 수납 건수
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-black text-blue-600">
+                      {overviewStats.totalCount.toLocaleString()}건
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">선택 기간 정상 승인 완료 건수</p>
                   </CardContent>
                 </Card>
 
@@ -718,18 +728,6 @@ export default function TenantStatisticsPage() {
                       {overviewStats.avgAmount.toLocaleString()}원
                     </div>
                     <p className="text-xs text-slate-400 mt-1">1회 결제 시 평균 봉헌 금액</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      마감 승인 성공률
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-blue-600">{approvalSuccessRate}</div>
-                    <p className="text-xs text-slate-400 mt-1">DB 수납 내역 정상 승인 비율</p>
                   </CardContent>
                 </Card>
               </div>
