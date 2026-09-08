@@ -244,7 +244,14 @@ export default function DonationFlow() {
   }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-  const totalSteps = 4;
+  const hasPrayerStep = Boolean(selectedItem.enablePrayerField ?? true);
+  const totalSteps = hasPrayerStep ? 4 : 3;
+
+  useEffect(() => {
+    if (step > totalSteps) {
+      setStep(totalSteps);
+    }
+  }, [totalSteps, step]);
 
   const chips = [1000, 5000, 10000, 50000, 100000, 500000];
 
@@ -288,7 +295,7 @@ export default function DonationFlow() {
       amount,
       name,
       phone,
-      prayerText: prayerText || undefined,
+      prayerText: (hasPrayerStep && prayerText) ? prayerText : undefined,
       baptismName: baptismName || undefined,
       familyMembers: familyMembers.length > 0 ? familyMembers : undefined,
       isRecurring,
@@ -656,14 +663,14 @@ export default function DonationFlow() {
               </div>
             )}
 
-            {/* ── Step 3: 기도/메모 ── */}
-            {step === 3 && (
+            {/* ── Step 3: 기도/메모 (사용 설정 시에만 표시) ── */}
+            {hasPrayerStep && step === 3 && (
               <div>
                 <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
                   {currentTenant.terminology.prayer}
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium">
-                  {selectedItem.enablePrayerField ? '작성하신 마음의 편지는 단체 관리자가 확인할 수 있습니다.' : '선택사항입니다. 적지 않으셔도 괜찮습니다.'}
+                  작성하신 마음의 편지는 단체 관리자가 확인할 수 있습니다.
                 </p>
                 <textarea
                   value={prayerText}
@@ -675,8 +682,8 @@ export default function DonationFlow() {
               </div>
             )}
 
-            {/* ── Step 4: 결제 방식 ── */}
-            {step === 4 && (
+            {/* ── 결제 방식 (기도문 활성화 시 Step 4, 비활성화 시 Step 3) ── */}
+            {((hasPrayerStep && step === 4) || (!hasPrayerStep && step === 3)) && (
               <div className="flex flex-col gap-6">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
