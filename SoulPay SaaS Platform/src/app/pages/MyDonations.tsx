@@ -569,11 +569,12 @@ export default function MyDonations() {
 
     try {
       const res = await subscriptionAPI.updateStatus(subId, newStatus);
-      if (res.success && res.data) {
+      const updatedSub = (res as any)?.subscription || res?.data?.subscription || res?.data;
+      if (res.success && (updatedSub || res.data !== undefined)) {
         toast.success(`정기 ${donationTerm}이(가) ${labelMap[newStatus]} 처리되었습니다.`);
-        setSubscriptions(prev => prev.map(s => s.id === subId ? res.data!.subscription : s));
+        setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, ...(updatedSub || {}), status: newStatus } : s));
       } else {
-        toast.error(`처리 실패: ${res.error}`);
+        toast.error(`처리 실패: ${res.error || '상태 갱신에 실패했습니다.'}`);
       }
     } catch (e) {
       toast.error('처리 중 오류가 발생했습니다.');

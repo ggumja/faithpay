@@ -2717,7 +2717,7 @@ const handleUpdateSubscriptionStatus = async (c: any) => {
     const { status } = await c.req.json(); // 'active' | 'paused' | 'cancelled'
     const updated = await db.updateSubscriptionStatus(id, status);
     if (!updated) return c.json({ success: false, error: "Subscription not found" }, 404);
-    return c.json({ success: true, subscription: updated });
+    return c.json({ success: true, data: updated, subscription: updated });
   } catch (error) {
     return c.json({ success: false, error: "Failed to update subscription status" }, 500);
   }
