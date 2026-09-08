@@ -72,6 +72,7 @@
       font-size: 15px;
       line-height: 1.65;
       overflow-x: clip;
+      width: 100%;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
@@ -80,9 +81,26 @@
       box-sizing: border-box;
     }
 
+    /* Korean Natural Word Wrapping across all text nodes */
+    h1, h2, h3, h4, p, li, td, th, blockquote, figcaption, span, a {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
     a {
       color: inherit;
       text-decoration: none;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-subtle);
+      border: 1px solid var(--color-border);
+      white-space: nowrap;
+      color: var(--color-cobalt);
     }
 
     .container {
@@ -104,8 +122,8 @@
       display: flex;
       align-items: center;
       gap: var(--space-lg);
-      padding: 8px 18px;
-      background: rgba(255, 255, 255, 0.92);
+      padding: 8px 20px;
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(12px);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-full);
@@ -120,6 +138,7 @@
       font-weight: 700;
       letter-spacing: -0.02em;
       color: var(--color-ink);
+      white-space: nowrap;
     }
     .brand-mark {
       width: 22px;
@@ -133,6 +152,7 @@
       font-size: 11px;
       font-weight: 700;
       font-family: var(--font-mono);
+      flex-shrink: 0;
     }
     .nav-links {
       display: flex;
@@ -146,6 +166,7 @@
       font-weight: 500;
       color: var(--color-ink-muted);
       transition: color 0.15s ease;
+      white-space: nowrap;
     }
     .nav-links a:hover {
       color: var(--color-cobalt);
@@ -162,12 +183,14 @@
       font-size: 12px;
       font-weight: 600;
       font-family: var(--font-mono);
+      white-space: nowrap;
     }
     .live-dot {
       width: 6px;
       height: 6px;
       background: var(--color-emerald);
       border-radius: 50%;
+      flex-shrink: 0;
     }
 
     /* Hero Section — Modern Minimal Two-Column Split */
@@ -197,12 +220,15 @@
     }
     .hero-title {
       font-family: var(--font-display);
-      font-size: clamp(34px, 4.2vw, 52px);
+      font-size: clamp(32px, 4vw, 50px);
       font-weight: 700;
-      line-height: 1.18;
+      line-height: 1.2;
       letter-spacing: -0.035em;
       color: var(--color-ink);
       margin: 0;
+    }
+    .title-phrase {
+      display: inline-block;
     }
     .hero-right {
       display: flex;
@@ -211,7 +237,7 @@
       padding-bottom: 6px;
     }
     .hero-lead {
-      font-size: 17px;
+      font-size: 16.5px;
       color: var(--color-ink-muted);
       line-height: 1.7;
       margin: 0;
@@ -225,6 +251,7 @@
     .btn-pill {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       padding: 11px 22px;
       border-radius: var(--radius-full);
@@ -232,6 +259,7 @@
       font-weight: 600;
       transition: all 0.15s ease;
       cursor: pointer;
+      white-space: nowrap;
     }
     .btn-primary {
       background: var(--color-ink);
@@ -274,12 +302,14 @@
       letter-spacing: -0.025em;
       color: var(--color-ink);
       margin: 0 0 10px 0;
+      line-height: 1.3;
     }
     .section-desc {
       font-size: 15px;
       color: var(--color-ink-muted);
       margin: 0;
-      max-width: 620px;
+      max-width: 640px;
+      line-height: 1.65;
     }
 
     /* Macrostructure: Bento Grid (Asymmetric Modular Tiles) */
@@ -314,7 +344,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
       margin-bottom: 20px;
+      flex-wrap: wrap;
     }
     .tile-domain {
       font-family: var(--font-mono);
@@ -325,6 +357,7 @@
       background: var(--color-surface-subtle);
       border: 1px solid var(--color-border);
       color: var(--color-ink);
+      white-space: nowrap;
     }
     .tile-domain.cobalt { color: var(--color-cobalt); background: var(--color-cobalt-light); border-color: var(--color-cobalt-border); }
     .tile-domain.emerald { color: var(--color-emerald); background: var(--color-emerald-light); border-color: var(--color-emerald-border); }
@@ -334,6 +367,7 @@
       font-size: 12px;
       font-weight: 600;
       color: var(--color-ink-dim);
+      white-space: nowrap;
     }
     .tile-title {
       font-family: var(--font-display);
@@ -342,12 +376,13 @@
       letter-spacing: -0.02em;
       color: var(--color-ink);
       margin: 0 0 10px 0;
+      line-height: 1.35;
     }
     .tile-desc {
       font-size: 14px;
       color: var(--color-ink-muted);
       margin: 0 0 24px 0;
-      line-height: 1.65;
+      line-height: 1.68;
     }
 
     /* Honest Feature Rows (No Invented Stats) */
@@ -363,10 +398,11 @@
     }
     .tile-specs li {
       display: flex;
-      align-items: baseline;
+      align-items: flex-start;
       gap: 10px;
-      font-size: 13px;
+      font-size: 13.5px;
       color: var(--color-ink-muted);
+      line-height: 1.55;
     }
     .tile-specs strong {
       color: var(--color-ink);
@@ -378,6 +414,7 @@
       background: var(--color-cobalt);
       border-radius: 1px;
       flex-shrink: 0;
+      margin-top: 7px;
     }
 
     /* Embedded Architecture Diagram Block (No Fake Chrome) */
@@ -409,9 +446,10 @@
       font-size: 15px;
       font-weight: 700;
       color: var(--color-ink);
+      line-height: 1.3;
     }
     .arch-node-desc {
-      font-size: 12px;
+      font-size: 12.5px;
       color: var(--color-ink-muted);
       line-height: 1.6;
     }
@@ -420,19 +458,22 @@
       font-size: 11px;
       color: var(--color-cobalt);
       margin-top: auto;
+      padding-top: 8px;
     }
 
-    /* Honest Infrastructure Comparison Matrix */
+    /* Responsive Architecture Comparison Matrix */
     .matrix-wrapper {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
-      overflow: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       margin-bottom: var(--space-2xl);
       box-shadow: var(--shadow-subtle);
     }
     table {
       width: 100%;
+      min-width: 640px;
       border-collapse: collapse;
       text-align: left;
     }
@@ -440,6 +481,7 @@
       padding: 16px 22px;
       border-bottom: 1px solid var(--color-border-subtle);
       font-size: 14px;
+      line-height: 1.55;
     }
     th {
       background: var(--color-surface-subtle);
@@ -449,6 +491,7 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
     }
     tr:last-child td { border-bottom: none; }
     td strong { color: var(--color-ink); font-weight: 600; }
@@ -476,11 +519,13 @@
       font-weight: 700;
       color: var(--color-ink);
       margin: 0 0 6px 0;
+      line-height: 1.35;
     }
     .cta-text p {
-      font-size: 14px;
+      font-size: 14.5px;
       color: var(--color-ink-muted);
       margin: 0;
+      line-height: 1.6;
     }
 
     /* Footer Archetype: Ft2 Inline Single Line */
@@ -500,7 +545,8 @@
     .footer-left {
       display: flex;
       align-items: center;
-      gap: 14px;
+      flex-wrap: wrap;
+      gap: 10px 14px;
     }
     .footer-brand {
       font-family: var(--font-display);
@@ -513,11 +559,11 @@
       color: var(--color-ink-dim);
     }
 
-    /* Responsiveness — Verified at 768 / 414 / 375 / 320 px */
+    /* Responsiveness & No-Break Rules Verified at 768 / 414 / 375 / 320 px */
     @media (max-width: 900px) {
       .hero-grid {
         grid-template-columns: 1fr;
-        gap: 28px;
+        gap: 32px;
       }
       .bento-grid {
         grid-template-columns: 1fr;
@@ -531,9 +577,22 @@
       .cta-bar {
         flex-direction: column;
         align-items: flex-start;
+        padding: 32px 24px;
       }
     }
-    @media (max-width: 540px) {
+    @media (max-width: 580px) {
+      .container {
+        padding: 0 18px;
+      }
+      .hero {
+        padding: 36px 0 44px;
+      }
+      .tile {
+        padding: 24px 20px;
+      }
+      .arch-canvas {
+        padding: 24px 20px;
+      }
       .arch-flow-grid {
         grid-template-columns: 1fr;
       }
@@ -575,13 +634,13 @@
         <div class="hero-left">
           <span class="eyebrow">Enterprise Multi-Tenant Infrastructure</span>
           <h1 class="hero-title">
-            단 한 건의 결제 단절도 없는<br>
-            완전 격리형 SaaS 아키텍처.
+            <span class="title-phrase">단 한 건의 결제 단절도 없는</span><br>
+            <span class="title-phrase">완전 격리형 SaaS 아키텍처.</span>
           </h1>
         </div>
         <div class="hero-right">
           <p class="hero-lead">
-            SoulPay(소울페이)는 보유 도메인(<code>soulpay.kr</code>, <code>soulpay.co.kr</code>)과 Cloudflare 에지 인프라를 바탕으로 결제 코어와 관리자 포털을 물리 분리하여 <strong>Zero Blast Radius</strong>와 <strong>99.99% 무중단 가용성</strong>을 실현합니다.
+            SoulPay(소울페이)는 보유 도메인(<code>soulpay.kr</code>, <code>soulpay.co.kr</code>)과 Cloudflare 에지 인프라를 결합하여 결제 코어와 관리자 포털을 물리 분리함으로써 <strong>Zero Blast Radius</strong>와 <strong>99.99% 무중단 가용성</strong>을 실현합니다.
           </p>
           <div class="hero-actions">
             <a href="#domains" class="btn-pill btn-primary">4대 독립 서브도메인 검토</a>
@@ -613,10 +672,10 @@
             성도 및 기부자를 위한 실시간 헌금·기부 전용 경량화 엔진입니다. 관리자 분석 도구나 통계 라이브러리를 완전히 배제하여 첫 화면 로딩 시간을 0.8초대로 단축하고, 생체인증 간편결제 및 카드 스캔을 지원합니다.
           </p>
           <ul class="tile-specs">
-            <li><span class="bullet-square"></span> <strong>번들 크기:</strong> 300KB 미만 초경량 최적화 (초고속 인입 보장)</li>
-            <li><span class="bullet-square"></span> <strong>지원 수단:</strong> 카카오페이, 네이버페이, 토스페이, 신용카드, 카드 스캔 연동</li>
-            <li><span class="bullet-square"></span> <strong>장애 격리:</strong> 단체 관리자 및 파트너 배포 작업과 물리적으로 무관 (Zero Blast Radius)</li>
-            <li><span class="bullet-square"></span> <strong>연계 기능:</strong> 무회원 휴대폰 OTP 납부 내역 조회, 정기구독 헌금, 모바일 영수증</li>
+            <li><span class="bullet-square"></span> <span><strong>번들 크기:</strong> 300KB 미만 초경량 최적화 (초고속 인입 보장)</span></li>
+            <li><span class="bullet-square"></span> <span><strong>지원 수단:</strong> 카카오페이, 네이버페이, 토스페이, 신용카드, 카드 스캔 연동</span></li>
+            <li><span class="bullet-square"></span> <span><strong>장애 격리:</strong> 단체 관리자 및 파트너 배포 작업과 물리적으로 무관 (Zero Blast Radius)</span></li>
+            <li><span class="bullet-square"></span> <span><strong>연계 기능:</strong> 무회원 휴대폰 OTP 납부 내역 조회, 정기구독 헌금, 모바일 영수증</span></li>
           </ul>
         </article>
 
@@ -631,9 +690,9 @@
             본사 관리자 전용 관제 포털로 공공 인터넷에 직접 노출되지 않으며, Cloudflare Zero Trust로 완벽히 보호됩니다.
           </p>
           <ul class="tile-specs">
-            <li><span class="bullet-square"></span> <strong>보안 정책:</strong> 사내 공인 IP 및 관리자 2단계 이메일 핀코드 인증</li>
-            <li><span class="bullet-square"></span> <strong>원장 관리:</strong> 다자간 정산 원장 (Multi-Party Ledger) 총괄</li>
-            <li><span class="bullet-square"></span> <strong>가맹 심사:</strong> 단체 고유번호증 및 서류 검토 승인 데스크</li>
+            <li><span class="bullet-square"></span> <span><strong>보안 정책:</strong> 사내 공인 IP 및 관리자 2단계 이메일 핀코드 인증</span></li>
+            <li><span class="bullet-square"></span> <span><strong>원장 관리:</strong> 다자간 정산 원장 (Multi-Party Ledger) 총괄</span></li>
+            <li><span class="bullet-square"></span> <span><strong>가맹 심사:</strong> 단체 고유번호증 및 서류 검토 승인 데스크</span></li>
           </ul>
         </article>
 
@@ -648,9 +707,9 @@
             개별 교회, 성당, 사찰의 재정 담당자와 목회자를 위한 통합 수납 관리 화면입니다. 당일 수납액 자동 마감 집계와 교인 명부 연계를 지원합니다.
           </p>
           <ul class="tile-specs">
-            <li><span class="bullet-square"></span> <strong>당일 마감 집계:</strong> PostgreSQL 기반 결측치 없는 일일 스냅샷 장부 생성</li>
-            <li><span class="bullet-square"></span> <strong>종교별 맞춤 용어:</strong> 기독교(헌금/십일조), 천주교(봉헌/미사), 불교(보시/인등)</li>
-            <li><span class="bullet-square"></span> <strong>교인 행정:</strong> 성도별 연간 기부 총액 및 홈택스 기부금 영수증 연동</li>
+            <li><span class="bullet-square"></span> <span><strong>당일 마감 집계:</strong> PostgreSQL 기반 결측치 없는 일일 스냅샷 장부 생성</span></li>
+            <li><span class="bullet-square"></span> <span><strong>종교별 맞춤 용어:</strong> 기독교(헌금/십일조), 천주교(봉헌/미사), 불교(보시/인등)</span></li>
+            <li><span class="bullet-square"></span> <span><strong>교인 행정:</strong> 성도별 연간 기부 총액 및 홈택스 기부금 영수증 연동</span></li>
           </ul>
         </article>
 
@@ -665,9 +724,9 @@
             전국 지사 및 영업 파트너를 위한 가맹 단체 유치 현황과 PG 결제 수수료 분배(Fee Sharing) 대시보드입니다.
           </p>
           <ul class="tile-specs">
-            <li><span class="bullet-square"></span> <strong>가맹 단체 등록:</strong> 영업 현장 태블릿을 통한 즉각적인 신규 단체 인입</li>
-            <li><span class="bullet-square"></span> <strong>실시간 정산 내역:</strong> 결제 건당 요율 기반의 파트너 수수료 자동 배분</li>
-            <li><span class="bullet-square"></span> <strong>권한 격리:</strong> 타 단체의 상세 교인 명부 및 내부 회계 데이터 접근 차단</li>
+            <li><span class="bullet-square"></span> <span><strong>가맹 단체 등록:</strong> 영업 현장 태블릿을 통한 즉각적인 신규 단체 인입</span></li>
+            <li><span class="bullet-square"></span> <span><strong>실시간 정산 내역:</strong> 결제 건당 요율 기반의 파트너 수수료 자동 배분</span></li>
+            <li><span class="bullet-square"></span> <span><strong>권한 격리:</strong> 타 단체의 상세 교인 명부 및 내부 회계 데이터 접근 차단</span></li>
           </ul>
         </article>
       </div>
