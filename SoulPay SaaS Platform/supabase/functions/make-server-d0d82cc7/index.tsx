@@ -2899,10 +2899,11 @@ const handleCertCallback = async (c: any) => {
     const payWay = body.payWay || "card";
     const cardSrc = String(body.cardSrc || body.cardsrc || "").trim().toUpperCase();
 
-    // 간편결제 식별 (C: PAYCO, O: KAKAOPAY, L: LPAY, V: TOSSPAY, K: 국민앱카드)
+    // 간편결제 식별 (C: PAYCO, O: KAKAOPAY, L: LPAY, V: TOSSPAY, K: 국민앱카드, N: 네이버페이)
     let paymentMethod = payWay || 'card';
     if (cardSrc === 'O') paymentMethod = '카카오페이';
     else if (cardSrc === 'V') paymentMethod = '토스페이';
+    else if (cardSrc === 'N') paymentMethod = '네이버페이';
     else if (cardSrc === 'C') paymentMethod = '페이코';
     else if (cardSrc === 'L') paymentMethod = '엘페이';
     else if (cardSrc === 'K') paymentMethod = '국민앱카드';
