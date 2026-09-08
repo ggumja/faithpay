@@ -997,7 +997,6 @@ export default function DonationHistory() {
                             <SelectItem value="카카오페이">카카오페이</SelectItem>
                             <SelectItem value="네이버페이">네이버페이</SelectItem>
                             <SelectItem value="토스페이">토스페이</SelectItem>
-                            <SelectItem value="계좌이체">계좌이체</SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>

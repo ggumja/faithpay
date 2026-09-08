@@ -1401,7 +1401,7 @@ export default function TenantStatisticsPage() {
                   간편결제 수납 세부 분석
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                  선택된 기간 동안 접수된 카카오페이, 네이버페이, 토스페이, 실시간 계좌이체 등의 세부 수납 통계입니다.
+                  선택된 기간 동안 접수된 카카오페이, 네이버페이, 토스페이의 세부 수납 통계입니다.
                 </DialogDescription>
               </div>
             </div>
