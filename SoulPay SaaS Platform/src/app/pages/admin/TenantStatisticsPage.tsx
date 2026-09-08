@@ -471,36 +471,51 @@ export default function TenantStatisticsPage() {
 
     // 🔴 과거(Past/Left) -> 현재(Present/Right) 시간 오름차순 정렬
     return Object.values(map).sort((a, b) => a.sortTime - b.sortTime);
-  }, [snapshotDonations, periodUnit]);
+  }, [dailySnapshots, periodUnit]);
 
   // CSV Export
-  const handleExportCSV = () => {
-    if (snapshotDonations.length === 0) {
-      toast.error('내보낼 마감 통계 데이터가 없습니다.');
-      return;
-    }
-    const headers = ['봉헌번호', '결제일시', '접수기기', '성명', '봉헌항목', '금액', '결제방법', '정기여부'];
-    const rows = snapshotDonations.map((d) => [
-      `"${d.id || ''}"`,
-      `"${new Date(d.createdAt || d.created_at).toLocaleString()}"`,
-      `"${d.deviceType === 'KIOSK' ? '키오스크' : '모바일/웹'}"`,
-      `"${d.donorName || '무기명'}"`,
-      `"${d.itemName || '일반헌금/보시'}"`,
-      d.amount || 0,
-      `"${getMethodCategory(d.paymentMethod || d.payment_method || d.method)}"`,
-      d.isRecurring ? '정기' : '1회성',
-    ]);
+  const handleExportCSV = async () => {
+    if (!currentTenant) return;
+    try {
+      const startDateStr = formatDateToYMD(periodSelection.startDate);
+      const endDateStr = formatDateToYMD(periodSelection.endDate);
+      const res = await statisticsAPI.getClosingTransactions(currentTenant.id, {
+        startDate: startDateStr,
+        endDate: endDateStr,
+        page: 1,
+        pageSize: 5000,
+      });
+      const list = res.data?.items || [];
+      if (list.length === 0) {
+        toast.error('내보낼 마감 통계 데이터가 없습니다.');
+        return;
+      }
+      const headers = ['봉헌번호', '결제일시', '접수기기', '성명', '봉헌항목', '금액', '결제방법', '정기여부'];
+      const rows = list.map((d: any) => [
+        `"${d.id || ''}"`,
+        `"${new Date(d.createdAt || d.created_at).toLocaleString()}"`,
+        `"${d.deviceType === 'KIOSK' ? '키오스크' : '모바일/웹'}"`,
+        `"${d.donorName || '무기명'}"`,
+        `"${d.itemName || '일반헌금/보시'}"`,
+        d.amount || 0,
+        `"${getMethodCategory(d.paymentMethod || d.payment_method || d.method)}"`,
+        d.isRecurring ? '정기' : '1회성',
+      ]);
 
-    const blob = new Blob(['\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')], {
-      type: 'text/csv;charset=utf-8;',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `마감통계_${cutoffDateStr.slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('전일 마감 통계 CSV 파일을 다운로드했습니다.');
+      const blob = new Blob(['\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')], {
+        type: 'text/csv;charset=utf-8;',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `마감통계_${cutoffDateStr.slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('전일 마감 통계 CSV 파일을 다운로드했습니다.');
+    } catch (e) {
+      console.error('CSV error:', e);
+      toast.error('CSV 다운로드 중 오류가 발생했습니다.');
+    }
   };
 
   if (!currentTenant) {
