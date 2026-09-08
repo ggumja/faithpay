@@ -15,6 +15,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from '../../components/ui/select';
 import {
   Table,
@@ -86,44 +89,67 @@ export function cleanPaymentMethod(method?: string): string {
   if (!method || typeof method !== 'string') return '신용카드';
   const m = method.trim();
   if (!m) return '신용카드';
+  const lower = m.toLowerCase();
 
-  // Card variations ("OffPG 현장 신용카드", "OffPG", "카드 인증결제", "카드결제", "card", "카드")
-  if (
-    m.includes('OffPG') ||
-    m.includes('카드') ||
-    m.toLowerCase().includes('card') ||
-    m.includes('삼성') ||
-    m.includes('애플')
-  ) {
-    return '신용카드';
-  }
-
-  // KakaoPay variations ("카카오페이 (QR/바코드)", "카카오페이 (TC0ONETIME)", "kakaopay")
-  if (m.includes('카카오') || m.toLowerCase().includes('kakao')) {
-    return '카카오페이';
-  }
-
-  // NaverPay variations
-  if (m.includes('네이버') || m.toLowerCase().includes('naver')) {
-    return '네이버페이';
-  }
-
-  // Account Transfer
-  if (m.includes('계좌') || m.includes('이체')) {
-    return '계좌이체';
-  }
-
-  // Virtual Account
-  if (m.includes('가상')) {
+  // 1. 가상계좌
+  if (m.includes('가상') || lower.includes('virtual')) {
     return '가상계좌';
   }
 
-  // Recurring payment
-  if (m.includes('정기') || m.includes('빌링')) {
-    return '정기결제';
+  // 2. 카카오페이
+  if (m.includes('카카오') || lower.includes('kakao')) {
+    return '카카오페이';
   }
 
-  return m;
+  // 3. 네이버페이
+  if (m.includes('네이버') || lower.includes('naver')) {
+    return '네이버페이';
+  }
+
+  // 4. 토스페이 (토스페이먼츠 PG 카드결제 및 토스뱅크 제외)
+  if (
+    m.includes('토스페이') ||
+    lower.includes('tosspay') ||
+    (m.includes('토스') && !m.includes('토스페이먼츠') && !m.includes('토스뱅크'))
+  ) {
+    return '토스페이';
+  }
+
+  // 5. 계좌이체
+  if (m.includes('계좌') || m.includes('이체') || lower.includes('transfer')) {
+    return '계좌이체';
+  }
+
+  // 6. 기타 간편결제
+  if (m.includes('간편') || lower.includes('simple') || lower.includes('easy')) {
+    return '간편결제';
+  }
+
+  // 7. 정기결제
+  if (m.includes('정기') || m.includes('빌링')) {
+    return '신용카드 (정기)';
+  }
+
+  // 8. 신용카드 (현장카드, 신용/체크카드, PG카드결제, card 등)
+  return '신용카드';
+}
+
+/**
+ * 통계 페이지(TenantStatisticsPage)의 3대 결제 수단 분류(신용카드, 간편결제, 가상계좌)와 100% 동기화된 카테고리를 반환합니다.
+ */
+export function getPaymentMethodCategory(method?: string): '신용카드' | '간편결제' | '가상계좌' {
+  const cleaned = cleanPaymentMethod(method);
+  if (cleaned === '가상계좌') return '가상계좌';
+  if (
+    cleaned === '카카오페이' ||
+    cleaned === '네이버페이' ||
+    cleaned === '토스페이' ||
+    cleaned === '계좌이체' ||
+    cleaned === '간편결제'
+  ) {
+    return '간편결제';
+  }
+  return '신용카드';
 }
 
 export function formatDonationId(rawId?: string, createdAtStr?: string): string {
@@ -487,7 +513,23 @@ export default function DonationHistory() {
       phoneStr.includes(searchTerm);
       
     const matchesStatus = statusFilter === 'all' || donation.paymentStatus === statusFilter;
-    const matchesMethod = methodFilter === 'all' || donation.paymentMethod === methodFilter;
+    
+    let matchesMethod = true;
+    if (methodFilter !== 'all') {
+      const category = getPaymentMethodCategory(donation.paymentMethod);
+      const cleaned = cleanPaymentMethod(donation.paymentMethod);
+
+      if (methodFilter === '신용카드') {
+        matchesMethod = category === '신용카드';
+      } else if (methodFilter === '간편결제') {
+        matchesMethod = category === '간편결제';
+      } else if (methodFilter === '가상계좌') {
+        matchesMethod = category === '가상계좌';
+      } else {
+        // 세부 간편결제 수단 (카카오페이, 네이버페이, 토스페이, 계좌이체 등)
+        matchesMethod = cleaned === methodFilter || donation.paymentMethod === methodFilter;
+      }
+    }
     const matchesDevice = deviceFilter === 'all' || donation.deviceType === deviceFilter;
     
     let matchesDate = true;
@@ -934,16 +976,29 @@ export default function DonationHistory() {
                         </SelectContent>
                       </Select>
 
-                      <Select value={methodFilter} onValueChange={setMethodFilter}>
+                      <Select
+                        value={methodFilter}
+                        onValueChange={(val) => {
+                          setMethodFilter(val);
+                          setCurrentPage(1);
+                        }}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="결제방법" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">전체 결제방법</SelectItem>
                           <SelectItem value="신용카드">신용카드</SelectItem>
-                          <SelectItem value="계좌이체">계좌이체</SelectItem>
+                          <SelectItem value="간편결제">간편결제 (전체)</SelectItem>
                           <SelectItem value="가상계좌">가상계좌</SelectItem>
-                          <SelectItem value="카카오페이">카카오페이</SelectItem>
+                          <SelectSeparator />
+                          <SelectGroup>
+                            <SelectLabel className="text-[11px] font-semibold text-slate-400">간편결제 세부</SelectLabel>
+                            <SelectItem value="카카오페이">카카오페이</SelectItem>
+                            <SelectItem value="네이버페이">네이버페이</SelectItem>
+                            <SelectItem value="토스페이">토스페이</SelectItem>
+                            <SelectItem value="계좌이체">계좌이체</SelectItem>
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
 
