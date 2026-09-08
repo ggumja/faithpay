@@ -312,11 +312,11 @@
       line-height: 1.65;
     }
 
-    /* Macrostructure: Bento Grid (Asymmetric Modular Tiles) */
-    .bento-grid {
+    /* 4-Domain Grid (Equal 2x2 Balanced Width) */
+    .domain-grid {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
       margin-bottom: var(--space-2xl);
     }
     .tile {
@@ -326,6 +326,7 @@
       padding: 32px;
       display: flex;
       flex-direction: column;
+      height: 100%;
       box-shadow: var(--shadow-subtle);
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
@@ -333,12 +334,6 @@
       border-color: var(--color-border-focus);
       box-shadow: var(--shadow-hover);
     }
-
-    /* Grid Span Configurations */
-    .span-8 { grid-column: span 8; }
-    .span-4 { grid-column: span 4; }
-    .span-6 { grid-column: span 6; }
-    .span-12 { grid-column: span 12; }
 
     .tile-header {
       display: flex;
@@ -565,11 +560,8 @@
         grid-template-columns: 1fr;
         gap: 32px;
       }
-      .bento-grid {
+      .domain-grid {
         grid-template-columns: 1fr;
-      }
-      .span-8, .span-4, .span-6, .span-12 {
-        grid-column: span 1;
       }
       .arch-flow-grid {
         grid-template-columns: 1fr 1fr;
@@ -660,9 +652,9 @@
         </p>
       </div>
 
-      <div class="bento-grid">
-        <!-- Tile 1: Pay Core (Dominant 8-column card) -->
-        <article class="tile span-8">
+      <div class="domain-grid">
+        <!-- Tile 1: Pay Core -->
+        <article class="tile">
           <div class="tile-header">
             <span class="tile-domain cobalt">pay.soulpay.kr</span>
             <span class="tile-tag">SLA 99.99% Guaranteed</span>
@@ -679,25 +671,8 @@
           </ul>
         </article>
 
-        <!-- Tile 2: Ops Portal (4-column card) -->
-        <article class="tile span-4">
-          <div class="tile-header">
-            <span class="tile-domain amber">ops.soulpay.kr</span>
-            <span class="tile-tag">Zero Trust Protected</span>
-          </div>
-          <h3 class="tile-title">최고 시스템 운영 센터</h3>
-          <p class="tile-desc">
-            본사 관리자 전용 관제 포털로 공공 인터넷에 직접 노출되지 않으며, Cloudflare Zero Trust로 완벽히 보호됩니다.
-          </p>
-          <ul class="tile-specs">
-            <li><span class="bullet-square"></span> <span><strong>보안 정책:</strong> 사내 공인 IP 및 관리자 2단계 이메일 핀코드 인증</span></li>
-            <li><span class="bullet-square"></span> <span><strong>원장 관리:</strong> 다자간 정산 원장 (Multi-Party Ledger) 총괄</span></li>
-            <li><span class="bullet-square"></span> <span><strong>가맹 심사:</strong> 단체 고유번호증 및 서류 검토 승인 데스크</span></li>
-          </ul>
-        </article>
-
-        <!-- Tile 3: Admin Portal (6-column card) -->
-        <article class="tile span-6">
+        <!-- Tile 2: Admin Portal -->
+        <article class="tile">
           <div class="tile-header">
             <span class="tile-domain cobalt">admin.soulpay.kr</span>
             <span class="tile-tag">Tenant Role Guard</span>
@@ -713,8 +688,8 @@
           </ul>
         </article>
 
-        <!-- Tile 4: Partner Portal (6-column card) -->
-        <article class="tile span-6">
+        <!-- Tile 3: Partner Portal -->
+        <article class="tile">
           <div class="tile-header">
             <span class="tile-domain emerald">partner.soulpay.kr</span>
             <span class="tile-tag">Commission Ledger</span>
@@ -727,6 +702,23 @@
             <li><span class="bullet-square"></span> <span><strong>가맹 단체 등록:</strong> 영업 현장 태블릿을 통한 즉각적인 신규 단체 인입</span></li>
             <li><span class="bullet-square"></span> <span><strong>실시간 정산 내역:</strong> 결제 건당 요율 기반의 파트너 수수료 자동 배분</span></li>
             <li><span class="bullet-square"></span> <span><strong>권한 격리:</strong> 타 단체의 상세 교인 명부 및 내부 회계 데이터 접근 차단</span></li>
+          </ul>
+        </article>
+
+        <!-- Tile 4: Ops Portal -->
+        <article class="tile">
+          <div class="tile-header">
+            <span class="tile-domain amber">ops.soulpay.kr</span>
+            <span class="tile-tag">Zero Trust Protected</span>
+          </div>
+          <h3 class="tile-title">최고 시스템 운영 센터</h3>
+          <p class="tile-desc">
+            본사 관리자 전용 관제 포털로 공공 인터넷에 직접 노출되지 않으며, Cloudflare Zero Trust로 완벽히 보호됩니다.
+          </p>
+          <ul class="tile-specs">
+            <li><span class="bullet-square"></span> <span><strong>보안 정책:</strong> 사내 공인 IP 및 관리자 2단계 이메일 핀코드 인증</span></li>
+            <li><span class="bullet-square"></span> <span><strong>원장 관리:</strong> 다자간 정산 원장 (Multi-Party Ledger) 총괄</span></li>
+            <li><span class="bullet-square"></span> <span><strong>가맹 심사:</strong> 단체 고유번호증 및 서류 검토 승인 데스크</span></li>
           </ul>
         </article>
       </div>
