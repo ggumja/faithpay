@@ -58,6 +58,11 @@ const FORBIDDEN_RULES = [
     id: 'DUMMY_BANK_OR_BIZNO',
     description: '가상 계좌번호 또는 임의 사업자번호 하드코딩 금지',
     regex: /('100-032-456789'|'1208200000')/,
+  },
+  {
+    id: 'DUMMY_DONOR_EMAIL_FALLBACK',
+    description: '임의의 가상 신도/기부자 이메일 Fallback 금지 (donator@soulpay.kr 등)',
+    regex: /['"`]donator@soulpay\.kr['"`]/,
   }
 ];
 

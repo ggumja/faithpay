@@ -1171,7 +1171,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const reqPayAmt = donationData.amount.toString();
     const realDonorName = donationData?.name || donationData?.donorName || "신도";
     const donorPhone = (donationData?.phone || donationData?.donorPhone || "").replace(/[^0-9]/g, '');
-    const donorEmail = donationData?.email || "donator@soulpay.kr";
+    const donorEmail = donationData?.email ? String(donationData.email).trim() : "";
 
     // Smallbee 검증 완료 공식 해시: sha256(ver + loginId + shopcode + reqPayAmt + timestamp + apiKey + "NANO")
     const hashValue = crypto.createHash("sha256")
