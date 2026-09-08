@@ -540,15 +540,7 @@ export const memberAPI = {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     if (!cleanPhone) return { success: false, error: '유효한 전화번호가 필요합니다.' };
 
-    // 1. /members/profile/:phone 백엔드 API
-    try {
-      const res = await fetchAPI<any>(`/members/profile/${cleanPhone}`);
-      if (res.success && res.data && typeof res.data === 'object' && (res.data.email || res.data.address || res.data.fullAddress || res.data.name)) {
-        return { success: true, data: res.data };
-      }
-    } catch {}
-
-    // 2. system_settings DB 실측 조회
+    // 1. system_settings DB 실측 조회 (기존 배포된 /settings/:key 엔드포인트 활용)
     try {
       const setRes = await settingsAPI.get(`member_profile_${cleanPhone}`);
       const val = setRes.data?.value !== undefined ? setRes.data.value : setRes.data;
@@ -557,7 +549,7 @@ export const memberAPI = {
       }
     } catch {}
 
-    // 3. localStorage 캐시 확인 (사용자가 마이페이지 브라우저에서 직접 입력/저장한 정보)
+    // 2. localStorage 캐시 확인 (사용자가 마이페이지 브라우저에서 직접 입력/저장한 정보)
     try {
       const local = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
       if (local) {
@@ -1019,9 +1011,9 @@ export const settingsAPI = {
     return fetchAPI<Record<string, any>>('/settings');
   },
 
-  /** 개별 설정 값 조회 */
+  /** 개별 설정 값 조회 (미설정 시 404를 정상적인 empty 상태로 취급) */
   async get(key: string): Promise<APIResponse<any>> {
-    return fetchAPI<any>(`/settings/${key}`);
+    return fetchAPI<any>(`/settings/${key}`, { silentFail: true } as any);
   },
 
   /** 설정 값 저장 (시스템 관리자 전용) */
