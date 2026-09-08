@@ -1315,6 +1315,18 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
   const sb = pgClient();
   const now = new Date().toISOString();
   const id = `sub_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // 한글 요일 ('일'~'토') 또는 문자열 숫자를 Postgres integer (0~6)로 안전 변환
+  const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+  let numericDayOfWeek: number | null = null;
+  if (sub.recurringDayOfWeek !== undefined && sub.recurringDayOfWeek !== null) {
+    if (typeof sub.recurringDayOfWeek === 'number') {
+      numericDayOfWeek = sub.recurringDayOfWeek;
+    } else if (typeof sub.recurringDayOfWeek === 'string') {
+      numericDayOfWeek = dayMap[sub.recurringDayOfWeek] ?? (parseInt(sub.recurringDayOfWeek, 10) || 0);
+    }
+  }
+
   const { data, error } = await sb
     .from('subscriptions')
     .insert({
@@ -1332,7 +1344,7 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
       card_name: sub.cardName ?? null,
       recurring_day: sub.recurringDay ?? 1,
       recurring_interval: sub.recurringInterval ?? 'monthly',
-      recurring_day_of_week: sub.recurringDayOfWeek ?? null,
+      recurring_day_of_week: numericDayOfWeek,
       status: 'active',
       next_payment_date: sub.nextPaymentDate ?? null,
       created_at: now, updated_at: now,
