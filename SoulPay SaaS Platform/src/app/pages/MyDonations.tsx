@@ -1058,7 +1058,7 @@ export default function MyDonations() {
                                 className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer font-medium flex items-center justify-center whitespace-nowrap"
                                 onClick={() => handleUpdateSubStatus(sub.id, 'paused')}
                               >
-                                다음 회차 쉬기
+                                정기 {currentTenant.terminology.donation} 일시정지
                               </Button>
                             ) : (
                               <Button
