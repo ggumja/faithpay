@@ -919,11 +919,30 @@ export default function MemberDetailPage() {
                   </span>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
-                  <span className="text-xs font-bold text-slate-500 block">주소</span>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 mt-2 block truncate" title={member.address}>
-                    {member.address || '주소 미입력'}
-                  </span>
+                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                        주소
+                      </span>
+                      {member.address && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(member.address || '');
+                            toast.success('주소가 클립보드에 복사되었습니다.');
+                          }}
+                          title="주소 복사"
+                          className="text-slate-400 hover:text-indigo-600 transition-colors p-0.5"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 mt-2 block break-keep break-words leading-relaxed select-text" title={member.address}>
+                      {member.address || '주소 미입력'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
