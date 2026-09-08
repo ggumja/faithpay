@@ -26,6 +26,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  Receipt,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
@@ -1388,138 +1390,190 @@ export default function TenantStatisticsPage() {
         </div>
       </div>
 
-      {/* 🟢 간편결제 세부 내역 상세 팝업 (Easy Pay Detail Modal) */}
+      {/* 🟢 간편결제 세부 내역 상세 팝업 (Easy Pay Detail Modal - Hallmark Design) */}
       <Dialog open={isEasyPayModalOpen} onOpenChange={setIsEasyPayModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center text-amber-600">
-                  <Smartphone className="h-5 w-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                    <span className="text-amber-600 dark:text-amber-400">
-                      [{selectedPeriodKey || periodSelection.label}]
-                    </span>{' '}
-                    간편결제 세부 분석
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                    {selectedPeriodKey
-                      ? `${selectedPeriodKey} (${periodUnit === 'daily' ? '일별' : periodUnit === 'weekly' ? '주별' : periodUnit === 'yearly' ? '년별' : '월별'}) 발생한 간편결제의 페이별 건수, 수납 금액 및 비중 현황입니다.`
-                      : `선택된 ${periodUnit === 'daily' ? '일별' : periodUnit === 'weekly' ? '주별' : periodUnit === 'yearly' ? '년별' : '월별'} 기간(${periodSelection.label}) 동안 접수된 카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 세부 현황입니다.`}
-                  </DialogDescription>
-                </div>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-xl">
+          {/* 헤더 영역: 닫기 버튼과의 겹침 방지를 위해 pr-10 패딩 부여 */}
+          <DialogHeader className="pb-4 border-b border-slate-100 dark:border-zinc-800/80 pr-10">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5 border border-amber-200/50 dark:border-amber-800/30">
+                <Smartphone className="h-5 w-5" />
               </div>
-              {selectedPeriodKey && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedPeriodKey(null)}
-                  className="text-xs text-slate-600 hover:text-slate-900 h-8"
-                >
-                  {periodSelection.label} 전체 보기
-                </Button>
-              )}
+              <div className="flex-1 min-w-0">
+                {/* 기간 메타데이터 뱃지 행: 길이가 길어도 깨지지 않도록 flex-wrap 지원 */}
+                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100/80 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/60">
+                    <Calendar className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                    <span>{selectedPeriodKey || periodSelection.label}</span>
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                    ({periodUnit === 'daily' ? '일별' : periodUnit === 'weekly' ? '주별' : periodUnit === 'yearly' ? '년별' : '월별'} 기준)
+                  </span>
+                  {selectedPeriodKey && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPeriodKey(null)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200/80 transition-colors"
+                    >
+                      전체 보기 ↩
+                    </button>
+                  )}
+                </div>
+
+                <DialogTitle className="text-xl font-black tracking-tight text-slate-900 dark:text-zinc-100">
+                  간편결제 수납 세부 분석
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                  선택된 기간 동안 접수된 카카오페이, 네이버페이, 토스페이, 실시간 계좌이체 등의 세부 수납 통계입니다.
+                </DialogDescription>
+              </div>
             </div>
           </DialogHeader>
 
-          <div className="space-y-6 pt-4">
-            {/* 요약 KPI 카드 3종 */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-                    {selectedPeriodKey || periodSelection.label} 간편결제액
-                  </p>
-                  <p className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">
-                    {modalEasyPayStats.totalAmount.toLocaleString()}원
-                  </p>
-                  <p className="text-[11px] text-amber-600/80 mt-1">
-                    {selectedPeriodKey || periodSelection.label} 수납 기준
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400">
-                    {selectedPeriodKey || periodSelection.label} 거래 건수
-                  </p>
-                  <p className="text-2xl font-black text-slate-800 dark:text-zinc-100 mt-1">
-                    {modalEasyPayStats.totalCount}건
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    {selectedPeriodKey || periodSelection.label} 거래 기준
+          <div className="space-y-6 pt-5">
+            {/* 요약 KPI 카드 3종 (안정적인 고정 레이아웃 및 균형잡힌 타이포그래피) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <Card className="bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/50 shadow-xs">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-amber-900/80 dark:text-amber-300">
+                      총 간편결제액
+                    </span>
+                    <span className="p-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                      <Smartphone className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  <div className="my-2.5">
+                    <span className="text-2xl font-black tracking-tight text-amber-700 dark:text-amber-400 font-mono">
+                      {modalEasyPayStats.totalAmount.toLocaleString()}
+                    </span>
+                    <span className="text-sm font-bold text-amber-800 dark:text-amber-300 ml-1">원</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700/70 dark:text-amber-400/70">
+                    선택 기간 수납 합계
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/40">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">1회 평균 결제액</p>
-                  <p className="text-2xl font-black text-indigo-700 dark:text-indigo-400 mt-1">
-                    {(modalEasyPayStats.totalCount > 0 ? Math.round(modalEasyPayStats.totalAmount / modalEasyPayStats.totalCount) : 0).toLocaleString()}원
+              <Card className="bg-slate-50/70 dark:bg-zinc-900/70 border border-slate-200 dark:border-zinc-800 shadow-xs">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                      총 거래 건수
+                    </span>
+                    <span className="p-1 rounded-md bg-slate-200/60 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+                      <Receipt className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  <div className="my-2.5">
+                    <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-zinc-100 font-mono">
+                      {modalEasyPayStats.totalCount.toLocaleString()}
+                    </span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-zinc-300 ml-1">건</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    정상 승인 완료 건
                   </p>
-                  <p className="text-[11px] text-indigo-600/80 mt-1">건당 평균 수납 금액</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200/70 dark:border-indigo-900/50 shadow-xs">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-indigo-900/80 dark:text-indigo-300">
+                      1회 평균 결제액
+                    </span>
+                    <span className="p-1 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  <div className="my-2.5">
+                    <span className="text-2xl font-black tracking-tight text-indigo-700 dark:text-indigo-400 font-mono">
+                      {(modalEasyPayStats.totalCount > 0 ? Math.round(modalEasyPayStats.totalAmount / modalEasyPayStats.totalCount) : 0).toLocaleString()}
+                    </span>
+                    <span className="text-sm font-bold text-indigo-800 dark:text-indigo-300 ml-1">원</span>
+                  </div>
+                  <p className="text-[11px] text-indigo-700/70 dark:text-indigo-400/70">
+                    건당 평균 수납 금액
+                  </p>
                 </CardContent>
               </Card>
             </div>
 
             {/* 페이별 건수 · 금액 · 비중 집계표 */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center justify-between">
-                <span>
-                  [{selectedPeriodKey || periodSelection.label}] 페이별 건수 · 금액 · 비중 분석
+            <div className="space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                    세부 수단별 수납 현황
+                  </h4>
+                  <Badge variant="outline" className="text-[11px] px-2 py-0.2 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700">
+                    총 {modalEasyPayStats.list.length}개 수단
+                  </Badge>
+                </div>
+                <span className="text-xs text-slate-400 dark:text-zinc-500">
+                  점유 비중 순 정렬
                 </span>
-                <span className="text-xs font-normal text-slate-500">카카오페이 · 네이버페이 · 토스페이 · 실시간 계좌이체 등</span>
-              </h4>
-              <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+              </div>
+
+              <div className="border border-slate-200/90 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80 dark:bg-zinc-800/50">
-                      <TableHead>세부 결제 수단</TableHead>
-                      <TableHead className="text-right">결제 건수</TableHead>
-                      <TableHead className="text-right">점유 비중</TableHead>
-                      <TableHead className="text-right">총 수납 금액</TableHead>
+                    <TableRow className="bg-slate-50/90 dark:bg-zinc-800/60">
+                      <TableHead className="font-semibold text-slate-600 dark:text-zinc-300">세부 결제 수단</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-600 dark:text-zinc-300">결제 건수</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-600 dark:text-zinc-300">점유 비중</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-600 dark:text-zinc-300">총 수납 금액</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {modalEasyPayStats.list.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-slate-400">
-                          선택된 기간({selectedPeriodKey || periodSelection.label}) 내 간편결제 수납 내역이 없습니다 (0건)
+                        <TableCell colSpan={4} className="py-12 text-center">
+                          <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-2">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800/80 flex items-center justify-center text-slate-400 dark:text-zinc-500">
+                              <Smartphone className="w-5 h-5" />
+                            </div>
+                            <p className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                              수납된 간편결제 내역이 없습니다
+                            </p>
+                            <p className="text-xs text-slate-400 dark:text-zinc-500">
+                              선택된 기간({selectedPeriodKey || periodSelection.label}) 동안 발생한 승인 완료 간편결제 내역이 0건입니다.
+                            </p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
                       modalEasyPayStats.list.map((item) => {
                         const getBadgeColor = (name: string) => {
-                          if (name.includes('카카오')) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-                          if (name.includes('네이버')) return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-                          if (name.includes('토스')) return 'bg-blue-100 text-blue-800 border-blue-300';
-                          if (name.includes('계좌') || name.includes('이체')) return 'bg-purple-100 text-purple-800 border-purple-300';
-                          return 'bg-amber-100 text-amber-800 border-amber-300';
+                          if (name.includes('카카오')) return 'bg-yellow-100 text-yellow-900 border-yellow-300 dark:bg-yellow-950/40 dark:text-yellow-300';
+                          if (name.includes('네이버')) return 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300';
+                          if (name.includes('토스')) return 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300';
+                          if (name.includes('계좌') || name.includes('이체')) return 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300';
+                          return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300';
                         };
                         return (
-                          <TableRow key={item.name}>
-                            <TableCell className="font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
-                              <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getBadgeColor(item.name)}`}>
+                          <TableRow key={item.name} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
+                            <TableCell className="font-semibold text-slate-800 dark:text-zinc-200">
+                              <Badge variant="outline" className={`text-xs px-2 py-0.5 font-bold ${getBadgeColor(item.name)}`}>
                                 {item.name}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-medium">{item.count}건</TableCell>
-                            <TableCell className="text-right font-semibold text-slate-600 dark:text-zinc-400">
-                              <div className="flex items-center justify-end gap-2">
+                            <TableCell className="text-right font-mono font-medium text-slate-800 dark:text-zinc-200">
+                              {item.count.toLocaleString()}건
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-slate-600 dark:text-zinc-400">
+                              <div className="flex items-center justify-end gap-2.5">
                                 <div className="w-16 bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
                                   <div
                                     className="bg-amber-500 h-1.5 rounded-full"
                                     style={{ width: `${Math.min(100, Math.max(0, Number(item.ratio)))}%` }}
                                   />
                                 </div>
-                                <span>{item.ratio}%</span>
+                                <span className="font-mono text-xs w-10 text-right">{item.ratio}%</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-bold text-amber-700 dark:text-amber-400">
+                            <TableCell className="text-right font-mono font-bold text-amber-700 dark:text-amber-400">
                               {item.amount.toLocaleString()}원
                             </TableCell>
                           </TableRow>
