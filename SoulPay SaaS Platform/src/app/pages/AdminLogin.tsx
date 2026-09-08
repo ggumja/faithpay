@@ -409,32 +409,6 @@ export default function AdminLogin() {
             </form>
           </div>
         </Card>
-
-        {/* 역할 전환 푸터 링크 카드 */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2.5 text-xs text-slate-600">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-600 font-medium">최고 시스템 관리자이신가요?</span>
-            <button
-              type="button"
-              onClick={() => navigate('/system/login')}
-              className="font-bold text-slate-700 hover:text-blue-600 cursor-pointer bg-transparent border-0 flex items-center gap-1 transition-colors"
-            >
-              <span>시스템 로그인</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
-            <span className="text-slate-600 font-medium">영업 대리점 / 파트너이신가요?</span>
-            <button
-              type="button"
-              onClick={() => navigate('/partner/login')}
-              className="font-bold text-slate-700 hover:text-blue-600 cursor-pointer bg-transparent border-0 flex items-center gap-1 transition-colors"
-            >
-              <span>파트너 로그인</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 🏢 1. 다중 단체 관리 계정 (회계법인/통합 관리자) 선택 모달 */}
