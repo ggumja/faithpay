@@ -44,7 +44,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     { id: 'prayers', icon: MessageSquare, label: terms.prayer, path: `/admin/prayers` },
     { id: 'menu', icon: FileText, label: terms.donationItems, path: `/admin/menu` },
     { id: 'members', icon: Users, label: '회원 관리', path: `/admin/members` },
-    { id: 'settlement', icon: DollarSign, label: '정산', path: `/admin/settlement` },
+    { id: 'settlement', icon: DollarSign, label: '정산(추정) 집계', path: `/admin/settlement` },
     { id: 'banners', icon: Image, label: '배너 관리', path: `/admin/banners` },
     { id: 'accounts', icon: UserCheck, label: '관리자 계정 관리', path: `/admin/accounts` },
     { id: 'settings', icon: Settings, label: '설정', path: `/admin/settings` },

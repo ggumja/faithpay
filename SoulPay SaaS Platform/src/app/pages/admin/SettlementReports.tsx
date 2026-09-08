@@ -221,7 +221,7 @@ export default function SettlementReports() {
                 pgFee: fee,
                 netAmount: net,
                 payoutDate: payoutDate.toISOString().slice(0, 10),
-                status: isPaidOut ? '입금 완료' : `${currentSettlementCycle} 입금 예정`
+                status: isPaidOut ? '집계 완료 (정산 대사)' : `${currentSettlementCycle} 입금 예정 (추정)`
               };
             });
 
@@ -249,11 +249,11 @@ export default function SettlementReports() {
                   let nextY = yearNum;
                   let nextM = monthNum + 1;
                   if (nextM > 12) { nextY += 1; nextM = 1; }
-                  settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산)`;
-                  statusStr = isPast ? '정산 완료' : '정산 예정';
+                  settlementDate = `${nextY}-${String(nextM).padStart(2, '0')}-05 (월정산 예정)`;
+                  statusStr = isPast ? '집계 완료 (정산 대사)' : '집계 진행 중';
                 } else {
-                  settlementDate = isPast ? `${currentSettlementCycle} 입금 완료` : `매일 ${currentSettlementCycle} 순차 입금`;
-                  statusStr = isPast ? '입금 완료' : '정산 진행 중';
+                  settlementDate = isPast ? `${currentSettlementCycle} 집계 완료` : `매일 ${currentSettlementCycle} 순차 집계`;
+                  statusStr = isPast ? '집계 완료 (PG 대사)' : '집계 진행 중';
                 }
               }
 
@@ -423,9 +423,14 @@ export default function SettlementReports() {
           <div className="w-full space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산 & 기부금 리포트</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산(추정) & 수납 대사 리포트</h1>
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold">
+                  원장 기준 추정치
+                </Badge>
+              </div>
               <p className="text-sm text-muted-foreground mt-1">
-                월별 정산 현황 및 국세청 제출용 기부금 대장 전산제출 파일을 관리합니다.
+                SoulPay 결제 승인 원장 기반의 수납 집계 및 추정 정산액을 확인하고, 국세청 전산제출 파일을 관리합니다.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -440,6 +445,19 @@ export default function SettlementReports() {
             </div>
           </div>
 
+          {/* ⚠️ 정산 추정액 안내 배너 (Financial Disclaimer) */}
+          <div className="p-4 rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50/80 via-orange-50/50 to-amber-50/30 text-amber-900 shadow-xs flex items-start gap-3">
+            <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs sm:text-sm leading-relaxed space-y-1">
+              <p className="font-semibold text-amber-950 flex items-center gap-1.5">
+                <span>안내: 본 화면의 정산 금액은 결제 승인 원장 기준의 <strong>정산 추정 집계액</strong>입니다.</span>
+              </p>
+              <p className="text-amber-800/90 text-xs">
+                실제 단체 통장으로 입금되는 최종 확정 정산액은 <strong>카드사별 우대수수료율(영세/중소 차등 적용), 매입 주기, 취소 전표 접수 시점, 부가세(VAT) 절사 및 지급 보류금</strong> 등에 따라 PG사 최종 정산액과 차이가 발생할 수 있습니다. 법적/회계적 최종 입금 내역은 가맹점의 <strong>PG사 상점관리자(포탈)</strong> 원장을 기준으로 확인하시기 바랍니다.
+              </p>
+            </div>
+          </div>
+
           {/* 🏢 가맹점 정산 정보 요약 카드 */}
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardContent className="p-5">
@@ -451,15 +469,15 @@ export default function SettlementReports() {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-base text-slate-900">{currentTenant.name} 정산 정보</h3>
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold text-[11px]">
-                        정산 연동 완료
+                      <Badge className="bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[11px]">
+                        PG 원장 집계 연동
                       </Badge>
                       <Badge className="bg-slate-100 text-slate-700 border-slate-200 font-semibold text-[11px]">
-                        자동 입금 활성화
+                        자동 입금 주기 설정됨
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      결제 승인 건에 대한 수수료 정산 및 입금 대장이 등록된 단체 계좌로 자동 반영됩니다.
+                      결제 승인 원장에 대한 기준 수수료율 차감 및 추정 입금 대장입니다.
                     </p>
                   </div>
                 </div>
@@ -577,36 +595,36 @@ export default function SettlementReports() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 총 봉헌액 ({summaryStats.currentMonthName})</CardTitle>
+                <CardTitle className="text-sm font-medium">기간 총 봉헌 수납액 ({summaryStats.currentMonthName})</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summaryStats.monthlyTotal.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <TrendingUp className="h-3 w-3 inline text-indigo-600 mr-1" />
-                  <span>실시간 DB 승인 누적</span>
+                  <span>실시간 승인 원장 집계</span>
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">정산 수수료 ({contractRate}%)</CardTitle>
+                <CardTitle className="text-sm font-medium">수수료 공제 추정액 ({contractRate}%)</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">{summaryStats.pgFee.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">계약 수수료율 {contractRate}%</p>
+                <p className="text-xs text-muted-foreground mt-1">기준 수수료율 {contractRate}% (VAT/우대율 별도)</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">단체 계좌 최종 입금액</CardTitle>
+                <CardTitle className="text-sm font-medium">단체 계좌 입금 추정액</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{summaryStats.finalDeposit.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <Calendar className="h-3 w-3 inline mr-1" />
-                  정산일: {summaryStats.settlementDateStr}
+                  정산 예정: {summaryStats.settlementDateStr}
                 </p>
               </CardContent>
             </Card>
@@ -614,16 +632,16 @@ export default function SettlementReports() {
 
           <Tabs defaultValue="monthly" className="space-y-6">
             <TabsList>
-              <TabsTrigger value="monthly">월별 정산 ({paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 요약)</TabsTrigger>
-              <TabsTrigger value="daily">일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 정산 명세</TabsTrigger>
-              <TabsTrigger value="negative">승인취소/음수이월 정산</TabsTrigger>
+              <TabsTrigger value="monthly">월별 정산(추정) ({paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 요약)</TabsTrigger>
+              <TabsTrigger value="daily">일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세</TabsTrigger>
+              <TabsTrigger value="negative">승인취소/음수이월 대사</TabsTrigger>
             </TabsList>
 
             {/* Monthly Settlement */}
             <TabsContent value="monthly" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>월별 정산 내역</CardTitle>
+                  <CardTitle>월별 정산(추정) 내역</CardTitle>
                   <CardDescription>
                     {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '실제 결제 원장 기반 월별 정산 현황'}
                   </CardDescription>
@@ -633,11 +651,11 @@ export default function SettlementReports() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>월</TableHead>
-                        <TableHead className="text-right">총 봉헌액</TableHead>
+                        <TableHead className="text-right">총 수납액</TableHead>
                         <TableHead className="text-right">수수료 ({contractRate}%)</TableHead>
-                        <TableHead className="text-right">실 정산액</TableHead>
-                        <TableHead>정산일</TableHead>
-                        <TableHead>상태</TableHead>
+                        <TableHead className="text-right">정산 추정액</TableHead>
+                        <TableHead>정산 예정일</TableHead>
+                        <TableHead>집계 상태</TableHead>
                         <TableHead className="text-right">작업</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -733,9 +751,9 @@ export default function SettlementReports() {
             <TabsContent value="daily" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 정산 명세</CardTitle>
+                  <CardTitle>일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세</CardTitle>
                   <CardDescription>
-                    승인완료된 각 결제건별 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일 정산 입금 예정/완료 명세입니다.
+                    승인완료된 각 결제건별 기준 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일 기준 입금 대사 추정 명세입니다.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -747,9 +765,9 @@ export default function SettlementReports() {
                         <TableHead>{terms.donor}명 / 항목</TableHead>
                         <TableHead className="text-right">승인 금액</TableHead>
                         <TableHead className="text-right">수수료 ({paymentConfig?.contractRate ?? contractRate}%)</TableHead>
-                        <TableHead className="text-right">실 입금액</TableHead>
+                        <TableHead className="text-right">입금 추정액</TableHead>
                         <TableHead>{paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 입금 예정일</TableHead>
-                        <TableHead>정산 상태</TableHead>
+                        <TableHead>대사 상태</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -792,7 +810,7 @@ export default function SettlementReports() {
                 <CardHeader>
                   <CardTitle>승인 취소 & 차기 정산 이월 차감 (Negative Settlement)</CardTitle>
                   <CardDescription>
-                    이미 단체 계좌로 입금 완료된 정산건의 결제 취소/오입금 발생 시 차기 정산액에서 자동 이월 차감되는 명세입니다.
+                    이미 단체 계좌로 입금 집계된 거래의 취소 발생 시 차기 정산액에서 자동 이월 차감되는 명세입니다.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -865,15 +883,18 @@ export default function SettlementReports() {
           </Tabs>
 
           {/* Info */}
-          <Card className="mt-8 bg-blue-50 border-blue-200">
+          <Card className="mt-8 bg-slate-50 border-slate-200 dark:bg-zinc-900 dark:border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base">정산 안내</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                <Info className="h-4 w-4 text-blue-600" />
+                정산 및 대사 업무 안내
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p>• 정산은 매월 5일에 자동으로 진행됩니다</p>
-              <p>• 결제 수수료: {contractRate}% (신용카드, 간편결제), 가상계좌는 건당 500원</p>
-              <p>• 세금계산서는 정산일에 자동으로 발행됩니다</p>
-              <p>• 정산 내역은 투명하게 공개되며, 언제든지 다운로드할 수 있습니다</p>
+            <CardContent className="space-y-2.5 text-sm text-slate-600 dark:text-zinc-400">
+              <p>• <strong>정산 추정액 기준</strong>: SoulPay 플랫폼 내 승인 완료된 결제 원장을 바탕으로 기본 수수료율({contractRate}%)을 공제하여 실시간 계산된 추정치입니다.</p>
+              <p>• <strong>실제 입금 대사</strong>: 카드사별 영세/중소 우대 수수료율 소급 적용, 부가세(VAT), 취소 전표 정산 상계 등에 따라 실제 단체 계좌 입금액과 차이가 있을 수 있습니다.</p>
+              <p>• <strong>확정 정산 내역 확인</strong>: 회계 결산 및 공식 세무 증빙은 가맹점 전용 <strong>PG사 상점관리자(포탈)</strong>에 로그인하시어 정산 확정 원장을 확인하시기 바랍니다.</p>
+              <p>• <strong>국세청 영수증 제출</strong>: 상단의 [국세청 전산제출 파일(.txt) 생성]을 통해 소득세법 표준 규격에 맞춘 기부금 전산 대장을 다운로드하여 홈택스에 바로 제출할 수 있습니다.</p>
             </CardContent>
           </Card>
         </div>
