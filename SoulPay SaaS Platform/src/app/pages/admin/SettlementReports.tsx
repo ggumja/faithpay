@@ -426,11 +426,11 @@ export default function SettlementReports() {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산(추정) & 수납 대사 리포트</h1>
                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold">
-                  원장 기준 추정치
+                  플랫폼 수납 집계 기준
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                SoulPay 결제 승인 원장 기반의 수납 집계 및 추정 정산액을 확인하고, 국세청 전산제출 파일을 관리합니다.
+                SoulPay 플랫폼 결제 완료 건을 바탕으로 수납 집계 및 추정 정산액을 확인하고, 국세청 전산제출 파일을 관리합니다.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -450,7 +450,7 @@ export default function SettlementReports() {
             <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs sm:text-sm leading-relaxed space-y-1">
               <p className="font-semibold text-amber-950 flex items-center gap-1.5">
-                <span>안내: 본 화면의 정산 금액은 결제 승인 원장 기준의 <strong>정산 추정 집계액</strong>입니다.</span>
+                <span>안내: 본 화면의 정산 금액은 플랫폼 결제 성공 건을 기준으로 단순 집계한 <strong>정산 추정액</strong>입니다.</span>
               </p>
               <p className="text-amber-800/90 text-xs">
                 실제 단체 통장으로 입금되는 최종 확정 정산액은 <strong>카드사별 우대수수료율(영세/중소 차등 적용), 매입 주기, 취소 전표 접수 시점, 부가세(VAT) 절사 및 지급 보류금</strong> 등에 따라 PG사 최종 정산액과 차이가 발생할 수 있습니다. 법적/회계적 최종 입금 내역은 가맹점의 <strong>PG사 상점관리자(포탈)</strong> 원장을 기준으로 확인하시기 바랍니다.
@@ -458,7 +458,7 @@ export default function SettlementReports() {
             </div>
           </div>
 
-          {/* 🏢 가맹점 정산 정보 요약 카드 */}
+          {/* 🏢 가맹점 결제 계약 및 정산 설정 정보 카드 */}
           <Card className="border-slate-200/80 bg-white shadow-xs">
             <CardContent className="p-5">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -468,16 +468,13 @@ export default function SettlementReports() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-base text-slate-900">{currentTenant.name} 정산 정보</h3>
-                      <Badge className="bg-blue-50 text-blue-700 border-blue-200 font-semibold text-[11px]">
-                        PG 원장 집계 연동
-                      </Badge>
+                      <h3 className="font-bold text-base text-slate-900">{currentTenant.name} 결제·정산 계약 기준</h3>
                       <Badge className="bg-slate-100 text-slate-700 border-slate-200 font-semibold text-[11px]">
-                        자동 입금 주기 설정됨
+                        PG 계약 조건
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      결제 승인 원장에 대한 기준 수수료율 차감 및 추정 입금 대장입니다.
+                      결제 대행(PG) 계약에 등록된 가맹점 식별코드 및 계약 기준 수수료율·정산 주기 정보입니다.
                     </p>
                   </div>
                 </div>
@@ -497,17 +494,17 @@ export default function SettlementReports() {
                   </div>
                   <div className="h-7 w-px bg-slate-200" />
                   <div>
-                    <span className="text-slate-500 text-[11px] block font-medium">정산 주기</span>
+                    <span className="text-slate-500 text-[11px] block font-medium">계약 정산 주기</span>
                     <span className="font-bold text-slate-700 text-xs">
                       {(paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+1'
-                        ? 'D+1일 (익일 정산)'
+                        ? 'D+1 영업일'
                         : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+2'
-                        ? 'D+2일 (2일후 정산)'
+                        ? 'D+2 영업일'
                         : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'D+3'
-                        ? 'D+3일 (3일후 정산)'
+                        ? 'D+3 영업일'
                         : (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'MONTHLY' || (paymentConfig?.payoutCycle || paymentConfig?.settlementCycle) === 'M+1'
-                        ? '월정산 (익월 5일)'
-                        : `${paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'}일 정산`}
+                        ? '월 1회 (익월 5일)'
+                        : `${paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일`}
                     </span>
                   </div>
                 </div>
@@ -601,7 +598,7 @@ export default function SettlementReports() {
                 <div className="text-2xl font-bold">{summaryStats.monthlyTotal.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   <TrendingUp className="h-3 w-3 inline text-indigo-600 mr-1" />
-                  <span>실시간 승인 원장 집계</span>
+                  <span>플랫폼 결제 성공 건 단순 합산</span>
                 </p>
               </CardContent>
             </Card>
@@ -643,7 +640,7 @@ export default function SettlementReports() {
                 <CardHeader>
                   <CardTitle>월별 정산(추정) 내역</CardTitle>
                   <CardDescription>
-                    {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '실제 결제 원장 기반 월별 정산 현황'}
+                    {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '플랫폼 결제 성공 내역 기반 월별 수납·정산 집계'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -891,9 +888,9 @@ export default function SettlementReports() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2.5 text-sm text-slate-600 dark:text-zinc-400">
-              <p>• <strong>정산 추정액 기준</strong>: SoulPay 플랫폼 내 승인 완료된 결제 원장을 바탕으로 기본 수수료율({contractRate}%)을 공제하여 실시간 계산된 추정치입니다.</p>
+              <p>• <strong>정산 추정액 기준</strong>: SoulPay 플랫폼 내 승인 완료된 결제 성공 내역을 바탕으로 기본 계약 수수료율({contractRate}%)을 공제하여 단순 집계한 추정치입니다.</p>
               <p>• <strong>실제 입금 대사</strong>: 카드사별 영세/중소 우대 수수료율 소급 적용, 부가세(VAT), 취소 전표 정산 상계 등에 따라 실제 단체 계좌 입금액과 차이가 있을 수 있습니다.</p>
-              <p>• <strong>확정 정산 내역 확인</strong>: 회계 결산 및 공식 세무 증빙은 가맹점 전용 <strong>PG사 상점관리자(포탈)</strong>에 로그인하시어 정산 확정 원장을 확인하시기 바랍니다.</p>
+              <p>• <strong>확정 정산 내역 확인</strong>: 회계 결산 및 공식 세무 증빙은 가맹점 전용 <strong>PG사 상점관리자(포탈)</strong>에 로그인하시어 정산 확정 내역을 확인하시기 바랍니다.</p>
               <p>• <strong>국세청 영수증 제출</strong>: 상단의 [국세청 전산제출 파일(.txt) 생성]을 통해 소득세법 표준 규격에 맞춘 기부금 전산 대장을 다운로드하여 홈택스에 바로 제출할 수 있습니다.</p>
             </CardContent>
           </Card>
