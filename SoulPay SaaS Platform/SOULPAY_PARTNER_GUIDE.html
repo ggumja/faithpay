@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoulPay (소울페이) 파트너십 제안서 — 총판·대리점·영업자 모집 안내</title>
+  <meta name="description" content="전국 10만 개 종교 및 비영리 단체 시장을 선점하는 SoulPay 공식 파트너십. 가맹 단체 유치 시 매월 발생하는 결제 수수료를 영구 배분받는 누적형 리커링 비즈니스 모델 안내서입니다." />
+  
+  <!-- Typography Pairing: Space Grotesk (Display) + Pretendard (Body) + JetBrains Mono (Specs) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <style>
+    /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+    /* Hallmark · genre: modern-minimal · macrostructure: Bento Grid · theme: Emerald/Cobalt · nav: N5 · footer: Ft2 */
+    
+    :root {
+      --color-paper: #f8fafc;
+      --color-surface: #ffffff;
+      --color-surface-subtle: #f1f5f9;
+      --color-border: #e2e8f0;
+      --color-border-subtle: #edf2f7;
+      --color-border-focus: #059669;
+      
+      --color-ink: #090d16;
+      --color-ink-muted: #475569;
+      --color-ink-dim: #94a3b8;
+      
+      --color-cobalt: #1d4ed8;
+      --color-cobalt-light: #eff6ff;
+      --color-cobalt-border: #bfdbfe;
+      
+      --color-emerald: #059669;
+      --color-emerald-light: #ecfdf5;
+      --color-emerald-border: #a7f3d0;
+      
+      --color-amber: #b45309;
+      --color-amber-light: #fffbeb;
+      --color-amber-border: #fde68a;
+
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 36px;
+      --space-2xl: 64px;
+
+      --shadow-subtle: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.02);
+      --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+      --shadow-hover: 0 12px 28px -6px rgba(5, 150, 105, 0.09), 0 2px 4px rgba(15, 23, 42, 0.03);
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--color-paper);
+      color: var(--color-ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.68;
+      overflow-x: clip;
+      width: 100%;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    h1, h2, h3, h4, p, li, td, th, blockquote, figcaption, span, a {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-subtle);
+      border: 1px solid var(--color-border);
+      white-space: nowrap;
+      color: var(--color-emerald);
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Nav Archetype: N5 Floating Pill */
+    .nav-wrapper {
+      position: sticky;
+      top: 20px;
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--space-xl);
+    }
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      padding: 8px 20px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-subtle);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-ink);
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      background: var(--color-emerald);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-ink-muted);
+      transition: color 0.15s ease;
+      white-space: nowrap;
+    }
+    .nav-links a:hover {
+      color: var(--color-emerald);
+    }
+    .nav-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--color-emerald-light);
+      border: 1px solid var(--color-emerald-border);
+      border-radius: var(--radius-full);
+      color: var(--color-emerald);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--color-emerald);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Hero Section — Modern Minimal Two-Column Split */
+    .hero {
+      padding: 48px 0 56px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--space-2xl);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 48px;
+      align-items: end;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-emerald);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(30px, 3.8vw, 46px);
+      font-weight: 700;
+      line-height: 1.22;
+      letter-spacing: -0.035em;
+      color: var(--color-ink);
+      margin: 0;
+    }
+    .title-phrase {
+      display: inline-block;
+    }
+    .hero-right {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 6px;
+    }
+    .hero-lead {
+      font-size: 16px;
+      color: var(--color-ink-muted);
+      line-height: 1.72;
+      margin: 0;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: var(--radius-full);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--color-ink);
+      color: #ffffff;
+      border: 1px solid var(--color-ink);
+    }
+    .btn-primary:hover {
+      background: var(--color-emerald);
+      border-color: var(--color-emerald);
+    }
+    .btn-secondary {
+      background: var(--color-surface);
+      color: var(--color-ink);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-subtle);
+    }
+    .btn-secondary:hover {
+      background: var(--color-surface-subtle);
+      border-color: #cbd5e1;
+    }
+
+    /* Section Headers */
+    .section-head {
+      margin-bottom: var(--space-xl);
+    }
+    .section-kicker {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-emerald);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--color-ink);
+      margin: 0 0 10px 0;
+      line-height: 1.3;
+    }
+    .section-desc {
+      font-size: 15px;
+      color: var(--color-ink-muted);
+      margin: 0;
+      max-width: 680px;
+      line-height: 1.65;
+    }
+
+    /* Equal Width 2x2 Grid for Cards */
+    .partner-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      margin-bottom: var(--space-2xl);
+    }
+    .partner-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow: var(--shadow-subtle);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .partner-card:hover {
+      border-color: var(--color-border-focus);
+      box-shadow: var(--shadow-hover);
+    }
+    .partner-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .partner-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--color-emerald-light);
+      border: 1px solid var(--color-emerald-border);
+      color: var(--color-emerald);
+    }
+    .partner-badge.cobalt {
+      background: var(--color-cobalt-light);
+      border-color: var(--color-cobalt-border);
+      color: var(--color-cobalt);
+    }
+    .partner-badge.amber {
+      background: var(--color-amber-light);
+      border-color: var(--color-amber-border);
+      color: var(--color-amber);
+    }
+    .partner-target {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-ink-dim);
+    }
+    .partner-title {
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-ink);
+      margin: 0 0 12px 0;
+      line-height: 1.35;
+    }
+    .partner-desc {
+      font-size: 14.5px;
+      color: var(--color-ink-muted);
+      margin: 0 0 20px 0;
+      line-height: 1.68;
+    }
+    .partner-specs {
+      list-style: none;
+      margin: 0;
+      padding: 16px 0 0 0;
+      border-top: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-top: auto;
+    }
+    .partner-specs li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--color-ink-muted);
+      line-height: 1.55;
+    }
+    .partner-specs strong {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+    .spec-bullet {
+      width: 5px;
+      height: 5px;
+      background: var(--color-emerald);
+      border-radius: 1px;
+      flex-shrink: 0;
+      margin-top: 7px;
+    }
+    .spec-bullet.cobalt {
+      background: var(--color-cobalt);
+    }
+
+    /* Revenue Model Comparison Table */
+    .table-wrapper {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
+    }
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th, td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--color-border-subtle);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    th {
+      background: var(--color-surface-subtle);
+      color: var(--color-ink-muted);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    td strong { color: var(--color-ink); font-weight: 600; }
+    .highlight-cell {
+      color: var(--color-emerald);
+      font-weight: 600;
+    }
+
+    /* Onboarding Steps: 4 Equal Steps */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: var(--space-2xl);
+    }
+    .step-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-subtle);
+    }
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-emerald);
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-ink);
+      line-height: 1.35;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--color-ink-muted);
+      line-height: 1.6;
+    }
+
+    /* CTA Bar */
+    .cta-bar {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
+    }
+    .cta-text h3 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-ink);
+      margin: 0 0 6px 0;
+      line-height: 1.35;
+    }
+    .cta-text p {
+      font-size: 14.5px;
+      color: var(--color-ink-muted);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* Footer Archetype: Ft2 Inline Single Line */
+    footer {
+      border-top: 1px solid var(--color-border);
+      padding: 28px 0;
+      font-size: 13px;
+      color: var(--color-ink-dim);
+    }
+    .footer-flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+    }
+    .footer-brand {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+    .footer-right {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-ink-dim);
+    }
+
+    /* Responsiveness */
+    @media (max-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+      .partner-grid {
+        grid-template-columns: 1fr;
+      }
+      .steps-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .cta-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 32px 24px;
+      }
+    }
+    @media (max-width: 580px) {
+      .container {
+        padding: 0 18px;
+      }
+      .hero {
+        padding: 36px 0 44px;
+      }
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-pill {
+        padding: 6px 14px;
+        gap: 12px;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav Archetype: N5 Floating Pill -->
+  <div class="container nav-wrapper">
+    <nav class="nav-pill" aria-label="Main Navigation">
+      <a href="#hero" class="nav-brand">
+        <span class="brand-mark">SP</span>
+        SoulPay Partner
+      </a>
+      <ul class="nav-links">
+        <li><a href="#market">시장 기회</a></li>
+        <li><a href="#model">수익 모델</a></li>
+        <li><a href="#tiers">파트너 등급</a></li>
+        <li><a href="#portal">영업 전용 툴</a></li>
+        <li><a href="#apply">가입 절차</a></li>
+      </ul>
+      <span class="nav-badge">
+        <span class="live-dot"></span>
+        파트너 모집 공식 안내서
+      </span>
+    </nav>
+  </div>
+
+  <main class="container">
+    <!-- Hero Section (Modern Minimal Split) -->
+    <section class="hero" id="hero">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <span class="eyebrow">SoulPay Partnership & Agency Program</span>
+          <h1 class="hero-title">
+            <span class="title-phrase">한 번 유치로 매월 영구 수익,</span><br>
+            <span class="title-phrase">종교·비영리 핀테크 파트너십.</span>
+          </h1>
+        </div>
+        <div class="hero-right">
+          <p class="hero-lead">
+            SoulPay(소울페이) 파트너 프로그램은 전국 10만 개 교회·성당·사찰 및 장학·복지재단을 대상으로 스마트 헌금 및 모금 솔루션을 보급하고, <strong>가맹 단체에서 발생하는 모든 결제액의 수수료를 매월 지속적으로 배분받는 누적형 리커링(Recurring) 비즈니스</strong>입니다.
+          </p>
+          <div class="hero-actions">
+            <a href="#model" class="btn-pill btn-primary">수익 모델 및 요율 보기</a>
+            <a href="#apply" class="btn-pill btn-secondary">파트너 가맹 신청 안내</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Market Opportunity Section -->
+    <section id="market" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">01 · Market Opportunity</span>
+        <h2 class="section-title">왜 지금 종교 및 비영리 핀테크인가?</h2>
+        <p class="section-desc">
+          일반 가맹점 시장의 치열한 레드오션과 달리, 90% 이상이 아직 지폐 수기 계수에 머물러 있는 블루오션 거대 시장입니다.
+        </p>
+      </div>
+
+      <div class="partner-grid">
+        <!-- Tile 1 -->
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge">Untapped Market</span>
+            <span class="partner-target">시장 규모</span>
+          </div>
+          <h3 class="partner-title">전국 10만 개소 이상의 미개척 블루오션</h3>
+          <p class="partner-desc">
+            국내 개신교 교회 약 6만 개, 불교 사찰 약 2만 개, 천주교 성당 약 2천 개, 그리고 2만 개 이상의 사회복지법인과 장학재단이 활동 중입니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet"></span> <span><strong>연간 헌금·기부 규모:</strong> 국내 연간 공식 기부금 총액 수조 원 대의 거대 결제 시장</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>전환 초기 단계:</strong> 아직 대다수 단체가 현금 봉투를 사용 중으로 진입 장벽이 낮음</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>자연 확산 효과:</strong> 노회, 교구, 총판 네트워크를 통한 지역 내 구전 확산 속도가 매우 빠름</span></li>
+          </ul>
+        </article>
+
+        <!-- Tile 2 -->
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge">No-Cash Shift</span>
+            <span class="partner-target">시대적 변화</span>
+          </div>
+          <h3 class="partner-title">현금 없는 사회 전환에 따른 긴급한 수요</h3>
+          <p class="partner-desc">
+            지폐를 소지하지 않는 청년·성도층이 급증하면서 교회와 단체들의 재정 감소 위기감이 커져 디지털 헌금함 도입이 필수가 되었습니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet"></span> <span><strong>단체의 절박한 니즈:</strong> 헌금 참여율 저하 방지를 위한 모바일/키오스크 도입 급증</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>행정 인력 부족:</strong> 주일마다 헌금을 계수하고 기부금영수증을 수기 발급하던 피로감 해소</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>높은 계약 체결율:</strong> 초기 도입 비용 무료 및 무료 데모 지원으로 제안 시 거부감 제로</span></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Revenue Model & Commission Sharing -->
+    <section id="model" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">02 · Lifetime Recurring Income</span>
+        <h2 class="section-title">단발성 판매가 아닌 매월 누적되는 평생 연금형 수익</h2>
+        <p class="section-desc">
+          한 번 연결한 단체가 서비스를 사용하는 한, 매월 정기 및 일시 헌금 결제액에서 발생하는 수수료가 파트너 계좌로 자동 입금됩니다.
+        </p>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 22%;">수익 항목</th>
+              <th style="width: 38%;">일반 단발성 IT 영업 (기존)</th>
+              <th style="width: 40%;">SoulPay 파트너십 (지속형)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>수익 발생 주기</strong></td>
+              <td>소프트웨어 납품 시 1회성 마진 지급 후 종료</td>
+              <td class="highlight-cell">매월 발생하는 결제 수수료를 12개월 365일 평생 누적 정산</td>
+            </tr>
+            <tr>
+              <td><strong>이탈률 (Churn Rate)</strong></td>
+              <td>1~2년 단위 재계약 실패 및 고객사 이탈 빈번</td>
+              <td class="highlight-cell">종교 단체 특성상 한번 도입 시 10년 이상 반영구 지속 사용</td>
+            </tr>
+            <tr>
+              <td><strong>추가 하드웨어 수익</strong></td>
+              <td>단말기 마진 단발성 정산</td>
+              <td class="highlight-cell">키오스크 판매·렌탈 마진 + 키오스크 현장 결제 수수료 동시 쉐어</td>
+            </tr>
+            <tr>
+              <td><strong>사후 관리 부담</strong></td>
+              <td>장애 발생 시 영업자가 직접 기술 대응 부담</td>
+              <td class="highlight-cell">본사 100% 전담 고객센터 & 인프라 관제로 영업자는 유치에만 집중</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Partner Tiers: Equal 2x2 Grid -->
+    <section id="tiers" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">03 · Partner Hierarchy</span>
+        <h2 class="section-title">파트너 등급별 역할 및 혜택 체계</h2>
+        <p class="section-desc">
+          영업 규모와 네트워크 역량에 맞추어 총판, 대리점, 영업 에이전트로 참여할 수 있습니다.
+        </p>
+      </div>
+
+      <div class="partner-grid">
+        <!-- Tier 1 -->
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge">Master Distributor</span>
+            <span class="partner-target">권역 총판 (광역 단위)</span>
+          </div>
+          <h3 class="partner-title">광역 권역 총판 파트너</h3>
+          <p class="partner-desc">
+            특정 시·도 단위의 독점 영업권을 보유하고, 하위 대리점과 에이전트 조직을 구축하여 광역 단위 수수료를 극대화하는 최상위 파트너입니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet"></span> <span><strong>최고 수수료율 배분:</strong> 관할 지역 전체 결제 거래액에 대한 최고율 쉐어링</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>오버라이딩 마진:</strong> 산하 대리점 및 에이전트 유치 실적에 대한 추가 관리 수익</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>본사 마케팅 지원:</strong> 권역 내 교단 세미나, 교구 행사 부스 비용 및 데모 장비 무상 지원</span></li>
+          </ul>
+        </article>
+
+        <!-- Tier 2 -->
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge cobalt">City Agency</span>
+            <span class="partner-target">지역 대리점 (시·군·구)</span>
+          </div>
+          <h3 class="partner-title">지역 거점 대리점</h3>
+          <p class="partner-desc">
+            시·군·구 거점을 기반으로 지역 내 대형 교회, 사찰, 복지재단을 직접 발굴하고 키오스크를 설치·공급하는 전문 영업점입니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet cobalt"></span> <span><strong>우대 수수료 배분:</strong> 직유치 단체 결제 거래액에 대한 고율 수수료 정산</span></li>
+            <li><span class="spec-bullet cobalt"></span> <span><strong>키오스크 설치 마진:</strong> 현장 무인 키오스크 공급 및 렌탈 운영 추가 수익</span></li>
+            <li><span class="spec-bullet cobalt"></span> <span><strong>영업 자료 풀세트:</strong> 제안서, 인쇄물, 데모 영상 등 본사 표준 킷 무상 제공</span></li>
+          </ul>
+        </article>
+
+        <!-- Tier 3 -->
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge amber">Sales Agent</span>
+            <span class="partner-target">독립 에이전트 (개인/팀)</span>
+          </div>
+          <h3 class="partner-title">독립 영업 에이전트</h3>
+          <p class="partner-desc">
+            목회자, 스님, 신도회, 교계 네트워크를 보유한 개인 영업자나 프리랜서로, 본인 소속 교회나 지인 단체를 추천·유치합니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet"></span> <span><strong>무자본 즉시 시작:</strong> 가맹비나 보증금 없이 계약 체결 즉시 영업 활동 가능</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>투명한 실적 정산:</strong> 유치한 단체에서 발생하는 결제액 수수료를 매월 원천징수 지급</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>부업 및 투잡 가능:</strong> 전용 모바일 웹으로 단체 등록만 하면 사후 관리는 본사 처리</span></li>
+          </ul>
+        </article>
+
+        <!-- Tier 4 -->
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge">IT Solution Partner</span>
+            <span class="partner-target">교적·ERP 연계 기업</span>
+          </div>
+          <h3 class="partner-title">교적 솔루션 / IT 연계 파트너</h3>
+          <p class="partner-desc">
+            기존 교회 행정 프로그램, 교적부 솔루션, 방송 장비, 종교 홈페이지를 공급하는 기업과의 API 및 패키지 번들 제휴입니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet"></span> <span><strong>기존 고객사 수익화:</strong> 이미 관리 중인 수백 개 종교 고객사에 결제 모듈 추가 공급</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>간편 API 연동:</strong> SoulPay 수납 데이터를 기존 교적부 데이터베이스와 실시간 동기화</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>공동 프로모션:</strong> 교적 소프트웨어 + SoulPay 결제 번들 결합 패키지 출시 지원</span></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Partner Dedicated Portal Section -->
+    <section id="portal" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">04 · Dedicated Partner Tools</span>
+        <h2 class="section-title">영업 전용 포털 시스템 (partner.soulpay.kr)</h2>
+        <p class="section-desc">
+          영업자가 현장에서 스마트폰 하나로 가맹 단체를 등록하고 실시간 수수료 정산 내역을 투명하게 확인하는 최첨단 시스템을 제공합니다.
+        </p>
+      </div>
+
+      <div class="partner-grid">
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge">One-Click Onboarding</span>
+            <span class="partner-target">현장 영업 간소화</span>
+          </div>
+          <h3 class="partner-title">모바일 원클릭 단체 인입</h3>
+          <p class="partner-desc">
+            종이 계약서 없이 태블릿이나 스마트폰으로 단체 기본 정보와 고유번호증 사진만 촬영해 올리면 1분 만에 가맹 접수가 완료됩니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet"></span> <span><strong>실시간 심사 현황:</strong> 서류 검토, PG 가맹 승인 진행 상태를 단계별 실시간 확인</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>파트너 자동 귀속:</strong> 등록된 단체는 해당 파트너의 고유 코드로 영구 매칭</span></li>
+          </ul>
+        </article>
+
+        <article class="partner-card">
+          <div class="partner-header">
+            <span class="partner-badge cobalt">Real-Time Analytics</span>
+            <span class="partner-target">투명한 정산 관제</span>
+          </div>
+          <h3 class="partner-title">실시간 수수료 정산 대시보드</h3>
+          <p class="partner-desc">
+            내 산하 가맹 단체들의 일별·월별 결제 거래액과 발생 수수료가 투명하게 1초 만에 집계되어 명세서로 발행됩니다.
+          </p>
+          <ul class="partner-specs">
+            <li><span class="spec-bullet cobalt"></span> <span><strong>수수료 자동 산출:</strong> 복잡한 수기 계산 없이 계약 요율에 따라 원 단위까지 자동 계산</span></li>
+            <li><span class="spec-bullet cobalt"></span> <span><strong>전자 세금계산서 연동:</strong> 법인/개인사업자 세금계산서 발행 및 개인 원천징수 원클릭 지원</span></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Partner Onboarding Steps -->
+    <section id="apply" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">05 · How to Join</span>
+        <h2 class="section-title">파트너 가입 4단계 절차</h2>
+        <p class="section-desc">
+          초기 비용 없이 온라인 접수 후 본사 승인을 거쳐 즉시 공인 파트너 자격이 부여됩니다.
+        </p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-box">
+          <span class="step-num">STEP 01</span>
+          <span class="step-title">온라인 파트너 신청</span>
+          <span class="step-desc">기본 인적사항 또는 사업자등록증과 희망 활동 지역(총판/대리점/에이전트)을 접수합니다.</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">STEP 02</span>
+          <span class="step-title">본사 상담 및 계약 체결</span>
+          <span class="step-desc">지역 상권 검토, 수수료 배분율 확정 및 공식 파트너십 전자 계약서를 체결합니다.</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">STEP 03</span>
+          <span class="step-title">포털 계정 & 영업 킷 발급</span>
+          <span class="step-desc"><code>partner.soulpay.kr</code> 전용 관리자 계정 생성 및 브로슈어, 제안서, 데모 계정이 지급됩니다.</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">STEP 04</span>
+          <span class="step-title">즉시 영업 개시 & 매월 정산</span>
+          <span class="step-desc">관할 지역 종교 및 비영리 단체에 제안을 시작하고 매월 10일 정산 수수료를 지급받습니다.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Bar -->
+    <section class="cta-bar">
+      <div class="cta-text">
+        <h3>전국 종교·비영리 핀테크 시장의 독점 파트너가 되세요</h3>
+        <p>선착순 권역별 독점 총판 및 대리점 계약이 진행 중입니다. 지금 바로 상담을 신청하세요.</p>
+      </div>
+      <div>
+        <a href="mailto:partner@soulpay.kr" class="btn-pill btn-primary">파트너십 제휴 신청하기</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer Archetype: Ft2 Inline Single Line -->
+  <footer>
+    <div class="container footer-flex">
+      <div class="footer-left">
+        <span class="footer-brand">SoulPay Inc.</span>
+        <span>주식회사 소울페이 파트너 사업본부 · 파트너 전용 포털: <code>partner.soulpay.kr</code> · 문의: partner@soulpay.kr</span>
+      </div>
+      <div class="footer-right">
+        <span>SoulPay Partner Guide · v1.0 (2026)</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
