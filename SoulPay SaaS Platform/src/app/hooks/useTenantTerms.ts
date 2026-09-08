@@ -24,6 +24,7 @@ export interface TenantTerms {
   receiptCancelConfirmText: string;// 종교별 승인 취소 확인 문구
   receiptEnglishTitle: string;     // 영문 영수증 타이틀
   receiptEnglishCancelTitle: string; // 영문 취소 영수증 타이틀
+  adminNotePlaceholder: string;    // 관리자 특이사항 메모 종교/단체별 맞춤 예시
 }
 
 export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
@@ -50,6 +51,7 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     receiptCancelConfirmText: '위 후원금 결제건은 정상적으로 승인 취소 완료되었음을 확인합니다.',
     receiptEnglishTitle: 'OFFICIAL DONATION RECEIPT',
     receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
+    adminNotePlaceholder: '예: 연말정산 기부금 영수증 우편 수령 희망. 010-0000-0000 가족 합산 공제 요청. 정기 후원 증액 상담 완료.',
   },
   // 2. 기독교 / 개신교 (교회)
   protestant: {
@@ -74,6 +76,7 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     receiptCancelConfirmText: '위 헌금 결제건은 정상적으로 승인 취소 완료되었음을 확인합니다.',
     receiptEnglishTitle: 'OFFICIAL CHURCH OFFERING RECEIPT',
     receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
+    adminNotePlaceholder: '예: 주일 예배 시 기부금 영수증 출력 희망. 010-0000-0000 배우자(배우자 성도) 헌금 내역 통합 관리. 소속 다락방/구역: 3교구 2구역.',
   },
   // 3. 천주교 / 가톨릭 (성당)
   catholic: {
@@ -98,6 +101,7 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     receiptCancelConfirmText: '위 봉헌 결제건은 정상적으로 승인 취소 완료되었음을 확인합니다.',
     receiptEnglishTitle: 'OFFICIAL CATHOLIC OFFERING RECEIPT',
     receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
+    adminNotePlaceholder: '예: 주일 미사 참례 시 기부금 영수증 출력 희망. 010-0000-0000 배우자(세례명) 교무금/봉헌 합산 관리. 소속 구역: 2구역 4반.',
   },
   // 4. 불교 (사찰 / 암자)
   temple: {
@@ -122,6 +126,7 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     receiptCancelConfirmText: '위 보시 결제건은 정상적으로 승인 취소 완료되었음을 확인합니다.',
     receiptEnglishTitle: 'OFFICIAL BUDDHIST DONATION RECEIPT',
     receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
+    adminNotePlaceholder: '예: 초하루 법회 사찰 방문 시 기부금 영수증 출력 희망. 010-0000-0000 가족(법명) 인등/연등 축원 통합 관리.',
   },
   // 5. 일반 비영리 / 기부 / 기타 단체
   general: {
@@ -146,6 +151,7 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     receiptCancelConfirmText: '위 기부금 결제건은 정상적으로 승인 취소 완료되었음을 확인합니다.',
     receiptEnglishTitle: 'OFFICIAL DONATION RECEIPT',
     receiptEnglishCancelTitle: 'OFFICIAL CANCELLATION RECEIPT (승인 취소 완료)',
+    adminNotePlaceholder: '예: 연말정산 기부금 영수증 우편 수령 희망. 010-0000-0000 가족 합산 공제 요청. 정기 기부 증액 상담 완료.',
   },
 };
 
@@ -228,6 +234,9 @@ export function useTenantTerms(orgOrReligionTypeOrTenant?: any): TenantTerms {
         ...(customTerminology.prayer ? { 
           prayer: `${customTerminology.prayer} 관리`,
           prayerInputLabel: customTerminology.prayer,
+        } : {}),
+        ...(customTerminology.adminNotePlaceholder ? {
+          adminNotePlaceholder: customTerminology.adminNotePlaceholder,
         } : {}),
       };
     }

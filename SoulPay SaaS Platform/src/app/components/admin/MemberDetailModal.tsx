@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPhoneNumber } from '../../pages/admin/AdminAccountManagement';
+import { useTenantTerms } from '../../hooks/useTenantTerms';
 
 export interface MemberDetailData {
   id: string;
@@ -104,10 +105,12 @@ export function MemberDetailModal({
   const [noteText, setNoteText] = useState(member.note || '');
   const [isEditingNote, setIsEditingNote] = useState(false);
 
+  const terms = useTenantTerms(currentTenant);
+
   // Religious terminology label
-  const memberTerm = currentTenant?.terminology?.member || (currentTenant?.religionType === 'buddhist' ? '불자' : currentTenant?.religionType === 'protestant' ? '성도' : currentTenant?.religionType === 'catholic' ? '교우' : '회원');
-  const donationTerm = currentTenant?.terminology?.donation || (currentTenant?.religionType === 'buddhist' ? '보시' : currentTenant?.religionType === 'protestant' ? '헌금' : currentTenant?.religionType === 'catholic' ? '봉헌' : '후원');
-  const prayerTerm = currentTenant?.terminology?.prayer || (currentTenant?.religionType === 'buddhist' ? '발원문' : currentTenant?.religionType === 'protestant' ? '기도제목' : currentTenant?.religionType === 'catholic' ? '미사지향' : '메시지');
+  const memberTerm = terms.donor;
+  const donationTerm = terms.donation;
+  const prayerTerm = terms.prayer;
   
   const getTitleLabel = () => {
     if (currentTenant?.religionType === 'catholic') return '세례명';
@@ -665,7 +668,7 @@ export function MemberDetailModal({
                 <Textarea
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="예: 매월 10일 사찰 방문 시 기부금 영수증 출력 희망. 010-0000-0000 배우자 통합 관리."
+                  placeholder={terms.adminNotePlaceholder}
                   className="min-h-[140px] rounded-xl p-4 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200"
                 />
 

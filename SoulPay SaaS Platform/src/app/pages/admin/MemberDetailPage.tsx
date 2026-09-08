@@ -1245,7 +1245,7 @@ export default function MemberDetailPage() {
                     <Textarea
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}
-                      placeholder="예: 매월 10일 사찰 방문 시 기부금 영수증 출력 희망. 010-0000-0000 배우자 통합 관리."
+                      placeholder={terms.adminNotePlaceholder}
                       className="min-h-[160px] rounded-xl p-4 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200"
                     />
 
