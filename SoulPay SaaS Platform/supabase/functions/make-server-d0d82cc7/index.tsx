@@ -3707,26 +3707,77 @@ app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
 
 // ==================== BATCH RECURRING SCHEDULER ====================
 // 매일 지정 시각(Cron / GitHub Actions)에 트리거되어 정기결제(일/주/월)를 자동 승인하는 배치 스케줄러
-app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
+const handleRecurringBatchRun = async (c: any) => {
   try {
+    // ⚡ KST (UTC+9) 기준 시각 정확히 산출
     const now = new Date();
-    const todayDate = now.getDate();
-    const daysMap = ['일', '월', '화', '수', '목', '금', '토'];
-    const todayDayOfWeek = daysMap[now.getDay()];
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const todayKstDateStr = kstNow.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+    const todayKstDayOfMonth = kstNow.getUTCDate();
+    const todayKstDayOfWeek = kstNow.getUTCDay(); // 0(일) ~ 6(토)
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-    console.log(`[Recurring Batch Scheduler] Started run for Date: ${todayDate}일, DayOfWeek: ${todayDayOfWeek}`);
+    console.log(`[Recurring Batch Scheduler] Run started at KST: ${todayKstDateStr} (${dayNames[todayKstDayOfWeek]}요일), DayOfMonth: ${todayKstDayOfMonth}`);
 
     // DB에서 모든 active 정기 구독 건 조회
     const allActiveSubscriptions = await db.getAllActiveSubscriptions();
-    
+    const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+
+    // 오늘 이미 성공적으로 결제된 내역 조회하여 2중 청구 원천 차단
+    const allDonations = await db.getAllDonations();
+    const chargedSubMap = new Set<string>();
+    for (const d of allDonations) {
+      if (d.isRecurring && d.paymentStatus === 'completed' && d.createdAt) {
+        const dKstDate = new Date(new Date(d.createdAt).getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        if (dKstDate === todayKstDateStr) {
+          chargedSubMap.add(`${d.tenantId}_${d.donorPhone.replace(/[^0-9]/g, '')}`);
+        }
+      }
+    }
+
     const targets = allActiveSubscriptions.filter((sub: any) => {
       if (sub.status !== 'active') return false;
 
+      // 일시중지 기간 체크
+      if (sub.pausedUntil && typeof sub.pausedUntil === 'string') {
+        const cleanPause = sub.pausedUntil.replace(/\./g, '-').slice(0, 10);
+        if (cleanPause > todayKstDateStr) {
+          return false;
+        }
+      }
+
+      // 오늘 이미 해당 고객/테넌트에서 정기결제가 승인된 경우 중복 청구 방지
+      const cleanPhone = (sub.donorPhone || '').replace(/[^0-9]/g, '');
+      if (chargedSubMap.has(`${sub.tenantId}_${cleanPhone}`)) {
+        console.log(`[Batch Scheduler] Skipping sub ${sub.id} (already charged today: ${todayKstDateStr})`);
+        return false;
+      }
+
+      // 1) nextPaymentDate가 설정되어 있는 경우 (가장 정확한 기준)
+      if (sub.nextPaymentDate && typeof sub.nextPaymentDate === 'string') {
+        const cleanNext = sub.nextPaymentDate.replace(/\./g, '-').slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanNext)) {
+          return cleanNext <= todayKstDateStr;
+        }
+      }
+
+      // 2) nextPaymentDate가 없는 레거시의 경우 주기 및 요일/일자 매칭 (타입 안전 변환)
       const interval = sub.recurringInterval || 'monthly';
       if (interval === 'daily') return true;
-      if (interval === 'weekly' && sub.recurringDayOfWeek === todayDayOfWeek) return true;
-      if (interval === 'monthly' && sub.recurringDay === todayDate) return true;
-      
+      if (interval === 'weekly') {
+        let dowNum = 0;
+        if (typeof sub.recurringDayOfWeek === 'number') {
+          dowNum = sub.recurringDayOfWeek;
+        } else if (typeof sub.recurringDayOfWeek === 'string') {
+          dowNum = dayMap[sub.recurringDayOfWeek] ?? (parseInt(sub.recurringDayOfWeek, 10) || 0);
+        }
+        return dowNum === todayKstDayOfWeek;
+      }
+      if (interval === 'monthly') {
+        const dom = Number(sub.recurringDay || 10);
+        return dom === todayKstDayOfMonth;
+      }
+
       return false;
     });
 
@@ -3735,10 +3786,9 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
     const results = [];
     for (const sub of targets) {
       try {
-        // 나노페이 v2.2.1 정기결제 승인 요청 (POST /api/payment/recure/billpay.io)
         let tranNo = `NANO_TRAN_${Date.now()}`;
         let apprNo = `APPR_${Date.now()}`;
-        
+
         if (sub.billKey) {
           const config = await db.getPaymentConfig(sub.tenantId);
           const billingCfg = config?.providerConfigs?.billing;
@@ -3776,13 +3826,14 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           receiptIssued: true,
         });
 
-        // 다음 결제 예정일 계산 및 갱신
+        // 결제 완료 후 다음 결제 예정일(next_payment_date)을 다음 주/다음 달로 안전하게 갱신
         const nextDate = calculateNextPaymentDate(
           sub.recurringInterval || 'monthly',
           sub.recurringDayOfWeek,
           sub.recurringDay,
-          now
+          true // isAfterImmediateCharge: 다음 회차로 넘김
         );
+
         try {
           await db.pgClient()
             .from('subscriptions')
@@ -3799,6 +3850,7 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           amount: sub.amount,
           status: 'success',
           donationId: donationRecord.id,
+          nextPaymentDate: nextDate,
         });
       } catch (err: any) {
         console.error(`[Recurring Batch Scheduler] Failed for sub ${sub.id}:`, err);
@@ -3814,7 +3866,7 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
             paymentMethod: 'card',
             paymentStatus: 'failed',
             isRecurring: true,
-            failureReason: err.message || '정기결제 자동 승인 실패',
+            failureReason: err?.message || '정기결제 자동 승인 실패',
           });
         } catch (saveErr) {
           console.error('[Recurring Batch Scheduler] Failed to record failed donation:', saveErr);
@@ -3822,22 +3874,26 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
         results.push({
           subId: sub.id,
           status: 'failed',
-          error: err.message || 'Payment execution failed',
+          error: err?.message || 'Payment execution failed',
         });
       }
     }
 
     return c.json({
       success: true,
-      timestamp: now.toISOString(),
+      executedAtKst: todayKstDateStr,
       processedCount: targets.length,
+      successCount: results.filter(r => r.status === 'success').length,
+      failedCount: results.filter(r => r.status === 'failed').length,
       results,
     });
   } catch (error: any) {
     console.error('Error running recurring batch scheduler:', error);
-    return c.json({ success: false, error: 'Batch scheduler execution failed' }, 500);
+    return c.json({ success: false, error: error?.message || 'Batch scheduler execution failed' }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/payment/recurring/batch-run", handleRecurringBatchRun);
+app.post("/payment/recurring/batch-run", handleRecurringBatchRun);
 
 // Admin 샌드박스 테스트 결제 생성 (실제 PostgreSQL 원장 분구 반영)
 app.post("/make-server-d0d82cc7/admin/test-donations", async (c) => {
