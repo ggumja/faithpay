@@ -2711,20 +2711,22 @@ app.get("/make-server-d0d82cc7/subscriptions/phone/:phone", handleGetSubscriptio
 app.get("/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
 
 // 비회원 정기결제 중단/일시정지 상태 변경
-app.post("/make-server-d0d82cc7/subscriptions/:id/status", async (c) => {
+const handleUpdateSubscriptionStatus = async (c: any) => {
   try {
     const id = c.req.param("id");
     const { status } = await c.req.json(); // 'active' | 'paused' | 'cancelled'
     const updated = await db.updateSubscriptionStatus(id, status);
-    if (!updated) return c.json({ success: false, error: "Subscription not found" }, 444);
+    if (!updated) return c.json({ success: false, error: "Subscription not found" }, 404);
     return c.json({ success: true, subscription: updated });
   } catch (error) {
     return c.json({ success: false, error: "Failed to update subscription status" }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/subscriptions/:id/status", handleUpdateSubscriptionStatus);
+app.post("/subscriptions/:id/status", handleUpdateSubscriptionStatus);
 
 // 정기결제 약정 삭제
-app.delete("/make-server-d0d82cc7/subscriptions/:id", async (c) => {
+const handleDeleteSubscription = async (c: any) => {
   try {
     const id = c.req.param("id");
     const ok = await db.deleteSubscription(id);
@@ -2732,7 +2734,9 @@ app.delete("/make-server-d0d82cc7/subscriptions/:id", async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error?.message }, 500);
   }
-});
+};
+app.delete("/make-server-d0d82cc7/subscriptions/:id", handleDeleteSubscription);
+app.delete("/subscriptions/:id", handleDeleteSubscription);
 
 // 정기결제 약정 등록 보장 (클라이언트 완료 콜백 대비 백업/동기화 엔드포인트)
 const handleRegisterSubscription = async (c: any) => {
