@@ -1029,21 +1029,21 @@ export default function MyDonations() {
                         </div>
 
                         {sub.status !== 'cancelled' && (
-                          <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                             {sub.status === 'active' ? (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex-1 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer"
+                                className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer font-medium flex items-center justify-center whitespace-nowrap"
                                 onClick={() => handleUpdateSubStatus(sub.id, 'paused')}
                               >
-                                🟡 다음 달 쉬기 (일시정지)
+                                🟡 다음 회차 쉬기
                               </Button>
                             ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex-1 text-xs border-green-300 text-green-700 hover:bg-green-50 cursor-pointer font-bold"
+                                className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 border-green-300 text-green-700 hover:bg-green-50 cursor-pointer font-bold flex items-center justify-center whitespace-nowrap"
                                 onClick={() => handleUpdateSubStatus(sub.id, 'active')}
                               >
                                 🟢 정기 {currentTenant.terminology.donation} 재개
@@ -1052,10 +1052,10 @@ export default function MyDonations() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              className="flex-1 text-xs cursor-pointer font-bold"
+                              className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 cursor-pointer font-bold flex items-center justify-center whitespace-nowrap"
                               onClick={() => handleUpdateSubStatus(sub.id, 'cancelled')}
                             >
-                              🔴 정기 {currentTenant.terminology.donation} 중단 (해지)
+                              🔴 정기 {currentTenant.terminology.donation} 해지
                             </Button>
                           </div>
                         )}
