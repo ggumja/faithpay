@@ -543,7 +543,7 @@ export const memberAPI = {
     // 1. /members/profile/:phone 백엔드 API
     try {
       const res = await fetchAPI<any>(`/members/profile/${cleanPhone}`);
-      if (res.success && res.data) {
+      if (res.success && res.data && typeof res.data === 'object' && (res.data.email || res.data.address || res.data.fullAddress || res.data.name)) {
         return { success: true, data: res.data };
       }
     } catch {}
@@ -551,16 +551,20 @@ export const memberAPI = {
     // 2. system_settings DB 실측 조회
     try {
       const setRes = await settingsAPI.get(`member_profile_${cleanPhone}`);
-      if (setRes.success && setRes.data) {
-        return { success: true, data: setRes.data };
+      const val = setRes.data?.value !== undefined ? setRes.data.value : setRes.data;
+      if (setRes.success && val && typeof val === 'object' && (val.email || val.address || val.fullAddress || val.name)) {
+        return { success: true, data: val };
       }
     } catch {}
 
-    // 3. localStorage 캐시 확인
+    // 3. localStorage 캐시 확인 (사용자가 마이페이지 브라우저에서 직접 입력/저장한 정보)
     try {
       const local = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
       if (local) {
-        return { success: true, data: JSON.parse(local) };
+        const parsed = JSON.parse(local);
+        if (parsed && typeof parsed === 'object' && (parsed.email || parsed.address || parsed.fullAddress || parsed.name)) {
+          return { success: true, data: parsed };
+        }
       }
     } catch {}
 
