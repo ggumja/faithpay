@@ -2485,8 +2485,9 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     return c.html(html);
   } catch (error: any) {
     console.error("BillKey callback error:", error);
+    const errMsg = error?.message || String(error);
     const failHtml = `<!DOCTYPE html><html><body><script>
-      try { if (window.opener) window.opener.postMessage({ type: 'SOULPAY_BILLKEY_RESULT', resultCode: '9999', resultMsg: '서버 오류' }, '*'); } catch(e){}
+      try { if (window.opener) window.opener.postMessage({ type: 'SOULPAY_BILLKEY_RESULT', resultCode: '9999', resultMsg: ${JSON.stringify('서버 오류: ' + errMsg)} }, '*'); } catch(e){}
       setTimeout(function(){ window.close(); }, 1500);
     </script></body></html>`;
     return c.html(failHtml, 500);
@@ -2550,8 +2551,8 @@ const handleGetSubscriptionsByPhone = async (c: any) => {
     const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
     const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
     return c.json({ success: true, data: subscriptions });
-  } catch (error) {
-    return c.json({ success: false, error: "Failed to fetch subscriptions" }, 500);
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to fetch subscriptions" }, 500);
   }
 };
 app.get("/make-server-d0d82cc7/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
