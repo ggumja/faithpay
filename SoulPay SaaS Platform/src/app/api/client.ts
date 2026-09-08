@@ -402,6 +402,16 @@ export const subscriptionAPI = {
     }
   },
 
+  async getByTenant(tenantId: string): Promise<APIResponse<any[]>> {
+    try {
+      const res = await fetchAPI<any[]>(`/subscriptions/tenant/${tenantId}`, { silentFail: true } as any);
+      if (res.success) return res;
+      return { success: true, data: [] };
+    } catch {
+      return { success: true, data: [] };
+    }
+  },
+
   async updateStatus(id: string, status: 'active' | 'paused' | 'cancelled'): Promise<APIResponse<{ subscription: any }>> {
     return fetchAPI<{ subscription: any }>(`/subscriptions/${id}/status`, {
       method: 'POST',

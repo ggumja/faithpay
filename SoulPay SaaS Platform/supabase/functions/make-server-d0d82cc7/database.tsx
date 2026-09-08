@@ -1388,6 +1388,27 @@ export async function getSubscriptionsByPhone(phone: string): Promise<Subscripti
   }));
 }
 
+export async function getSubscriptionsByTenant(tenantId: string): Promise<Subscription[]> {
+  const sb = pgClient();
+  const { data } = await sb
+    .from('subscriptions')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+  return (data ?? []).map((r: any) => ({
+    id: r.id, tenantId: r.tenant_id, donorName: r.donor_name,
+    donorPhone: r.donor_phone, donorEmail: r.donor_email,
+    itemId: r.item_id, itemName: r.item_name, amount: r.amount,
+    userId: r.user_id, billKey: r.bill_key, cardNo: r.card_no, cardName: r.card_name,
+    recurringDay: r.recurring_day,
+    recurringInterval: r.recurring_interval || 'monthly',
+    recurringDayOfWeek: r.recurring_day_of_week,
+    status: r.status,
+    nextPaymentDate: r.next_payment_date, pausedUntil: r.paused_until,
+    createdAt: r.created_at, updatedAt: r.updated_at,
+  }));
+}
+
 export async function updateSubscriptionStatus(id: string, status: 'active' | 'paused' | 'cancelled'): Promise<Subscription | null> {
   const sb = pgClient();
   const { data, error } = await sb

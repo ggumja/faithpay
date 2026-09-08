@@ -2710,6 +2710,22 @@ const handleGetSubscriptionsByPhone = async (c: any) => {
 app.get("/make-server-d0d82cc7/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
 app.get("/subscriptions/phone/:phone", handleGetSubscriptionsByPhone);
 
+// 테넌트(단체)별 정기결제 약정 목록 조회
+const handleGetSubscriptionsByTenant = async (c: any) => {
+  try {
+    const tenantId = c.req.param("tenantId");
+    if (!tenantId) {
+      return c.json({ success: false, error: "tenantId is required" }, 400);
+    }
+    const subscriptions = await db.getSubscriptionsByTenant(tenantId);
+    return c.json({ success: true, data: subscriptions });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to fetch subscriptions" }, 500);
+  }
+};
+app.get("/make-server-d0d82cc7/subscriptions/tenant/:tenantId", handleGetSubscriptionsByTenant);
+app.get("/subscriptions/tenant/:tenantId", handleGetSubscriptionsByTenant);
+
 // 비회원 정기결제 중단/일시정지/재개 상태 변경
 const handleUpdateSubscriptionStatus = async (c: any) => {
   try {

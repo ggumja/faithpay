@@ -21,35 +21,39 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   RefreshCw,
-  Zap,
-  SkipForward,
   PauseCircle,
   PlayCircle,
   XCircle,
-  CreditCard,
   FileCheck,
+  CreditCard,
+  AlertCircle,
 } from 'lucide-react';
-import { donationAPI } from '../../api/client';
-import { assignSequentialDonationIds } from './DonationHistory';
+import { subscriptionAPI } from '../../api/client';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { toast } from 'sonner';
 
-// 약정 마스터 인터페이스
-interface SubscriptionMaster {
+// 실제 DB 약정 인터페이스
+export interface SubscriptionRecord {
   id: string;
+  tenantId: string;
   donorName: string;
   donorPhone: string;
+  donorEmail?: string;
+  itemId: string;
   itemName: string;
   amount: number;
-  recurringDay: number;
-  paymentMethod: string;
+  billKey?: string;
+  cardNo?: string;
+  cardName?: string;
+  recurringDay?: number;
+  recurringInterval?: 'daily' | 'weekly' | 'monthly';
+  recurringDayOfWeek?: number;
   status: 'active' | 'paused' | 'cancelled';
-  startDate: string;
-  nextBillingDate: string;
+  nextPaymentDate?: string;
+  pausedUntil?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export default function RecurringPendingPage() {
@@ -58,165 +62,110 @@ export default function RecurringPendingPage() {
   const { tenants, currentTenant, setCurrentTenant } = useApp();
   const terms = useTenantTerms(currentTenant);
 
-  const [activeTab, setActiveTab] = useState<'master' | 'schedule'>('master');
-  const [donations, setDonations] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // 약정 상태 로컬 관리 (일시중지, 재개, 해지)
-  const [masterStatuses, setMasterStatuses] = useState<Record<string, 'active' | 'paused' | 'cancelled'>>({
-    'SUB-2026-0001': 'active',
-    'SUB-2026-0002': 'active',
-    'SUB-2026-0003': 'paused',
-  });
-
-  // 스케줄러 실행 항목 상태 로컬 관리 (대기, 실행완료, 건너뜀)
-  const [scheduleStatuses, setScheduleStatuses] = useState<Record<string, 'pending' | 'executed' | 'skipped'>>({});
-
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
-      fetchDonations(tenant.id);
+      fetchSubscriptions(tenant.id);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  const fetchDonations = async (tenantId: string) => {
+  const fetchSubscriptions = async (tenantId: string) => {
     setIsLoading(true);
     try {
-      const res = await donationAPI.getByTenant(tenantId);
+      const res = await subscriptionAPI.getByTenant(tenantId);
       if (res.success && res.data) {
-        setDonations(assignSequentialDonationIds(res.data));
+        setSubscriptions(res.data);
       } else {
-        setDonations([]);
+        setSubscriptions([]);
       }
     } catch (e) {
-      console.error(e);
-      setDonations([]);
+      console.error('Failed to fetch subscriptions:', e);
+      setSubscriptions([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 1. 📌 Tab 1: 정기결제 약정 마스터 목록 생성
-  const subscriptionMasters = useMemo<SubscriptionMaster[]>(() => {
-    const map: Record<string, SubscriptionMaster> = {};
-
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-
-    donations.forEach((d) => {
-      const isRecurring = d.isRecurring || d.is_recurring;
-      if (isRecurring) {
-        const phone = d.donorPhone || d.donor_phone || '-';
-        const key = `${d.donorName || '무기명'}_${phone}_${d.itemName || '기본'}`;
-
-        if (!map[key]) {
-          const subId = `SUB-${currentYear}-${String(Object.keys(map).length + 1).padStart(4, '0')}`;
-          const date = new Date(d.createdAt || d.created_at || Date.now());
-          const recurringDay = date.getDate() || 15;
-          const status = masterStatuses[subId] || 'active';
-
-          map[key] = {
-            id: subId,
-            donorName: d.donorName || '무기명',
-            donorPhone: phone,
-            itemName: d.itemName || '일반후원',
-            amount: Number(d.amount) || 0,
-            recurringDay,
-            paymentMethod: d.paymentMethod || '신용카드 빌링',
-            status,
-            startDate: date.toISOString().slice(0, 10),
-            nextBillingDate: `${currentYear}-${currentMonth}-${String(recurringDay).padStart(2, '0')}`,
-          };
-        }
-      }
-    });
-
-    return Object.values(map);
-  }, [donations, masterStatuses]);
-
-  // 2. ⚡ Tab 2: 스케줄러 결제 실행 대기열 생성 (해지건 제외)
-  const scheduledExecutions = useMemo(() => {
-    return subscriptionMasters.filter(sub => sub.status !== 'cancelled').map((sub, idx) => {
-      const schDateStr = sub.nextBillingDate.replace(/-/g, '');
-      const schId = `SCH-${schDateStr}-${String(idx + 1).padStart(3, '0')}`;
-      const status = scheduleStatuses[schId] || (sub.status === 'paused' ? 'skipped' : 'pending');
-
-      return {
-        id: schId,
-        masterId: sub.id,
-        scheduledDate: `${sub.nextBillingDate} 09:00:00 (KST)`,
-        donorName: sub.donorName,
-        donorPhone: sub.donorPhone,
-        itemName: sub.itemName,
-        amount: sub.amount,
-        paymentMethod: sub.paymentMethod,
-        attemptCount: 1,
-        status, // 'pending' | 'executed' | 'skipped'
-      };
-    });
-  }, [subscriptionMasters, scheduleStatuses]);
+  // 결제 주기 텍스트 포맷 헬퍼
+  const formatInterval = (sub: SubscriptionRecord) => {
+    const interval = sub.recurringInterval || 'monthly';
+    if (interval === 'daily') return '매일 결제';
+    if (interval === 'weekly') {
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+      const dow = Number(sub.recurringDayOfWeek ?? 0);
+      return `매주 (${dayNames[dow] || '일'})요일`;
+    }
+    return `매월 ${sub.recurringDay || 10}일`;
+  };
 
   // 검색 필터링
-  const filteredMasters = useMemo(() => {
-    return subscriptionMasters.filter((m) => {
+  const filteredSubs = useMemo(() => {
+    return subscriptions.filter((s) => {
       if (!searchTerm) return true;
       const term = searchTerm.trim().toLowerCase();
       return (
-        m.donorName.toLowerCase().includes(term) ||
-        m.id.toLowerCase().includes(term) ||
-        m.itemName.toLowerCase().includes(term) ||
-        m.donorPhone.toLowerCase().includes(term)
+        (s.donorName || '').toLowerCase().includes(term) ||
+        (s.id || '').toLowerCase().includes(term) ||
+        (s.itemName || '').toLowerCase().includes(term) ||
+        (s.donorPhone || '').toLowerCase().includes(term)
       );
     });
-  }, [subscriptionMasters, searchTerm]);
+  }, [subscriptions, searchTerm]);
 
-  const filteredSchedules = useMemo(() => {
-    return scheduledExecutions.filter((s) => {
-      if (!searchTerm) return true;
-      const term = searchTerm.trim().toLowerCase();
-      return (
-        s.donorName.toLowerCase().includes(term) ||
-        s.id.toLowerCase().includes(term) ||
-        s.itemName.toLowerCase().includes(term) ||
-        s.masterId.toLowerCase().includes(term)
-      );
-    });
-  }, [scheduledExecutions, searchTerm]);
+  // KPI 통계 산출 (100% 실측 DB 기반)
+  const activeCount = useMemo(() => {
+    return subscriptions.filter((s) => s.status === 'active').length;
+  }, [subscriptions]);
 
-  const activeMasterCount = useMemo(() => {
-    return subscriptionMasters.filter((m) => m.status === 'active').length;
-  }, [subscriptionMasters]);
+  const pausedCount = useMemo(() => {
+    return subscriptions.filter((s) => s.status === 'paused').length;
+  }, [subscriptions]);
 
-  const totalMonthlyCommitment = useMemo(() => {
-    return subscriptionMasters
-      .filter((m) => m.status === 'active')
-      .reduce((sum, m) => sum + m.amount, 0);
-  }, [subscriptionMasters]);
+  const cancelledCount = useMemo(() => {
+    return subscriptions.filter((s) => s.status === 'cancelled').length;
+  }, [subscriptions]);
 
-  // 약정 상태 조작
-  const handleToggleMasterStatus = (subId: string, newStatus: 'active' | 'paused' | 'cancelled') => {
-    setMasterStatuses((prev) => ({ ...prev, [subId]: newStatus }));
+  const { totalMonthlyCommitment, totalPerRunAmount } = useMemo(() => {
+    const activeSubs = subscriptions.filter((s) => s.status === 'active');
+    const perRun = activeSubs.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const monthly = activeSubs.reduce((sum, s) => {
+      const amt = Number(s.amount) || 0;
+      const interval = s.recurringInterval || 'monthly';
+      if (interval === 'weekly') return sum + amt * 4;
+      if (interval === 'daily') return sum + amt * 30;
+      return sum + amt;
+    }, 0);
+    return { totalMonthlyCommitment: monthly, totalPerRunAmount: perRun };
+  }, [subscriptions]);
+
+  // 실제 약정 상태 DB 업데이트 (일시중지, 재개, 해지)
+  const handleToggleStatus = async (subId: string, newStatus: 'active' | 'paused' | 'cancelled') => {
     const labelMap = { active: '정상 재개', paused: '일시 중지', cancelled: '약정 해지' };
-    toast.success(`[${subId}] 약정이 ${labelMap[newStatus]} 처리되었습니다.`);
+    if (!window.confirm(`선택한 정기 약정을 정말 ${labelMap[newStatus]} 처리하시겠습니까?`)) return;
+
+    try {
+      const res = await subscriptionAPI.updateStatus(subId, newStatus);
+      if (res.success) {
+        toast.success(`약정이 ${labelMap[newStatus]} 처리되었습니다.`);
+        setSubscriptions((prev) =>
+          prev.map((s) => (s.id === subId ? { ...s, status: newStatus } : s))
+        );
+      } else {
+        toast.error(`처리 실패: ${res.error || '상태 변경에 실패했습니다.'}`);
+      }
+    } catch {
+      toast.error('처리 중 오류가 발생했습니다.');
+    }
   };
 
-  // 스케줄러 수동 수기 실행
-  const handleExecuteNow = (schId: string, donorName: string) => {
-    setScheduleStatuses((prev) => ({ ...prev, [schId]: 'executed' }));
-    toast.success(`⚡ [${donorName}] 님의 청구건이 지금 즉시 강제 결제 승인 처리되었습니다.`);
-  };
-
-  // 스케줄러 이번 회차 건너뛰기
-  const handleSkipExecution = (schId: string, donorName: string) => {
-    setScheduleStatuses((prev) => ({ ...prev, [schId]: 'skipped' }));
-    toast.info(`⏭️ [${donorName}] 님의 이번 회차 청구가 건너뛰기(스킵) 처리되었습니다.`);
-  };
-
+  const totalPages = Math.max(1, Math.ceil(filteredSubs.length / pageSize));
   const currentPath = location.pathname;
 
   if (!currentTenant) {
@@ -255,7 +204,7 @@ export default function RecurringPendingPage() {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 lg:p-8 space-y-6 w-full">
+        <div className="p-6 lg:p-8 space-y-6 w-full max-w-7xl mx-auto">
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -264,18 +213,18 @@ export default function RecurringPendingPage() {
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100">
                   {terms.recurringPending} 관리 센터
                 </h1>
-                <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 font-bold text-xs">
-                  2단계 분리 아키텍처
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-xs">
+                  실시간 DB 실측 연동
                 </Badge>
               </div>
               <p className="text-slate-500 dark:text-zinc-400 text-sm">
-                {terms.donor}별 정기 약정 계약(마스터)과 자동 결제 스케줄러 실행 대기열을 명확히 구분하여 관리합니다
+                {terms.donor}별 정기 결제 약정 마스터 계약 현황 및 차회 결제 예정일을 통합 관리합니다
               </p>
             </div>
 
             <Button
               variant="outline"
-              onClick={() => fetchDonations(currentTenant.id)}
+              onClick={() => fetchSubscriptions(currentTenant.id)}
               disabled={isLoading}
               className="gap-2 cursor-pointer shadow-xs self-start md:self-auto"
             >
@@ -286,21 +235,23 @@ export default function RecurringPendingPage() {
 
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-emerald-500">
+            <Card className="border-l-4 border-l-emerald-500 shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  활성 정기 약정 수 (Master)
+                  활성 정기 약정 수 (Active)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  {activeMasterCount}건
+                  {activeCount}건
                 </div>
-                <p className="text-xs text-slate-400 mt-1">전체 {subscriptionMasters.length}건 중 결제 진행 중</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  전체 {subscriptions.length}건 중 결제 진행 중 (해지 {cancelledCount}건)
+                </p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-indigo-500">
+            <Card className="border-l-4 border-l-indigo-500 shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   월 약정 예상 수납 총액
@@ -310,323 +261,224 @@ export default function RecurringPendingPage() {
                 <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
                   {totalMonthlyCommitment.toLocaleString()}원
                 </div>
-                <p className="text-xs text-slate-400 mt-1">매월 자동 결제 수납되는 총약정액</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  월 환산 예상액 (회차별 합계: {totalPerRunAmount.toLocaleString()}원)
+                </p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
+            <Card className="border-l-4 border-l-amber-500 shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  이번 달 실행 대기 스케줄
+                  일시중지 / 해지 약정 현황
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
-                  {scheduledExecutions.filter((s) => s.status === 'pending').length}건
+                  {pausedCount + cancelledCount}건
                 </div>
-                <p className="text-xs text-slate-400 mt-1">오전 9시 자동 배치 실행 대기 건수</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  일시중지 {pausedCount}건 · 해지 완료 {cancelledCount}건
+                </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sub-Tab Navigation Bar */}
-          <div className="flex border-b border-slate-200 dark:border-zinc-800 gap-3">
-            <button
-              onClick={() => {
-                setActiveTab('master');
-                setCurrentPage(1);
-              }}
-              className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'master'
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-black'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200'
-              }`}
-            >
-              <FileCheck className="h-4 w-4" />
-              <span>📌 1. 정기결제 약정 목록 (Subscription Master)</span>
-              <Badge variant="secondary" className="text-xs font-semibold">
-                {filteredMasters.length}건
-              </Badge>
-            </button>
+          {/* 정기결제 약정 마스터 목록 */}
+          <Card className="shadow-xs">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+              <div>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <FileCheck className="h-5 w-5 text-indigo-600" />
+                  정기 약정 마스터 계약 명세 ({filteredSubs.length}건)
+                </CardTitle>
+                <CardDescription>
+                  {terms.donor}별 정기 결제 계약 정보입니다. 결제 주기, 다음 결제 예정일, 일시중지 및 해지 상태를 실시간 관리합니다.
+                </CardDescription>
+              </div>
 
-            <button
-              onClick={() => {
-                setActiveTab('schedule');
-                setCurrentPage(1);
-              }}
-              className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'schedule'
-                  ? 'border-amber-600 text-amber-600 dark:text-amber-400 font-black'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200'
-              }`}
-            >
-              <Clock className="h-4 w-4" />
-              <span>⚡ 2. 스케줄러 실 결제 실행 대기열 (Batch Execution Queue)</span>
-              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-bold">
-                {filteredSchedules.length}건
-              </Badge>
-            </button>
-          </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="약정자 성명, 약정ID, 연락처 검색..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-9 text-xs"
+                />
+              </div>
+            </CardHeader>
 
-          {/* TAB 1: 정기결제 약정 마스터 목록 */}
-          {activeTab === 'master' && (
-            <Card>
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="text-lg font-bold">
-                    정기 약정 마스터 계약 명세 ({filteredMasters.length}건)
-                  </CardTitle>
-                  <CardDescription>
-                    {terms.donor}별 지속 정기 결제 계약 정보입니다. 결제일 변경, 일시중지, 해지 관리를 수행합니다.
-                  </CardDescription>
-                </div>
-
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="약정자 성명, 약정ID, 연락처 검색..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="pl-9 text-xs"
-                  />
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <Table>
-                  <TableHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/70 dark:bg-zinc-900/50">
+                    <TableHead className="w-[140px]">약정 번호</TableHead>
+                    <TableHead>약정자 성명</TableHead>
+                    <TableHead>연락처</TableHead>
+                    <TableHead>후원 항목</TableHead>
+                    <TableHead className="text-right">약정 금액</TableHead>
+                    <TableHead>결제 주기</TableHead>
+                    <TableHead>다음(첫) 결제 예정일</TableHead>
+                    <TableHead>결제 카드</TableHead>
+                    <TableHead>약정 상태</TableHead>
+                    <TableHead className="text-center">약정 관리</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
                     <TableRow>
-                      <TableHead>약정 번호</TableHead>
-                      <TableHead>약정자 성명</TableHead>
-                      <TableHead>연락처</TableHead>
-                      <TableHead>후원 항목</TableHead>
-                      <TableHead className="text-right">약정 금액</TableHead>
-                      <TableHead>정기 결제일</TableHead>
-                      <TableHead>결제 수단</TableHead>
-                      <TableHead>약정 상태</TableHead>
-                      <TableHead className="text-center">약정 관리</TableHead>
+                      <TableCell colSpan={10} className="text-center py-16 text-slate-400">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <RefreshCw className="h-6 w-6 animate-spin text-indigo-600" />
+                          <p className="text-sm font-medium">정기 약정 데이터를 실시간 조회 중입니다...</p>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMasters.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center py-12 text-slate-400 space-y-2">
-                          <Calendar className="h-8 w-8 mx-auto text-slate-300 dark:text-zinc-600 mb-2" />
-                          <p className="font-semibold text-sm">등록된 정기 약정 계약 정보가 없습니다.</p>
+                  ) : filteredSubs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-16 text-slate-400 space-y-2">
+                        <Calendar className="h-8 w-8 mx-auto text-slate-300 dark:text-zinc-600 mb-2" />
+                        <p className="font-semibold text-sm">등록된 정기 약정 계약 정보가 없습니다.</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSubs.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((sub) => (
+                      <TableRow key={sub.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/40">
+                        <TableCell className="font-mono text-[11px] font-bold text-slate-700 dark:text-zinc-300">
+                          {sub.id}
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredMasters.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((sub) => (
-                        <TableRow key={sub.id}>
-                          <TableCell className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200">
-                            {sub.id}
-                          </TableCell>
-                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
-                            {sub.donorName}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-500">
-                            {sub.donorPhone}
-                          </TableCell>
-                          <TableCell className="font-medium text-slate-700 dark:text-zinc-300">
-                            {sub.itemName}
-                          </TableCell>
-                          <TableCell className="text-right font-black text-indigo-600 dark:text-indigo-400">
-                            {sub.amount.toLocaleString()}원
-                          </TableCell>
-                          <TableCell className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                            매월 {sub.recurringDay}일
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600 dark:text-zinc-400">
-                            {sub.paymentMethod}
-                          </TableCell>
-                          <TableCell>
+                        <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
+                          {sub.donorName || '무기명'}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500">
+                          {sub.donorPhone || '-'}
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-700 dark:text-zinc-300">
+                          {sub.itemName || '정기 헌금'}
+                        </TableCell>
+                        <TableCell className="text-right font-black text-indigo-600 dark:text-indigo-400">
+                          {Number(sub.amount || 0).toLocaleString()}원
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                          {formatInterval(sub)}
+                        </TableCell>
+                        <TableCell className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                          {sub.nextPaymentDate || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 dark:text-zinc-400">
+                          {sub.cardName || '신용카드'}{sub.cardNo ? ` (${sub.cardNo})` : ''}
+                        </TableCell>
+                        <TableCell>
+                          {sub.status === 'active' && (
+                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-[11px]">
+                              🟢 결제 진행중
+                            </Badge>
+                          )}
+                          {sub.status === 'paused' && (
+                            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[11px]">
+                              🟡 일시 중지
+                            </Badge>
+                          )}
+                          {sub.status === 'cancelled' && (
+                            <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 font-bold text-[11px]">
+                              🔴 약정 해지
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
                             {sub.status === 'active' && (
-                              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-[11px]">
-                                🟢 결제 진행중
-                              </Badge>
-                            )}
-                            {sub.status === 'paused' && (
-                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[11px]">
-                                🟡 일시 중지
-                              </Badge>
-                            )}
-                            {sub.status === 'cancelled' && (
-                              <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 font-bold text-[11px]">
-                                🔴 약정 해지
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {sub.status === 'active' ? (
+                              <>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleToggleMasterStatus(sub.id, 'paused')}
+                                  onClick={() => handleToggleStatus(sub.id, 'paused')}
                                   className="h-7 px-2 text-[11px] font-bold gap-1 text-amber-700 hover:bg-amber-50 cursor-pointer"
                                 >
                                   <PauseCircle className="h-3.5 w-3.5" />
                                   일시중지
                                 </Button>
-                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleStatus(sub.id, 'cancelled')}
+                                  className="h-7 px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  해지
+                                </Button>
+                              </>
+                            )}
+                            {sub.status === 'paused' && (
+                              <>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleToggleMasterStatus(sub.id, 'active')}
+                                  onClick={() => handleToggleStatus(sub.id, 'active')}
                                   className="h-7 px-2 text-[11px] font-bold gap-1 text-emerald-700 hover:bg-emerald-50 cursor-pointer"
                                 >
                                   <PlayCircle className="h-3.5 w-3.5" />
                                   결제재개
                                 </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleToggleMasterStatus(sub.id, 'cancelled')}
-                                className="h-7 px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 cursor-pointer"
-                              >
-                                <XCircle className="h-3.5 w-3.5" />
-                                해지
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* TAB 2: 스케줄러 실 결제 실행 대기열 */}
-          {activeTab === 'schedule' && (
-            <Card className="border-amber-200 dark:border-amber-900/40">
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="text-lg font-bold text-amber-950 dark:text-amber-200">
-                    스케줄러 자동 결제 대기열 ({filteredSchedules.length}건)
-                  </CardTitle>
-                  <CardDescription>
-                    오전 9시 배치 스케줄러가 결제 승인을 시도할 1회차 실 결제 대기 목록입니다
-                  </CardDescription>
-                </div>
-
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="약정자 성명, 스케줄ID 검색..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="pl-9 text-xs"
-                  />
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>스케줄 ID</TableHead>
-                      <TableHead>실행 예정 일시</TableHead>
-                      <TableHead>약정자 성명</TableHead>
-                      <TableHead>후원 항목</TableHead>
-                      <TableHead className="text-right">청구 금액</TableHead>
-                      <TableHead>시도 회차</TableHead>
-                      <TableHead>스케줄 상태</TableHead>
-                      <TableHead className="text-center">수동 관리 조작</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSchedules.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-12 text-slate-400 space-y-2">
-                          <Clock className="h-8 w-8 mx-auto text-slate-300 dark:text-zinc-600 mb-2" />
-                          <p className="font-semibold text-sm">실행 예정 대기열이 비어 있습니다.</p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleStatus(sub.id, 'cancelled')}
+                                  className="h-7 px-2 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  해지
+                                </Button>
+                              </>
+                            )}
+                            {sub.status === 'cancelled' && (
+                              <span className="text-xs text-slate-400 font-medium">해지 완료</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredSchedules.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((sch) => (
-                        <TableRow key={sch.id}>
-                          <TableCell className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">
-                            {sch.id}
-                          </TableCell>
-                          <TableCell className="text-xs font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                            {sch.scheduledDate}
-                          </TableCell>
-                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
-                            {sch.donorName}
-                          </TableCell>
-                          <TableCell className="text-slate-700 dark:text-zinc-300">
-                            {sch.itemName}
-                          </TableCell>
-                          <TableCell className="text-right font-black text-amber-600 dark:text-amber-400">
-                            {sch.amount.toLocaleString()}원
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {sch.attemptCount}차 시도
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {sch.status === 'pending' && (
-                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[11px]">
-                                ⏳ 오전 9시 결제 대기중
-                              </Badge>
-                            )}
-                            {sch.status === 'executed' && (
-                              <Badge className="bg-emerald-600 text-white font-bold text-[11px]">
-                                ⚡ 강제 승인 완료
-                              </Badge>
-                            )}
-                            {sch.status === 'skipped' && (
-                              <Badge className="bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-400 font-semibold text-[11px]">
-                                ⏭️ 이번 회차 스킵
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {sch.status === 'pending' ? (
-                                <>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => handleExecuteNow(sch.id, sch.donorName)}
-                                    className="h-7 px-2 text-[11px] font-bold gap-1 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
-                                  >
-                                    <Zap className="h-3.5 w-3.5" />
-                                    지금 강제 결제
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleSkipExecution(sch.id, sch.donorName)}
-                                    className="h-7 px-2 text-[11px] font-medium gap-1 cursor-pointer"
-                                  >
-                                    <SkipForward className="h-3.5 w-3.5" />
-                                    이번달 건너뛰기
-                                  </Button>
-                                </>
-                              ) : (
-                                <span className="text-xs text-slate-400 font-medium">조작 완료됨</span>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* 페이지네이션 (건수가 10건 초과일 때 노출) */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 text-xs text-slate-500">
+                  <div>
+                    전체 {filteredSubs.length}건 중 {(currentPage - 1) * pageSize + 1} -{' '}
+                    {Math.min(currentPage * pageSize, filteredSubs.length)}건 표시
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-7 w-7 p-0 cursor-pointer"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="px-2 font-bold text-slate-800 dark:text-zinc-200">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-7 w-7 p-0 cursor-pointer"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
