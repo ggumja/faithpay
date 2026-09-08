@@ -624,13 +624,13 @@ export default function DonationHistory() {
     const tenantName = currentTenant?.name || 'SoulPay';
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `${tenantName}_봉헌내역_${dateStr}.csv`);
+    link.setAttribute('download', `${tenantName}_${terms.donation}내역_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast.success(`${filteredDonations.length}건의 봉헌 내역이 엑셀(CSV)로 다운로드되었습니다.`);
+    toast.success(`${filteredDonations.length}건의 ${terms.donation} 내역이 엑셀(CSV)로 다운로드되었습니다.`);
   };
 
   const handleViewDetail = (donation: any) => {
@@ -809,7 +809,7 @@ export default function DonationHistory() {
               <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
             </SheetContent>
           </Sheet>
-          <h1 className="text-lg font-semibold">봉헌 내역</h1>
+          <h1 className="text-lg font-semibold">{terms.donationHistory}</h1>
         </div>
 
         {/* Content */}
@@ -830,10 +830,10 @@ export default function DonationHistory() {
             {subscriptions.length > 0 && (
               <div className="mb-8 border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-6 rounded-2xl">
                 <h3 className="text-lg font-bold text-indigo-950 dark:text-indigo-200 mb-1 flex items-center gap-2">
-                  <span>⚡ 내 정기결제 셀프 관리</span>
+                  <span>⚡ 내 정기{terms.donation} 셀프 관리</span>
                   <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
                 </h3>
-                <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-4">매월 자동 청구되는 보시/헌금 정기결제를 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
+                <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-4">매월 자동 청구되는 정기 {terms.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {subscriptions.map(sub => (
@@ -897,7 +897,7 @@ export default function DonationHistory() {
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
-                        조회 기간 봉헌액
+                        조회 기간 {terms.donation}액
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -919,7 +919,7 @@ export default function DonationHistory() {
                     <CardContent>
                       <div className="text-2xl font-bold text-green-600">{completedCount}건</div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        정상 승인된 봉헌
+                        정상 승인된 {terms.donation}
                       </p>
                     </CardContent>
                   </Card>
@@ -955,7 +955,7 @@ export default function DonationHistory() {
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
-                            placeholder="이름, 전화번호, 봉헌번호 검색"
+                            placeholder={`이름, 전화번호, ${terms.donation}번호 검색`}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9"
@@ -1111,9 +1111,9 @@ export default function DonationHistory() {
                 {/* Table */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>봉헌 목록</CardTitle>
+                    <CardTitle>{terms.donation} 목록</CardTitle>
                     <CardDescription>
-                      {filteredDonations.length}건의 봉헌 내역이 조회되었습니다
+                      {filteredDonations.length}건의 {terms.donation} 내역이 조회되었습니다
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1121,11 +1121,11 @@ export default function DonationHistory() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>봉헌번호</TableHead>
+                            <TableHead>{terms.donation}번호</TableHead>
                             <TableHead>일시</TableHead>
                             <TableHead>기기</TableHead>
                             <TableHead>이름</TableHead>
-                            <TableHead>봉헌항목</TableHead>
+                            <TableHead>{terms.donation}항목</TableHead>
                             <TableHead className="text-right">금액</TableHead>
                             <TableHead>결제방법</TableHead>
                             <TableHead>결제상태</TableHead>
@@ -1142,7 +1142,7 @@ export default function DonationHistory() {
                           ) : currentDonations.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                조회된 봉헌 내역이 없습니다
+                                조회된 {terms.donation} 내역이 없습니다
                               </TableCell>
                             </TableRow>
                           ) : (
@@ -1196,7 +1196,7 @@ export default function DonationHistory() {
                                       ) : null}
                                     </div>
                                   </TableCell>
-                                  <TableCell>{donation.itemName || '일반헌금/보시'}</TableCell>
+                                  <TableCell>{donation.itemName || `기본 ${terms.donation}`}</TableCell>
                                   <TableCell className="text-right font-bold">
                                     {(donation.amount || 0).toLocaleString()}원
                                   </TableCell>
@@ -1398,7 +1398,7 @@ export default function DonationHistory() {
                         </div>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-sm text-muted-foreground">봉헌 일시</p>
+                        <p className="text-sm text-muted-foreground">{terms.donation} 일시</p>
                         <p className="font-semibold">
                           {!isNaN(new Date(selectedDonation.createdAt).getTime()) ? new Date(selectedDonation.createdAt).toLocaleString('ko-KR') : '-'}
                         </p>
@@ -1407,7 +1407,7 @@ export default function DonationHistory() {
 
                     {selectedDonation.prayerText && (
                       <div className="pt-4 border-t">
-                        <p className="text-sm text-muted-foreground mb-2">기도 제목</p>
+                        <p className="text-sm text-muted-foreground mb-2">{terms.prayerInputLabel || terms.prayer || '기도/메시지'}</p>
                         <p className="p-3 bg-slate-50 rounded-lg">{selectedDonation.prayerText}</p>
                       </div>
                     )}
