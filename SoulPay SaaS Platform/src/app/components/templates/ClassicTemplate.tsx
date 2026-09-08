@@ -5,6 +5,7 @@ import { FaithTheme } from '../../theme/faithTheme';
 import { Motif, MotifLarge } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { formatPhoneNumber } from '../../utils/phoneUtils';
 import {
   MapPin, Phone, Mail, Clock, ChevronRight,
   Shield, Repeat, Landmark, Heart, Search, Star, Sparkles
@@ -435,7 +436,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               {currentTenant.contact?.phone && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <Phone size={14} color={C.cobalt} style={{ flexShrink: 0 }} />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: C.ink, fontWeight: 600 }}>{currentTenant.contact.phone}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: C.ink, fontWeight: 600 }}>{formatPhoneNumber(currentTenant.contact.phone)}</span>
                 </div>
               )}
               {currentTenant.contact?.email && (

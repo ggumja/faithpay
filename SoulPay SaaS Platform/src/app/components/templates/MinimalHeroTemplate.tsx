@@ -5,6 +5,7 @@ import { FaithTheme } from '../../theme/faithTheme';
 import { Motif } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { formatPhoneNumber } from '../../utils/phoneUtils';
 import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Heart, Star } from 'lucide-react';
 
 interface MinimalHeroTemplateProps {
@@ -289,33 +290,88 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
         <div
           style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: 24,
-            padding: '24px 28px',
-            marginBottom: 44,
+            borderRadius: 16,
+            padding: '16px 20px',
+            marginBottom: 28,
             border: '1px solid #E2E8F0',
-            boxShadow: '0 6px 20px rgba(15, 23, 42, 0.03)',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 20,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 16,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${ft.primary}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ft.primary, border: `1px solid ${ft.primary}25` }}>
-              <MapPin size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                minWidth: 40,
+                maxWidth: 40,
+                flexShrink: 0,
+                borderRadius: 12,
+                backgroundColor: `${ft.primary}12`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: ft.primary,
+                border: `1px solid ${ft.primary}25`,
+                boxSizing: 'border-box',
+              }}
+            >
+              <MapPin size={18} style={{ flexShrink: 0 }} />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>위치</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginTop: 2 }}>{currentTenant.address || '주소 정보 등록됨'}</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#0F172A',
+                  marginTop: 2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={currentTenant.address || '주소 정보 등록됨'}
+              >
+                {currentTenant.address || '주소 정보 등록됨'}
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${ft.primary}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ft.primary, border: `1px solid ${ft.primary}25` }}>
-              <Phone size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                minWidth: 40,
+                maxWidth: 40,
+                flexShrink: 0,
+                borderRadius: 12,
+                backgroundColor: `${ft.primary}12`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: ft.primary,
+                border: `1px solid ${ft.primary}25`,
+                boxSizing: 'border-box',
+              }}
+            >
+              <Phone size={18} style={{ flexShrink: 0 }} />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>문의처</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginTop: 2, fontFamily: 'monospace' }}>{currentTenant.contact?.phone || '문의처 정보'}</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#0F172A',
+                  marginTop: 2,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                }}
+              >
+                {formatPhoneNumber(currentTenant.contact?.phone) || '문의처 정보'}
+              </div>
             </div>
           </div>
         </div>

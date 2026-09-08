@@ -21,6 +21,11 @@ export function formatPhoneNumber(phone: string | null | undefined): string {
   const digits = normalizePhoneNumber(phone);
   if (!digits) return '';
 
+  // 12자리 (안심번호 0507-XXXX-XXXX 등)
+  if (digits.length === 12 && digits.startsWith('050')) {
+    return digits.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
+  }
+
   // 11자리 (휴대폰 010-XXXX-XXXX, 지역번호 031-XXXX-XXXX)
   if (digits.length === 11) {
     return digits.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
