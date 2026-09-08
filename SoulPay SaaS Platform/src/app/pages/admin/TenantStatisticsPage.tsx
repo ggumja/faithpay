@@ -792,7 +792,7 @@ export default function TenantStatisticsPage() {
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <CardTitle className="text-lg font-bold">
-                      선택 기간 수납 상세 거래 명세 ({filteredSnapshotList.length}건)
+                      선택 기간 수납 상세 거래 명세 ({totalTransactionCount.toLocaleString()}건)
                     </CardTitle>
                     <CardDescription>
                       선택한 기간 및 마감 시점 스냅샷에 포함된 정제 완료 수납 내역 목록입니다
