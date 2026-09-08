@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
-import { ArrowLeft, Lock, Mail, Building2, ChevronRight, Phone, Search, CheckCircle2, KeyRound } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, Building2, ChevronRight, Phone, Search, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminLogin() {
@@ -15,6 +15,9 @@ export default function AdminLogin() {
   const { tenants, setCurrentAdmin, setCurrentTenant } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const activeTenant = tenants.find((t) => t.slug === tenantSlug || t.id === tenantSlug);
 
   // 다중 단체 관리 계정 (회계법인 등) 선택 모달
   const [multiTenantModalOpen, setMultiTenantModalOpen] = useState(false);
@@ -302,52 +305,51 @@ export default function AdminLogin() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-slate-500 hover:text-slate-900 cursor-pointer font-bold -ml-2"
+            className="text-slate-500 hover:text-slate-900 cursor-pointer font-semibold -ml-2 text-xs"
             onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            {tenantSlug ? '단체 봉헌 메인으로' : 'SoulPay 메인으로'}
+            {activeTenant?.name ? `${activeTenant.name} 홈으로` : (tenantSlug ? '단체 홈으로' : '메인으로')}
           </Button>
-          {tenantSlug && (
-            <span className="bg-blue-50 text-blue-700 text-xs font-black px-3.5 py-1 rounded-full border border-blue-200 shadow-xs">
-              {tenantSlug}
+          {activeTenant && (
+            <span className="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full border border-slate-200">
+              {activeTenant.name}
             </span>
           )}
         </div>
 
-        {/* 🤍 중앙 대형 깔끔한 SoulPay 로고 심볼 & 타이틀 헤더 */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-xl shadow-blue-500/25 text-white mb-1 transition-transform hover:scale-105">
-            <Building2 className="h-8 w-8" />
+        {/* 중앙 로고 심볼 & 타이틀 헤더 */}
+        <div className="text-center space-y-2.5">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/15">
+            <Building2 className="h-7 w-7" />
           </div>
           <div>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-3xl font-black text-slate-900 tracking-tight">SoulPay</span>
-              <span className="bg-blue-600 text-white text-[11px] font-black px-2.5 py-0.5 rounded-md shadow-xs">
+              <span className="text-2xl font-black text-slate-900 tracking-tight">SoulPay</span>
+              <span className="bg-blue-50 text-blue-700 border border-blue-200/60 text-[11px] font-bold px-2 py-0.5 rounded-md">
                 가맹 단체 포털
               </span>
             </div>
-            <p className="text-sm font-semibold text-slate-500 mt-1">
-              교회 · 사찰 · 성당 · 구호재단 전용 수납 &amp; 헌금 관리 포털
+            <p className="text-xs text-slate-500 mt-1 font-medium">
+              교회 · 사찰 · 성당 · 비영리단체 수납 &amp; 관리 시스템
             </p>
           </div>
         </div>
 
-        {/* 🤍 깨끗한 순백색 메인 로그인 카드 */}
-        <Card className="border-slate-200/90 shadow-xl rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="bg-slate-50/60 border-b border-slate-100 p-6 sm:p-8">
-            <CardTitle className="text-xl font-black text-slate-900">단체 관리자 로그인</CardTitle>
-            <CardDescription className="text-slate-500 text-xs mt-1 font-medium">
-              개설 신청 시 등록하신 담당자 이메일과 비밀번호를 입력해 주세요.
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent className="p-6 sm:p-8 space-y-5">
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
+        {/* 깨끗한 순백색 메인 로그인 카드 */}
+        <Card className="border-slate-200/90 shadow-sm rounded-2xl overflow-hidden bg-white">
+          <div className="p-6 sm:p-8 space-y-5">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">단체 관리자 로그인</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                개설 신청 시 등록하신 담당자 이메일과 비밀번호를 입력해 주세요.
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-xs font-bold text-slate-700">
-                  <Mail className="h-3.5 w-3.5 inline mr-1 text-slate-400" />
-                  담당자 이메일 *
+                  담당자 이메일
                 </Label>
                 <Input
                   id="email"
@@ -356,28 +358,36 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-12 rounded-xl bg-slate-50/70 border-slate-200 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 rounded-xl bg-white border-slate-200 text-sm font-medium focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-xs font-bold text-slate-700">
-                  <Lock className="h-3.5 w-3.5 inline mr-1 text-slate-400" />
-                  비밀번호 *
+                  비밀번호
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-12 rounded-xl bg-slate-50/70 border-slate-200 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500/20"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-11 rounded-xl bg-white border-slate-200 pr-10 text-sm font-medium focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* 이메일 찾기 / 비밀번호 재설정 서브 링크 */}
-              <div className="flex items-center justify-end gap-3 text-xs text-slate-500 pt-1">
+              <div className="flex items-center justify-end gap-3 text-xs text-slate-500 pt-0.5">
                 <button
                   type="button"
                   onClick={() => { setEmailSearchResult(null); setSearchOrgName(''); setSearchPhone(''); setFindEmailOpen(true); }}
@@ -395,30 +405,35 @@ export default function AdminLogin() {
                 </button>
               </div>
 
-              <Button type="submit" className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-md shadow-blue-500/20 cursor-pointer mt-2">
+              <Button
+                type="submit"
+                className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xs cursor-pointer active:scale-[0.99] transition-all mt-1"
+              >
                 단체 관리자 로그인
               </Button>
             </form>
-          </CardContent>
+          </div>
         </Card>
 
         {/* 역할 전환 푸터 링크 카드 */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-2.5 text-xs text-slate-600">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2.5 text-xs text-slate-600">
           <div className="flex items-center justify-between">
-            <span>🛡️ SoulPay 최고 시스템 관리자이신가요?</span>
+            <span className="text-slate-600 font-medium">최고 시스템 관리자이신가요?</span>
             <button
+              type="button"
               onClick={() => navigate('/system/login')}
-              className="font-bold text-purple-600 hover:underline cursor-pointer bg-transparent border-0 flex items-center gap-0.5"
+              className="font-bold text-slate-700 hover:text-blue-600 cursor-pointer bg-transparent border-0 flex items-center gap-1 transition-colors"
             >
               <span>시스템 로그인</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span>💼 영업 대리점 / 영업자 파트너이신가요?</span>
+          <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+            <span className="text-slate-600 font-medium">영업 대리점 / 파트너이신가요?</span>
             <button
+              type="button"
               onClick={() => navigate('/partner/login')}
-              className="font-bold text-emerald-600 hover:underline cursor-pointer bg-transparent border-0 flex items-center gap-0.5"
+              className="font-bold text-slate-700 hover:text-blue-600 cursor-pointer bg-transparent border-0 flex items-center gap-1 transition-colors"
             >
               <span>파트너 로그인</span>
               <ChevronRight className="h-3.5 w-3.5" />
