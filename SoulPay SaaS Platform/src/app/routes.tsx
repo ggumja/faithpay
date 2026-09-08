@@ -1,52 +1,60 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 import RootLayout from "./layouts/RootLayout";
-import Root from "./pages/Root";
-import TenantHome from "./pages/TenantHome";
-import DonationFlow from "./pages/DonationFlow";
-import PaymentSelection from "./pages/PaymentSelection";
-import DonationComplete from "./pages/DonationComplete";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import SystemAdminShell from "./pages/admin/SystemAdminShell";
-import SystemAdminDashboard from "./pages/admin/SystemAdminDashboard";
-import SystemAdminLogin from "./pages/admin/SystemAdminLogin";
-import TenantDetailPage from "./pages/admin/TenantDetailPage";
-import PendingTenantDetailPage from "./pages/admin/PendingTenantDetailPage";
-import DonationHistory from "./pages/admin/DonationHistory";
-import PrayerManagement from "./pages/admin/PrayerManagement";
-import DonationMenuManagement from "./pages/admin/DonationMenuManagement";
-import MemberManagement from "./pages/admin/MemberManagement";
-import MemberDetailPage from "./pages/admin/MemberDetailPage";
-import SettlementReports from "./pages/admin/SettlementReports";
-import BannerManagement from "./pages/admin/BannerManagement";
-import OrganizationSettings from "./pages/admin/OrganizationSettings";
-import MyDonations from "./pages/MyDonations";
-import TaxReceiptCenter from "./pages/TaxReceiptCenter";
-import OnboardingFlow from "./pages/OnboardingFlow";
-import PartnerDashboard from "./pages/partner/PartnerDashboard";
-import PartnerTenantCreate from "./pages/partner/PartnerTenantCreate";
-import PartnerApply from "./pages/partner/PartnerApply";
-import PartnerLogin from "./pages/partner/PartnerLogin";
-import AgentDashboard from "./pages/agent/AgentDashboard";
-import NotFound from "./pages/NotFound";
-import SystemSettingsPage from "./pages/admin/SystemSettingsPage";
-import PartnerDetailPage from "./pages/admin/PartnerDetailPage";
-import SettlementCenterPage from "./pages/admin/SettlementCenterPage";
-import PartnerManagement from "./pages/admin/PartnerManagement";
-import CommissionStatsPage from "./pages/admin/CommissionStatsPage";
-import MultiPartySettlementLedger from "./pages/admin/components/MultiPartySettlementLedger";
-import TenantStatsPage from "./pages/admin/TenantStatsPage";
-import TenantStatisticsPage from "./pages/admin/TenantStatisticsPage";
-import RecurringPendingPage from "./pages/admin/RecurringPendingPage";
-import AdminRedirectGuard from "./pages/admin/AdminRedirectGuard";
-import AdminAccountManagement from "./pages/admin/AdminAccountManagement";
-import SystemAdminAccountPage from "./pages/admin/SystemAdminAccountPage";
 
+// ── 공통 / 일반 페이지 ──
+const Root = lazy(() => import("./pages/Root"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const OnboardingFlow = lazy(() => import("./pages/OnboardingFlow"));
+const KakaoPaySandbox = lazy(() => import("./pages/KakaoPaySandbox"));
+const KakaoPayApprovePage = lazy(() => import("./pages/KakaoPayApprovePage"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const SystemAdminLogin = lazy(() => import("./pages/admin/SystemAdminLogin"));
+const AdminRedirectGuard = lazy(() => import("./pages/admin/AdminRedirectGuard"));
 
+// ── [Group 1] 사용자 결제 / 기부 코어 (User Donation Core) ──
+const TenantHome = lazy(() => import("./pages/TenantHome"));
+const DonationFlow = lazy(() => import("./pages/DonationFlow"));
+const PaymentSelection = lazy(() => import("./pages/PaymentSelection"));
+const DonationComplete = lazy(() => import("./pages/DonationComplete"));
+const TenantKiosk = lazy(() => import("./pages/TenantKiosk"));
+const MyDonations = lazy(() => import("./pages/MyDonations"));
+const TaxReceiptCenter = lazy(() => import("./pages/TaxReceiptCenter"));
 
-import TenantKiosk from "./pages/TenantKiosk";
-import KakaoPaySandbox from "./pages/KakaoPaySandbox";
-import KakaoPayApprovePage from "./pages/KakaoPayApprovePage";
+// ── [Group 2] 단체 관리자 포털 (Tenant Admin Portal) ──
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const DonationHistory = lazy(() => import("./pages/admin/DonationHistory"));
+const TenantStatisticsPage = lazy(() => import("./pages/admin/TenantStatisticsPage"));
+const PrayerManagement = lazy(() => import("./pages/admin/PrayerManagement"));
+const DonationMenuManagement = lazy(() => import("./pages/admin/DonationMenuManagement"));
+const MemberManagement = lazy(() => import("./pages/admin/MemberManagement"));
+const MemberDetailPage = lazy(() => import("./pages/admin/MemberDetailPage"));
+const SettlementReports = lazy(() => import("./pages/admin/SettlementReports"));
+const BannerManagement = lazy(() => import("./pages/admin/BannerManagement"));
+const OrganizationSettings = lazy(() => import("./pages/admin/OrganizationSettings"));
+const RecurringPendingPage = lazy(() => import("./pages/admin/RecurringPendingPage"));
+const AdminAccountManagement = lazy(() => import("./pages/admin/AdminAccountManagement"));
+
+// ── [Group 3] 파트너 / 총판 관리자 포털 (Partner Portal) ──
+const PartnerLogin = lazy(() => import("./pages/partner/PartnerLogin"));
+const PartnerApply = lazy(() => import("./pages/partner/PartnerApply"));
+const PartnerDashboard = lazy(() => import("./pages/partner/PartnerDashboard"));
+const PartnerTenantCreate = lazy(() => import("./pages/partner/PartnerTenantCreate"));
+const AgentDashboard = lazy(() => import("./pages/agent/AgentDashboard"));
+
+// ── [Group 4] 시스템 최고 관리자 포털 (System Admin Portal) ──
+const SystemAdminShell = lazy(() => import("./pages/admin/SystemAdminShell"));
+const SystemAdminDashboard = lazy(() => import("./pages/admin/SystemAdminDashboard"));
+const PendingTenantDetailPage = lazy(() => import("./pages/admin/PendingTenantDetailPage"));
+const TenantDetailPage = lazy(() => import("./pages/admin/TenantDetailPage"));
+const SettlementCenterPage = lazy(() => import("./pages/admin/SettlementCenterPage"));
+const TenantStatsPage = lazy(() => import("./pages/admin/TenantStatsPage"));
+const PartnerManagement = lazy(() => import("./pages/admin/PartnerManagement"));
+const PartnerDetailPage = lazy(() => import("./pages/admin/PartnerDetailPage"));
+const CommissionStatsPage = lazy(() => import("./pages/admin/CommissionStatsPage"));
+const MultiPartySettlementLedger = lazy(() => import("./pages/admin/components/MultiPartySettlementLedger"));
+const SystemSettingsPage = lazy(() => import("./pages/admin/SystemSettingsPage"));
+const SystemAdminAccountPage = lazy(() => import("./pages/admin/SystemAdminAccountPage"));
 
 export const router = createBrowserRouter([
   {
