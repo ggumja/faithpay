@@ -342,7 +342,7 @@ export default function TenantStatisticsPage() {
     return list.length > 0 ? list : ['일반헌금/보시'];
   }, [itemStats]);
 
-  // 5. 정기 vs 일시 통계 (Subscription)
+  // 5. 정기 vs 1회성 통계 (Subscription)
   const subscriptionStats = useMemo(() => {
     let recurringAmount = 0;
     let recurringCount = 0;
@@ -367,7 +367,7 @@ export default function TenantStatisticsPage() {
       oneTimeCount,
       chartData: [
         { name: '🗓️ 정기 결제', amount: recurringAmount, count: recurringCount },
-        { name: '⚡ 일시 결제', amount: oneTimeAmount, count: oneTimeCount },
+        { name: '⚡ 1회성 결제', amount: oneTimeAmount, count: oneTimeCount },
       ],
     };
   }, [snapshotDonations]);
@@ -487,7 +487,7 @@ export default function TenantStatisticsPage() {
       `"${d.itemName || '일반헌금/보시'}"`,
       d.amount || 0,
       `"${getMethodCategory(d.paymentMethod || d.payment_method || d.method)}"`,
-      d.isRecurring ? '정기' : '일시',
+      d.isRecurring ? '정기' : '1회성',
     ]);
 
     const blob = new Blob(['\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')], {
@@ -639,7 +639,7 @@ export default function TenantStatisticsPage() {
               }`}
             >
               <Repeat className="h-4 w-4" />
-              5. 정기 vs 일시 분석
+              5. 정기 vs 1회성 분석
             </button>
           </div>
 
@@ -817,7 +817,7 @@ export default function TenantStatisticsPage() {
                               </TableCell>
                               <TableCell>
                                 <Badge variant={donation.isRecurring ? 'default' : 'secondary'} className="text-[11px]">
-                                  {donation.isRecurring ? '정기' : '일시'}
+                                  {donation.isRecurring ? '정기' : '1회성'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -1183,7 +1183,7 @@ export default function TenantStatisticsPage() {
             </div>
           )}
 
-          {/* TAB 5: 정기 vs 일시 분석 */}
+          {/* TAB 5: 정기 vs 1회성 분석 */}
           {activeTab === 'subscription' && (
             <div className="space-y-6 animate-in fade-in duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1201,7 +1201,7 @@ export default function TenantStatisticsPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg font-bold">일시 결제 수납</CardTitle>
+                    <CardTitle className="text-lg font-bold">1회성 결제 수납</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-black text-emerald-600">
@@ -1214,7 +1214,7 @@ export default function TenantStatisticsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold">정기 vs 일시 비중 비교</CardTitle>
+                  <CardTitle className="text-lg font-bold">정기 vs 1회성 비중 비교</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
@@ -1229,11 +1229,11 @@ export default function TenantStatisticsPage() {
                 </CardContent>
               </Card>
 
-              {/* TAB 5 전용: 기간별 x 정기/일시 집계표 */}
+              {/* TAB 5 전용: 기간별 x 정기/1회성 집계표 */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold">기간별 x 정기/일시 결제 상세 집계표</CardTitle>
-                  <CardDescription>선택한 기간별 정기결제 및 일시결제의 비율과 금액 현황입니다</CardDescription>
+                  <CardTitle className="text-lg font-bold">기간별 x 정기/1회성 결제 상세 집계표</CardTitle>
+                  <CardDescription>선택한 기간별 정기결제 및 1회성 결제의 비율과 금액 현황입니다</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -1241,7 +1241,7 @@ export default function TenantStatisticsPage() {
                       <TableRow>
                         <TableHead>조회 기간</TableHead>
                         <TableHead className="text-right">정기결제 (건/금액)</TableHead>
-                        <TableHead className="text-right">일시결제 (건/금액)</TableHead>
+                        <TableHead className="text-right">1회성 결제 (건/금액)</TableHead>
                         <TableHead className="text-right">정기 수납 비중</TableHead>
                         <TableHead className="text-right">총 수납 금액</TableHead>
                       </TableRow>
