@@ -51,10 +51,36 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
-import { donationAPI } from '../../api/client';
+import { donationAPI, subscriptionAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
+
+export interface MemberDonationHistoryItem {
+  id: string;
+  date: string;
+  itemName: string;
+  amount: number;
+  paymentMethod: string;
+  type: 'recurring' | 'once';
+  status: 'completed' | 'cancelled' | 'failed' | 'pending';
+  cancelReason?: string;
+  cancelApprovedAt?: string;
+  failureReason?: string;
+}
+
+export interface MemberSubscriptionItem {
+  id: string;
+  itemName: string;
+  monthlyAmount: number;
+  billingDay: number;
+  status: 'active' | 'paused' | 'cancelled';
+  nextPaymentDate: string;
+  cardName?: string;
+  cardNo?: string;
+  recurringInterval?: string;
+  createdAt?: string;
+}
 
 export interface MemberDetailData {
   id: string;
@@ -69,23 +95,8 @@ export interface MemberDetailData {
   lastDonation: string;
   recurringCount: number;
   note?: string;
-  donationsHistory?: {
-    id: string;
-    date: string;
-    itemName: string;
-    amount: number;
-    paymentMethod: string;
-    type: 'recurring' | 'once';
-    status: 'completed' | 'cancelled';
-  }[];
-  subscriptions?: {
-    id: string;
-    itemName: string;
-    monthlyAmount: number;
-    billingDay: number;
-    status: 'active' | 'paused' | 'cancelled';
-    nextPaymentDate: string;
-  }[];
+  donationsHistory?: MemberDonationHistoryItem[];
+  subscriptions?: MemberSubscriptionItem[];
   prayersHistory?: {
     id: string;
     date: string;
@@ -122,6 +133,10 @@ export default function MemberDetailPage() {
 
   const handleOpenTaxModal = () => {
     if (!member) return;
+    if (member.totalDonation <= 0) {
+      toast.warning(`실제 납부 완료된 ${terms.donation} 금액이 0원이므로 소득공제용 기부금영수증을 발급할 수 없습니다.`);
+      return;
+    }
     setTaxYear(new Date().getFullYear().toString());
     setTaxDonorName(member.name);
     setTaxAddress(member.address || '');
@@ -162,8 +177,19 @@ export default function MemberDetailPage() {
     });
   }, [member, periodSelection]);
 
-  const filteredTotalSum = useMemo(() => {
-    return filteredDonationsHistory.reduce((sum, don) => sum + (don.amount || 0), 0);
+  // 기간 내 정상 결제 완료 건들의 합계 (취소/실패/대기 제외)
+  const filteredCompletedSum = useMemo(() => {
+    return filteredDonationsHistory
+      .filter((don) => don.status === 'completed')
+      .reduce((sum, don) => sum + (don.amount || 0), 0);
+  }, [filteredDonationsHistory]);
+
+  const completedDonationCount = useMemo(() => {
+    return filteredDonationsHistory.filter((don) => don.status === 'completed').length;
+  }, [filteredDonationsHistory]);
+
+  const nonCompletedDonationCount = useMemo(() => {
+    return filteredDonationsHistory.filter((don) => don.status !== 'completed').length;
   }, [filteredDonationsHistory]);
 
   useEffect(() => {
@@ -181,47 +207,105 @@ export default function MemberDetailPage() {
       try {
         const res = await donationAPI.getByTenant(currentTenant.id);
         if (res.success && res.data) {
-          // Aggregate or find matching member
-          const rawMatch = res.data.find((d: any) => d.id === memberId || stripPhoneDigits(d.donorPhone) === memberId);
-          
+          // Aggregate or find matching member (by donation ID, raw phone, or stripped digits)
+          const targetDigits = stripPhoneDigits(memberId);
+          let rawMatch = res.data.find(
+            (d: any) =>
+              d.id === memberId ||
+              stripPhoneDigits(d.donorPhone) === targetDigits ||
+              d.donorPhone === memberId
+          );
+
+          // If no donation record exists yet, check if member has active subscription
+          if (!rawMatch && targetDigits.length >= 8) {
+            try {
+              const subRes = await subscriptionAPI.getByPhone(targetDigits);
+              if (subRes.success && subRes.data && subRes.data.length > 0) {
+                const firstSub = subRes.data[0];
+                rawMatch = {
+                  id: firstSub.id,
+                  donorName: firstSub.donorName,
+                  donorPhone: firstSub.donorPhone,
+                  donorEmail: firstSub.donorEmail || '',
+                  createdAt: firstSub.createdAt,
+                };
+              }
+            } catch (e) {
+              console.warn('Subscription fallback check failed:', e);
+            }
+          }
+
           if (rawMatch) {
             const rawPhone = rawMatch.donorPhone || '';
             const digitsKey = stripPhoneDigits(rawPhone) || '미등록';
 
-            // Filter all donations for this donor phone
+            // Filter all donations for this donor phone and sort newest first
             const donorDonations = res.data.filter((d: any) => stripPhoneDigits(d.donorPhone) === digitsKey);
-            const totalSum = donorDonations
-              .filter((d: any) => !d.paymentStatus || d.paymentStatus === 'completed')
-              .reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
-            
-            // 1. 정기 약정 현황 (Subscriptions) - DB의 isRecurring 결제 건을 기반으로 약정 정보 수집
-            const recurringDonations = donorDonations.filter((d: any) => d.isRecurring && (!d.paymentStatus || d.paymentStatus === 'completed'));
-            const recurringMap = new Map<string, any>();
+            donorDonations.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
-            recurringDonations.forEach((d: any) => {
-              const itemKey = d.itemName || d.title || `${currentTenant.terminology?.donation || '보시/후원'} (정기)`;
-              if (!recurringMap.has(itemKey)) {
-                const dateObj = d.createdAt ? new Date(d.createdAt) : new Date();
-                const billingDay = dateObj.getDate() || 15;
-                
-                const nextDate = new Date();
-                nextDate.setMonth(nextDate.getMonth() + 1);
-                nextDate.setDate(billingDay);
+            // 1. 실 납부 완료 건 집계 (취소/실패 건은 총액 및 최근 납부일 산정에서 엄격 제외)
+            const completedDonations = donorDonations.filter((d: any) => !d.paymentStatus || d.paymentStatus === 'completed');
+            const totalSum = completedDonations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+            const lastCompleted = completedDonations[0];
+            const lastDonationDate = lastCompleted?.createdAt ? lastCompleted.createdAt.split('T')[0] : '';
 
-                recurringMap.set(itemKey, {
-                  id: `sub_${d.id}`,
-                  itemName: itemKey,
-                  monthlyAmount: d.amount || 0,
-                  billingDay: billingDay,
-                  status: 'active' as const,
-                  nextPaymentDate: nextDate.toISOString().slice(0, 10),
-                });
+            // 2. 정기 약정 현황 (Subscriptions) - 실제 DB subscriptions 테이블 100% 실측 조회
+            let subscriptionsList: MemberSubscriptionItem[] = [];
+            if (digitsKey && digitsKey !== '미등록') {
+              try {
+                const subRes = await subscriptionAPI.getByPhone(digitsKey);
+                if (subRes.success && Array.isArray(subRes.data)) {
+                  subscriptionsList = subRes.data.map((sub: any) => ({
+                    id: sub.id,
+                    itemName: sub.itemName || `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)`,
+                    monthlyAmount: sub.amount || 0,
+                    billingDay: sub.recurringDay || 15,
+                    status: (sub.status as any) || 'active',
+                    nextPaymentDate: sub.nextPaymentDate ? sub.nextPaymentDate.slice(0, 10) : '',
+                    cardName: sub.cardName || '',
+                    cardNo: sub.cardNo || '',
+                    recurringInterval: sub.recurringInterval || 'monthly',
+                    createdAt: sub.createdAt ? sub.createdAt.slice(0, 10) : '',
+                  }));
+                }
+              } catch (subErr) {
+                console.error('Failed to load subscriptions from DB:', subErr);
               }
-            });
+            }
 
-            const subscriptionsList = Array.from(recurringMap.values());
+            // DB subscriptions 테이블에 아직 미등록된 레거시 정기 납부 이력이 있는 경우 보완
+            if (subscriptionsList.length === 0) {
+              const recurringDonations = completedDonations.filter((d: any) => d.isRecurring);
+              const recurringMap = new Map<string, MemberSubscriptionItem>();
 
-            // 2. 발원문 / 지향문 이력 (Prayers) - DB의 prayerText 기반 수집
+              recurringDonations.forEach((d: any) => {
+                const itemKey = d.itemName || d.title || `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)`;
+                if (!recurringMap.has(itemKey)) {
+                  const dateObj = d.createdAt ? new Date(d.createdAt) : new Date();
+                  const billingDay = dateObj.getDate() || 15;
+                  const nextDate = new Date();
+                  nextDate.setMonth(nextDate.getMonth() + 1);
+                  nextDate.setDate(billingDay);
+
+                  recurringMap.set(itemKey, {
+                    id: `sub_${d.id}`,
+                    itemName: itemKey,
+                    monthlyAmount: d.amount || 0,
+                    billingDay: billingDay,
+                    status: 'active' as const,
+                    nextPaymentDate: nextDate.toISOString().slice(0, 10),
+                    recurringInterval: 'monthly',
+                    createdAt: d.createdAt ? d.createdAt.slice(0, 10) : '',
+                  });
+                }
+              });
+
+              subscriptionsList = Array.from(recurringMap.values());
+            }
+
+            const activeRecurringCount = subscriptionsList.filter((s) => s.status === 'active').length;
+
+            // 3. 발원문 / 지향문 이력 (Prayers) - DB의 prayerText 기반 수집
             const prayersList = donorDonations
               .filter((d: any) => d.prayerText && String(d.prayerText).trim() !== '')
               .map((d: any, idx: number) => ({
@@ -242,17 +326,20 @@ export default function MemberDetailPage() {
               rrn: rawMatch.rrn || '',
               registeredDate: rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
               totalDonation: totalSum,
-              lastDonation: donorDonations[0]?.createdAt ? donorDonations[0].createdAt.split('T')[0] : (rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : ''),
-              recurringCount: subscriptionsList.length,
+              lastDonation: lastDonationDate,
+              recurringCount: activeRecurringCount,
               note: rawMatch.note || '',
               donationsHistory: donorDonations.map((d: any) => ({
                 id: d.id,
                 date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
-                itemName: d.itemName || (d.isRecurring ? `${currentTenant.terminology?.donation || '보시/후원'} (정기)` : `특별 ${currentTenant.terminology?.donation || '보시/후원'}`),
+                itemName: d.itemName || (d.isRecurring ? `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)` : `특별 ${currentTenant.terminology?.donation || '헌금/봉헌'}`),
                 amount: d.amount || 0,
                 paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
                 type: d.isRecurring ? 'recurring' : 'once',
-                status: d.paymentStatus || 'completed',
+                status: (d.paymentStatus || 'completed') as any,
+                cancelReason: d.cancelReason,
+                cancelApprovedAt: d.cancelApprovedAt,
+                failureReason: d.failureReason,
               })),
               subscriptions: subscriptionsList,
               prayersHistory: prayersList,
@@ -472,6 +559,15 @@ export default function MemberDetailPage() {
 
   // 2. 전체 납부 확인서 인쇄
   const handlePrintReceipt = (donationItem?: any) => {
+    if (donationItem && donationItem.status !== 'completed') {
+      toast.warning('취소 또는 실패한 결제 건은 납부 확인서를 발급할 수 없습니다.');
+      return;
+    }
+    if (!donationItem && member.totalDonation <= 0) {
+      toast.warning(`실제 납부 완료된 ${terms.donation} 금액이 0원이므로 납부 확인서를 발급할 수 없습니다.`);
+      return;
+    }
+
     const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow) {
       toast.error('팝업 차단이 활성화되어 있습니다. 팝업 허용 후 다시 시도해 주세요.');
@@ -558,6 +654,31 @@ export default function MemberDetailPage() {
       </html>
     `);
     printWindow.document.close();
+  };
+
+  // 3. 정기결제 약정 상태 변경 (DB 실시간 반영)
+  const handleUpdateSubscriptionStatus = async (subId: string, newStatus: 'active' | 'paused' | 'cancelled') => {
+    try {
+      const res = await subscriptionAPI.updateStatus(subId, newStatus);
+      if (res.success) {
+        const label = newStatus === 'active' ? '약정 유지' : newStatus === 'paused' ? '일시정지' : '해지';
+        toast.success(`정기결제 약정 상태가 [${label}] 상태로 변경되었습니다.`);
+        setMember((prev) => {
+          if (!prev || !prev.subscriptions) return prev;
+          const updatedSubs = prev.subscriptions.map((s) => (s.id === subId ? { ...s, status: newStatus } : s));
+          const activeCount = updatedSubs.filter((s) => s.status === 'active').length;
+          return {
+            ...prev,
+            subscriptions: updatedSubs,
+            recurringCount: activeCount,
+          };
+        });
+      } else {
+        toast.error('약정 상태 변경에 실패했습니다: ' + (res.error || ''));
+      }
+    } catch (e: any) {
+      toast.error('약정 상태 변경 중 오류가 발생했습니다: ' + (e?.message || ''));
+    }
   };
 
   const handleOpenEditModal = () => {
@@ -820,9 +941,18 @@ export default function MemberDetailPage() {
                       </div>
 
                       <div className="flex items-center gap-3 self-end sm:self-auto text-xs font-medium text-slate-600 dark:text-zinc-400">
-                        <span>조회 건수: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm">{filteredDonationsHistory.length}건</strong></span>
+                        <span>
+                          조회 건수: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm">{filteredDonationsHistory.length}건</strong>
+                          {nonCompletedDonationCount > 0 && (
+                            <span className="text-[11px] text-slate-500 ml-1">
+                              (완료 {completedDonationCount}건 / 취소·실패 {nonCompletedDonationCount}건)
+                            </span>
+                          )}
+                        </span>
                         <span className="text-slate-300">|</span>
-                        <span>기간 합계 금액: <strong className="text-emerald-600 dark:text-emerald-400 font-black text-sm">₩ {filteredTotalSum.toLocaleString()}원</strong></span>
+                        <span>
+                          기간 실납부 합계: <strong className="text-emerald-600 dark:text-emerald-400 font-black text-sm">₩ {filteredCompletedSum.toLocaleString()}원</strong>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -835,13 +965,14 @@ export default function MemberDetailPage() {
                         <TableHead className="font-bold">구분</TableHead>
                         <TableHead className="font-bold">결제 수단</TableHead>
                         <TableHead className="text-right font-bold">결제 금액</TableHead>
+                        <TableHead className="text-center font-bold">결제 상태</TableHead>
                         <TableHead className="text-center font-bold">영수증</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredDonationsHistory.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                          <TableCell colSpan={7} className="text-center py-12 text-slate-500">
                             <div className="space-y-1">
                               <p className="font-bold text-slate-700">선택하신 기간에 해당하는 결제 내역이 없습니다.</p>
                               <p className="text-xs text-slate-400">기간 설정을 변경하거나 '초기화' 버튼을 눌러 전체 목록을 확인해보세요.</p>
@@ -859,19 +990,66 @@ export default function MemberDetailPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs text-slate-600 font-medium">{don.paymentMethod}</TableCell>
-                            <TableCell className="text-right font-black text-slate-900 dark:text-zinc-100">
-                              ₩ {don.amount.toLocaleString()}원
+                            <TableCell className="text-right">
+                              {don.status === 'completed' ? (
+                                <span className="font-black text-slate-900 dark:text-zinc-100 font-mono">
+                                  ₩ {don.amount.toLocaleString()}원
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-slate-400 line-through font-mono">
+                                  ₩ {don.amount.toLocaleString()}원
+                                </span>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePrintReceipt(don)}
-                                className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
-                              >
-                                <Printer className="h-3.5 w-3.5" />
-                                인쇄
-                              </Button>
+                              {don.status === 'completed' ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-bold">
+                                  정상 완료
+                                </Badge>
+                              ) : don.status === 'cancelled' ? (
+                                <div className="space-y-0.5 inline-block">
+                                  <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-xs font-bold">
+                                    결제 취소(환불)
+                                  </Badge>
+                                  {don.cancelReason && (
+                                    <span className="block text-[10.5px] text-rose-600 font-normal max-w-[140px] truncate" title={don.cancelReason}>
+                                      사유: {don.cancelReason}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : don.status === 'failed' ? (
+                                <div className="space-y-0.5 inline-block">
+                                  <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-bold">
+                                    결제 실패
+                                  </Badge>
+                                  {don.failureReason && (
+                                    <span className="block text-[10.5px] text-amber-700 font-normal max-w-[140px] truncate" title={don.failureReason}>
+                                      {don.failureReason}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-slate-600 text-xs">
+                                  대기
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {don.status === 'completed' ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handlePrintReceipt(don)}
+                                  className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                                >
+                                  <Printer className="h-3.5 w-3.5" />
+                                  인쇄
+                                </Button>
+                              ) : don.status === 'cancelled' ? (
+                                <span className="text-xs text-rose-500 font-medium">취소/환불</span>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-medium">-</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))
@@ -888,63 +1066,125 @@ export default function MemberDetailPage() {
                         자동 이체 / 정기결제 약정 현황
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        매월 자동 수납되는 정기 약정을 일시정지 또는 해지 관리합니다.
+                        매월 또는 매주 자동 수납되는 정기 약정을 확인하고 일시정지 또는 해지 관리합니다.
                       </p>
                     </div>
                   </div>
 
                   {subscriptions.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {subscriptions.map((sub) => (
-                        <Card key={sub.id} className="border-l-4 border-l-indigo-600">
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-base font-bold">{sub.itemName}</CardTitle>
-                              <Badge className={sub.status === 'active' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-800'}>
-                                {sub.status === 'active' ? '🟢 약정 유지 중' : '⚪ 일시 정지'}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3 pt-1">
-                            <div className="flex items-baseline justify-between">
-                              <span className="text-xs text-slate-500">월 약정 금액</span>
-                              <span className="text-lg font-black text-indigo-600">₩ {sub.monthlyAmount.toLocaleString()}원 / 월</span>
-                            </div>
+                      {subscriptions.map((sub) => {
+                        const intervalLabel = sub.recurringInterval === 'weekly' ? '주간 (매주)' : '월간 (매월)';
+                        const cycleDesc =
+                          sub.recurringInterval === 'weekly'
+                            ? '매주 일요일'
+                            : `매월 ${sub.billingDay || 15}일`;
 
-                            <div className="text-xs text-slate-600 space-y-1 pt-2 border-t font-mono">
-                              <div className="flex justify-between">
-                                <span>정기 결제일:</span>
-                                <span className="font-bold">매월 {sub.billingDay}일</span>
+                        return (
+                          <Card key={sub.id} className="border-l-4 border-l-indigo-600">
+                            <CardHeader className="pb-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <CardTitle className="text-base font-bold text-slate-900">{sub.itemName}</CardTitle>
+                                  <span className="text-xs text-slate-500 font-medium">{intervalLabel} 자동 결제</span>
+                                </div>
+                                <Badge
+                                  className={
+                                    sub.status === 'active'
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold'
+                                      : sub.status === 'paused'
+                                      ? 'bg-amber-100 text-amber-800 border-amber-300 font-bold'
+                                      : 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
+                                  }
+                                >
+                                  {sub.status === 'active'
+                                    ? '🟢 약정 유지 중'
+                                    : sub.status === 'paused'
+                                    ? '⏸️ 일시 정지'
+                                    : '🔴 약정 해지됨'}
+                                </Badge>
                               </div>
-                              <div className="flex justify-between">
-                                <span>다음 결제 예정일:</span>
-                                <span className="font-bold text-slate-900">{sub.nextPaymentDate}</span>
+                            </CardHeader>
+                            <CardContent className="space-y-3 pt-1">
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-xs text-slate-500">약정 금액</span>
+                                <span className="text-lg font-black text-indigo-600">
+                                  ₩ {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
+                                </span>
                               </div>
-                            </div>
 
-                            <div className="flex items-center gap-2 pt-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => toast.info('정기결제 약정 상태 변경이 처리되었습니다.')}
-                                className="flex-1 text-xs gap-1"
-                              >
-                                <PauseCircle className="h-3.5 w-3.5 text-amber-600" />
-                                일시정지
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => toast.info('약정 해지 신청이 접수되었습니다.')}
-                                className="flex-1 text-xs gap-1 text-rose-600 hover:text-rose-700"
-                              >
-                                <XCircle className="h-3.5 w-3.5" />
-                                약정 해지
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                              <div className="text-xs text-slate-600 space-y-1.5 pt-2 border-t">
+                                {sub.cardName && (
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">결제 수단:</span>
+                                    <span className="font-bold text-slate-800">{sub.cardName}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">결제 주기:</span>
+                                  <span className="font-bold text-slate-800">{cycleDesc}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">다음 결제 예정일:</span>
+                                  <span className="font-bold text-slate-900 font-mono">{sub.nextPaymentDate || '-'}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-2">
+                                {sub.status === 'active' && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
+                                      className="flex-1 text-xs gap-1 cursor-pointer"
+                                    >
+                                      <PauseCircle className="h-3.5 w-3.5 text-amber-600" />
+                                      일시정지
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
+                                      className="flex-1 text-xs gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer"
+                                    >
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      약정 해지
+                                    </Button>
+                                  </>
+                                )}
+                                {sub.status === 'paused' && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
+                                      className="flex-1 text-xs gap-1 text-emerald-700 hover:bg-emerald-50 border-emerald-200 cursor-pointer font-bold"
+                                    >
+                                      <RefreshCw className="h-3.5 w-3.5" />
+                                      약정 재개
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
+                                      className="flex-1 text-xs gap-1 text-rose-600 hover:bg-rose-50 border-rose-200 cursor-pointer"
+                                    >
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      약정 해지
+                                    </Button>
+                                  </>
+                                )}
+                                {sub.status === 'cancelled' && (
+                                  <div className="w-full text-center py-1 text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg">
+                                    해지된 정기결제 약정입니다.
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-12 bg-slate-50 rounded-2xl border text-slate-500 text-sm">

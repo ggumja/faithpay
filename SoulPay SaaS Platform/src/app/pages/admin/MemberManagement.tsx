@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
-import { donationAPI } from '../../api/client';
+import { donationAPI, subscriptionAPI } from '../../api/client';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
@@ -104,7 +104,7 @@ export default function MemberManagement() {
                 address: d.address || '',
                 registeredDate: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
                 totalDonation: isCompleted ? (d.amount || 0) : 0,
-                lastDonation: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+                lastDonation: isCompleted && d.createdAt ? d.createdAt.split('T')[0] : '',
                 recurringCount: (d.isRecurring && isCompleted) ? 1 : 0,
                 note: '',
               });
@@ -113,11 +113,33 @@ export default function MemberManagement() {
               if (isCompleted) {
                 existing.totalDonation += d.amount || 0;
                 if (d.isRecurring) existing.recurringCount += 1;
+                if (!existing.lastDonation && d.createdAt) {
+                  existing.lastDonation = d.createdAt.split('T')[0];
+                }
               }
               if (existing.name === '무기명' && d.donorName) existing.name = d.donorName;
               if (!existing.email && d.donorEmail) existing.email = d.donorEmail;
             }
           });
+
+          // DB subscriptions 테이블 실측 조회 연동하여 정기 약정 건수 정확히 동기화
+          const phoneList = Array.from(map.keys()).filter((p) => p && p !== '미등록');
+          await Promise.all(
+            phoneList.map(async (phone) => {
+              try {
+                const subRes = await subscriptionAPI.getByPhone(phone);
+                if (subRes.success && Array.isArray(subRes.data)) {
+                  const activeCount = subRes.data.filter((s: any) => s.status === 'active').length;
+                  const memberEntry = map.get(phone);
+                  if (memberEntry) {
+                    memberEntry.recurringCount = Math.max(memberEntry.recurringCount, activeCount);
+                  }
+                }
+              } catch (e) {
+                console.warn('Failed to load subscriptions for member', phone, e);
+              }
+            })
+          );
 
           const aggregated = Array.from(map.values());
           setMembers(aggregated);
