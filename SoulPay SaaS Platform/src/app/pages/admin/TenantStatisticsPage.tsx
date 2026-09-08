@@ -232,15 +232,36 @@ export default function TenantStatisticsPage() {
   const getMethodCategory = (rawMethod?: string): string => {
     if (!rawMethod) return '신용카드';
     const m = String(rawMethod).trim();
-    if (m.includes('카카오') || m.toLowerCase().includes('kakao')) return '카카오페이';
-    if (m.includes('네이버') || m.toLowerCase().includes('naver')) return '네이버페이';
-    if (m.includes('가상')) return '가상계좌';
-    if (m.includes('계좌') || m.includes('이체') || m.toLowerCase().includes('transfer')) return '실시간 계좌이체';
-    return '신용카드'; // 토스페이먼츠, PG, 카드, 테스트 등 결제수단 기본값은 신용카드로 매핑
+    const lower = m.toLowerCase();
+
+    // 1. 가상계좌
+    if (m.includes('가상') || lower.includes('virtual')) {
+      return '가상계좌';
+    }
+
+    // 2. 간편결제 (카카오페이, 네이버페이, 토스페이, 계좌이체 등 간편결제 통합)
+    if (
+      m.includes('카카오') || lower.includes('kakao') ||
+      m.includes('네이버') || lower.includes('naver') ||
+      m.includes('토스페이') || lower.includes('tosspay') ||
+      (m.includes('토스') && !m.includes('토스페이먼츠') && !m.includes('토스뱅크')) ||
+      m.includes('간편') || lower.includes('simple') || lower.includes('easy') ||
+      m.includes('계좌') || m.includes('이체') || lower.includes('transfer')
+    ) {
+      return '간편결제';
+    }
+
+    // 3. 신용카드 (카드, PG 일반 결제, 토스페이먼츠 카드결제 등 기본값)
+    return '신용카드';
   };
 
   const methodStats = useMemo(() => {
-    const map: Record<string, { amount: number; count: number }> = {};
+    const map: Record<string, { amount: number; count: number }> = {
+      '신용카드': { amount: 0, count: 0 },
+      '간편결제': { amount: 0, count: 0 },
+      '가상계좌': { amount: 0, count: 0 },
+    };
+
     snapshotDonations.forEach((d) => {
       const method = getMethodCategory(d.paymentMethod || d.payment_method || d.method);
       if (!map[method]) map[method] = { amount: 0, count: 0 };
@@ -248,13 +269,17 @@ export default function TenantStatisticsPage() {
       map[method].count += 1;
     });
 
-    const chartData = Object.keys(map).map((name) => ({
+    const CATEGORIES = ['신용카드', '간편결제', '가상계좌'];
+    const summaryList = CATEGORIES.map((name) => ({
       name,
-      value: map[name].amount,
-      count: map[name].count,
+      value: map[name]?.amount || 0,
+      count: map[name]?.count || 0,
     }));
 
-    return { map, chartData };
+    // 파이차트에는 실제 수납액이 있는 항목만 표출
+    const chartData = summaryList.filter((item) => item.value > 0);
+
+    return { map, summaryList, chartData };
   }, [snapshotDonations]);
 
   // 3. 기기/채널별 통계 (Device)
@@ -461,7 +486,7 @@ export default function TenantStatisticsPage() {
       `"${d.donorName || '무기명'}"`,
       `"${d.itemName || '일반헌금/보시'}"`,
       d.amount || 0,
-      `"${d.paymentMethod || '신용카드'}"`,
+      `"${getMethodCategory(d.paymentMethod || d.payment_method || d.method)}"`,
       d.isRecurring ? '정기' : '일시',
     ]);
 
@@ -788,7 +813,7 @@ export default function TenantStatisticsPage() {
                                 {(Number(donation.amount) || 0).toLocaleString()}원
                               </TableCell>
                               <TableCell className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
-                                {donation.paymentMethod || '신용카드'}
+                                {getMethodCategory(donation.paymentMethod || donation.payment_method || donation.method)}
                               </TableCell>
                               <TableCell>
                                 <Badge variant={donation.isRecurring ? 'default' : 'secondary'} className="text-[11px]">
@@ -852,30 +877,47 @@ export default function TenantStatisticsPage() {
                     <CardDescription>수단별 수납액 비중 (전일 마감 기준)</CardDescription>
                   </CardHeader>
                   <CardContent className="flex justify-center">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={methodStats.chartData}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        >
-                          {methodStats.chartData.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {methodStats.chartData.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-[300px] text-slate-400">
+                        <CreditCard className="h-10 w-10 mb-2 opacity-40" />
+                        <p className="text-sm font-medium">조회 기간 내 결제 수납 내역이 없습니다 (0건)</p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={methodStats.chartData}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            dataKey="value"
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          >
+                            {methodStats.chartData.map((item, index) => {
+                              const colorMap: Record<string, string> = {
+                                '신용카드': '#3B82F6',
+                                '간편결제': '#F59E0B',
+                                '가상계좌': '#10B981',
+                              };
+                              return (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={colorMap[item.name] || COLORS[index % COLORS.length]}
+                                />
+                              );
+                            })}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg font-bold">수단별 수납 현황 표</CardTitle>
-                    <CardDescription>결제 수단별 세부 금액 및 건수</CardDescription>
+                    <CardDescription>결제 수단별 세부 금액 및 건수 (신용카드 / 간편결제 / 가상계좌)</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -887,7 +929,7 @@ export default function TenantStatisticsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {methodStats.chartData.map((item) => (
+                        {methodStats.summaryList.map((item) => (
                           <TableRow key={item.name}>
                             <TableCell className="font-semibold">{item.name}</TableCell>
                             <TableCell className="text-right font-medium">{item.count}건</TableCell>
@@ -914,37 +956,40 @@ export default function TenantStatisticsPage() {
                       <TableRow>
                         <TableHead>조회 기간</TableHead>
                         <TableHead className="text-right">신용카드</TableHead>
-                        <TableHead className="text-right">카카오페이</TableHead>
-                        <TableHead className="text-right">계좌이체</TableHead>
+                        <TableHead className="text-right">간편결제</TableHead>
                         <TableHead className="text-right">가상계좌</TableHead>
                         <TableHead className="text-right">총 수납액</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {periodMatrixList.map((row) => (
-                        <TableRow key={row.periodKey}>
-                          <TableCell className="font-semibold text-slate-800 dark:text-zinc-200">{row.periodKey}</TableCell>
-                          <TableCell className="text-right text-xs">
-                            <span className="font-bold text-slate-700">{(row.methods['신용카드']?.amount || 0).toLocaleString()}원</span>
-                            <span className="text-slate-400 ml-1">({row.methods['신용카드']?.count || 0}건)</span>
-                          </TableCell>
-                          <TableCell className="text-right text-xs">
-                            <span className="font-bold text-amber-700">{(row.methods['카카오페이']?.amount || 0).toLocaleString()}원</span>
-                            <span className="text-slate-400 ml-1">({row.methods['카카오페이']?.count || 0}건)</span>
-                          </TableCell>
-                          <TableCell className="text-right text-xs">
-                            <span className="font-bold text-blue-700">{(row.methods['실시간 계좌이체']?.amount || 0).toLocaleString()}원</span>
-                            <span className="text-slate-400 ml-1">({row.methods['실시간 계좌이체']?.count || 0}건)</span>
-                          </TableCell>
-                          <TableCell className="text-right text-xs">
-                            <span className="font-bold text-emerald-700">{(row.methods['가상계좌']?.amount || 0).toLocaleString()}원</span>
-                            <span className="text-slate-400 ml-1">({row.methods['가상계좌']?.count || 0}건)</span>
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-indigo-600 dark:text-indigo-400">
-                            {row.totalAmount.toLocaleString()}원
+                      {periodMatrixList.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-6 text-slate-400">
+                            조회된 수납 내역이 없습니다 (0건)
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        periodMatrixList.map((row) => (
+                          <TableRow key={row.periodKey}>
+                            <TableCell className="font-semibold text-slate-800 dark:text-zinc-200">{row.periodKey}</TableCell>
+                            <TableCell className="text-right text-xs">
+                              <span className="font-bold text-slate-700">{(row.methods['신용카드']?.amount || 0).toLocaleString()}원</span>
+                              <span className="text-slate-400 ml-1">({row.methods['신용카드']?.count || 0}건)</span>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              <span className="font-bold text-amber-700">{(row.methods['간편결제']?.amount || 0).toLocaleString()}원</span>
+                              <span className="text-slate-400 ml-1">({row.methods['간편결제']?.count || 0}건)</span>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              <span className="font-bold text-emerald-700">{(row.methods['가상계좌']?.amount || 0).toLocaleString()}원</span>
+                              <span className="text-slate-400 ml-1">({row.methods['가상계좌']?.count || 0}건)</span>
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-indigo-600 dark:text-indigo-400">
+                              {row.totalAmount.toLocaleString()}원
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
