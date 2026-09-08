@@ -1021,7 +1021,7 @@ export default function MyDonations() {
                                   ? `매주 (${['일','월','화','수','목','금','토'][Number(sub.recurringDayOfWeek ?? sub.recurring_day_of_week ?? 0)] || '일'})요일`
                                   : `매월 ${sub.recurringDay || sub.recurring_day || 10}일`
                             })</p>
-                            <p>· 결제카드: {sub.cardName || '신용카드'} ({sub.cardNo || '****-****'})</p>
+                            <p>· 결제카드: {sub.cardName || '신용카드'}{sub.cardNo ? ` (${sub.cardNo})` : ''}</p>
                             {(sub.nextPaymentDate || sub.next_payment_date) && (
                               <p>· 다음(첫) 결제 예정일: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{sub.nextPaymentDate || sub.next_payment_date}</span></p>
                             )}
