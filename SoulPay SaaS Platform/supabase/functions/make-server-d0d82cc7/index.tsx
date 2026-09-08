@@ -3709,15 +3709,22 @@ app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
 // 매일 지정 시각(Cron / GitHub Actions)에 트리거되어 정기결제(일/주/월)를 자동 승인하는 배치 스케줄러
 const handleRecurringBatchRun = async (c: any) => {
   try {
-    // ⚡ KST (UTC+9) 기준 시각 정확히 산출
-    const now = new Date();
-    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const reqBody = await c.req.json().catch(() => ({}));
+    const dryRun = Boolean(reqBody?.dryRun);
+    const targetDateOverride = reqBody?.simulateDate || reqBody?.targetDate;
+
+    // ⚡ KST (UTC+9) 기준 시각 산출 (simulateDate 지정 시 해당 일자로 시뮬레이션)
+    let kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    if (targetDateOverride && typeof targetDateOverride === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(targetDateOverride)) {
+      kstNow = new Date(`${targetDateOverride}T09:00:00+09:00`);
+    }
+
     const todayKstDateStr = kstNow.toISOString().slice(0, 10); // 'YYYY-MM-DD'
     const todayKstDayOfMonth = kstNow.getUTCDate();
     const todayKstDayOfWeek = kstNow.getUTCDay(); // 0(일) ~ 6(토)
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-    console.log(`[Recurring Batch Scheduler] Run started at KST: ${todayKstDateStr} (${dayNames[todayKstDayOfWeek]}요일), DayOfMonth: ${todayKstDayOfMonth}`);
+    console.log(`[Recurring Batch Scheduler] Run started at KST: ${todayKstDateStr} (${dayNames[todayKstDayOfWeek]}요일), DayOfMonth: ${todayKstDayOfMonth}, DryRun: ${dryRun}`);
 
     // DB에서 모든 active 정기 구독 건 조회
     const allActiveSubscriptions = await db.getAllActiveSubscriptions();
@@ -3746,9 +3753,9 @@ const handleRecurringBatchRun = async (c: any) => {
         }
       }
 
-      // 오늘 이미 해당 고객/테넌트에서 정기결제가 승인된 경우 중복 청구 방지
+      // 오늘 이미 해당 고객/테넌트에서 정기결제가 승인된 경우 중복 청구 방지 (dryRun 시에는 통과 허용)
       const cleanPhone = (sub.donorPhone || '').replace(/[^0-9]/g, '');
-      if (chargedSubMap.has(`${sub.tenantId}_${cleanPhone}`)) {
+      if (!dryRun && chargedSubMap.has(`${sub.tenantId}_${cleanPhone}`)) {
         console.log(`[Batch Scheduler] Skipping sub ${sub.id} (already charged today: ${todayKstDateStr})`);
         return false;
       }
@@ -3782,6 +3789,30 @@ const handleRecurringBatchRun = async (c: any) => {
     });
 
     console.log(`[Recurring Batch Scheduler] Target subscriptions count: ${targets.length}`);
+
+    // 시뮬레이션 / 무과금 검증 모드(dryRun)인 경우 실제 PG 호출 없이 매칭된 약정 목록만 반환
+    if (dryRun) {
+      return c.json({
+        success: true,
+        dryRun: true,
+        evaluatedDateKst: todayKstDateStr,
+        dayOfWeek: `${dayNames[todayKstDayOfWeek]}요일`,
+        matchedTargetsCount: targets.length,
+        targets: targets.map((t: any) => ({
+          subId: t.id,
+          tenantId: t.tenantId,
+          donorName: t.donorName,
+          donorPhone: t.donorPhone,
+          amount: t.amount,
+          recurringInterval: t.recurringInterval,
+          recurringDayOfWeek: t.recurringDayOfWeek,
+          recurringDay: t.recurringDay,
+          nextPaymentDate: t.nextPaymentDate,
+          cardName: t.cardName,
+          status: t.status,
+        })),
+      });
+    }
 
     const results = [];
     for (const sub of targets) {
