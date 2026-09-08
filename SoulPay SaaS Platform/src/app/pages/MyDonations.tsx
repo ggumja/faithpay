@@ -595,7 +595,7 @@ export default function MyDonations() {
               onClick={handleLogout}
               className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs font-bold rounded-xl cursor-pointer shadow-xs"
             >
-              🔒 로그아웃
+              로그아웃
             </Button>
           )}
         </div>
@@ -766,7 +766,6 @@ export default function MyDonations() {
                     : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
-                <History className="w-4 h-4 text-[#3182F6]" />
                 <span>봉헌 내역</span>
                 {history.length > 0 && (
                   <Badge variant="secondary" className="ml-0.5 text-[10px] bg-slate-200 dark:bg-zinc-700 px-1.5 py-0 font-bold">
@@ -784,7 +783,6 @@ export default function MyDonations() {
                     : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
-                <span className="text-amber-500 font-extrabold">⚡</span>
                 <span>정기결제</span>
                 {subscriptions.length > 0 && (
                   <Badge className="ml-0.5 text-[10px] bg-indigo-600 text-white px-1.5 py-0 font-bold">
@@ -802,7 +800,6 @@ export default function MyDonations() {
                     : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
-                <User className="w-4 h-4 text-indigo-600" />
                 <span>정보 관리</span>
               </button>
             </div>
@@ -813,11 +810,10 @@ export default function MyDonations() {
                 <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/50">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-base font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                      <User className="h-4 w-4 text-indigo-600" />
                       <span>내 프로필 및 기부자 정보 관리</span>
                     </CardTitle>
                     <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[11px] font-bold border-none">
-                      🔒 본인인증 완료 ({formatPhoneNumber(phoneNumber)})
+                      본인인증 완료 ({formatPhoneNumber(phoneNumber)})
                     </Badge>
                   </div>
                   <CardDescription className="text-xs text-slate-500 mt-1">
@@ -975,7 +971,7 @@ export default function MyDonations() {
                   <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-900/50">
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-base font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                        <span>⚡ 내 정기{currentTenant.terminology.donation} 셀프 관리</span>
+                        <span>내 정기{currentTenant.terminology.donation} 셀프 관리</span>
                       </CardTitle>
                       <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
                     </div>
@@ -999,7 +995,7 @@ export default function MyDonations() {
                               navigate(`/${tenantSlug}/donate`, { state: { selectedItem: recurringItem, isRecurring: true } });
                             }}
                           >
-                            ⚡ 정기 {currentTenant.terminology.donation} 신청하러 가기
+                            정기 {currentTenant.terminology.donation} 신청하러 가기
                           </Button>
                         )}
                       </div>
@@ -1010,7 +1006,7 @@ export default function MyDonations() {
                           <div className="flex justify-between items-start mb-1">
                             <h4 className="font-bold text-sm">{sub.itemName}</h4>
                             <Badge className={sub.status === 'active' ? 'bg-green-100 text-green-800' : sub.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}>
-                              {sub.status === 'active' ? '🟢 이용 중' : sub.status === 'paused' ? '🟡 일시정지' : '🔴 해지 완료'}
+                              {sub.status === 'active' ? '이용 중' : sub.status === 'paused' ? '일시정지' : '해지 완료'}
                             </Badge>
                           </div>
                           <div className="text-xs text-zinc-500 space-y-0.5">
@@ -1037,7 +1033,7 @@ export default function MyDonations() {
                                 className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 border-amber-300 text-amber-700 hover:bg-amber-50 cursor-pointer font-medium flex items-center justify-center whitespace-nowrap"
                                 onClick={() => handleUpdateSubStatus(sub.id, 'paused')}
                               >
-                                🟡 다음 회차 쉬기
+                                다음 회차 쉬기
                               </Button>
                             ) : (
                               <Button
@@ -1046,7 +1042,7 @@ export default function MyDonations() {
                                 className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 border-green-300 text-green-700 hover:bg-green-50 cursor-pointer font-bold flex items-center justify-center whitespace-nowrap"
                                 onClick={() => handleUpdateSubStatus(sub.id, 'active')}
                               >
-                                🟢 정기 {currentTenant.terminology.donation} 재개
+                                정기 {currentTenant.terminology.donation} 재개
                               </Button>
                             )}
                             <Button
@@ -1055,7 +1051,7 @@ export default function MyDonations() {
                               className="w-full text-[11.5px] sm:text-xs px-1.5 h-9 cursor-pointer font-bold flex items-center justify-center whitespace-nowrap"
                               onClick={() => handleUpdateSubStatus(sub.id, 'cancelled')}
                             >
-                              🔴 정기 {currentTenant.terminology.donation} 해지
+                              정기 {currentTenant.terminology.donation} 해지
                             </Button>
                           </div>
                         )}
@@ -1081,7 +1077,7 @@ export default function MyDonations() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-[#3182F6]" />
-                      <span>📅 봉헌 내역 기간 지정</span>
+                      <span>봉헌 내역 기간 지정</span>
                     </span>
 
                     {/* 퀵 렌지 선택 버튼 */}
@@ -1289,16 +1285,16 @@ export default function MyDonations() {
                                               </Badge>
                                               {item.isRecurring && (
                                                 <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 text-[11px] font-bold border-none px-2 py-0.5">
-                                                  ⚡ 정기
+                                                   정기
                                                 </Badge>
                                               )}
                                               {item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG') ? (
                                                 <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-800 border-amber-300 font-bold px-2 py-0.5">
-                                                  🖥️ 현장 키오스크 결제
+                                                  현장 키오스크 결제
                                                 </Badge>
                                               ) : (
                                                 <Badge variant="outline" className="text-[11px] bg-slate-50 text-slate-700 border-slate-300 font-semibold px-2 py-0.5">
-                                                  📱 온라인 웹/모바일 결제
+                                                   온라인 웹/모바일 결제
                                                 </Badge>
                                               )}
                                             </div>
