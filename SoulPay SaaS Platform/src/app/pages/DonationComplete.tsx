@@ -55,6 +55,9 @@ export default function DonationComplete() {
   });
 
   const terms = useTenantTerms(tenant);
+  const isRegisteredOnly = searchParams.get('registeredOnly') === 'true';
+  const isCharged = searchParams.get('charged') === 'true';
+  const nextDateParam = searchParams.get('nextDate');
 
   // 2. 헌금 폼 데이터 복구
   const [formData, setFormData] = useState<DonationFormData>(() => {
@@ -198,8 +201,12 @@ export default function DonationComplete() {
     if (tenant && formData && !hasRecordedRef.current) {
       hasRecordedRef.current = true;
 
-      // 이미 서버(PG사 콜백, Toss confirm 등)를 통해 donIdParam으로 DB에 생성된 경우 중복 INSERT 방지
-      if (donIdParam) {
+      // 이미 서버(PG사 콜백, Toss confirm 등)를 통해 donIdParam으로 DB에 생성되었거나 0원 카드등록만 진행한 경우 중복 INSERT 방지
+      if (donIdParam || isRegisteredOnly) {
+        if (isRegisteredOnly) {
+          console.log('[DonationComplete] Registered-only subscription, skipping immediate donation record');
+          return;
+        }
         console.log('[DonationComplete] Server already recorded donation:', donIdParam);
         donationAPI.getByTenant(tenant.id).then(res => {
           if (res.success && res.data) {
@@ -309,10 +316,12 @@ export default function DonationComplete() {
 
           <div className="flex-1">
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
-              봉헌이 완료되었습니다
+              {isRegisteredOnly ? `정기 ${terms.donation} 카드가 등록되었습니다` : `${terms.donation}이 완료되었습니다`}
             </h1>
             <p className="text-sm font-semibold text-white/80 tracking-wide">
-              {completionMessage}
+              {isRegisteredOnly
+                ? `첫 번째 ${terms.donation}은 ${nextDateParam ? `${nextDateParam}에` : '지정 결제일에'} 자동으로 진행됩니다.`
+                : completionMessage}
             </p>
           </div>
         </div>
@@ -340,18 +349,23 @@ export default function DonationComplete() {
               style={{ background: ft.primaryBg, color: ft.primary }}
             >
               <Motif kind={ft.motif} size={10} color={ft.primary} />
-              <span>{terms.receiptModalTitle}</span>
+              <span>{isRegisteredOnly ? `정기 ${terms.donation} 약정 등록 확인서` : terms.receiptModalTitle}</span>
             </span>
 
             <span className="block text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mb-1.5">
-              최종 {terms.donation} 금액
+              {isRegisteredOnly ? '오늘 결제 금액' : `최종 ${terms.donation} 금액`}
             </span>
             
             <div className="flex items-baseline gap-1 mb-6 border-b pb-5 border-dashed border-zinc-200 dark:border-zinc-800">
               <span className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ color: ft.primaryDark }}>
-                {fmt(formData.amount)}
+                {isRegisteredOnly ? '0' : fmt(formData.amount)}
               </span>
               <span className="font-display text-base font-bold" style={{ color: ft.primaryDark }}>원</span>
+              {isRegisteredOnly && (
+                <span className="ml-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  (정기 약정 금액: {fmt(formData.amount)}원)
+                </span>
+              )}
             </div>
 
             {/* Meta Table */}
@@ -364,13 +378,15 @@ export default function DonationComplete() {
                 [`${terms.receiptDonorLabel.replace(/\s+/g, '')} 성명`, formData.name || '무기명'],
                 ...(formData.baptismName ? [[tenant.religionType === 'protestant' ? '직분' : tenant.religionType === 'buddhist' ? '법명' : '세례명', formData.baptismName]] : []),
                 ['연락처', formData.phone || '-'],
-                ...(formData.isRecurring ? [['결제 주기', (() => {
-                  const interval = formData.recurringInterval;
-                  if (interval === 'daily') return '정기 결제 (매일)';
-                  if (interval === 'weekly') return `정기 결제 (매주 ${formData.recurringDayOfWeek || '일'}요일)`;
-                  // monthly (기본)
-                  return `정기 결제 (매월 ${formData.recurringDay || '-'}일)`;
-                })()]] : [['결제 유형', '일회성 단발']]),
+                ...(formData.isRecurring ? [
+                  ['결제 주기', (() => {
+                    const interval = formData.recurringInterval;
+                    if (interval === 'daily') return '정기 결제 (매일)';
+                    if (interval === 'weekly') return `정기 결제 (매주 ${formData.recurringDayOfWeek || '일'}요일)`;
+                    return `정기 결제 (매월 ${formData.recurringDay || '-'}일)`;
+                  })()],
+                  [isRegisteredOnly ? '첫 결제 예정일' : '다음 결제 예정일', nextDateParam || '지정 주기일'],
+                ] : [['결제 유형', '일회성 단발']]),
               ].map(([key, val]) => (
                 <div key={key} className="flex justify-between items-center text-xs">
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium">{key}</span>

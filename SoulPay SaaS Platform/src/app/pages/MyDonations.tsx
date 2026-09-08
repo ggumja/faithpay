@@ -345,21 +345,38 @@ export default function MyDonations() {
       setHistory(matched);
       loadSavedProfile(cleanPhone, matchedRaw);
 
-      // 정기결제 약정 목록: 정상 결제 완료(completed) 이력 중 isRecurring === true인 건을 약정으로 합성
-      const recurringLogs = matchedRaw.filter(d => d.isRecurring && (!d.paymentStatus || d.paymentStatus === 'completed'));
-      const fetchedSubs: any[] = recurringLogs.map(d => ({
-        id: d.id || `sub_${d.createdAt || Date.now()}`,
-        tenantId: currentTenant.id,
-        donorName: d.donorName || d.name,
-        donorPhone: d.donorPhone || cleanPhone,
-        itemName: d.itemName || '정기 보시금',
-        amount: d.amount,
-        status: 'active',
-        recurringInterval: d.recurringInterval || 'monthly',
-        createdAt: d.createdAt,
-      }));
+      // 정기결제 약정 목록: 실제 DB subscriptions 테이블에서 휴대폰 번호로 등록된 약정 실측 조회
+      let realSubs: any[] = [];
+      try {
+        const subRes = await subscriptionAPI.getByPhone(cleanPhone);
+        if (subRes.success && Array.isArray(subRes.data)) {
+          realSubs = subRes.data.filter((s: any) => !s.tenantId || s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id);
+        }
+      } catch (subErr) {
+        console.warn('Failed to fetch real subscriptions from DB:', subErr);
+      }
 
-      setSubscriptions(fetchedSubs);
+      if (realSubs.length > 0) {
+        setSubscriptions(realSubs);
+      } else {
+        // DB subscriptions 테이블에 아직 미등록된 레거시 이력인 경우만 결제 완료 이력에서 보조 매핑
+        const recurringLogs = matchedRaw.filter(d => d.isRecurring && (!d.paymentStatus || d.paymentStatus === 'completed'));
+        const fetchedSubs: any[] = recurringLogs.map(d => ({
+          id: d.id || `sub_${d.createdAt || Date.now()}`,
+          tenantId: currentTenant.id,
+          donorName: d.donorName || d.name,
+          donorPhone: d.donorPhone || cleanPhone,
+          itemName: d.itemName || '정기 봉헌금',
+          amount: d.amount,
+          status: 'active',
+          recurringInterval: d.recurringInterval || 'monthly',
+          recurringDay: d.recurringDay || 10,
+          recurringDayOfWeek: d.recurringDayOfWeek,
+          nextPaymentDate: d.nextPaymentDate,
+          createdAt: d.createdAt,
+        }));
+        setSubscriptions(fetchedSubs);
+      }
     } catch (err) {
       console.warn('Error fetching donor data:', err);
     } finally {
@@ -999,6 +1016,9 @@ export default function MyDonations() {
                           <div className="text-xs text-zinc-500 space-y-0.5">
                             <p>· 금액: <span className="font-bold text-zinc-900 dark:text-zinc-100">{sub.amount.toLocaleString()}원</span> ({sub.recurringInterval === 'daily' ? '매일 자동결제' : sub.recurringInterval === 'weekly' ? `매주 (${sub.recurringDayOfWeek || '일'})요일` : `매월 ${sub.recurringDay || 10}일`})</p>
                             <p>· 결제카드: {sub.cardName || '신용카드'} ({sub.cardNo || '****-****'})</p>
+                            {(sub.nextPaymentDate || sub.next_payment_date) && (
+                              <p>· 다음(첫) 결제 예정일: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{sub.nextPaymentDate || sub.next_payment_date}</span></p>
+                            )}
                           </div>
                         </div>
 

@@ -206,6 +206,7 @@ export interface DonationFormData {
   recurringInterval?: 'daily' | 'weekly' | 'monthly';
   recurringDay?: number;
   recurringDayOfWeek?: string;
+  firstPaymentTiming?: 'immediate' | 'scheduled';
 }
 
 export interface AdminUser {

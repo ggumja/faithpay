@@ -146,6 +146,7 @@ export default function DonationFlow() {
   const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [recurringDayOfWeek, setRecurringDayOfWeek] = useState<string>('일');
   const [recurringDay, setRecurringDay] = useState<number>(5);
+  const [firstPaymentTiming, setFirstPaymentTiming] = useState<'immediate' | 'scheduled'>('immediate');
 
   useEffect(() => {
     if (tenantSlug && tenants.length > 0) {
@@ -294,6 +295,7 @@ export default function DonationFlow() {
       recurringInterval: isRecurring ? recurringInterval : undefined,
       recurringDayOfWeek: isRecurring && recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
       recurringDay: isRecurring && recurringInterval === 'monthly' ? recurringDay : undefined,
+      firstPaymentTiming: isRecurring ? firstPaymentTiming : undefined,
     });
     navigate(`/${tenantSlug}/payment`);
   };

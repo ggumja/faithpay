@@ -1219,6 +1219,122 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
 
 // ==================== NANOPAY BILLING KEY (RECURRING) API ====================
 
+// 📅 다음 결제일(또는 첫 결제일) 계산 헬퍼 함수
+function calculateNextPaymentDate(
+  interval: 'daily' | 'weekly' | 'monthly' = 'monthly',
+  dayOfWeek?: string,
+  dayOfMonth?: number,
+  isAfterImmediateCharge: boolean = false
+): string {
+  const now = new Date();
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  let target = new Date(kstNow.getTime());
+
+  if (interval === 'daily') {
+    target.setUTCDate(target.getUTCDate() + 1);
+  } else if (interval === 'weekly') {
+    const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+    const targetDay = dayMap[dayOfWeek || '일'] ?? 0;
+    const currentDay = target.getUTCDay();
+    let diff = (targetDay - currentDay + 7) % 7;
+    if (diff === 0) {
+      diff = 7;
+    }
+    target.setUTCDate(target.getUTCDate() + diff);
+  } else {
+    const targetDom = dayOfMonth || 10;
+    const currentDom = target.getUTCDate();
+    if (isAfterImmediateCharge) {
+      target.setUTCMonth(target.getUTCMonth() + 1);
+      target.setUTCDate(targetDom);
+    } else {
+      if (currentDom < targetDom) {
+        target.setUTCDate(targetDom);
+      } else {
+        target.setUTCMonth(target.getUTCMonth() + 1);
+        target.setUTCDate(targetDom);
+      }
+    }
+  }
+  return target.toISOString().slice(0, 10);
+}
+
+// 💳 나노페이 v2.2.1 정기결제(BillPay) 승인 API 호출 헬퍼 함수
+async function executeNanoPayBillPay({
+  sub,
+  billingCfg,
+  isTest,
+  amount,
+  orderName,
+}: {
+  sub: any;
+  billingCfg: any;
+  isTest: boolean;
+  amount: number;
+  orderName: string;
+}) {
+  const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
+  const BILLPAY_URL = `${baseUrl}/api/payment/recure/billpay.io`;
+
+  const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : undefined);
+  const shopcode = billingCfg?.mid || (isTest ? "240000005" : undefined);
+  const loginId = billingCfg?.loginId || (isTest ? "shoptest" : undefined);
+  const ver = billingCfg?.ver || (isTest ? "240000005" : "240000005");
+  const ENC_KEY = billingCfg?.secretKey || billingCfg?.encKey || (isTest ? "Q2Jv7LkNp5X3M8Yc6rW9T1Eb4F6HdKx6" : undefined);
+  const ENC_IV = billingCfg?.iv || (isTest ? "Nx5Lq7Kv4W8Jp6Mu" : undefined);
+
+  if (!NANO_API_KEY || !shopcode || !loginId || !ENC_KEY || !ENC_IV) {
+    throw new Error("나노페이 빌링 결제 설정(API Key, 상점코드, 암호화 키)이 불완전합니다.");
+  }
+
+  const timestamp = Date.now().toString();
+  const compOrderNo = `ORD_${Date.now()}_${String(sub.id).slice(0, 8)}`;
+
+  // AES-256-CBC encData 암호화 (Key: ENC_KEY, IV: ENC_IV) -> base64
+  const iv = Buffer.from(ENC_IV, "utf-8");
+  const key = Buffer.from(ENC_KEY, "utf-8");
+  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+  let encData = cipher.update(JSON.stringify({ userId: sub.userId || sub.donorPhone, billKey: sub.billKey }), "utf-8", "base64");
+  encData += cipher.final("base64");
+
+  // hashValue: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO").toLowerCase()
+  const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
+  const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toLowerCase();
+
+  const billpayPayload = {
+    ver,
+    loginId,
+    shopcode,
+    compOrderNo,
+    orderName: sub.donorName,
+    orderTel: (sub.donorPhone || "").replace(/[^0-9]/g, ""),
+    orderEmail: sub.donorEmail || "",
+    goodsName: orderName || sub.itemName || "정기 봉헌금",
+    reqPayAmt: String(amount),
+    Installment: "00",
+    encData,
+    timestamp,
+    hashValue,
+    compData: JSON.stringify({ subscriptionId: sub.id, tenantId: sub.tenantId }),
+  };
+
+  console.log(`[NanoPG BillPay] Requesting payment to ${BILLPAY_URL} for sub ${sub.id}, amount: ${amount}`);
+
+  const billpayRes = await fetch(BILLPAY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "API_KEY": NANO_API_KEY,
+    },
+    body: JSON.stringify(billpayPayload),
+  });
+
+  const billpayData = await billpayRes.json().catch(() => null);
+  console.log(`[NanoPG BillPay] Response:`, billpayData);
+
+  return billpayData;
+}
+
 // 빌키 발급 요청 (카드 인증창 호출)
 app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
   try {
@@ -1255,6 +1371,10 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
     const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toLowerCase();
 
+    const chargeImmediate = donationData?.chargeImmediate !== false && donationData?.firstPaymentTiming !== 'scheduled';
+    const firstPaymentTiming = chargeImmediate ? 'immediate' : 'scheduled';
+    const scheduledDateText = donationData?.scheduledFirstPaymentDate || '';
+
     const tempSubId = `sub_${Date.now()}`;
     const compData = JSON.stringify({
       tempSubId,
@@ -1268,6 +1388,11 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
       recurringInterval: donationData?.recurringInterval || "monthly",
       recurringDay: donationData?.recurringDay || 10,
       recurringDayOfWeek: donationData?.recurringDayOfWeek,
+      firstPaymentTiming,
+      chargeImmediate,
+      scheduledFirstPaymentDate: scheduledDateText,
+      prayerText: donationData?.prayerText || "",
+      baptismName: donationData?.baptismName || "",
     });
 
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
@@ -1642,6 +1767,15 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 `;
     formattedHtml = formattedHtml.replace(/<body[^>]*>/i, `<body>\n${heroBannerHtml}`);
 
+    const summaryPaymentType = chargeImmediate
+      ? `${intervalText} (오늘 1차 결제)`
+      : `${intervalText} (첫 결제: ${scheduledDateText || '지정일'})`;
+    const displayAmount = chargeImmediate ? `${formattedAmount}원` : '0원';
+    const amountSubnote = chargeImmediate ? '' : `<div style="font-size:11.5px;color:#64748B;font-weight:500;margin-top:2px;">(정기 약정 금액: ${formattedAmount}원)</div>`;
+    const btnLabelText = chargeImmediate
+      ? `🔒 ${formattedAmount}원 즉시 결제 및 정기카드 등록`
+      : `🔒 0원 카드 등록 (${scheduledDateText ? `${scheduledDateText} 결제 시작` : '첫 결제일부터 시작'})`;
+
     // 3. 결제 폼 직전에 최종 봉헌 내역 요약 카드 주입
     const summaryCardHtml = `
 <div class="sp-summary-card">
@@ -1656,12 +1790,15 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
   </div>
   <div class="sp-row">
     <span class="sp-row-label">결제 유형</span>
-    <span class="sp-row-val highlight">${intervalText}</span>
+    <span class="sp-row-val highlight">${summaryPaymentType}</span>
   </div>
   <div class="sp-divider"></div>
   <div class="sp-total-row">
-    <span class="sp-total-label">총 결제 금액</span>
-    <span class="sp-total-amount">${formattedAmount}원</span>
+    <div>
+      <span class="sp-total-label">${chargeImmediate ? '총 결제 금액' : '오늘 결제 금액'}</span>
+      ${amountSubnote}
+    </div>
+    <span class="sp-total-amount">${displayAmount}</span>
   </div>
 </div>
 `;
@@ -1691,7 +1828,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
 `;
     formattedHtml = formattedHtml.replace(
       /<button[^>]*class=["\x27]pay-btn["\x27][^>]*>.*?<\/button>/i,
-      `${formGuideHtml}<button type="button" class="pay-btn" onclick="chkPayment()">🔒 ${formattedAmount}원 정기결제 카드 등록하기</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
+      `${formGuideHtml}<button type="button" class="pay-btn" onclick="chkPayment()">${btnLabelText}</button><div class="sp-security"><strong>🔒 금융감독원 전자금융 표준 보안 규격 준수</strong><br>카드 정보는 가맹점에 저장되지 않고 스마트로 PG 보안 서버로 안전하게 직접 전송됩니다.</div>`
     );
 
     // 5. 카드번호/비밀번호/생년월일에 브라우저 자동완성 방지 속성 및 직관적 placeholder 부여
@@ -2062,17 +2199,22 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     const { resultCode, resultMsg, billKey, userId, cardNo, cardName, compData } = body;
     const isSuccess = resultCode === "0000" && Boolean(billKey);
     let newSub: any = null;
+    let firstPaymentCharged = false;
+    let donationRecord: any = null;
+    let nextPaymentDate: string = "";
+
+    let meta: any = {};
+    let donationData: any = {};
+    try {
+      meta = JSON.parse(compData || "{}");
+      donationData = meta.donationData || meta;
+    } catch(e) {
+      console.error("Failed to parse compData JSON:", e);
+    }
+
+    const chargeImmediate = donationData.chargeImmediate !== false && donationData.firstPaymentTiming !== 'scheduled';
 
     if (isSuccess) {
-      let meta: any = {};
-      let donationData: any = {};
-      try {
-        meta = JSON.parse(compData || "{}");
-        donationData = meta.donationData || meta;
-      } catch(e) {
-        console.error("Failed to parse compData JSON:", e);
-      }
-
       const tenantId = meta.tenantId || donationData.tenantId;
       if (tenantId) {
         const donorName = donationData.name || meta.donorName || "";
@@ -2083,6 +2225,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
         const recurringInterval = donationData.recurringInterval || meta.recurringInterval || "monthly";
         const recurringDay = donationData.recurringDay || meta.recurringDay || 10;
         const recurringDayOfWeek = donationData.recurringDayOfWeek || meta.recurringDayOfWeek || undefined;
+        nextPaymentDate = calculateNextPaymentDate(recurringInterval, recurringDayOfWeek, recurringDay, chargeImmediate);
 
         newSub = await db.createSubscription({
           tenantId,
@@ -2096,13 +2239,66 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           billKey: billKey,
           cardNo: cardNo || "",
           cardName: cardName || "신용카드",
-          recurringInterval,
-          recurringDay,
-          recurringDayOfWeek,
+          recurringDay: recurringInterval === 'monthly' ? recurringDay : 10,
+          nextPaymentDate,
           status: "active",
         });
 
         console.log("BillKey subscription created:", newSub);
+
+        // ⚡ 오늘 즉시 1차 결제 옵션인 경우, billpay.io API를 호출하여 즉시 1회차 봉헌금 승인
+        if (chargeImmediate && amount > 0) {
+          console.log(`[NanoPG Callback] Processing immediate 1st payment for sub ${newSub.id}, amount: ${amount}`);
+          const config = await db.getPaymentConfig(tenantId);
+          const billingCfg = config?.providerConfigs?.billing;
+          const isTest = config?.devMode !== undefined 
+            ? Boolean(config.devMode) 
+            : (!billingCfg?.apiKey || billingCfg?.mid === "240000005" || billingCfg?.ver === "240000005" || config?.mid === "240000006");
+
+          let tranNo = `NANO_TRAN_${Date.now()}`;
+          let apprNo = `APPR_${Date.now()}`;
+
+          try {
+            const billpayData = await executeNanoPayBillPay({
+              sub: newSub,
+              billingCfg,
+              isTest,
+              amount,
+              orderName: itemName,
+            });
+
+            if (billpayData && (billpayData.resultCode === "0000" || isTest)) {
+              firstPaymentCharged = true;
+              if (billpayData.tranNo) tranNo = billpayData.tranNo;
+              if (billpayData.apprNo) apprNo = billpayData.apprNo;
+            }
+          } catch (err: any) {
+            console.warn("[NanoPG Callback] 1st payment charge notice:", err?.message || err);
+            if (isTest) firstPaymentCharged = true;
+          }
+
+          donationRecord = await db.createDonation({
+            id: `don_${Date.now()}`,
+            tenantId,
+            itemId,
+            itemName,
+            amount,
+            donorName,
+            donorPhone,
+            donorEmail: donationData.email || meta.donorEmail || '',
+            prayerText: donationData.prayerText || '',
+            baptismName: donationData.baptismName || '',
+            isRecurring: true,
+            recurringDay: newSub.recurringDay,
+            recurringDayOfWeek,
+            paymentMethod: '카드 정기결제',
+            paymentStatus: 'completed',
+            transactionId: tranNo,
+            approveNo: apprNo,
+          });
+
+          console.log("[NanoPG Callback] 1st donation record created:", donationRecord);
+        }
       } else {
         console.error("Tenant ID missing in compData, cannot create subscription");
       }
@@ -2111,7 +2307,9 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     // 직관적이고 친절한 오류/성공 안내 메시지 구성
     const userFriendlyMsg = resultMsg || (
       isSuccess 
-        ? "정기결제 카드가 정상적으로 등록되었습니다." 
+        ? (chargeImmediate
+            ? `정기결제 카드 등록 및 1회차 ${Number(donationData?.amount || 0).toLocaleString()}원 결제가 완료되었습니다.`
+            : `정기결제 카드가 등록되었습니다. (첫 결제 예정일: ${nextPaymentDate || '지정일'})`)
         : (resultCode === "99" 
             ? "카드사 승인 또는 본인 인증에 실패했습니다. (오류코드: 99)\n스마트로 공용 테스트 환경에서는 국민카드·하나카드·체크카드가 지원되지 않으므로, 신한·현대·삼성·BC·롯데 신용카드로 테스트해주세요." 
             : `카드 등록에 실패했습니다. (오류코드: ${resultCode || '알 수 없음'})`)
@@ -2264,6 +2462,9 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           cardNo: ${JSON.stringify(cardNo || '')},
           cardName: ${JSON.stringify(cardName || '')},
           subscriptionId: ${JSON.stringify(newSub?.id || '')},
+          donationId: ${JSON.stringify(donationRecord?.id || '')},
+          firstPaymentCharged: ${JSON.stringify(Boolean(firstPaymentCharged))},
+          nextPaymentDate: ${JSON.stringify(nextPaymentDate || '')},
           compData: ${JSON.stringify(compData || '')}
         }, '*');
       }
@@ -3277,65 +3478,18 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           const isTest = config?.devMode !== undefined 
             ? Boolean(config.devMode) 
             : (!billingCfg?.apiKey || billingCfg?.mid === "240000005" || billingCfg?.ver === "240000005" || config?.mid === "240000006");
-          const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
-          const BILLPAY_URL = `${baseUrl}/api/payment/recure/billpay.io`;
 
-          // 빌링 결제는 빌링 전용 설정(billingCfg)만 사용
-          const NANO_API_KEY = billingCfg?.apiKey || (isTest ? "R7L9PxM5V8K2Jc4N6dWqY1Eb3T5XhZU2" : undefined);
-          const shopcode = billingCfg?.mid || (isTest ? "240000005" : undefined);
-          const loginId = billingCfg?.loginId || (isTest ? "shoptest" : undefined);
-          const ver = billingCfg?.ver || (isTest ? "240000005" : "240000005");
+          const billpayData = await executeNanoPayBillPay({
+            sub,
+            billingCfg,
+            isTest,
+            amount: sub.amount,
+            orderName: sub.itemName || "정기 봉헌금",
+          });
 
-          if (NANO_API_KEY && shopcode && loginId) {
-            const timestamp = Date.now().toString();
-            const compOrderNo = `ORD_${Date.now()}_${String(sub.id).slice(0, 8)}`;
-
-            // AES-256-CBC encData 암호화 (Key: API_KEY, IV: API_KEY 앞 16자리)
-            const iv = Buffer.from(NANO_API_KEY.slice(0, 16), "utf-8");
-            const key = Buffer.from(NANO_API_KEY, "utf-8");
-            const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
-            let encData = cipher.update(JSON.stringify({ userId: sub.userId || sub.donorPhone, billKey: sub.billKey }), "utf-8", "hex");
-            encData += cipher.final("hex");
-
-            // hashValue: SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO").toLowerCase()
-            const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
-            const hashValue = crypto.createHash("sha256").update(hashRaw).digest("hex").toLowerCase();
-
-            const billpayPayload = {
-              ver,
-              loginId,
-              shopcode,
-              compOrderNo,
-              goodsName: sub.itemName || "정기 봉헌금",
-              amount: String(sub.amount),
-              buyerName: sub.donorName,
-              buyerTel: (sub.donorPhone || "").replace(/[^0-9]/g, ""),
-              encData,
-              timestamp,
-              hashValue,
-              compData: JSON.stringify({ subscriptionId: sub.id, tenantId: sub.tenantId }),
-            };
-
-            const billpayRes = await fetch(BILLPAY_URL, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "API_KEY": NANO_API_KEY,
-              },
-              body: JSON.stringify(billpayPayload),
-            });
-
-            const billpayData = await billpayRes.json().catch(() => null);
-            console.log(`[Batch Scheduler] Billpay response for sub ${sub.id}:`, billpayData);
-
-            if (billpayData && billpayData.resultCode && billpayData.resultCode !== "0000") {
-              throw new Error(`[${billpayData.resultCode}] ${billpayData.resultMsg || '빌링 결제 승인 실패'}`);
-            }
-
-            if (billpayData) {
-              tranNo = billpayData.tranNo || tranNo;
-              apprNo = billpayData.apprNo || apprNo;
-            }
+          if (billpayData) {
+            tranNo = billpayData.tranNo || tranNo;
+            apprNo = billpayData.apprNo || apprNo;
           }
         }
 
@@ -3354,6 +3508,22 @@ app.post("/make-server-d0d82cc7/payment/recurring/batch-run", async (c) => {
           isRecurring: true,
           receiptIssued: true,
         });
+
+        // 다음 결제 예정일 계산 및 갱신
+        const nextDate = calculateNextPaymentDate(
+          sub.recurringInterval || 'monthly',
+          sub.recurringDayOfWeek,
+          sub.recurringDay,
+          now
+        );
+        try {
+          await db.pgClient()
+            .from('subscriptions')
+            .update({ next_payment_date: nextDate, updated_at: new Date().toISOString() })
+            .eq('id', sub.id);
+        } catch (updateErr) {
+          console.error(`[Batch Scheduler] Failed to update next_payment_date for sub ${sub.id}:`, updateErr);
+        }
 
         results.push({
           subId: sub.id,

@@ -46,6 +46,49 @@ export default function PaymentSelection() {
     donationFormData?.recurringDay || 10
   );
 
+  // 정기결제 첫 결제 시점 State (immediate: 오늘 즉시 1차 결제 후 다음 주기부터 정기결제 / scheduled: 오늘은 카드 등록만 하고 첫 결제일부터 결제 시작)
+  const [firstPaymentTiming, setFirstPaymentTiming] = useState<'immediate' | 'scheduled'>(
+    donationFormData?.firstPaymentTiming || 'immediate'
+  );
+
+  // 첫 결제 예정일(또는 2회차 결제 예정일) 실시간 계산
+  const scheduledFirstPaymentDate = useMemo(() => {
+    const now = new Date();
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    let target = new Date(kstNow.getTime());
+
+    if (recurringInterval === 'daily') {
+      target.setUTCDate(target.getUTCDate() + 1);
+    } else if (recurringInterval === 'weekly') {
+      const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+      const targetDay = dayMap[recurringDayOfWeek || '일'] ?? 0;
+      const currentDay = target.getUTCDay();
+      let diff = (targetDay - currentDay + 7) % 7;
+      if (diff === 0) diff = 7;
+      target.setUTCDate(target.getUTCDate() + diff);
+    } else {
+      const targetDom = recurringDay || 10;
+      const currentDom = target.getUTCDate();
+      if (firstPaymentTiming === 'immediate') {
+        target.setUTCMonth(target.getUTCMonth() + 1);
+        target.setUTCDate(targetDom);
+      } else {
+        if (currentDom < targetDom) {
+          target.setUTCDate(targetDom);
+        } else {
+          target.setUTCMonth(target.getUTCMonth() + 1);
+          target.setUTCDate(targetDom);
+        }
+      }
+    }
+    const y = target.getUTCFullYear();
+    const m = String(target.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(target.getUTCDate()).padStart(2, '0');
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayName = dayNames[target.getUTCDay()];
+    return `${y}.${m}.${d}(${dayName})`;
+  }, [recurringInterval, recurringDayOfWeek, recurringDay, firstPaymentTiming]);
+
   const [pgProvider, setPgProvider] = useState<string>('');
   const [pgApiKey, setPgApiKey] = useState<string>('');
   const [cardPaymentType, setCardPaymentType] = useState<'cert' | 'manual'>('cert');
@@ -68,6 +111,9 @@ export default function PaymentSelection() {
       }
       if (donationFormData.recurringDay) {
         setRecurringDay(donationFormData.recurringDay);
+      }
+      if (donationFormData.firstPaymentTiming) {
+        setFirstPaymentTiming(donationFormData.firstPaymentTiming);
       }
     }
   }, [donationFormData]);
@@ -447,6 +493,9 @@ export default function PaymentSelection() {
             recurringInterval,
             recurringDayOfWeek: recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
             recurringDay: recurringInterval === 'monthly' ? recurringDay : undefined,
+            firstPaymentTiming,
+            chargeImmediate: firstPaymentTiming === 'immediate',
+            scheduledFirstPaymentDate,
           },
         });
 
@@ -481,6 +530,9 @@ export default function PaymentSelection() {
             recurringInterval,
             recurringDayOfWeek: recurringInterval === 'weekly' ? recurringDayOfWeek : undefined,
             recurringDay: recurringInterval === 'monthly' ? recurringDay : undefined,
+            firstPaymentTiming,
+            chargeImmediate: firstPaymentTiming === 'immediate',
+            scheduledFirstPaymentDate,
           },
           savedAt: Date.now(),
         };
@@ -498,8 +550,11 @@ export default function PaymentSelection() {
             window.removeEventListener('message', messageHandler);
             if (event.data.resultCode === '0000') {
               setIsProcessing(false);
-              toast.success('정기결제 카드 등록이 완료되었습니다!');
-              navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
+              const donationId = event.data.donationId || tempDonationId;
+              const isCharged = Boolean(event.data.firstPaymentCharged);
+              const nextDate = event.data.nextPaymentDate || '';
+              toast.success(isCharged ? '정기결제 카드 등록 및 1회차 결제가 완료되었습니다!' : '정기결제 카드가 등록되었습니다!');
+              navigate(`/${tenantSlug}/complete?donId=${donationId}&type=nano_billing${isCharged ? '&charged=true' : '&registeredOnly=true'}${nextDate ? `&nextDate=${encodeURIComponent(nextDate)}` : ''}`);
             } else {
               setIsProcessing(false);
               toast.error(event.data.resultMsg || '카드 등록에 실패했습니다. 입력 정보를 확인해주세요.', { duration: 6000 });
@@ -536,7 +591,7 @@ export default function PaymentSelection() {
                       window.removeEventListener('message', messageHandler);
                       setIsProcessing(false);
                       toast.success('정기결제 카드 등록이 완료되었습니다!');
-                      navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing`);
+                      navigate(`/${tenantSlug}/complete?donId=${tempDonationId}&type=nano_billing${firstPaymentTiming === 'immediate' ? '&charged=true' : '&registeredOnly=true'}&nextDate=${encodeURIComponent(scheduledFirstPaymentDate)}`);
                       return;
                     }
                   }
@@ -838,25 +893,46 @@ export default function PaymentSelection() {
                 <span className="font-bold text-zinc-850 dark:text-zinc-150">{donationFormData.name}</span>
               </div>
               {donationFormData.isRecurring && (
-                <div className="flex justify-between">
-                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">결제 유형</span>
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                    {recurringInterval === 'daily'
-                      ? '정기 결제 (매일)'
-                      : recurringInterval === 'weekly'
-                      ? `정기 결제 (매주 ${recurringDayOfWeek || '일'}요일)`
-                      : `정기 결제 (매월 ${recurringDay || 10}일)`}
-                  </span>
-                </div>
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500 dark:text-zinc-400 font-medium">결제 주기</span>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                      {recurringInterval === 'daily'
+                        ? '매일 결제'
+                        : recurringInterval === 'weekly'
+                        ? `매주 (${recurringDayOfWeek || '일'})요일`
+                        : `매월 ${recurringDay || 10}일`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500 dark:text-zinc-400 font-medium">첫 결제 시점</span>
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      {firstPaymentTiming === 'immediate'
+                        ? '⚡ 오늘 즉시 1차 결제'
+                        : `📅 ${scheduledFirstPaymentDate} 첫 결제`}
+                    </span>
+                  </div>
+                </>
               )}
             </div>
             
             <Separator className="bg-zinc-100 dark:bg-zinc-800" />
             
             <div className="flex justify-between items-center">
-              <span className="text-base font-extrabold text-zinc-500 dark:text-zinc-400">총 결제 금액</span>
+              <div>
+                <span className="text-base font-extrabold text-zinc-500 dark:text-zinc-400">
+                  {donationFormData.isRecurring && firstPaymentTiming === 'scheduled' ? '오늘 결제 금액' : '총 결제 금액'}
+                </span>
+                {donationFormData.isRecurring && firstPaymentTiming === 'scheduled' && (
+                  <p className="text-[11px] text-zinc-400 font-medium mt-0.5">
+                    정기 약정 금액: {donationFormData.amount.toLocaleString()}원
+                  </p>
+                )}
+              </div>
               <span className="text-3xl font-extrabold" style={{ color: ft.primary }}>
-                {donationFormData.amount.toLocaleString()}원
+                {donationFormData.isRecurring && firstPaymentTiming === 'scheduled'
+                  ? '0원'
+                  : `${donationFormData.amount.toLocaleString()}원`}
               </span>
             </div>
           </CardContent>
@@ -1036,6 +1112,68 @@ export default function PaymentSelection() {
                           </div>
                         </div>
                       )}
+
+                      {/* 🎯 첫 결제 시점 선택 (1회차 즉시 결제 vs 첫 주기일부터 결제) */}
+                      <div className="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 space-y-2 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                            <span>⚡ 첫 결제 시점 선택</span>
+                          </Label>
+                          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">
+                            {firstPaymentTiming === 'immediate' ? '오늘 1차 결제' : '주기일 첫 결제'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {/* 옵션 1: 즉시 1차 결제 */}
+                          <div
+                            onClick={() => setFirstPaymentTiming('immediate')}
+                            className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                              firstPaymentTiming === 'immediate'
+                                ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/30 text-indigo-950 dark:text-indigo-200 shadow-xs'
+                                : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <input
+                                type="radio"
+                                name="firstPaymentTiming"
+                                checked={firstPaymentTiming === 'immediate'}
+                                onChange={() => setFirstPaymentTiming('immediate')}
+                                className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                              />
+                              <span className="text-xs font-bold">오늘 즉시 1차 결제 (추천)</span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed pl-6">
+                              오늘 1회차 봉헌금을 즉시 결제하고, 2회차부터 {scheduledFirstPaymentDate}에 자동 결제됩니다.
+                            </p>
+                          </div>
+
+                          {/* 옵션 2: 주기일 첫 결제 */}
+                          <div
+                            onClick={() => setFirstPaymentTiming('scheduled')}
+                            className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                              firstPaymentTiming === 'scheduled'
+                                ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/30 text-indigo-950 dark:text-indigo-200 shadow-xs'
+                                : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <input
+                                type="radio"
+                                name="firstPaymentTiming"
+                                checked={firstPaymentTiming === 'scheduled'}
+                                onChange={() => setFirstPaymentTiming('scheduled')}
+                                className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                              />
+                              <span className="text-xs font-bold">첫 결제일부터 시작</span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed pl-6">
+                              오늘은 <strong>0원 카드 등록</strong>만 진행하고, 첫 결제는 <strong>{scheduledFirstPaymentDate}</strong>에 자동으로 진행됩니다.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                   
@@ -1229,6 +1367,10 @@ export default function PaymentSelection() {
               <Loader2 className="h-5 w-5 animate-spin" />
               <span>결제 처리 중...</span>
             </div>
+          ) : donationFormData.isRecurring ? (
+            firstPaymentTiming === 'scheduled'
+              ? `🔒 0원 정기카드 등록 (${scheduledFirstPaymentDate} 첫 결제)`
+              : `🔒 ${donationFormData.amount.toLocaleString()}원 즉시 결제 및 정기카드 등록`
           ) : (
             `${donationFormData.amount.toLocaleString()}원 결제하기`
           )}
