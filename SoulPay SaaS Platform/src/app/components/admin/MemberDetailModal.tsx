@@ -534,7 +534,12 @@ export function MemberDetailModal({
                 <TableBody>
                   {donations.map((don) => (
                     <TableRow key={don.id}>
-                      <TableCell className="font-mono text-xs text-slate-600">{don.date}</TableCell>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        <div className="font-semibold text-slate-800 dark:text-zinc-200">{don.date}</div>
+                        {(don as any).time && (
+                          <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{(don as any).time}</div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
                       <TableCell>
                         <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">

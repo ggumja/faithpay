@@ -59,6 +59,7 @@ import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components
 export interface MemberDonationHistoryItem {
   id: string;
   date: string;
+  time?: string;
   itemName: string;
   amount: number;
   paymentMethod: string;
@@ -360,18 +361,30 @@ export default function MemberDetailPage() {
               lastDonation: lastDonationDate,
               recurringCount: activeRecurringCount,
               note: rawMatch.note || '',
-              donationsHistory: donorDonations.map((d: any) => ({
-                id: d.id,
-                date: d.createdAt ? d.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
-                itemName: d.itemName || (d.isRecurring ? `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)` : `특별 ${currentTenant.terminology?.donation || '헌금/봉헌'}`),
-                amount: d.amount || 0,
-                paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
-                type: d.isRecurring ? 'recurring' : 'once',
-                status: (d.paymentStatus || 'completed') as any,
-                cancelReason: d.cancelReason,
-                cancelApprovedAt: d.cancelApprovedAt,
-                failureReason: d.failureReason,
-              })),
+              donationsHistory: donorDonations.map((d: any) => {
+                const dateObj = d.createdAt ? new Date(d.createdAt) : null;
+                const isValid = dateObj && !isNaN(dateObj.getTime());
+                const datePart = isValid
+                  ? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`
+                  : (d.createdAt ? d.createdAt.split('T')[0] : '');
+                const timePart = isValid
+                  ? `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`
+                  : (d.createdAt && d.createdAt.includes('T') ? d.createdAt.split('T')[1]?.slice(0, 8) : '');
+
+                return {
+                  id: d.id,
+                  date: datePart,
+                  time: timePart,
+                  itemName: d.itemName || (d.isRecurring ? `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)` : `특별 ${currentTenant.terminology?.donation || '헌금/봉헌'}`),
+                  amount: d.amount || 0,
+                  paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
+                  type: d.isRecurring ? 'recurring' : 'once',
+                  status: (d.paymentStatus || 'completed') as any,
+                  cancelReason: d.cancelReason,
+                  cancelApprovedAt: d.cancelApprovedAt,
+                  failureReason: d.failureReason,
+                };
+              }),
               subscriptions: subscriptionsList,
               prayersHistory: prayersList,
             };
@@ -1049,7 +1062,12 @@ export default function MemberDetailPage() {
                       ) : (
                         filteredDonationsHistory.map((don) => (
                           <TableRow key={don.id}>
-                            <TableCell className="font-mono text-xs text-slate-600">{don.date}</TableCell>
+                            <TableCell className="font-mono text-xs whitespace-nowrap">
+                              <div className="font-semibold text-slate-800 dark:text-zinc-200">{don.date}</div>
+                              {don.time && (
+                                <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{don.time}</div>
+                              )}
+                            </TableCell>
                             <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
                             <TableCell>
                               <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">
