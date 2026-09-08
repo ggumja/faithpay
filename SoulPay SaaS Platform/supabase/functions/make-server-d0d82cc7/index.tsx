@@ -389,8 +389,8 @@ app.get("/make-server-d0d82cc7/settings/:key", async (c) => {
       .from('system_settings')
       .select('key, value, description')
       .eq('key', key)
-      .single();
-    if (error || !data) return c.json({ success: false, error: 'Setting not found' }, 404);
+      .maybeSingle();
+    if (error || !data) return c.json({ success: true, data: null }, 200);
     return c.json({ success: true, data: data.value });
   } catch (err) {
     console.error('Error fetching setting:', err);
