@@ -33,7 +33,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const navigate = useNavigate();
   const { currentAdmin, setCurrentAdmin, currentTenant, setCurrentTenant } = useApp();
-  const terms = useTenantTerms(currentTenant?.orgType);
+  const terms = useTenantTerms(currentTenant);
   const { canAccessMenu, getMenuPermission } = useAdminPermissions();
 
   const menuItems = [
@@ -43,7 +43,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     { id: 'statistics', icon: BarChart3, label: '마감 통계', path: `/admin/statistics` },
     { id: 'prayers', icon: MessageSquare, label: terms.prayer, path: `/admin/prayers` },
     { id: 'menu', icon: FileText, label: terms.donationItems, path: `/admin/menu` },
-    { id: 'members', icon: Users, label: '회원 관리', path: `/admin/members` },
+    { id: 'members', icon: Users, label: terms.memberManagement || '회원 관리', path: `/admin/members` },
     { id: 'settlement', icon: DollarSign, label: '정산(추정) 집계', path: `/admin/settlement` },
     { id: 'banners', icon: Image, label: '배너 관리', path: `/admin/banners` },
     { id: 'accounts', icon: UserCheck, label: '관리자 계정 관리', path: `/admin/accounts` },
@@ -166,8 +166,8 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
           className="w-full justify-between font-semibold border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800"
           onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
         >
-          <span>신도 페이지 보기</span>
-          <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
+          <span className="truncate">{terms.publicPageLabel || '온라인 수납 페이지 보기'}</span>
+          <ExternalLink className="h-3.5 w-3.5 text-slate-500 shrink-0 ml-1" />
         </Button>
 
         <Button

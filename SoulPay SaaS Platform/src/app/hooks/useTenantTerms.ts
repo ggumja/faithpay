@@ -7,6 +7,8 @@ export interface TenantTerms {
   recurringPending: string;  // 예: '정기후원 대기' | '정기헌금 대기' | '정기봉헌 대기' | '정기보시 대기'
   prayer: string;            // 예: '응원메시지 관리' | '기도제목 관리' | '미사지향 관리' | '발원문 관리'
   donor: string;             // 예: '후원자' | '성도' | '교우' | '불자'
+  memberManagement: string;  // 예: '후원자 관리' | '성도 관리' | '교우 관리' | '신도(불자) 관리'
+  publicPageLabel: string;   // 예: '후원 페이지 보기' | '온라인 헌금 페이지 보기' | '봉헌 페이지 보기' | '온라인 보시 페이지 보기'
   prayerInputLabel: string;  // 예: '응원/소원 메시지' | '기도제목' | '미사지향' | '발원문'
   
   // 영수증 전용 종교별 명확한 구분 표기
@@ -33,6 +35,8 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     recurringPending: '정기후원 대기',
     prayer: '응원메시지 관리',
     donor: '후원자',
+    memberManagement: '후원자 관리',
+    publicPageLabel: '후원 페이지 보기',
     prayerInputLabel: '응원/소원 메시지',
     receiptTitle: '후 원 금  영 수 증',
     cancelReceiptTitle: '후 원 금  결 제  취 소  영 수 증',
@@ -55,6 +59,8 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     recurringPending: '정기헌금 대기',
     prayer: '기도제목 관리',
     donor: '성도',
+    memberManagement: '교인(성도) 관리',
+    publicPageLabel: '온라인 헌금 페이지 보기',
     prayerInputLabel: '기도제목',
     receiptTitle: '헌 금  영 수 증',
     cancelReceiptTitle: '헌 금  결 제  취 소  영 수 증',
@@ -77,6 +83,8 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     recurringPending: '정기봉헌 대기',
     prayer: '미사지향 관리',
     donor: '교우',
+    memberManagement: '신자(교우) 관리',
+    publicPageLabel: '온라인 봉헌 페이지 보기',
     prayerInputLabel: '미사지향',
     receiptTitle: '봉 헌  영 수 증',
     cancelReceiptTitle: '봉 헌  결 제  취 소  영 수 증',
@@ -99,6 +107,8 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     recurringPending: '정기보시 대기',
     prayer: '발원문 관리',
     donor: '불자',
+    memberManagement: '신도(불자) 관리',
+    publicPageLabel: '온라인 보시 페이지 보기',
     prayerInputLabel: '발원문/소원',
     receiptTitle: '보 시  영 수 증',
     cancelReceiptTitle: '보 시  결 제  취 소  영 수 증',
@@ -121,6 +131,8 @@ export const TENANT_TERMINOLOGY: Record<string, TenantTerms> = {
     recurringPending: '정기기부 대기',
     prayer: '기부메시지 관리',
     donor: '기부자',
+    memberManagement: '기부회원 관리',
+    publicPageLabel: '온라인 기부 페이지 보기',
     prayerInputLabel: '기부 메시지',
     receiptTitle: '기 부 금  영 수 증',
     cancelReceiptTitle: '기 부 금  결 제  취 소  영 수 증',
@@ -206,7 +218,13 @@ export function useTenantTerms(orgOrReligionTypeOrTenant?: any): TenantTerms {
           donationItems: `${customTerminology.donation} 항목`,
           recurringPending: `정기${customTerminology.donation} 대기`,
         } : {}),
-        ...(customTerminology.member ? { donor: customTerminology.member } : {}),
+        ...(customTerminology.member ? { 
+          donor: customTerminology.member,
+          memberManagement: `${customTerminology.member} 관리`,
+        } : {}),
+        ...(customTerminology.donation ? {
+          publicPageLabel: `온라인 ${customTerminology.donation} 페이지 보기`,
+        } : {}),
         ...(customTerminology.prayer ? { 
           prayer: `${customTerminology.prayer} 관리`,
           prayerInputLabel: customTerminology.prayer,
