@@ -558,16 +558,45 @@ export default function PaymentSelection() {
 
         // ① 콜백 팝업창에서 발송하는 postMessage 이벤트 수신 (즉시 반응)
         let messageReceived = false;
-        const messageHandler = (event: MessageEvent) => {
+        const messageHandler = async (event: MessageEvent) => {
           if (event.data && event.data.type === 'SOULPAY_BILLKEY_RESULT') {
             messageReceived = true;
             console.log('[Nanopay BillKey Result Received in Parent]:', event.data);
             window.removeEventListener('message', messageHandler);
             if (event.data.resultCode === '0000') {
+              let subscriptionId = event.data.subscriptionId;
+              let nextDate = event.data.nextPaymentDate || scheduledFirstPaymentDate || '';
+
+              // ⚡ 백엔드 콜백에서 compData 손상 등으로 구독이 미생성된 경우를 대비한 2중 안전장치
+              if (!subscriptionId && event.data.billKey) {
+                try {
+                  const regRes = await subscriptionAPI.register({
+                    tenantId: currentTenant.id,
+                    donorName: donorName || '신도',
+                    donorPhone: donorPhone,
+                    donorEmail: donationFormData?.email || '',
+                    itemId: selectedDonationItem.id,
+                    itemName: selectedDonationItem.name,
+                    amount: donationFormData.amount,
+                    billKey: event.data.billKey,
+                    cardNo: event.data.cardNo || '',
+                    cardName: event.data.cardName || '신용카드',
+                    recurringDay: recurringDay || 10,
+                    recurringInterval: recurringInterval || 'monthly',
+                    recurringDayOfWeek: recurringDayOfWeek,
+                    nextPaymentDate: nextDate,
+                  });
+                  if (regRes?.data?.id) {
+                    subscriptionId = regRes.data.id;
+                  }
+                } catch (regErr) {
+                  console.warn('[PaymentSelection] Secondary subscription registration error:', regErr);
+                }
+              }
+
               setIsProcessing(false);
               const donationId = event.data.donationId || tempDonationId;
               const isCharged = Boolean(event.data.firstPaymentCharged);
-              const nextDate = event.data.nextPaymentDate || '';
               toast.success(isCharged ? '정기결제 카드 등록 및 1회차 결제가 완료되었습니다!' : '정기결제 카드가 등록되었습니다!');
               navigate(`/${tenantSlug}/complete?donId=${donationId}&type=nano_billing${isCharged ? '&charged=true' : '&registeredOnly=true'}${nextDate ? `&nextDate=${encodeURIComponent(nextDate)}` : ''}`);
             } else {

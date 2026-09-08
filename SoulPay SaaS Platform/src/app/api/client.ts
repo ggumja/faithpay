@@ -408,6 +408,13 @@ export const subscriptionAPI = {
       body: JSON.stringify({ status }),
     });
   },
+
+  async register(subData: any): Promise<APIResponse<any>> {
+    return fetchAPI<any>(`/subscriptions/register`, {
+      method: 'POST',
+      body: JSON.stringify(subData),
+    });
+  },
 };
 
 // ==================== DONATION ITEMS API ====================

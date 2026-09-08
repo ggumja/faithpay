@@ -1244,10 +1244,19 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
 // 📅 다음 결제일(또는 첫 결제일) 계산 헬퍼 함수
 function calculateNextPaymentDate(
   interval: 'daily' | 'weekly' | 'monthly' = 'monthly',
-  dayOfWeek?: string,
+  dayOfWeek?: string | number,
   dayOfMonth?: number,
-  isAfterImmediateCharge: boolean = false
+  isAfterImmediateCharge: boolean | Date = false,
+  scheduledFirstPaymentDate?: string
 ): string {
+  if (scheduledFirstPaymentDate && typeof scheduledFirstPaymentDate === 'string') {
+    // YYYY.MM.DD(요일) 또는 YYYY-MM-DD 포맷 정규화
+    const cleanDate = scheduledFirstPaymentDate.replace(/\./g, '-').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+      return cleanDate;
+    }
+  }
+
   const now = new Date();
   const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   let target = new Date(kstNow.getTime());
@@ -1256,7 +1265,12 @@ function calculateNextPaymentDate(
     target.setUTCDate(target.getUTCDate() + 1);
   } else if (interval === 'weekly') {
     const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
-    const targetDay = dayMap[dayOfWeek || '일'] ?? 0;
+    let targetDay = 0;
+    if (typeof dayOfWeek === 'number') {
+      targetDay = dayOfWeek;
+    } else if (typeof dayOfWeek === 'string') {
+      targetDay = dayMap[dayOfWeek] ?? (parseInt(dayOfWeek, 10) || 0);
+    }
     const currentDay = target.getUTCDay();
     let diff = (targetDay - currentDay + 7) % 7;
     if (diff === 0) {
@@ -1266,7 +1280,8 @@ function calculateNextPaymentDate(
   } else {
     const targetDom = dayOfMonth || 10;
     const currentDom = target.getUTCDate();
-    if (isAfterImmediateCharge) {
+    const afterCharge = Boolean(isAfterImmediateCharge);
+    if (afterCharge) {
       target.setUTCMonth(target.getUTCMonth() + 1);
       target.setUTCDate(targetDom);
     } else {
@@ -1397,25 +1412,47 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     const firstPaymentTiming = chargeImmediate ? 'immediate' : 'scheduled';
     const scheduledDateText = donationData?.scheduledFirstPaymentDate || '';
 
-    const tempSubId = `sub_${Date.now()}`;
-    const compData = JSON.stringify({
-      tempSubId,
-      tenantId,
-      donorName: donationData?.name || "",
-      donorPhone: cleanPhone,
-      donorEmail: donationData?.email || "",
-      itemId: donationData?.itemId || "recurring",
-      itemName: donationData?.itemName || "정기 봉헌금",
-      amount: donationData?.amount || 0,
-      recurringInterval: donationData?.recurringInterval || "monthly",
-      recurringDay: donationData?.recurringDay || 10,
-      recurringDayOfWeek: donationData?.recurringDayOfWeek,
-      firstPaymentTiming,
-      chargeImmediate,
-      scheduledFirstPaymentDate: scheduledDateText,
-      prayerText: donationData?.prayerText || "",
-      baptismName: donationData?.baptismName || "",
-    });
+    const tempSubId = `sub_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // ⚡ DB donations 테이블에 pending 상태로 사전 등록하여 PG 콜백 시 compData 유실이나 길이 제한에 100% 대비
+    try {
+      await db.createDonation({
+        id: tempSubId,
+        tenantId,
+        itemId: donationData?.itemId || 'recurring',
+        itemName: donationData?.itemName || '정기 봉헌금',
+        amount: Number(donationData?.amount || 0),
+        donorName: donationData?.name || '신도',
+        donorPhone: cleanPhone,
+        prayerText: donationData?.prayerText || '',
+        baptismName: donationData?.baptismName || '',
+        isRecurring: true,
+        recurringDay: donationData?.recurringDay || 10,
+        paymentStatus: 'pending',
+        paymentMethod: '카드 정기결제',
+        failureReason: JSON.stringify({
+          tempSubId,
+          tenantId,
+          recurringInterval: donationData?.recurringInterval || 'monthly',
+          recurringDayOfWeek: donationData?.recurringDayOfWeek,
+          recurringDay: donationData?.recurringDay || 10,
+          firstPaymentTiming,
+          chargeImmediate,
+          scheduledFirstPaymentDate: scheduledDateText,
+          donorEmail: donationData?.email || '',
+          amount: Number(donationData?.amount || 0),
+          itemName: donationData?.itemName || '정기 봉헌금',
+          donorName: donationData?.name || '',
+        }),
+        transactionId: '',
+      });
+      console.log(`[NanoPG BillKey Req] Pre-registered pending subscription donation ${tempSubId} in DB`);
+    } catch (dbErr) {
+      console.warn(`[NanoPG BillKey Req] Failed to pre-register pending donation:`, dbErr);
+    }
+
+    // compData에는 간결한 tempSubId만 전달하여 PG사 글자수(100자) 제한 및 특수문자/UTF-8 왜곡 원천 차단
+    const compData = tempSubId;
 
     const baseUrl = isTest ? "https://dev3.nanopay.co.kr" : "https://pay.nanopay.co.kr";
     const NANO_REQKEY_URL = `${baseUrl}/api/payment/recure/reqkey.io`;
@@ -2227,11 +2264,82 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
 
     let meta: any = {};
     let donationData: any = {};
-    try {
-      meta = JSON.parse(compData || "{}");
-      donationData = meta.donationData || meta;
-    } catch(e) {
-      console.error("Failed to parse compData JSON:", e);
+
+    // 1) compData가 JSON인 경우 파싱 (URL-encoding decodeURIComponent 고려)
+    if (compData && typeof compData === 'string') {
+      try {
+        let rawStr = compData.trim();
+        if (rawStr.startsWith('%')) {
+          try { rawStr = decodeURIComponent(rawStr); } catch (_) {}
+        }
+        if (rawStr.startsWith('{')) {
+          meta = JSON.parse(rawStr);
+          donationData = meta.donationData || meta;
+        }
+      } catch (e) {
+        console.warn("compData JSON parse failed:", e);
+      }
+    }
+
+    // 2) compData가 tempSubId인 경우 DB donations 테이블에서 조회
+    let pendingDonation: any = null;
+    const cleanPhone = (userId ? String(userId).replace(/^u/, '') : '').replace(/[^0-9]/g, '');
+
+    if (compData && typeof compData === 'string' && compData.startsWith('sub_')) {
+      try {
+        pendingDonation = await db.getDonationById(compData);
+      } catch (e) {
+        console.warn("Failed to lookup pending donation by compData id:", e);
+      }
+    }
+
+    // 3) 그래도 못 찾은 경우 userId(휴대폰 번호) 기반으로 최신 pending 정기결제 내역 조회
+    if (!pendingDonation && cleanPhone) {
+      try {
+        const sb = db.pgClient();
+        const { data } = await sb
+          .from('donations')
+          .select('*')
+          .eq('donor_phone', cleanPhone)
+          .eq('is_recurring', true)
+          .eq('payment_status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          pendingDonation = data;
+        }
+      } catch (e) {
+        console.warn("Failed to lookup pending donation by phone:", e);
+      }
+    }
+
+    if (pendingDonation) {
+      let storedMeta: any = {};
+      try {
+        const rawFail = pendingDonation.failure_reason || pendingDonation.failureReason;
+        if (rawFail && typeof rawFail === 'string' && rawFail.startsWith('{')) {
+          storedMeta = JSON.parse(rawFail);
+        }
+      } catch (_) {}
+      meta = {
+        tenantId: pendingDonation.tenant_id || pendingDonation.tenantId,
+        donorName: pendingDonation.donor_name || pendingDonation.donorName,
+        donorPhone: pendingDonation.donor_phone || pendingDonation.donorPhone,
+        donorEmail: storedMeta.donorEmail || "",
+        itemId: pendingDonation.item_id || pendingDonation.itemId,
+        itemName: pendingDonation.item_name || pendingDonation.itemName,
+        amount: pendingDonation.amount,
+        recurringInterval: storedMeta.recurringInterval || "monthly",
+        recurringDay: pendingDonation.recurring_day || storedMeta.recurringDay || 10,
+        recurringDayOfWeek: storedMeta.recurringDayOfWeek,
+        firstPaymentTiming: storedMeta.firstPaymentTiming,
+        chargeImmediate: storedMeta.chargeImmediate,
+        scheduledFirstPaymentDate: storedMeta.scheduledFirstPaymentDate,
+        prayerText: pendingDonation.prayer_text || pendingDonation.prayerText || "",
+        baptismName: pendingDonation.baptism_name || pendingDonation.baptismName || "",
+      };
+      donationData = meta;
     }
 
     const chargeImmediate = donationData.chargeImmediate !== false && donationData.firstPaymentTiming !== 'scheduled';
@@ -2239,15 +2347,23 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     if (isSuccess) {
       const tenantId = meta.tenantId || donationData.tenantId;
       if (tenantId) {
-        const donorName = donationData.name || meta.donorName || "";
-        const donorPhone = (donationData.phone || meta.donorPhone || "").replace(/[^0-9]/g, '');
+        const donorName = donationData.name || meta.donorName || "신도";
+        const donorPhone = (donationData.phone || meta.donorPhone || cleanPhone).replace(/[^0-9]/g, '');
         const itemId = donationData.itemId || meta.itemId || "recurring";
         const itemName = donationData.itemName || meta.itemName || "정기 봉헌금";
         const amount = Number(donationData.amount || meta.amount || 0);
         const recurringInterval = donationData.recurringInterval || meta.recurringInterval || "monthly";
         const recurringDay = donationData.recurringDay || meta.recurringDay || 10;
-        const recurringDayOfWeek = donationData.recurringDayOfWeek || meta.recurringDayOfWeek || undefined;
-        nextPaymentDate = calculateNextPaymentDate(recurringInterval, recurringDayOfWeek, recurringDay, chargeImmediate);
+        const recurringDayOfWeek = donationData.recurringDayOfWeek ?? meta.recurringDayOfWeek;
+        const scheduledDate = donationData.scheduledFirstPaymentDate || meta.scheduledFirstPaymentDate;
+
+        nextPaymentDate = calculateNextPaymentDate(
+          recurringInterval,
+          recurringDayOfWeek,
+          recurringDay,
+          chargeImmediate,
+          scheduledDate
+        );
 
         newSub = await db.createSubscription({
           tenantId,
@@ -2257,7 +2373,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           itemId,
           itemName,
           amount,
-          userId: userId || donorPhone,
+          userId: userId || `u${donorPhone}`,
           billKey: billKey,
           cardNo: cardNo || "",
           cardName: cardName || "신용카드",
@@ -2268,7 +2384,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           status: "active",
         });
 
-        console.log("BillKey subscription created:", newSub);
+        console.log("BillKey subscription created successfully:", newSub);
 
         // ⚡ 오늘 즉시 1차 결제 옵션인 경우, billpay.io API를 호출하여 즉시 1회차 봉헌금 승인
         if (chargeImmediate && amount > 0) {
@@ -2322,6 +2438,14 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           });
 
           console.log("[NanoPG Callback] 1st donation record created:", donationRecord);
+        }
+
+        // 즉시 결제가 아닌 경우 임시 pending donation 행 정리
+        if (pendingDonation && !chargeImmediate) {
+          try {
+            const sb = db.pgClient();
+            await sb.from('donations').delete().eq('id', pendingDonation.id || pendingDonation.id);
+          } catch (_) {}
         }
       } else {
         console.error("Tenant ID missing in compData, cannot create subscription");
@@ -2609,6 +2733,91 @@ app.delete("/make-server-d0d82cc7/subscriptions/:id", async (c) => {
     return c.json({ success: false, error: error?.message }, 500);
   }
 });
+
+// 정기결제 약정 등록 보장 (클라이언트 완료 콜백 대비 백업/동기화 엔드포인트)
+const handleRegisterSubscription = async (c: any) => {
+  try {
+    const body = await c.req.json();
+    const {
+      tenantId,
+      donorName,
+      donorPhone,
+      donorEmail,
+      itemId,
+      itemName,
+      amount,
+      billKey,
+      cardNo,
+      cardName,
+      recurringDay,
+      recurringInterval,
+      recurringDayOfWeek,
+      nextPaymentDate,
+    } = body;
+
+    if (!tenantId || !donorPhone || !billKey) {
+      return c.json({ success: false, error: "tenantId, donorPhone, billKey are required" }, 400);
+    }
+
+    const cleanPhone = donorPhone.replace(/[^0-9]/g, '');
+
+    // 중복 생성 방지: 동일 테넌트, 전화번호, 빌키, 요일/일자의 활성 약정이 이미 존재하는지 확인
+    const existingSubs = await db.getSubscriptionsByPhone(cleanPhone);
+    const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+    let normDow: number | null = null;
+    if (recurringDayOfWeek !== undefined && recurringDayOfWeek !== null) {
+      normDow = typeof recurringDayOfWeek === 'number' 
+        ? recurringDayOfWeek 
+        : (dayMap[recurringDayOfWeek] ?? (parseInt(recurringDayOfWeek, 10) || 0));
+    }
+
+    const matched = existingSubs.find((s: any) => 
+      s.tenantId === tenantId && 
+      s.billKey === billKey && 
+      (s.recurringDayOfWeek === normDow || s.recurringDay === recurringDay) &&
+      s.status === 'active'
+    );
+
+    if (matched) {
+      console.log("[Subscriptions Register] Found existing subscription, returning:", matched.id);
+      return c.json({ success: true, data: matched });
+    }
+
+    const calculatedNextDate = nextPaymentDate || calculateNextPaymentDate(
+      recurringInterval || 'monthly',
+      normDow ?? undefined,
+      recurringDay || 10,
+      false
+    );
+
+    const newSub = await db.createSubscription({
+      tenantId,
+      donorName: donorName || "신도",
+      donorPhone: cleanPhone,
+      donorEmail: donorEmail || "",
+      itemId: itemId || "recurring",
+      itemName: itemName || "정기 봉헌금",
+      amount: Number(amount || 0),
+      userId: `u${cleanPhone}`,
+      billKey,
+      cardNo: cardNo || "",
+      cardName: cardName || "신용카드",
+      recurringDay: recurringInterval === 'monthly' ? (recurringDay || 10) : 10,
+      recurringInterval: recurringInterval || "monthly",
+      recurringDayOfWeek: normDow ?? undefined,
+      nextPaymentDate: calculatedNextDate,
+      status: "active",
+    });
+
+    console.log("[Subscriptions Register] Successfully created subscription via register API:", newSub.id);
+    return c.json({ success: true, data: newSub });
+  } catch (err: any) {
+    console.error("[Subscriptions Register] Error:", err);
+    return c.json({ success: false, error: err?.message || String(err) }, 500);
+  }
+};
+app.post("/make-server-d0d82cc7/subscriptions/register", handleRegisterSubscription);
+app.post("/subscriptions/register", handleRegisterSubscription);
 
 // 인증결제 콜백 결과 처리 (Nanopay / Mainpay POST/GET 처리)
 const handleCertCallback = async (c: any) => {
