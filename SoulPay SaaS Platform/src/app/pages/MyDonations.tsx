@@ -120,24 +120,40 @@ export default function MyDonations() {
     });
   };
 
-  const loadSavedProfile = (cleanPhone: string, donationsList: any[]) => {
+  const loadSavedProfile = async (cleanPhone: string, donationsList: any[]) => {
     try {
       const localStr = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
       if (localStr) {
         const parsed = JSON.parse(localStr);
-        setProfileName(parsed.name || '');
-        setProfileBaptismName(parsed.baptismName || '');
-        setProfileEmail(parsed.email || '');
-        setProfileZonecode(parsed.zonecode || '');
-        setProfileAddress(parsed.address || '');
-        setProfileAddressDetail(parsed.addressDetail || '');
+        if (parsed.name) setProfileName(parsed.name);
+        if (parsed.baptismName) setProfileBaptismName(parsed.baptismName);
+        if (parsed.email) setProfileEmail(parsed.email);
+        if (parsed.zonecode) setProfileZonecode(parsed.zonecode);
+        if (parsed.address || parsed.addressBase) setProfileAddress(parsed.address || parsed.addressBase);
+        if (parsed.addressDetail) setProfileAddressDetail(parsed.addressDetail);
         if (parsed.password) {
           setProfilePassword(parsed.password);
           setProfilePasswordConfirm(parsed.password);
         }
-        return;
       }
     } catch {}
+
+    // DB 실측 프로필 조회 연동 (다른 브라우저나 디바이스에서도 완벽 동기화)
+    try {
+      const profRes = await memberAPI.getProfile(cleanPhone);
+      if (profRes.success && profRes.data) {
+        const p = profRes.data;
+        if (p.name) setProfileName(p.name);
+        if (p.baptismName) setProfileBaptismName(p.baptismName);
+        if (p.email) setProfileEmail(p.email);
+        if (p.zonecode) setProfileZonecode(p.zonecode);
+        if (p.address || (p as any).addressBase) setProfileAddress(p.address || (p as any).addressBase);
+        if (p.addressDetail) setProfileAddressDetail(p.addressDetail);
+        return;
+      }
+    } catch (profErr) {
+      console.warn('Failed to load remote profile in mypage:', profErr);
+    }
 
     if (donationsList && donationsList.length > 0) {
       const first = donationsList[0];
@@ -213,7 +229,10 @@ export default function MyDonations() {
         name: profileName,
         baptismName: profileBaptismName,
         email: profileEmail,
-        address: combinedAddress,
+        zonecode: profileZonecode,
+        address: profileAddress,
+        addressDetail: profileAddressDetail,
+        fullAddress: combinedAddress,
         password: profilePassword,
       });
 

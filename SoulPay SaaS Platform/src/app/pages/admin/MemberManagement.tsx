@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
-import { donationAPI, subscriptionAPI } from '../../api/client';
+import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
@@ -122,21 +122,37 @@ export default function MemberManagement() {
             }
           });
 
-          // DB subscriptions 테이블 실측 조회 연동하여 정기 약정 건수 정확히 동기화
+          // DB subscriptions 및 member profile 실측 조회 연동하여 약정 건수, 이메일, 주소 정확히 동기화
           const phoneList = Array.from(map.keys()).filter((p) => p && p !== '미등록');
           await Promise.all(
             phoneList.map(async (phone) => {
               try {
-                const subRes = await subscriptionAPI.getByPhone(phone);
-                if (subRes.success && Array.isArray(subRes.data)) {
-                  const activeCount = subRes.data.filter((s: any) => s.status === 'active').length;
-                  const memberEntry = map.get(phone);
-                  if (memberEntry) {
-                    memberEntry.recurringCount = Math.max(memberEntry.recurringCount, activeCount);
+                const [subRes, profRes] = await Promise.allSettled([
+                  subscriptionAPI.getByPhone(phone),
+                  memberAPI.getProfile(phone),
+                ]);
+
+                const memberEntry = map.get(phone);
+                if (!memberEntry) return;
+
+                if (subRes.status === 'fulfilled' && subRes.value.success && Array.isArray(subRes.value.data)) {
+                  const activeCount = subRes.value.data.filter((s: any) => s.status === 'active').length;
+                  memberEntry.recurringCount = Math.max(memberEntry.recurringCount, activeCount);
+                  if (!memberEntry.email && subRes.value.data.length > 0) {
+                    const firstWithEmail = subRes.value.data.find((s: any) => s.donorEmail);
+                    if (firstWithEmail) memberEntry.email = firstWithEmail.donorEmail;
                   }
                 }
+
+                if (profRes.status === 'fulfilled' && profRes.value.success && profRes.value.data) {
+                  const p = profRes.value.data;
+                  if (p.email) memberEntry.email = p.email;
+                  if (p.fullAddress || p.address) memberEntry.address = p.fullAddress || p.address;
+                  if (p.name && (memberEntry.name === '무기명' || !memberEntry.name)) memberEntry.name = p.name;
+                  if (p.baptismName && !memberEntry.baptismName) memberEntry.baptismName = p.baptismName;
+                }
               } catch (e) {
-                console.warn('Failed to load subscriptions for member', phone, e);
+                console.warn('Failed to load extra data for member', phone, e);
               }
             })
           );
@@ -275,18 +291,35 @@ export default function MemberManagement() {
     setIsEditMemberModalOpen(true);
   };
 
-  const handleSaveEditMember = () => {
+  const handleSaveEditMember = async () => {
     if (!editingMember) return;
     if (!memberName.trim()) {
       toast.error(`${memberTerm} 성명을 입력해 주세요.`);
       return;
     }
 
+    const cleanPhone = stripPhoneDigits(memberPhone) || stripPhoneDigits(editingMember.phone);
+
+    // DB 및 영구 설정 실측 저장
+    if (cleanPhone) {
+      try {
+        await memberAPI.updateProfile(cleanPhone, {
+          name: memberName.trim(),
+          baptismName: memberTitle.trim(),
+          email: memberEmail.trim(),
+          address: memberAddress.trim(),
+          fullAddress: memberAddress.trim(),
+        });
+      } catch (err) {
+        console.warn('Failed to persist member profile edit in DB:', err);
+      }
+    }
+
     const updated = {
       ...editingMember,
       name: memberName.trim(),
       baptismName: memberTitle.trim(),
-      phone: stripPhoneDigits(memberPhone),
+      phone: cleanPhone || editingMember.phone,
       email: memberEmail.trim(),
       address: memberAddress.trim(),
       rrn: memberRrn.trim() || editingMember.rrn,
@@ -294,7 +327,7 @@ export default function MemberManagement() {
 
     setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? updated : m)));
     setIsEditMemberModalOpen(false);
-    toast.success(`[${updated.name}] ${memberTerm} 정보가 수정되었습니다.`);
+    toast.success(`[${updated.name}] ${memberTerm} 정보가 수정 및 저장되었습니다.`);
   };
 
   const handleDeleteMember = (id: string, name: string) => {

@@ -3618,11 +3618,20 @@ app.post("/make-server-d0d82cc7/admin/reset-ledger", async (c) => {
 const handleUpdateProfile = async (c: any) => {
   try {
     const body = await c.req.json();
-    const { phone, name, baptismName, email, address, password } = body;
+    const { phone, name, baptismName, email, address, fullAddress, zonecode, addressDetail, password } = body;
     if (!phone) {
       return c.json({ success: false, error: 'Phone number is required' }, 400);
     }
-    const result = await db.updateDonorProfile(phone, { name, baptismName, email, address, password });
+    const result = await db.updateDonorProfile(phone, {
+      name,
+      baptismName,
+      email,
+      address,
+      fullAddress,
+      zonecode,
+      addressDetail,
+      password,
+    });
     return c.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error updating donor profile:', error);
@@ -3630,6 +3639,26 @@ const handleUpdateProfile = async (c: any) => {
   }
 };
 
+// 📱 신도/회원 프로필 조회 API
+const handleGetProfile = async (c: any) => {
+  try {
+    const phone = c.req.param('phone');
+    if (!phone) {
+      return c.json({ success: false, error: 'Phone number is required' }, 400);
+    }
+    const profile = await db.getDonorProfile(phone);
+    if (!profile) {
+      return c.json({ success: false, error: 'Profile not found' }, 404);
+    }
+    return c.json({ success: true, data: profile });
+  } catch (error: any) {
+    console.error('Error getting donor profile:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+app.get("/make-server-d0d82cc7/members/profile/:phone", handleGetProfile);
+app.get("/members/profile/:phone", handleGetProfile);
 app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
 app.post("/members/update-profile", handleUpdateProfile);
 

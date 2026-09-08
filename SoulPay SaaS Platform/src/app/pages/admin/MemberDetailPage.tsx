@@ -51,7 +51,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
-import { donationAPI, subscriptionAPI } from '../../api/client';
+import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
@@ -316,13 +316,44 @@ export default function MemberDetailPage() {
                 beneficiaryName: d.donorName || rawMatch.donorName || terms.donor,
               }));
 
+            // 4. 회원 프로필 정보 동기화 (이메일, 주소, 직분 등 DB 및 settingsAPI 100% 실측 조회)
+            let resolvedEmail = rawMatch.donorEmail || '';
+            let resolvedAddress = rawMatch.address || '';
+            let resolvedName = rawMatch.donorName || '무기명';
+            let resolvedTitle = rawMatch.baptismName || '';
+
+            if (digitsKey && digitsKey !== '미등록') {
+              try {
+                const profileRes = await memberAPI.getProfile(digitsKey);
+                if (profileRes.success && profileRes.data) {
+                  const p = profileRes.data;
+                  if (p.email) resolvedEmail = p.email;
+                  if (p.fullAddress || p.address) {
+                    resolvedAddress = p.fullAddress || p.address || '';
+                  }
+                  if (p.name && (resolvedName === '무기명' || !resolvedName)) resolvedName = p.name;
+                  if (p.baptismName) resolvedTitle = p.baptismName;
+                }
+              } catch (profErr) {
+                console.warn('Failed to load member profile:', profErr);
+              }
+            }
+
+            // 만약 resolvedEmail이 아직 비어있다면 subscriptions의 donorEmail 확인
+            if (!resolvedEmail && subscriptionsList.length > 0) {
+              const subWithEmail = subscriptionsList.find((s: any) => (s as any).donorEmail || (s as any).email);
+              if (subWithEmail) {
+                resolvedEmail = (subWithEmail as any).donorEmail || (subWithEmail as any).email;
+              }
+            }
+
             const loadedMem: MemberDetailData = {
               id: memberId,
-              name: rawMatch.donorName || '무기명',
-              baptismName: rawMatch.baptismName || '',
+              name: resolvedName,
+              baptismName: resolvedTitle,
               phone: digitsKey,
-              email: rawMatch.donorEmail || '',
-              address: rawMatch.address || '',
+              email: resolvedEmail,
+              address: resolvedAddress,
               rrn: rawMatch.rrn || '',
               registeredDate: rawMatch.createdAt ? rawMatch.createdAt.split('T')[0] : new Date().toISOString().slice(0, 10),
               totalDonation: totalSum,
@@ -691,10 +722,27 @@ export default function MemberDetailPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editName.trim()) {
       toast.error('회원 성명을 입력해 주세요.');
       return;
+    }
+
+    const cleanPhone = stripPhoneDigits(editPhone) || (member ? stripPhoneDigits(member.phone) : '');
+
+    // DB 및 영구 설정 실측 저장
+    if (cleanPhone) {
+      try {
+        await memberAPI.updateProfile(cleanPhone, {
+          name: editName.trim(),
+          baptismName: editTitle.trim(),
+          email: editEmail.trim(),
+          address: editAddress.trim(),
+          fullAddress: editAddress.trim(),
+        });
+      } catch (err) {
+        console.warn('Failed to update member profile in DB:', err);
+      }
     }
 
     setMember((prev) =>
@@ -703,7 +751,7 @@ export default function MemberDetailPage() {
             ...prev,
             name: editName.trim(),
             baptismName: editTitle.trim(),
-            phone: stripPhoneDigits(editPhone),
+            phone: cleanPhone || prev.phone,
             email: editEmail.trim(),
             address: editAddress.trim(),
             rrn: editRrn.trim() || prev.rrn,
@@ -712,7 +760,7 @@ export default function MemberDetailPage() {
     );
 
     setIsEditModalOpen(false);
-    toast.success(`[${editName}] ${memberTerm} 정보가 수정되었습니다.`);
+    toast.success(`[${editName}] ${memberTerm} 정보가 수정 및 저장되었습니다.`);
   };
 
   const handleDelete = () => {

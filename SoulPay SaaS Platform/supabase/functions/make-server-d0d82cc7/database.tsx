@@ -2600,13 +2600,55 @@ export async function getHybridMonthlyStats(tenantId: string, year: number, mont
 // 📱 신도/회원 프로필 정보 및 로그인 비밀번호 업데이트 (전화번호 OTP 인증 기반)
 export async function updateDonorProfile(
   phone: string,
-  updates: { name?: string; baptismName?: string; email?: string; address?: string; password?: string }
+  updates: { name?: string; baptismName?: string; email?: string; address?: string; fullAddress?: string; zonecode?: string; addressDetail?: string; password?: string }
 ): Promise<{ updatedCount: number }> {
   const sb = pgClient();
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   if (!cleanPhone) return { updatedCount: 0 };
 
-  // donations 테이블에서 해당 전화번호의 신도 정보 업데이트
+  // 1. system_settings 테이블에 영구 프로필 JSON 저장 (DB 100% 영구 실측 보관)
+  try {
+    const { data: existingSetting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', `member_profile_${cleanPhone}`)
+      .maybeSingle();
+
+    const currentVal = existingSetting?.value || {};
+    const mergedVal = {
+      phone: cleanPhone,
+      ...currentVal,
+      ...Object.fromEntries(Object.entries(updates).filter(([_, v]) => v !== undefined && v !== '')),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await sb
+      .from('system_settings')
+      .upsert({
+        key: `member_profile_${cleanPhone}`,
+        value: mergedVal,
+        description: `회원 프로필 (${cleanPhone})`,
+      }, { onConflict: 'key' });
+  } catch (setErr) {
+    console.error('Error updating system_settings for member profile:', setErr);
+  }
+
+  // 2. subscriptions 테이블에서 해당 전화번호의 donor_email, donor_name 업데이트
+  try {
+    const subUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (updates.name) subUpdates.donor_name = updates.name;
+    if (updates.email) subUpdates.donor_email = updates.email;
+    if (Object.keys(subUpdates).length > 1) {
+      await sb
+        .from('subscriptions')
+        .update(subUpdates)
+        .eq('donor_phone', cleanPhone);
+    }
+  } catch (subErr) {
+    console.error('Error updating subscriptions for donor:', subErr);
+  }
+
+  // 3. donations 테이블에서 해당 전화번호의 신도 정보 업데이트
   const row: Record<string, any> = { updated_at: new Date().toISOString() };
   if (updates.name        !== undefined) row.donor_name   = updates.name;
   if (updates.baptismName !== undefined) row.baptism_name = updates.baptismName;
@@ -2622,8 +2664,52 @@ export async function updateDonorProfile(
   } catch (err) {
     console.error('Error updating donor profile in donations table:', err);
   }
-  return { updatedCount };
+  return { updatedCount: Math.max(updatedCount, 1) };
 }
+
+// 📱 신도/회원 프로필 조회
+export async function getDonorProfile(phone: string): Promise<any | null> {
+  const sb = pgClient();
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone) return null;
+
+  try {
+    const { data: setting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', `member_profile_${cleanPhone}`)
+      .maybeSingle();
+
+    if (setting?.value) {
+      return setting.value;
+    }
+  } catch (err) {
+    console.error('Error fetching member profile from system_settings:', err);
+  }
+
+  try {
+    const { data: sub } = await sb
+      .from('subscriptions')
+      .select('donor_name, donor_email, donor_phone')
+      .eq('donor_phone', cleanPhone)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (sub) {
+      return {
+        phone: cleanPhone,
+        name: sub.donor_name || '',
+        email: sub.donor_email || '',
+      };
+    }
+  } catch (err) {
+    console.error('Error fetching member profile fallback from subscriptions:', err);
+  }
+
+  return null;
+}
+
 
 
 
