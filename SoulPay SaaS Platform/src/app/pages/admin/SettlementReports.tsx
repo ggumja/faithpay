@@ -430,7 +430,7 @@ export default function SettlementReports() {
             </div>
             <div className="flex items-center gap-2">
               <Button onClick={handleGenerateNTSFile} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
-                <FileTextIcon className="h-4 w-4 mr-2" />
+                <FileText className="h-4 w-4 mr-2" />
                 국세청 전산제출 파일 (.txt) 생성
               </Button>
               <Button onClick={handleExportCSV} variant="outline">
@@ -718,7 +718,7 @@ export default function SettlementReports() {
                                 size="sm"
                                 onClick={() => handleDownloadReceipt(record.month)}
                               >
-                                <FileTextIcon className="h-4 w-4" />
+                                <FileText className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
