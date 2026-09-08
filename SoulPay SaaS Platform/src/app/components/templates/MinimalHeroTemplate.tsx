@@ -16,15 +16,15 @@ interface MinimalHeroTemplateProps {
 }
 
 const itemIcons: Record<string, React.ReactNode> = {
-  '십일조':   <Landmark size={20} />,
-  '감사헌금': <Heart size={20} />,
-  '건축헌금': <Landmark size={20} />,
-  '인등보시': <Star size={20} />,
-  '불사공양': <Heart size={20} />,
-  '기도보시': <Sparkles size={20} />,
-  '교무금':   <Landmark size={20} />,
-  '미사예물': <Star size={20} />,
-  '특별봉헌': <Heart size={20} />,
+  '십일조':   <Landmark size={18} />,
+  '감사헌금': <Heart size={18} />,
+  '건축헌금': <Landmark size={18} />,
+  '인등보시': <Star size={18} />,
+  '불사공양': <Heart size={18} />,
+  '기도보시': <Sparkles size={18} />,
+  '교무금':   <Landmark size={18} />,
+  '미사예물': <Star size={18} />,
+  '특별봉헌': <Heart size={18} />,
 };
 
 const MINIMAL_CSS = `
@@ -35,12 +35,60 @@ const MINIMAL_CSS = `
   transform: scale(0.96) !important;
 }
 
-.mh-card-hover {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+/* Hallmark · component: donation-card · genre: modern-minimal
+ * states: default · hover · focus · active · disabled
+ * contrast: pass (46–50)
+ */
+.mh-main-content {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 36px 16px 80px;
 }
-.mh-card-hover:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.10), 0 6px 16px -4px rgba(15, 23, 42, 0.05);
+@media (min-width: 640px) {
+  .mh-main-content {
+    padding: 48px 24px 96px;
+  }
+}
+
+.mh-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .mh-cards-grid {
+    gap: 16px;
+  }
+}
+
+.mh-card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 16px 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justifyContent: space-between;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  outline: none;
+}
+.mh-card:hover {
+  transform: translateY(-2px);
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.07), 0 2px 6px -2px rgba(15, 23, 42, 0.03);
+}
+.mh-card:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+.mh-card:active {
+  transform: scale(0.985);
+}
+.mh-card:hover .mh-action-icon {
+  transform: translateX(2px);
 }
 
 @keyframes mh-fade-in {
@@ -236,7 +284,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
       </header>
 
       {/* ── Main Content Grid ── */}
-      <main style={{ maxWidth: 920, margin: '0 auto', padding: '52px 24px 96px' }}>
+      <main className="mh-main-content">
         {/* Quick Info Cards */}
         <div
           style={{
@@ -342,46 +390,118 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
         </div>
 
         {/* Donation Items Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 20 }}>
+        <div className="mh-cards-grid">
           {filteredItems.map((item) => (
             <div
               key={item.id}
               onClick={() => navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: item } })}
-              className="mh-card-hover mh-btn-spring"
-              style={{
-                backgroundColor: '#FFFFFF',
-                padding: '26px',
-                borderRadius: 24,
-                border: '1px solid #E2E8F0',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
+              className="mh-card mh-btn-spring"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: item } });
+                }
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${ft.primary}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ft.primary }}>
-                    {itemIcons[item.name] || <Heart size={20} />}
+                {/* Header: Icon + Name + Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      backgroundColor: `${ft.primary}12`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: ft.primary,
+                      flexShrink: 0,
+                    }}>
+                      {itemIcons[item.name] || <Heart size={18} />}
+                    </div>
+                    <span style={{
+                      fontWeight: 800,
+                      fontSize: 16,
+                      color: '#0F172A',
+                      letterSpacing: '-0.01em',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {item.name}
+                    </span>
                   </div>
+
                   {item.allowRecurring && (
-                    <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: `${ft.primary}15`, color: ft.primary, padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      backgroundColor: `${ft.primary}12`,
+                      color: ft.primary,
+                      padding: '2px 7px',
+                      borderRadius: 6,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      flexShrink: 0,
+                    }}>
                       <Repeat size={10} /> 정기
                     </span>
                   )}
                 </div>
 
-                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8, color: '#0F172A', letterSpacing: '-0.01em' }}>{item.name}</div>
-                <div style={{ fontSize: 13, color: '#64748B', marginBottom: 20, lineHeight: 1.55, minHeight: 40, fontWeight: 400 }}>
-                  {item.description || '정성으로 드리는 은혜로운 마음'}
+                {/* Description */}
+                <div style={{
+                  fontSize: 13,
+                  color: '#64748B',
+                  lineHeight: 1.45,
+                  marginBottom: 12,
+                  fontWeight: 400,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}>
+                  {item.description || `${currentTenant.name} ${terms.donation} 항목입니다.`}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15, fontWeight: 800, color: ft.primary, paddingTop: 14, borderTop: '1px solid #F1F5F9' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{item.amountType === 'fixed' && item.fixedAmount ? `₩${item.fixedAmount.toLocaleString()}` : '자율 선택'}</span>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: `${ft.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ChevronRight size={16} color={ft.primary} />
+              {/* Footer: Amount & Action */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 10,
+                borderTop: '1px solid #F1F5F9',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: ft.primary,
+                    fontFamily: item.amountType === 'fixed' && item.fixedAmount ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit',
+                  }}>
+                    {item.amountType === 'fixed' && item.fixedAmount ? `₩${item.fixedAmount.toLocaleString()}` : '자율 선택'}
+                  </span>
+                </div>
+                <div
+                  className="mh-action-icon"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    backgroundColor: `${ft.primary}12`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: ft.primary,
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                >
+                  <ChevronRight size={15} />
                 </div>
               </div>
             </div>
