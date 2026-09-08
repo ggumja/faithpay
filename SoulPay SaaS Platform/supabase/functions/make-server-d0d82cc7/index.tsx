@@ -2897,6 +2897,19 @@ const handleCertCallback = async (c: any) => {
     const tranNo = body.tranNo || body.apprNo || body.tno || "";
     const apprNo = body.apprNo || tranNo;
     const payWay = body.payWay || "card";
+    const cardSrc = String(body.cardSrc || body.cardsrc || "").trim().toUpperCase();
+
+    // 간편결제 식별 (C: PAYCO, O: KAKAOPAY, L: LPAY, V: TOSSPAY, K: 국민앱카드)
+    let paymentMethod = payWay || 'card';
+    if (cardSrc === 'O') paymentMethod = '카카오페이';
+    else if (cardSrc === 'V') paymentMethod = '토스페이';
+    else if (cardSrc === 'C') paymentMethod = '페이코';
+    else if (cardSrc === 'L') paymentMethod = '엘페이';
+    else if (cardSrc === 'K') paymentMethod = '국민앱카드';
+    else if (cardSrc) paymentMethod = '간편결제';
+    else if (payWay === 'dbank') paymentMethod = '실시간 계좌이체';
+    else if (payWay === 'vbank') paymentMethod = '가상계좌';
+    else if (payWay === 'card') paymentMethod = '신용카드';
 
     const isSuccess = resultCode === "0000";
 
@@ -2910,9 +2923,9 @@ const handleCertCallback = async (c: any) => {
             paymentStatus: 'completed',
             transactionId: tranNo,
             approveNo: apprNo,
-            paymentMethod: payWay || 'card',
+            paymentMethod,
           });
-          console.log(`✅ Certified payment successful for donation: ${donation.id}`);
+          console.log(`✅ Certified payment successful for donation: ${donation.id} (method: ${paymentMethod}, cardSrc: ${cardSrc || 'N/A'})`);
         } else {
           await db.updateDonation(donation.tenant_id, donation.id, {
             paymentStatus: 'failed',
@@ -2934,11 +2947,11 @@ const handleCertCallback = async (c: any) => {
             donorName: body.orderName || body.compOrderMem || '신도',
             donorPhone: body.orderTel || '',
             paymentStatus: 'completed',
-            paymentMethod: payWay || 'card',
+            paymentMethod,
             transactionId: tranNo,
             approveNo: apprNo,
           });
-          console.log(`✅ Recreated and recorded successful donation from callback: ${donationId}`);
+          console.log(`✅ Recreated and recorded successful donation from callback: ${donationId} (method: ${paymentMethod}, cardSrc: ${cardSrc || 'N/A'})`);
         }
       }
     }
