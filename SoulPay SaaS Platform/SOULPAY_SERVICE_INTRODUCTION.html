@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoulPay (소울페이) 서비스 소개서 — 스마트 종교·비영리 헌금 및 행정 관리 올인원 솔루션</title>
+  <meta name="description" content="교회, 성당, 사찰, 비영리 단체를 위한 스마트 모바일 헌금, 현장 키오스크, 당일 마감 집계, 국세청 홈택스 기부금영수증 올인원 SaaS 서비스 소개서입니다." />
+  
+  <!-- Typography Pairing: Space Grotesk (Display) + Pretendard (Body) + JetBrains Mono (Specs) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <style>
+    /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+    /* Hallmark · genre: modern-minimal · macrostructure: Bento Grid · theme: Cobalt · nav: N5 · footer: Ft2 */
+    
+    :root {
+      /* Locked Tokens — Clean Light Slate & Trust Cobalt */
+      --color-paper: #f8fafc;
+      --color-surface: #ffffff;
+      --color-surface-subtle: #f1f5f9;
+      --color-border: #e2e8f0;
+      --color-border-subtle: #edf2f7;
+      --color-border-focus: #1d4ed8;
+      
+      --color-ink: #090d16;
+      --color-ink-muted: #475569;
+      --color-ink-dim: #94a3b8;
+      
+      --color-cobalt: #1d4ed8;
+      --color-cobalt-light: #eff6ff;
+      --color-cobalt-border: #bfdbfe;
+      
+      --color-emerald: #047857;
+      --color-emerald-light: #f0fdf4;
+      --color-emerald-border: #bbf7d0;
+      
+      --color-amber: #b45309;
+      --color-amber-light: #fffbeb;
+      --color-amber-border: #fde68a;
+
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 36px;
+      --space-2xl: 64px;
+
+      --shadow-subtle: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.02);
+      --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+      --shadow-hover: 0 12px 28px -6px rgba(29, 78, 216, 0.08), 0 2px 4px rgba(15, 23, 42, 0.03);
+    }
+
+    /* Reset & Core Setup */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--color-paper);
+      color: var(--color-ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.68;
+      overflow-x: clip;
+      width: 100%;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    /* Korean Natural Word Wrapping across all text nodes */
+    h1, h2, h3, h4, p, li, td, th, blockquote, figcaption, span, a {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-subtle);
+      border: 1px solid var(--color-border);
+      white-space: nowrap;
+      color: var(--color-cobalt);
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Nav Archetype: N5 Floating Pill */
+    .nav-wrapper {
+      position: sticky;
+      top: 20px;
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--space-xl);
+    }
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      padding: 8px 20px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-subtle);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-ink);
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      background: var(--color-ink);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-ink-muted);
+      transition: color 0.15s ease;
+      white-space: nowrap;
+    }
+    .nav-links a:hover {
+      color: var(--color-cobalt);
+    }
+    .nav-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--color-emerald-light);
+      border: 1px solid var(--color-emerald-border);
+      border-radius: var(--radius-full);
+      color: var(--color-emerald);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--color-emerald);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Hero Section — Modern Minimal Two-Column Split */
+    .hero {
+      padding: 48px 0 56px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--space-2xl);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 48px;
+      align-items: end;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-cobalt);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 3.8vw, 48px);
+      font-weight: 700;
+      line-height: 1.22;
+      letter-spacing: -0.035em;
+      color: var(--color-ink);
+      margin: 0;
+    }
+    .title-phrase {
+      display: inline-block;
+    }
+    .hero-right {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 6px;
+    }
+    .hero-lead {
+      font-size: 16.5px;
+      color: var(--color-ink-muted);
+      line-height: 1.7;
+      margin: 0;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: var(--radius-full);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--color-ink);
+      color: #ffffff;
+      border: 1px solid var(--color-ink);
+    }
+    .btn-primary:hover {
+      background: var(--color-cobalt);
+      border-color: var(--color-cobalt);
+    }
+    .btn-secondary {
+      background: var(--color-surface);
+      color: var(--color-ink);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-subtle);
+    }
+    .btn-secondary:hover {
+      background: var(--color-surface-subtle);
+      border-color: #cbd5e1;
+    }
+
+    /* Section Headers */
+    .section-head {
+      margin-bottom: var(--space-xl);
+    }
+    .section-kicker {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-cobalt);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--color-ink);
+      margin: 0 0 10px 0;
+      line-height: 1.3;
+    }
+    .section-desc {
+      font-size: 15px;
+      color: var(--color-ink-muted);
+      margin: 0;
+      max-width: 680px;
+      line-height: 1.65;
+    }
+
+    /* Problem vs Solution Split Cards */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      margin-bottom: var(--space-2xl);
+    }
+    .problem-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-subtle);
+    }
+    .problem-card.pain {
+      border-left: 4px solid var(--color-amber);
+    }
+    .problem-card.solution {
+      border-left: 4px solid var(--color-emerald);
+    }
+    .card-kicker {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .pain .card-kicker { color: var(--color-amber); }
+    .solution .card-kicker { color: var(--color-emerald); }
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-ink);
+      margin: 0 0 16px 0;
+      line-height: 1.35;
+    }
+    .point-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .point-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--color-ink-muted);
+      line-height: 1.6;
+    }
+    .point-list strong {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+    .bullet-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+    .pain .bullet-dot { background: var(--color-amber); }
+    .solution .bullet-dot { background: var(--color-emerald); }
+
+    /* Core 4 Services: Equal 2x2 Grid */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      margin-bottom: var(--space-2xl);
+    }
+    .service-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow: var(--shadow-subtle);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .service-card:hover {
+      border-color: var(--color-border-focus);
+      box-shadow: var(--shadow-hover);
+    }
+    .service-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .service-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--color-cobalt-light);
+      border: 1px solid var(--color-cobalt-border);
+      color: var(--color-cobalt);
+    }
+    .service-target {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-ink-dim);
+    }
+    .service-title {
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-ink);
+      margin: 0 0 12px 0;
+      line-height: 1.35;
+    }
+    .service-desc {
+      font-size: 14.5px;
+      color: var(--color-ink-muted);
+      margin: 0 0 20px 0;
+      line-height: 1.68;
+    }
+    .service-specs {
+      list-style: none;
+      margin: 0;
+      padding: 16px 0 0 0;
+      border-top: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-top: auto;
+    }
+    .service-specs li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--color-ink-muted);
+      line-height: 1.55;
+    }
+    .service-specs strong {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+    .spec-bullet {
+      width: 5px;
+      height: 5px;
+      background: var(--color-cobalt);
+      border-radius: 1px;
+      flex-shrink: 0;
+      margin-top: 7px;
+    }
+
+    /* Religious Terminology Matching Table */
+    .terms-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
+    }
+    table {
+      width: 100%;
+      min-width: 660px;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th, td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--color-border-subtle);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    th {
+      background: var(--color-surface-subtle);
+      color: var(--color-ink-muted);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    td strong { color: var(--color-ink); font-weight: 600; }
+    .badge-term {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--color-surface-subtle);
+      border: 1px solid var(--color-border);
+      color: var(--color-ink);
+    }
+
+    /* Onboarding Steps: 4 Equal Steps */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: var(--space-2xl);
+    }
+    .step-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-subtle);
+    }
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-cobalt);
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-ink);
+      line-height: 1.35;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--color-ink-muted);
+      line-height: 1.6;
+    }
+
+    /* CTA Bar */
+    .cta-bar {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: var(--space-2xl);
+      box-shadow: var(--shadow-subtle);
+    }
+    .cta-text h3 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-ink);
+      margin: 0 0 6px 0;
+      line-height: 1.35;
+    }
+    .cta-text p {
+      font-size: 14.5px;
+      color: var(--color-ink-muted);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* Footer Archetype: Ft2 Inline Single Line */
+    footer {
+      border-top: 1px solid var(--color-border);
+      padding: 28px 0;
+      font-size: 13px;
+      color: var(--color-ink-dim);
+    }
+    .footer-flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+    }
+    .footer-brand {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+    .footer-right {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-ink-dim);
+    }
+
+    /* Responsiveness */
+    @media (max-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+      .problem-grid, .services-grid {
+        grid-template-columns: 1fr;
+      }
+      .steps-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .cta-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 32px 24px;
+      }
+    }
+    @media (max-width: 580px) {
+      .container {
+        padding: 0 18px;
+      }
+      .hero {
+        padding: 36px 0 44px;
+      }
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-pill {
+        padding: 6px 14px;
+        gap: 12px;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav Archetype: N5 Floating Pill -->
+  <div class="container nav-wrapper">
+    <nav class="nav-pill" aria-label="Main Navigation">
+      <a href="#hero" class="nav-brand">
+        <span class="brand-mark">SP</span>
+        SoulPay
+      </a>
+      <ul class="nav-links">
+        <li><a href="#problems">도입 필요성</a></li>
+        <li><a href="#services">핵심 솔루션</a></li>
+        <li><a href="#terms">단체별 맞춤</a></li>
+        <li><a href="#onboarding">도입 절차</a></li>
+      </ul>
+      <span class="nav-badge">
+        <span class="live-dot"></span>
+        서비스 소개서 v1.0
+      </span>
+    </nav>
+  </div>
+
+  <main class="container">
+    <!-- Hero Section (Modern Minimal Split) -->
+    <section class="hero" id="hero">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <span class="eyebrow">Smart Giving & Administrative SaaS</span>
+          <h1 class="hero-title">
+            <span class="title-phrase">헌금 수납부터 재정 행정까지,</span><br>
+            <span class="title-phrase">종교 단체를 위한 올인원 솔루션.</span>
+          </h1>
+        </div>
+        <div class="hero-right">
+          <p class="hero-lead">
+            SoulPay(소울페이)는 현금 없는 시대의 성도와 신도를 위한 모바일 간편결제·키오스크 수납부터, 재정 담당자를 위한 실시간 마감 집계 및 국세청 기부금영수증 발행까지 하나로 연결하는 종교·비영리 통합 핀테크 플랫폼입니다.
+          </p>
+          <div class="hero-actions">
+            <a href="#services" class="btn-pill btn-primary">4대 핵심 서비스 보기</a>
+            <a href="#onboarding" class="btn-pill btn-secondary">도입 상담 및 절차 안내</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problem vs Solution Section -->
+    <section id="problems" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">01 · Why SoulPay</span>
+        <h2 class="section-title">기존 헌금 행정의 고충과 SoulPay의 해결책</h2>
+        <p class="section-desc">
+          지폐 수기 계수와 수기 장부 관리에서 벗어나, 안전하고 투명한 디지털 재정 체계로 전환할 수 있습니다.
+        </p>
+      </div>
+
+      <div class="problem-grid">
+        <!-- Pain Points -->
+        <div class="problem-card pain">
+          <span class="card-kicker">기존 현장 헌금·기부의 한계</span>
+          <h3 class="card-title">지폐 중심 수납과 행정 인력의 부담</h3>
+          <ul class="point-list">
+            <li><span class="bullet-dot"></span> <span><strong>현금 소지 감소:</strong> 성도·청년층의 현금 미소지로 현장 헌금 참여율 지속 저하</span></li>
+            <li><span class="bullet-dot"></span> <span><strong>계좌이체 식별 곤란:</strong> 동명이인, 입금자명 오기재로 인한 교인별 기부 내역 누락 빈번</span></li>
+            <li><span class="bullet-dot"></span> <span><strong>수기 계수 오차 & 분실 위험:</strong> 예배 후 봉투 개봉 및 집계에 2~3시간 소요, 보관 위험</span></li>
+            <li><span class="bullet-dot"></span> <span><strong>연말정산 업무 폭증:</strong> 12~1월 수기 영수증 발급 문의와 인쇄·우편 발송 행정 마비</span></li>
+          </ul>
+        </div>
+
+        <!-- Solution -->
+        <div class="problem-card solution">
+          <span class="card-kicker">SoulPay 도입 후 변화</span>
+          <h3 class="card-title">100% 전산화된 무오차 재정 시스템</h3>
+          <ul class="point-list">
+            <li><span class="bullet-dot"></span> <span><strong>스마트 간편결제:</strong> 카카오/네이버/토스페이/카드로 10초 만에 간편 봉헌</span></li>
+            <li><span class="bullet-dot"></span> <span><strong>교적부 자동 일치:</strong> 휴대폰 번호 기반으로 성도 식별 및 누락 없는 헌금 매칭</span></li>
+            <li><span class="bullet-dot"></span> <span><strong>당일 마감 자동 집계:</strong> 온라인/키오스크 헌금이 실시간 PostgreSQL 장부에 합산</span></li>
+            <li><span class="bullet-dot"></span> <span><strong>국세청 홈택스 원클릭:</strong> 교인이 모바일에서 직접 기부금영수증 즉시 출력</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core 4 Services Section (Equal 2x2 Width) -->
+    <section id="services" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">02 · Core Services</span>
+        <h2 class="section-title">SoulPay의 4대 핵심 서비스 구성</h2>
+        <p class="section-desc">
+          성도의 모바일 헌금부터 현장 키오스크, 재정 집계 대시보드까지 완벽하게 분리된 전용 화면으로 제공됩니다.
+        </p>
+      </div>
+
+      <div class="services-grid">
+        <!-- Service 1 -->
+        <article class="service-card">
+          <div class="service-header">
+            <span class="service-badge">Mobile Web Giving</span>
+            <span class="service-target">성도 / 기부자 전용</span>
+          </div>
+          <h3 class="service-title">스마트 모바일 헌금함 & 전자 봉투</h3>
+          <p class="service-desc">
+            별도의 앱 설치 없이 단체 고유 링크나 주보 QR코드를 스캔하면 즉시 열리는 전용 모바일 웹 헌금함입니다.
+          </p>
+          <ul class="service-specs">
+            <li><span class="spec-bullet"></span> <span><strong>멀티 결제 수단:</strong> 카카오페이, 네이버페이, 토스페이, 신용카드, 카드 스캔</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>기도제목 동봉:</strong> 헌금 시 감사의 고백 및 중보 기도제목을 목회자에게 안전하게 전달</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>정기 약정 헌금:</strong> 매월 지정일에 십일조/선교헌금이 자동 출금되는 정기구독</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>무회원 납부 조회:</strong> 본인 휴대폰 번호 OTP 인증으로 역대 헌금 내역 즉시 확인</span></li>
+          </ul>
+        </article>
+
+        <!-- Service 2 -->
+        <article class="service-card">
+          <div class="service-header">
+            <span class="service-badge">Smart Kiosk PWA</span>
+            <span class="service-target">현장 봉헌 공간</span>
+          </div>
+          <h3 class="service-title">친환경 스마트 터치 키오스크</h3>
+          <p class="service-desc">
+            교회 로비, 대성전 입구, 사찰 법당에 설치하여 현금 없이도 카드로 경건하게 봉헌할 수 있는 현장 키오스크 솔루션입니다.
+          </p>
+          <ul class="service-specs">
+            <li><span class="spec-bullet"></span> <span><strong>직관적인 큰 글씨 터치:</strong> 전 연령층 성도가 3번의 터치로 완료하는 심플 UI</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>종이 없는 친환경:</strong> 카카오톡 알림톡으로 전자 헌금 확인증 즉시 발송</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>독립 캐싱 구동:</strong> 인터넷 순단 시에도 안전하게 결제 트랜잭션 복구</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>기기 맞춤 설정:</strong> 단체 로고, 대표 성경 구절, 모금 테마 영상 표출</span></li>
+          </ul>
+        </article>
+
+        <!-- Service 3 -->
+        <article class="service-card">
+          <div class="service-header">
+            <span class="service-badge">Admin & Closing Ledger</span>
+            <span class="service-target">재정부 / 교역자 전용</span>
+          </div>
+          <h3 class="service-title">당일 자동 마감 재정 관리 포털</h3>
+          <p class="service-desc">
+            주일 예배 직후 버튼 한 번으로 온라인과 키오스크 수납액이 자동 결산되어 당일 재정 보고서가 완성됩니다.
+          </p>
+          <ul class="service-specs">
+            <li><span class="spec-bullet"></span> <span><strong>실시간 수납 대시보드:</strong> 헌금 종류별(십일조, 감사, 건축 등) 실시간 합산 통계</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>일일 마감 스냅샷:</strong> PostgreSQL DB에 수정 불가능한 일별 마감 원장 영구 보관</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>교인 명부 연동:</strong> 성도별 교적 번호, 직분, 출석 구역과 헌금 이력 자동 통합</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>엑셀 다운로드:</strong> 회계 감사 및 교단 보고용 표준 엑셀 장부 원클릭 추출</span></li>
+          </ul>
+        </article>
+
+        <!-- Service 4 -->
+        <article class="service-card">
+          <div class="service-header">
+            <span class="service-badge">Tax Center</span>
+            <span class="service-target">교인 복지 & 행정 절감</span>
+          </div>
+          <h3 class="service-title">국세청 홈택스 기부금 영수증 센터</h3>
+          <p class="service-desc">
+            연말정산 시즌마다 수백 건의 영수증을 수기로 발행하던 행정 업무를 100% 자동화합니다.
+          </p>
+          <ul class="service-specs">
+            <li><span class="spec-bullet"></span> <span><strong>홈택스 표준 전산 연계:</strong> 국세청 연말정산 간소화 서비스 제출 양식 완벽 준수</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>모바일 직접 출력:</strong> 교인이 본인 스마트폰에서 PDF 영수증 직접 내려받기</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>위변조 방지:</strong> 고유 일련번호 및 전자 직인 날인으로 법적 공신력 확보</span></li>
+            <li><span class="spec-bullet"></span> <span><strong>단체 직인 전산 관리:</strong> 인감도장 분실 위험 없이 안전하게 암호화 보관</span></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Religious Terminology Customization -->
+    <section id="terms" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">03 · Religious Terminology</span>
+        <h2 class="section-title">종교 및 단체 성격별 맞춤 용어 체계</h2>
+        <p class="section-desc">
+          SoulPay는 단체의 고유한 신앙적 전통과 예법을 존중하여 모든 UI 화면의 용어와 항목을 동적으로 일치화합니다.
+        </p>
+      </div>
+
+      <div class="terms-card">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 22%;">구분</th>
+              <th style="width: 26%;">기독교 (개신교)</th>
+              <th style="width: 26%;">천주교 (성당)</th>
+              <th style="width: 26%;">불교 (사찰)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>기본 명칭</strong></td>
+              <td><span class="badge-term">헌금 (Offering)</span></td>
+              <td><span class="badge-term">봉헌금 (Offertory)</span></td>
+              <td><span class="badge-term">보시금 (Dana)</span></td>
+            </tr>
+            <tr>
+              <td><strong>기본 수납 항목</strong></td>
+              <td>십일조, 감사헌금, 선교헌금</td>
+              <td>교무금, 주일헌금, 미사예물</td>
+              <td>인등비, 연등보시, 천도재비</td>
+            </tr>
+            <tr>
+              <td><strong>동봉 메시지</strong></td>
+              <td>기도제목 (중보기도 요청)</td>
+              <td>미사지향 (생미사/연미사)</td>
+              <td>축원문 (가족 건강/성취 발원)</td>
+            </tr>
+            <tr>
+              <td><strong>납부 주체 호칭</strong></td>
+              <td>성도, 교우, 집사, 장로</td>
+              <td>신자, 교우, 형제·자매</td>
+              <td>불자, 신도, 보살, 거사</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Onboarding Steps -->
+    <section id="onboarding" style="margin-bottom: var(--space-2xl);">
+      <div class="section-head">
+        <span class="section-kicker">04 · Simple Onboarding</span>
+        <h2 class="section-title">간편한 4단계 도입 절차</h2>
+        <p class="section-desc">
+          복잡한 서류 절차 없이 고유번호증만으로 온라인에서 영업일 기준 2일 이내 즉시 오픈할 수 있습니다.
+        </p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-box">
+          <span class="step-num">STEP 01</span>
+          <span class="step-title">온라인 가맹 신청</span>
+          <span class="step-desc">단체명, 대표자 정보, 고유번호증 사본을 온라인 접수창에 간단히 등록합니다.</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">STEP 02</span>
+          <span class="step-title">서류 심사 & PG 개설</span>
+          <span class="step-desc">비영리 종교 단체 전용 수수료 혜택 심사 및 공식 PG 정산 계좌가 개설됩니다.</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">STEP 03</span>
+          <span class="step-title">전용 도메인 & QR 발급</span>
+          <span class="step-desc">단체 고유 헌금 링크(<code>pay.soulpay.kr/단체명</code>)와 인쇄용 고해상도 QR코드가 즉시 발급됩니다.</span>
+        </div>
+        <div class="step-box">
+          <span class="step-num">STEP 04</span>
+          <span class="step-title">예배 및 현장 오픈</span>
+          <span class="step-desc">주보 인쇄물에 QR코드를 삽입하거나 키오스크를 배치하여 바로 헌금 수납을 시작합니다.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Bar -->
+    <section class="cta-bar">
+      <div class="cta-text">
+        <h3>디지털 헌금 문화의 새로운 표준을 시작하세요</h3>
+        <p>현장 맞춤형 키오스크 대여 및 모바일 헌금함 데모 체험을 무료로 신청하실 수 있습니다.</p>
+      </div>
+      <div>
+        <a href="mailto:contact@soulpay.kr" class="btn-pill btn-primary">도입 문의 및 상담 신청</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer Archetype: Ft2 Inline Single Line -->
+  <footer>
+    <div class="container footer-flex">
+      <div class="footer-left">
+        <span class="footer-brand">SoulPay Inc.</span>
+        <span>주식회사 소울페이 · 종교 및 비영리 스마트 재정 솔루션 · 공식 도메인: <code>soulpay.kr</code></span>
+      </div>
+      <div class="footer-right">
+        <span>SoulPay Service Guide · v1.0 (2026)</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
