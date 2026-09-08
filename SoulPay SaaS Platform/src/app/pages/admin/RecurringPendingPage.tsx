@@ -318,7 +318,7 @@ export default function RecurringPendingPage() {
                     <TableHead className="w-[140px]">약정 번호</TableHead>
                     <TableHead>약정자 성명</TableHead>
                     <TableHead>연락처</TableHead>
-                    <TableHead>후원 항목</TableHead>
+                    <TableHead>{terms.donation} 항목</TableHead>
                     <TableHead className="text-right">약정 금액</TableHead>
                     <TableHead>결제 주기</TableHead>
                     <TableHead>다음(첫) 결제 예정일</TableHead>

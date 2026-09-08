@@ -1432,6 +1432,38 @@ export async function updateSubscriptionStatus(id: string, status: 'active' | 'p
   };
 }
 
+export async function updateSubscription(id: string, updates: Partial<Subscription>): Promise<Subscription | null> {
+  const sb = pgClient();
+  const dbUpdates: any = { updated_at: new Date().toISOString() };
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if (updates.itemName !== undefined) dbUpdates.item_name = updates.itemName;
+  if (updates.itemId !== undefined) dbUpdates.item_id = updates.itemId;
+  if (updates.cardName !== undefined) dbUpdates.card_name = updates.cardName;
+  if (updates.cardNo !== undefined) dbUpdates.card_no = updates.cardNo;
+  if (updates.nextPaymentDate !== undefined) dbUpdates.next_payment_date = updates.nextPaymentDate;
+  if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+
+  const { data, error } = await sb
+    .from('subscriptions')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select('*')
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    id: data.id, tenantId: data.tenant_id, donorName: data.donor_name,
+    donorPhone: data.donor_phone, donorEmail: data.donor_email,
+    itemId: data.item_id, itemName: data.item_name, amount: data.amount,
+    userId: data.user_id, billKey: data.bill_key, cardNo: data.card_no, cardName: data.card_name,
+    recurringDay: data.recurring_day,
+    recurringInterval: data.recurring_interval || 'monthly',
+    recurringDayOfWeek: data.recurring_day_of_week,
+    status: data.status,
+    nextPaymentDate: data.next_payment_date, pausedUntil: data.paused_until,
+    createdAt: data.created_at, updatedAt: data.updated_at,
+  };
+}
+
 export async function deleteSubscription(id: string): Promise<boolean> {
   const sb = pgClient();
   const { error } = await sb.from('subscriptions').delete().eq('id', id);

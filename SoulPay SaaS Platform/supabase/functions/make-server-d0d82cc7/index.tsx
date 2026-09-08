@@ -2764,6 +2764,21 @@ const handleUpdateSubscriptionStatus = async (c: any) => {
 app.post("/make-server-d0d82cc7/subscriptions/:id/status", handleUpdateSubscriptionStatus);
 app.post("/subscriptions/:id/status", handleUpdateSubscriptionStatus);
 
+// 정기결제 약정 상세 정보(항목명, 카드정보 등) 수정
+const handleUpdateSubscription = async (c: any) => {
+  try {
+    const id = c.req.param("id");
+    const updates = await c.req.json();
+    const updated = await db.updateSubscription(id, updates);
+    if (!updated) return c.json({ success: false, error: "Subscription not found" }, 404);
+    return c.json({ success: true, data: updated });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to update subscription" }, 500);
+  }
+};
+app.put("/make-server-d0d82cc7/subscriptions/:id", handleUpdateSubscription);
+app.put("/subscriptions/:id", handleUpdateSubscription);
+
 // 정기결제 약정 삭제
 const handleDeleteSubscription = async (c: any) => {
   try {
