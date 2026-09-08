@@ -195,19 +195,19 @@ export default function TenantDetailPage() {
           setKakaoCid(cfg.kakaoCid || '');
           setKakaoSecretKey(cfg.kakaoSecretKey || '');
           setKakaoMode(cfg.kakaoMode || 'test');
-          setEnableKakaoPay(cfg.enableKakaoPay === true || cfg.providerConfigs?.kakaopay?.isEnabled === true);
+          setEnableKakaoPay(cfg.enableKakaoPay !== undefined ? Boolean(cfg.enableKakaoPay) : (cfg.providerConfigs?.kakaopay?.isEnabled ?? false));
 
           setNaverPartnerId(cfg.naverPartnerId || cfg.providerConfigs?.naverpay?.merchantId || '');
           setNaverClientId(cfg.naverClientId || cfg.providerConfigs?.naverpay?.clientKey || '');
           setNaverClientSecret(cfg.naverClientSecret || cfg.providerConfigs?.naverpay?.secretKey || '');
           setNaverMode(cfg.naverMode || cfg.providerConfigs?.naverpay?.mode || 'test');
-          setEnableNaverPay(cfg.enableNaverPay === true || cfg.providerConfigs?.naverpay?.isEnabled === true);
+          setEnableNaverPay(cfg.enableNaverPay !== undefined ? Boolean(cfg.enableNaverPay) : (cfg.providerConfigs?.naverpay?.isEnabled ?? false));
 
           setTossPayMid(cfg.tossPayMid || cfg.providerConfigs?.tosspay?.merchantId || '');
           setTossPayApiKey(cfg.tossPayApiKey || cfg.providerConfigs?.tosspay?.clientKey || '');
           setTossPaySecretKey(cfg.tossPaySecretKey || cfg.providerConfigs?.tosspay?.secretKey || '');
           setTossPayMode(cfg.tossPayMode || cfg.providerConfigs?.tosspay?.mode || 'test');
-          setEnableTossPay(cfg.enableTossPay === true || cfg.providerConfigs?.tosspay?.isEnabled === true);
+          setEnableTossPay(cfg.enableTossPay !== undefined ? Boolean(cfg.enableTossPay) : (cfg.providerConfigs?.tosspay?.isEnabled ?? false));
 
           const billingCfg = cfg.providerConfigs?.billing || {};
           setBillMid(billingCfg.mid || '');
@@ -217,10 +217,10 @@ export default function TenantDetailPage() {
           setBillIv(billingCfg.iv || '');
           setBillVer(billingCfg.ver || '240000005');
 
-          setEnableCard(cfg.enableCard !== undefined ? cfg.enableCard : true);
-          setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? cfg.enableEasyPayment : true);
-          setEnableVBank(cfg.enableVBank !== undefined ? cfg.enableVBank : true);
-          setIsActive(cfg.isActive !== undefined ? cfg.isActive : true);
+          setEnableCard(cfg.enableCard !== undefined ? Boolean(cfg.enableCard) : true);
+          setEnableEasyPayment(cfg.enableEasyPayment !== undefined ? Boolean(cfg.enableEasyPayment) : true);
+          setEnableVBank(cfg.enableVBank !== undefined ? Boolean(cfg.enableVBank) : true);
+          setIsActive(cfg.isActive !== undefined ? Boolean(cfg.isActive) : true);
         } else {
           // 결제 미설정/미지정 단체인 경우 깨끗하게 공란 및 비활성화로 유지
           setPaymentConfig(null);
@@ -385,6 +385,9 @@ export default function TenantDetailPage() {
       }
     }
 
+    const hasAnyEasy = Boolean(enableKakaoPay || enableNaverPay || enableTossPay);
+    const computedEnableEasyPayment = Boolean(enableEasyPayment && hasAnyEasy);
+
     setIsSaving(true);
     try {
       const response = await fetch(
@@ -410,20 +413,20 @@ export default function TenantDetailPage() {
             kakaoCid,
             kakaoSecretKey,
             kakaoMode,
-            enableKakaoPay,
+            enableKakaoPay: Boolean(enableKakaoPay),
             naverPartnerId,
             naverClientId,
             naverClientSecret,
             naverMode,
-            enableNaverPay,
+            enableNaverPay: Boolean(enableNaverPay),
             tossPayMid,
             tossPayApiKey,
             tossPaySecretKey,
             tossPayMode,
-            enableTossPay,
-            enableCard,
-            enableEasyPayment,
-            enableVBank,
+            enableTossPay: Boolean(enableTossPay),
+            enableCard: Boolean(enableCard),
+            enableEasyPayment: computedEnableEasyPayment,
+            enableVBank: Boolean(enableVBank),
             isActive: true,
             providerConfigs: {
               ...(paymentConfig?.providerConfigs || {}),
@@ -537,9 +540,9 @@ export default function TenantDetailPage() {
             ver: billVer,
           },
         },
-        enableCard,
-        enableEasyPayment,
-        enableVBank,
+        enableCard: Boolean(enableCard),
+        enableEasyPayment: computedEnableEasyPayment,
+        enableVBank: Boolean(enableVBank),
         isActive: true,
         updatedAt: new Date().toISOString(),
       };
@@ -1535,33 +1538,108 @@ export default function TenantDetailPage() {
                       </>
                     )}
 
-                    <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">허용할 수납 결제 수단 선택</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        <label className="flex items-center gap-2 p-3 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors shadow-2xs">
-                          <input
-                            type="checkbox"
-                            checked={enableCard}
-                            onChange={(e) => setEnableCard(e.target.checked)}
-                            className="h-4 w-4 rounded text-purple-600 border-gray-300 focus:ring-purple-500"
-                          />
-                          <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                            <CreditCard className="h-4 w-4 text-purple-600" />
-                            신용 / 체크카드
-                          </span>
+                    <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-zinc-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-xs font-extrabold text-slate-800 dark:text-zinc-200">허용할 수납 결제 수단 선택</Label>
+                          <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium">체크 해제(미사용)된 결제 수단은 신도 결제 페이지에서 완전히 숨겨집니다.</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* 1. 신용/체크카드 */}
+                        <label className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          enableCard 
+                            ? 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800 shadow-2xs' 
+                            : 'bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 opacity-70'
+                        }`}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-xs font-bold text-slate-850 dark:text-zinc-150 flex items-center gap-1.5">
+                              <CreditCard className="h-4 w-4 text-purple-600" />
+                              신용 / 체크카드
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={enableCard}
+                              onChange={(e) => setEnableCard(e.target.checked)}
+                              className="h-4 w-4 rounded text-purple-600 border-gray-300 focus:ring-purple-500 cursor-pointer"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 dark:text-zinc-400 font-medium">일반/정기 카드결제</span>
+                            <span className={`font-extrabold text-[10.5px] px-1.5 py-0.5 rounded ${
+                              enableCard ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300' : 'bg-slate-200 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                            }`}>
+                              {enableCard ? '🟢 사용함' : '🔴 미사용'}
+                            </span>
+                          </div>
                         </label>
 
-                        <label className="flex items-center gap-2 p-3 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors shadow-2xs">
-                          <input
-                            type="checkbox"
-                            checked={enableVBank}
-                            onChange={(e) => setEnableVBank(e.target.checked)}
-                            className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                          />
-                          <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                            <Building2 className="h-4 w-4 text-indigo-600" />
-                            가상계좌 (무통장 입금)
-                          </span>
+                        {/* 2. 가상계좌 (무통장 입금) */}
+                        <label className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          enableVBank 
+                            ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800 shadow-2xs' 
+                            : 'bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 opacity-70'
+                        }`}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-xs font-bold text-slate-850 dark:text-zinc-150 flex items-center gap-1.5">
+                              <Building2 className="h-4 w-4 text-indigo-600" />
+                              가상계좌 (무통장)
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={enableVBank}
+                              onChange={(e) => setEnableVBank(e.target.checked)}
+                              className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 dark:text-zinc-400 font-medium">고유 전용계좌 발급</span>
+                            <span className={`font-extrabold text-[10.5px] px-1.5 py-0.5 rounded ${
+                              enableVBank ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300' : 'bg-slate-200 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                            }`}>
+                              {enableVBank ? '🟢 사용함' : '🔴 미사용'}
+                            </span>
+                          </div>
+                        </label>
+
+                        {/* 3. 간편결제 (카카오/네이버/토스) */}
+                        <label className={`flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          enableEasyPayment && (enableKakaoPay || enableNaverPay || enableTossPay)
+                            ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 shadow-2xs' 
+                            : 'bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 opacity-70'
+                        }`}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-xs font-bold text-slate-850 dark:text-zinc-150 flex items-center gap-1.5">
+                              <Zap className="h-4 w-4 text-amber-500 fill-amber-400" />
+                              간편결제 3종 전체
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={enableEasyPayment}
+                              onChange={(e) => setEnableEasyPayment(e.target.checked)}
+                              className="h-4 w-4 rounded text-amber-500 border-gray-300 focus:ring-amber-500 cursor-pointer"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveTab('easypay');
+                              }}
+                              className="text-amber-700 dark:text-amber-400 hover:underline font-bold text-[10.5px] cursor-pointer"
+                            >
+                              설정 관리 ➔
+                            </button>
+                            <span className={`font-extrabold text-[10.5px] px-1.5 py-0.5 rounded ${
+                              enableEasyPayment && (enableKakaoPay || enableNaverPay || enableTossPay)
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300' 
+                                : 'bg-slate-200 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                            }`}>
+                              {enableEasyPayment && (enableKakaoPay || enableNaverPay || enableTossPay) ? '🟢 전체 사용함' : '🔴 전체 미사용'}
+                            </span>
+                          </div>
                         </label>
                       </div>
                     </div>
@@ -1786,6 +1864,52 @@ export default function TenantDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* 🌟 간편결제 서비스 전체 총괄 활성화/비활성화 마스터 스위치 */}
+              <div className={`p-4 rounded-2xl border transition-all mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs ${
+                enableEasyPayment 
+                  ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800' 
+                  : 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                    enableEasyPayment ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                  }`}>
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-850 dark:text-zinc-150 flex items-center gap-2">
+                      <span>간편결제 전체 서비스 활성화 여부</span>
+                      <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md ${
+                        enableEasyPayment ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300'
+                      }`}>
+                        {enableEasyPayment ? '🟢 전체 사용 중' : '🔴 전체 사용안함 (차단)'}
+                      </span>
+                    </div>
+                    <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
+                      {enableEasyPayment 
+                        ? '간편결제가 전체 활성화되어 있습니다. 아래 개별 결제사(카카오/네이버/토스) 설정에 따라 활성화된 결제수단이 회원 결제창에 노출됩니다.' 
+                        : '간편결제가 전체 비활성화되어 있습니다. 개별 결제사 설정과 무관하게 회원 결제창에서 간편결제 옵션이 완전히 숨겨집니다.'}
+                    </p>
+                  </div>
+                </div>
+                <Select 
+                  value={enableEasyPayment ? 'true' : 'false'} 
+                  onValueChange={(val) => setEnableEasyPayment(val === 'true')}
+                >
+                  <SelectTrigger className={`w-48 h-10 text-xs font-bold cursor-pointer ${
+                    enableEasyPayment 
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700' 
+                      : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-700'
+                  }`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">🟢 간편결제 전체 사용함</SelectItem>
+                    <SelectItem value="false">🔴 간편결제 전체 사용안함</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Easy Pay Sub-Tabs */}
               <div className="flex flex-col sm:flex-row gap-2 p-1.5 bg-slate-100 dark:bg-zinc-800 rounded-xl mb-5">
                 <button

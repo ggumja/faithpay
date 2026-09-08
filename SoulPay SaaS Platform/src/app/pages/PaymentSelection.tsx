@@ -164,12 +164,20 @@ export default function PaymentSelection() {
           const activePg = res.data.pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay';
           setPgProvider(activePg);
           setPgApiKey(res.data.apiKey || res.data.tossPayApiKey || currentTenant?.paymentConfig?.apiKey || '');
-          setEnableCard(res.data.enableCard !== undefined ? res.data.enableCard : true);
-          setEnableVBank(res.data.enableVBank !== undefined ? res.data.enableVBank : true);
+          const cardOk = res.data.enableCard !== undefined ? Boolean(res.data.enableCard) : true;
+          const vBankOk = res.data.enableVBank !== undefined ? Boolean(res.data.enableVBank) : true;
+          setEnableCard(cardOk);
+          setEnableVBank(vBankOk);
 
-          const kOk = res.data.enableKakaoPay === true || res.data.providerConfigs?.kakaopay?.isEnabled === true;
-          const nOk = res.data.enableNaverPay === true || res.data.providerConfigs?.naverpay?.isEnabled === true;
-          const tOk = res.data.enableTossPay === true || res.data.providerConfigs?.tosspay?.isEnabled === true;
+          const kOk = res.data.enableKakaoPay !== undefined 
+            ? Boolean(res.data.enableKakaoPay) 
+            : (res.data.providerConfigs?.kakaopay?.isEnabled === true);
+          const nOk = res.data.enableNaverPay !== undefined 
+            ? Boolean(res.data.enableNaverPay) 
+            : (res.data.providerConfigs?.naverpay?.isEnabled === true);
+          const tOk = res.data.enableTossPay !== undefined 
+            ? Boolean(res.data.enableTossPay) 
+            : (res.data.providerConfigs?.tosspay?.isEnabled === true);
 
           setEnableKakaoPay(kOk);
           setEnableNaverPay(nOk);
@@ -184,12 +192,14 @@ export default function PaymentSelection() {
           setEnableEasyPayment(isEasyPayActive);
           
           // 만약 활성화된 수단으로 기본 선택값 세팅
-          if (res.data.enableCard !== false) {
+          if (cardOk) {
             setPaymentMethod('card');
           } else if (isEasyPayActive) {
             setPaymentMethod('simple');
-          } else if (res.data.enableVBank !== false) {
+          } else if (vBankOk) {
             setPaymentMethod('bank');
+          } else {
+            setPaymentMethod('');
           }
         } else {
           // fallback 기본 나노PG
@@ -293,6 +303,11 @@ export default function PaymentSelection() {
 
     if (!agreed) {
       toast.error('결제 진행에 동의해주세요');
+      return;
+    }
+
+    if (!paymentMethod) {
+      toast.error('이용 가능한 결제 수단을 선택해주세요.');
       return;
     }
 
@@ -1342,6 +1357,13 @@ export default function PaymentSelection() {
                       <p>· 발급된 가상계좌로 24시간 이내 입금하시면 결제 처리가 자동 완료됩니다.</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {!donationFormData.isRecurring && !enableCard && !enableEasyPayment && !enableVBank && (
+                <div className="py-8 px-4 text-center bg-zinc-50 dark:bg-zinc-850/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                  <p className="text-xs font-bold text-zinc-650 dark:text-zinc-300">현재 이용 가능한 결제 수단이 없습니다.</p>
+                  <p className="text-[11px] text-zinc-450 dark:text-zinc-500 mt-1">관리자에게 문의해 주시기 바랍니다.</p>
                 </div>
               )}
             </RadioGroup>

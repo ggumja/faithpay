@@ -416,6 +416,8 @@ app.put("/make-server-d0d82cc7/settings/:key", async (c) => {
     console.error('Error updating setting:', err);
     return c.json({ success: false, error: 'Failed to update setting' }, 500);
   }
+});
+
 // 시스템 설정 삭제 — DELETE /settings/:key
 app.delete("/make-server-d0d82cc7/settings/:key", async (c) => {
   try {
