@@ -860,7 +860,6 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
     payment_method: normalizedMethod,
     transaction_id: finalTransactionId,
     approve_no: finalApproveNo,
-    receipt_url: donation.receiptUrl ?? null,
     failure_reason: donation.failureReason ?? null,
     cancel_reason: donation.cancelReason ?? null,
     cancel_transaction_id: donation.cancelTransactionId ?? null,
@@ -878,11 +877,8 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
     .select('*')
     .single();
   if (error) {
-    console.error('createDonation DB upsert failed:', error.message);
-    // fallback: return in-memory object
-    const fallback: Donation = { ...donation, paymentMethod: normalizedMethod, transactionId: finalTransactionId, createdAt: now, updatedAt: now };
-    if (fallback.paymentStatus === 'completed') await recordDonationToLedger(fallback);
-    return fallback;
+    console.error('createDonation DB upsert failed:', error.message, error.details, error.hint);
+    throw new Error(`createDonation DB upsert failed: ${error.message} (details: ${error.details || ''}, hint: ${error.hint || ''})`);
   }
 
   const newDonation: Donation = rowToDonation(data);
@@ -937,7 +933,6 @@ export async function updateDonation(tenantId: string, id: string, updates: Part
   if (updates.transactionId !== undefined) row.transaction_id = updates.transactionId;
   if (updates.prayerText    !== undefined) row.prayer_text    = updates.prayerText;
   if (updates.approveNo     !== undefined) row.approve_no     = updates.approveNo;
-  if (updates.receiptUrl    !== undefined) row.receipt_url    = updates.receiptUrl;
   if (updates.failureReason !== undefined) row.failure_reason = updates.failureReason;
   if (updates.cancelReason  !== undefined) row.cancel_reason  = updates.cancelReason;
   if (updates.cancelTransactionId !== undefined) row.cancel_transaction_id = updates.cancelTransactionId;

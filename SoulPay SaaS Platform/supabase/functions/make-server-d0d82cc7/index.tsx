@@ -2619,12 +2619,12 @@ const handleCertCallback = async (c: any) => {
     const isSuccess = resultCode === "0000";
 
     if (donationId) {
-      const donations = await db.getAllDonations();
-      const donation = donations.find(d => d.id === donationId);
+      const sb = db.pgClient();
+      const { data: donation } = await sb.from('donations').select('*').eq('id', donationId).maybeSingle();
       
       if (donation) {
         if (isSuccess) {
-          await db.updateDonation(donation.tenantId, donation.id, {
+          await db.updateDonation(donation.tenant_id, donation.id, {
             paymentStatus: 'completed',
             transactionId: tranNo,
             approveNo: apprNo,
@@ -2632,14 +2632,32 @@ const handleCertCallback = async (c: any) => {
           });
           console.log(`✅ Certified payment successful for donation: ${donation.id}`);
         } else {
-          await db.updateDonation(donation.tenantId, donation.id, {
+          await db.updateDonation(donation.tenant_id, donation.id, {
             paymentStatus: 'failed',
             failureReason: resultMsg || '나노페이 결제 실패',
           });
           console.log(`❌ Certified payment failed for donation: ${donation.id}, error: ${resultMsg}`);
         }
-      } else {
-        console.warn("Donation record not found for ID:", donationId);
+      } else if (isSuccess) {
+        console.warn("Donation record not found for ID, recreating from callback:", donationId);
+        const allTenants = await db.getAllTenants();
+        const matchedTenant = allTenants.find((t: any) => t.id === body.tenantId || t.slug === body.tenantId) || allTenants[0];
+        if (matchedTenant) {
+          await db.createDonation({
+            id: donationId,
+            tenantId: matchedTenant.id,
+            itemId: 'cert',
+            itemName: body.goodsName || '봉헌금',
+            amount: Number(body.reqPayAmt) || 1000,
+            donorName: body.orderName || body.compOrderMem || '신도',
+            donorPhone: body.orderTel || '',
+            paymentStatus: 'completed',
+            paymentMethod: payWay || 'card',
+            transactionId: tranNo,
+            approveNo: apprNo,
+          });
+          console.log(`✅ Recreated and recorded successful donation from callback: ${donationId}`);
+        }
       }
     }
 
@@ -2785,9 +2803,9 @@ app.post("/make-server-d0d82cc7/donations", async (c) => {
     const donation = await db.createDonation(body);
     
     return c.json({ success: true, data: donation }, 201);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating donation:', error);
-    return c.json({ success: false, error: 'Failed to create donation' }, 500);
+    return c.json({ success: false, error: error?.message || 'Failed to create donation' }, 500);
   }
 });
 
