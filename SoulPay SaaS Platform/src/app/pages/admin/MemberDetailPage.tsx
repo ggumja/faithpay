@@ -80,6 +80,7 @@ export interface MemberSubscriptionItem {
   cardName?: string;
   cardNo?: string;
   recurringInterval?: string;
+  recurringDayOfWeek?: number | string;
   createdAt?: string;
 }
 
@@ -266,6 +267,7 @@ export default function MemberDetailPage() {
                     cardName: sub.cardName || '',
                     cardNo: sub.cardNo || '',
                     recurringInterval: sub.recurringInterval || 'monthly',
+                    recurringDayOfWeek: sub.recurringDayOfWeek ?? sub.recurring_day_of_week,
                     createdAt: sub.createdAt ? sub.createdAt.slice(0, 10) : '',
                   }));
                 }
@@ -1159,10 +1161,31 @@ export default function MemberDetailPage() {
                   {subscriptions.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {subscriptions.map((sub) => {
-                        const intervalLabel = sub.recurringInterval === 'weekly' ? '주간 (매주)' : '월간 (매월)';
+                        const intervalLabel =
+                          sub.recurringInterval === 'daily'
+                            ? '일간 (매일)'
+                            : sub.recurringInterval === 'weekly'
+                            ? '주간 (매주)'
+                            : '월간 (매월)';
+
+                        const getDayLabel = (val: any) => {
+                          if (val === undefined || val === null) return '일';
+                          if (typeof val === 'string') {
+                            const trimmed = val.replace(/[^일월화수목금토0-6]/g, '');
+                            if (['일', '월', '화', '수', '목', '금', '토'].includes(trimmed)) return trimmed;
+                            const num = parseInt(trimmed, 10);
+                            if (!isNaN(num) && num >= 0 && num <= 6) return ['일', '월', '화', '수', '목', '금', '토'][num];
+                            return '일';
+                          }
+                          const days = ['일', '월', '화', '수', '목', '금', '토'];
+                          return days[Number(val) % 7] ?? '일';
+                        };
+
                         const cycleDesc =
-                          sub.recurringInterval === 'weekly'
-                            ? '매주 일요일'
+                          sub.recurringInterval === 'daily'
+                            ? '매일'
+                            : sub.recurringInterval === 'weekly'
+                            ? `매주 (${getDayLabel(sub.recurringDayOfWeek)})요일`
                             : `매월 ${sub.billingDay || 15}일`;
 
                         return (
