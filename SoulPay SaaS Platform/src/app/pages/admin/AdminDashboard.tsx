@@ -17,10 +17,7 @@ import {
 import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import {
-  TrendingUp,
   ArrowUpRight,
-  DollarSign,
-  UserPlus,
   AlertCircle,
   Menu,
 } from 'lucide-react';
@@ -343,89 +340,82 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-8">
+        <div className="p-6 sm:p-8 space-y-6">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
-                  대시보드
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
-                  {currentTenant.name}
-                </p>
-              </div>
-              <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
-                {terms.donor} 페이지 보기
-              </Button>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                대시보드
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+                {currentTenant.name}
+              </p>
             </div>
+            <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
+              {terms.donor} 페이지 보기
+            </Button>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 총 {terms.donation}액</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalMonthlyAmount.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  당월 <span className="text-green-600 font-semibold">{totalCount}건</span> 결제 완료
-                  {totalAllTimeAmount > totalMonthlyAmount && (
-                    <span className="text-slate-400 block sm:inline sm:ml-1.5 font-normal">
-                      (전체 누적 {totalAllTimeAmount.toLocaleString()}원 / {totalAllTimeCount}건)
-                    </span>
-                  )}
-                </p>
-                <div className="mt-2">
-                  <TrendingUp className="h-4 w-4 inline text-green-600 mr-1" />
-                  <span className="text-sm text-green-600 font-medium">DB 실시간 동기화 완료</span>
-                </div>
-              </CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                이번 달 총 {terms.donation}액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: currentTenant.primaryColor }}>
+                {totalMonthlyAmount.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">
+                당월 <span className="text-blue-600 dark:text-blue-400 font-semibold">{totalCount}건</span> 결제 완료
+                {totalAllTimeAmount > totalMonthlyAmount && (
+                  <span className="text-slate-400 block sm:inline sm:ml-1.5 font-normal">
+                    (전체 누적 {totalAllTimeAmount.toLocaleString()}원 / {totalAllTimeCount}건)
+                  </span>
+                )}
+              </p>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">신규 {terms.donor}</CardTitle>
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{memberCount}명</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-600 font-semibold">DB 데이터 동기화</span>
-                </p>
-                <Button variant="link" className="mt-2 p-0 h-auto" asChild>
-                  <Link to={`/${tenantSlug}/admin/members`}>
-                    회원 목록 보기
-                    <ArrowUpRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                  신규 {terms.donor}
+                </span>
+                <Link
+                  to={`/${tenantSlug}/admin/members`}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                >
+                  회원 관리
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                {memberCount}명
+              </div>
+              <p className="text-xs text-slate-400">등록된 전체 회원 실시간 동기화</p>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">대기중인 {terms.prayer}</CardTitle>
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{pendingPrayerCount}건</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  미인쇄 항목
-                </p>
-                <Button variant="link" className="mt-2 p-0 h-auto" asChild>
-                  <Link to={`/${tenantSlug}/admin/prayers`}>
-                    바로가기
-                    <ArrowUpRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                  대기중인 {terms.prayer}
+                </span>
+                <Link
+                  to={`/${tenantSlug}/admin/prayers`}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                >
+                  기도문 관리
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {pendingPrayerCount}건
+              </div>
+              <p className="text-xs text-slate-400">라벨 미인쇄 대기 건수</p>
             </Card>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
