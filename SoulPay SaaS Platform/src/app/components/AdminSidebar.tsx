@@ -128,27 +128,27 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
         );
       })()}
 
-      <nav className="space-y-1 flex-1">
+      <nav className="space-y-0.5 flex-1">
         {accessibleMenuItems.map((item) => {
-          const fullPath = `/${tenantSlug}${item.path}`;
+          const fullPath = tenantSlug ? `/${tenantSlug}${item.path}` : item.path;
           const isActive = currentPath === fullPath;
           const permLevel = getMenuPermission(item.id);
 
           return (
             <Link key={item.id} to={fullPath}>
               <div
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-blue-50 text-blue-600 font-bold border-l-4 border-blue-600'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
                 }`}
               >
                 <div className="flex items-center min-w-0">
-                  <item.icon className={`h-4 w-4 mr-3 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <item.icon className={`h-4 w-4 mr-2.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span className="truncate">{item.label}</span>
                 </div>
                 {permLevel === 'read' && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold shrink-0">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium shrink-0">
                     조회
                   </span>
                 )}
@@ -162,7 +162,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
 
       <div className="space-y-1.5">
         <button
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
           onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
         >
           <span className="truncate">{terms.publicPageLabel || '온라인 수납 페이지 보기'}</span>
@@ -170,10 +170,10 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
         </button>
 
         <button
-          className="w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-start px-3 py-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4 mr-3 text-rose-500" />
+          <LogOut className="h-4 w-4 mr-2.5 text-rose-500" />
           로그아웃
         </button>
       </div>
