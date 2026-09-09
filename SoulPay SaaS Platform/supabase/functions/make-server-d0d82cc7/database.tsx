@@ -923,11 +923,16 @@ export async function getDonationsByTenant(tenantId: string): Promise<Donation[]
   // tenant_id 또는 slug 두 방향 모두 검색
   const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
   const tid = tenant?.id ?? tenantId;
-  const { data } = await sb
-    .from('donations')
-    .select('*')
-    .eq('tenant_id', tid)
-    .order('created_at', { ascending: false });
+  const slug = tenant?.slug;
+
+  let query = sb.from('donations').select('*');
+  if (slug && slug !== tid) {
+    query = query.or(`tenant_id.eq.${tid},tenant_id.eq.${slug}`);
+  } else {
+    query = query.eq('tenant_id', tid);
+  }
+
+  const { data } = await query.order('created_at', { ascending: false });
   return (data ?? []).map(rowToDonation);
 }
 
@@ -1150,29 +1155,7 @@ export async function getMonthlyStats(tenantId: string, year: number, month: num
 }
 
 export async function calculateAndSaveMonthlyStats(tenantId: string, year: number, month: number): Promise<MonthlyStats> {
-  const donations = await getDonationsByTenant(tenantId);
-  const monthStr = `${year}-${String(month).padStart(2, '0')}`;
-  const monthDonations = donations.filter((d) => d.createdAt?.startsWith(monthStr));
-
-  const stats: MonthlyStats = {
-    tenantId, year, month,
-    totalAmount: 0, totalCount: monthDonations.length,
-    byType: {}, byPaymentMethod: {},
-    recurringAmount: 0, recurringCount: 0,
-    oneTimeAmount: 0, oneTimeCount: 0,
-  };
-  for (const d of monthDonations) {
-    stats.totalAmount += d.amount;
-    const t = d.itemName || 'unknown';
-    if (!stats.byType[t]) stats.byType[t] = { amount: 0, count: 0 };
-    stats.byType[t].amount += d.amount; stats.byType[t].count++;
-    const m = d.paymentMethod || 'unknown';
-    if (!stats.byPaymentMethod[m]) stats.byPaymentMethod[m] = { amount: 0, count: 0 };
-    stats.byPaymentMethod[m].amount += d.amount; stats.byPaymentMethod[m].count++;
-    if (d.isRecurring) { stats.recurringAmount += d.amount; stats.recurringCount++; }
-    else { stats.oneTimeAmount += d.amount; stats.oneTimeCount++; }
-  }
-  return stats;
+  return getHybridMonthlyStats(tenantId, year, month);
 }
 
 // ==================== PARTNER DB FUNCTIONS ====================
@@ -2672,52 +2655,94 @@ export async function seed800kLedger(): Promise<boolean> {
 
 /**
  * 하이브리드 통계 집계 엔진 (Hybrid Stats Calculator)
- * - 과거 마감 월: 마감 스토어 캐시에서 0.001초 직통 응답 (DB 부하 제로)
- * - 당월 (진행중 월): 실시간 헌금/수수료 결제 트랜잭션에서 온디맨드 재계산 & 당월 캐시 갱신
+ * - 실제 DB donations 원장에서 100% 실측 조회
+ * - 정상 결제완료(completed) 건만 수납 총액 및 건수 집계에 포함 (Zero-distortion rule)
+ * - 정기/일시 봉헌 구분 및 결제수단/항목별 통계 실측 산출
+ * - 취소/환불(cancelled), 실패(failed), 대기(pending) 건수도 별도 실측 산출
  */
 export async function getHybridMonthlyStats(tenantId: string, year: number, month: number): Promise<any> {
-  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-  const supabase = pgClient();
+  const donations = await getDonationsByTenant(tenantId);
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
 
-  const { data: commRows } = await supabase
-    .from('partner_commissions')
-    .select('*')
-    .eq('tenant_id', tenantId);
-
-  const { data: donRows } = await supabase
-    .from('donations')
-    .select('*')
-    .eq('tenant_id', tenantId);
-
-  const rawRows = (commRows && commRows.length > 0) ? commRows : (donRows ?? []);
-  const rows = rawRows.filter((r: any) => {
-    const dateStr = r.created_at || r.createdAt || '';
-    if (!dateStr) return true;
-    return dateStr.startsWith(monthKey);
+  // 한국 표준시(KST, UTC+9) 기준 해당 연월에 속하는 헌금만 필터링
+  const monthDonations = donations.filter((d) => {
+    if (!d.createdAt) return false;
+    const dDate = new Date(d.createdAt);
+    if (isNaN(dDate.getTime())) return false;
+    const kstDate = new Date(dDate.getTime() + 9 * 60 * 60 * 1000);
+    const dYear = kstDate.getUTCFullYear();
+    const dMonth = kstDate.getUTCMonth() + 1;
+    return dYear === year && dMonth === month;
   });
 
   let totalAmount = 0;
   let totalCount = 0;
+  let recurringAmount = 0;
+  let recurringCount = 0;
+  let oneTimeAmount = 0;
+  let oneTimeCount = 0;
+  let cancelledAmount = 0;
+  let cancelledCount = 0;
+  let failedCount = 0;
+  let pendingCount = 0;
+
   const byType: Record<string, { amount: number; count: number }> = {};
   const byPaymentMethod: Record<string, { amount: number; count: number }> = {};
 
-  for (const r of rows) {
-    const gross = Number(r.donation_amount || r.amount || 0);
-    totalAmount += gross;
-    totalCount += 1;
-    const typeName = r.item_name || r.donation_type || '일반 헌금';
-    if (!byType[typeName]) byType[typeName] = { amount: 0, count: 0 };
-    byType[typeName].amount += gross; byType[typeName].count += 1;
-    const payMethod = r.payment_method || '신용카드';
-    if (!byPaymentMethod[payMethod]) byPaymentMethod[payMethod] = { amount: 0, count: 0 };
-    byPaymentMethod[payMethod].amount += gross; byPaymentMethod[payMethod].count += 1;
+  for (const d of monthDonations) {
+    const amt = Number(d.amount) || 0;
+    const status = d.paymentStatus || 'completed';
+
+    if (status === 'completed') {
+      totalAmount += amt;
+      totalCount += 1;
+
+      if (d.isRecurring) {
+        recurringAmount += amt;
+        recurringCount += 1;
+      } else {
+        oneTimeAmount += amt;
+        oneTimeCount += 1;
+      }
+
+      const typeName = d.itemName || '일반 헌금';
+      if (!byType[typeName]) byType[typeName] = { amount: 0, count: 0 };
+      byType[typeName].amount += amt;
+      byType[typeName].count += 1;
+
+      let payMethod = d.paymentMethod || (d.isRecurring ? '정기결제' : '신용카드');
+      if (payMethod.includes('카드')) payMethod = '신용카드';
+      if (!byPaymentMethod[payMethod]) byPaymentMethod[payMethod] = { amount: 0, count: 0 };
+      byPaymentMethod[payMethod].amount += amt;
+      byPaymentMethod[payMethod].count += 1;
+    } else if (status === 'cancelled') {
+      cancelledAmount += amt;
+      cancelledCount += 1;
+    } else if (status === 'failed') {
+      failedCount += 1;
+    } else if (status === 'pending') {
+      pendingCount += 1;
+    }
   }
 
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
   return {
-    tenantId, year, month, totalAmount, totalCount,
-    recurringAmount: 0, recurringCount: 0,
-    oneTimeAmount: totalAmount, oneTimeCount: totalCount,
-    byType, byPaymentMethod,
+    tenantId: tid,
+    year,
+    month,
+    totalAmount,
+    totalCount,
+    recurringAmount,
+    recurringCount,
+    oneTimeAmount,
+    oneTimeCount,
+    cancelledAmount,
+    cancelledCount,
+    failedCount,
+    pendingCount,
+    byType,
+    byPaymentMethod,
     isClosed: monthKey < new Date().toISOString().slice(0, 7),
     lastCalculatedAt: new Date().toISOString(),
   };

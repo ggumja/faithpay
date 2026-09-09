@@ -47,6 +47,10 @@ interface TenantStats {
     recurringCount: number;
     oneTimeAmount: number;
     oneTimeCount: number;
+    cancelledAmount?: number;
+    cancelledCount?: number;
+    failedCount?: number;
+    pendingCount?: number;
     byType: Record<string, { amount: number; count: number }>;
     byPaymentMethod: Record<string, { amount: number; count: number }>;
   };
@@ -118,6 +122,8 @@ export default function TenantStatsPage() {
   const totalCount = allStats.reduce((sum, item) => sum + (item?.stats?.totalCount || 0), 0);
   const totalRecurring = allStats.reduce((sum, item) => sum + (item?.stats?.recurringAmount || 0), 0);
   const totalOneTime = allStats.reduce((sum, item) => sum + (item?.stats?.oneTimeAmount || 0), 0);
+  const totalCancelled = allStats.reduce((sum, item) => sum + (item?.stats?.cancelledAmount || 0), 0);
+  const totalCancelledCount = allStats.reduce((sum, item) => sum + (item?.stats?.cancelledCount || 0), 0);
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -191,7 +197,7 @@ export default function TenantStatsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              총 매출
+              총 매출 (결제 완료)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -201,7 +207,14 @@ export default function TenantStatsPage() {
                 {formatCurrency(totalAmount)}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{totalCount}건</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {totalCount}건 결제완료
+              {totalCancelledCount > 0 && (
+                <span className="text-rose-500 font-medium ml-1.5">
+                  (취소 {totalCancelledCount}건 {formatCurrency(totalCancelled)})
+                </span>
+              )}
+            </p>
           </CardContent>
         </Card>
 
@@ -315,7 +328,12 @@ export default function TenantStatsPage() {
                             {formatCurrency(item.stats?.totalAmount || 0)}
                           </TableCell>
                           <TableCell className="text-right">
-                            {item.stats?.totalCount || 0}건
+                            <div>{item.stats?.totalCount || 0}건</div>
+                            {(item.stats?.cancelledCount || 0) > 0 && (
+                              <span className="text-[10px] text-rose-500 block font-normal">
+                                (취소 {item.stats?.cancelledCount}건)
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right text-blue-600">
                             {formatCurrency(item.stats?.recurringAmount || 0)}

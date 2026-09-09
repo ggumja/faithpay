@@ -3403,7 +3403,7 @@ app.post("/make-server-d0d82cc7/admin/seed-800k", async (c) => {
 
 
 // 전체 단체별 통계 조회 (특정 년월) - 우선순위 상단 배치
-app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
+const handleGetAllTenantStats = async (c: any) => {
   try {
     const year = parseInt(c.req.param('year'));
     const month = parseInt(c.req.param('month'));
@@ -3434,11 +3434,12 @@ app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
     console.error('Error fetching all tenant stats:', error);
     return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
   }
-});
+};
+app.get("/make-server-d0d82cc7/stats/all/:year/:month", handleGetAllTenantStats);
+app.get("/stats/all/:year/:month", handleGetAllTenantStats);
 
 // 월별 통계 조회
-
-app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", async (c) => {
+const handleGetTenantMonthlyStats = async (c: any) => {
   try {
     const tenantId = c.req.param('tenantId');
     const year = parseInt(c.req.param('year'));
@@ -3470,10 +3471,12 @@ app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", async (c) => {
     console.error('Error fetching stats:', error);
     return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
   }
-});
+};
+app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", handleGetTenantMonthlyStats);
+app.get("/stats/:tenantId/:year/:month", handleGetTenantMonthlyStats);
 
 // 통계 재계산
-app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", async (c) => {
+const handleRecalculateStats = async (c: any) => {
   try {
     const tenantId = c.req.param('tenantId');
     const year = parseInt(c.req.param('year'));
@@ -3486,7 +3489,9 @@ app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", async
     console.error('Error recalculating stats:', error);
     return c.json({ success: false, error: 'Failed to recalculate statistics' }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", handleRecalculateStats);
+app.post("/stats/:tenantId/:year/:month/recalculate", handleRecalculateStats);
 
 
 
