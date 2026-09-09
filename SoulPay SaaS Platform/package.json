@@ -12,6 +12,7 @@
     "build:admin": "BUILD_TARGET=admin vite build",
     "build:partner": "BUILD_TARGET=partner vite build",
     "build:ops": "BUILD_TARGET=ops vite build",
+    "build:dev": "BUILD_TARGET=dev vite build",
     "build:all": "pnpm build:pay && pnpm build:kiosk && pnpm build:admin && pnpm build:partner && pnpm build:ops",
     "dev": "vite",
     "predeploy": "VITE_BASE_PATH=/soulpay/ pnpm run build",

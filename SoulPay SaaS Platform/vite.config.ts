@@ -14,13 +14,14 @@ function targetEntryPlugin(target?: string) {
     admin: 'SoulPay Admin - 단체 관리자 포털',
     partner: 'SoulPay Partner - 영업 파트너 포털',
     ops: 'SoulPay Ops - 시스템 관리자',
+    dev: 'SoulPay [Dev/Staging] - 통합 테스트 환경',
   };
 
   return {
     name: 'vite-plugin-target-entry',
     enforce: 'pre' as const,
     resolveId(id: string) {
-      if (target && (id.endsWith('/src/main.tsx') || id.endsWith('src/main.tsx') || id === '/src/main.tsx')) {
+      if (target && target !== 'dev' && (id.endsWith('/src/main.tsx') || id.endsWith('src/main.tsx') || id === '/src/main.tsx')) {
         return path.resolve(__dirname, `src/entries/${target}.tsx`);
       }
       return null;

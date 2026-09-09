@@ -8,6 +8,7 @@
     "build:admin": "pnpm --prefix \"SoulPay SaaS Platform\" run build:admin",
     "build:partner": "pnpm --prefix \"SoulPay SaaS Platform\" run build:partner",
     "build:ops": "pnpm --prefix \"SoulPay SaaS Platform\" run build:ops",
+    "build:dev": "pnpm --prefix \"SoulPay SaaS Platform\" run build:dev",
     "dev": "pnpm --prefix \"SoulPay SaaS Platform\" run dev"
   }
 }
