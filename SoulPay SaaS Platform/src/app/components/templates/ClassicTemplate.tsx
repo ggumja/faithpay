@@ -105,6 +105,97 @@ const RESPONSIVE_CSS = `
 @media (max-width: 479px) {
   .th-nav-admin-label { display: none; }
 }
+
+/* Header Responsive Layout */
+.th-header-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  height: 60px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.th-tenant-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.th-tenant-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.th-nav-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.th-mypage-label-full { display: inline; }
+.th-mypage-label-short { display: none; }
+.th-admin-label-full { display: inline; }
+.th-admin-label-short { display: none; }
+.th-btn-mypage {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.th-btn-admin {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.th-btn-donate {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .th-header-inner {
+    padding: 0 10px;
+    gap: 4px;
+  }
+  .th-tenant-name {
+    max-width: 100px;
+    font-size: 13px;
+  }
+  .th-mypage-label-full { display: none; }
+  .th-mypage-label-short { display: inline; }
+  .th-admin-label-full { display: none; }
+  .th-admin-label-short { display: inline; }
+  .th-btn-mypage {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+    gap: 3px !important;
+  }
+  .th-btn-admin {
+    padding: 5px 7px !important;
+    font-size: 11px !important;
+  }
+  .th-btn-donate {
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .th-tenant-name {
+    max-width: 76px;
+    font-size: 12px;
+  }
+  .th-btn-admin {
+    display: none;
+  }
+}
 `;
 
 interface ClassicTemplateProps {
@@ -156,7 +247,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
     currentTenant.religionType === 'buddhist'   ? '법회 시간' : '미사 시간';
 
   return (
-    <div style={{ minHeight: '100vh', background: C.paper, color: C.ink, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+    <div style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', background: C.paper, color: C.ink, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
       <style>{RESPONSIVE_CSS}</style>
 
       {/* ── Sticky Nav ── */}
@@ -168,44 +259,48 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
         boxShadow: heroVisible ? 'none' : C.shadow,
         transition: 'box-shadow 250ms ease, background 250ms ease',
       }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', height: 60, padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="th-header-inner">
+          <div className="th-tenant-info">
             <div style={{ width: 32, height: 32, borderRadius: 10, background: ft.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <Motif kind={ft.motif} size={16} color={ft.primary} />
             </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, color: C.ink }}>{currentTenant.name}</div>
-              <div style={{ fontSize: 11, color: C.ink3, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>{ft.name}</div>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <div className="th-tenant-name" style={{ color: C.ink }}>{currentTenant.name}</div>
+              <div style={{ fontSize: 11, color: C.ink3, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ft.name}</div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="th-nav-actions">
             <button
-              className="th-btn-spring"
+              className="th-btn-spring th-btn-mypage"
               onClick={() => navigate(`/${currentTenant.slug}/my-donations`)}
-              style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 12, color: C.cobalt, fontFamily: 'inherit', fontWeight: 700, padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}
+              title={`${terms.donor} 마이페이지`}
+              style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.cobalt, fontFamily: 'inherit', fontWeight: 700, borderRadius: 8, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobalt; e.currentTarget.style.background = C.cobaltBg; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = 'none'; }}
             >
               <span>🔑</span>
-              <span>{terms.donor} 로그인 · 마이페이지</span>
+              <span className="th-mypage-label-full">{terms.donor} 마이페이지</span>
+              <span className="th-mypage-label-short">마이페이지</span>
             </button>
             <button
-              className="th-btn-spring"
+              className="th-btn-spring th-btn-admin"
               onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}
-              style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 12, color: C.ink3, fontFamily: 'inherit', fontWeight: 600, padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}
+              title="관리자 로그인"
+              style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.ink3, fontFamily: 'inherit', fontWeight: 600, borderRadius: 8, whiteSpace: 'nowrap' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobaltBorder; e.currentTarget.style.color = C.cobalt; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.ink3; }}
             >
-              <span className="th-nav-admin-label">관리자 </span>로그인
+              <span className="th-admin-label-full">관리자 로그인</span>
+              <span className="th-admin-label-short">관리자</span>
             </button>
             <button
-              className="th-btn-spring"
+              className="th-btn-spring th-btn-donate"
               onClick={() => {
                 const firstItem = allItems && allItems.length > 0 ? allItems[0] : undefined;
                 navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
               }}
-              style={{ height: 36, padding: '0 16px', fontSize: 13, fontWeight: 700, borderRadius: 10, background: ft.primary, color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap' }}
+              style={{ fontWeight: 700, borderRadius: 8, background: ft.primary, color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap', flexShrink: 0 }}
             >{terms.donation}하기</button>
           </div>
         </div>
