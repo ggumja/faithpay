@@ -25,8 +25,18 @@ import {
   Mail,
   Lock,
   MapPin,
+  List,
+  LayoutGrid,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../components/ui/dialog';
 
 import TaxReceiptModal from '../components/TaxReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
@@ -101,6 +111,10 @@ export default function MyDonations() {
   const [activeTab, setActiveTab] = useState<'history' | 'recurring' | 'profile'>('history');
   // 🔘 결제 상태 필터 ('all' | 'completed' | 'cancelled')
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'cancelled'>('all');
+  // 📋 목록형/카드형 뷰 모드 ('list' | 'card', 기본값: 'list')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  // 🔍 상세 내역 팝업/모달 대상 아이템
+  const [selectedDetailItem, setSelectedDetailItem] = useState<HistoryItem | null>(null);
 
   // 📅 기간 지정 필터 상태 & 📄 10개씩 페이징 상태
   const [startDate, setStartDate] = useState<string>('');
@@ -1179,45 +1193,77 @@ export default function MyDonations() {
                         </div>
                       </div>
 
-                      {/* History List Header with Status Filter */}
+                      {/* History List Header with Status Filter & View Mode Toggle */}
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-zinc-200">
                             {terms.donation} 상세 내역 ({filteredHistory.length}건)
                           </h3>
 
-                          {/* 🔘 결제 상태 필터 (전체 / 결제완료 / 결제취소) */}
-                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
-                            <button
-                              onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'all'
-                                  ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs'
-                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
-                              }`}
-                            >
-                              전체 ({dateFilteredHistory.length})
-                            </button>
-                            <button
-                              onClick={() => { setStatusFilter('completed'); setCurrentPage(1); }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'completed'
-                                  ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
-                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
-                              }`}
-                            >
-                              결제완료 ({completedList.length})
-                            </button>
-                            <button
-                              onClick={() => { setStatusFilter('cancelled'); setCurrentPage(1); }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'cancelled'
-                                  ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs'
-                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
-                              }`}
-                            >
-                              결제취소 ({cancelledList.length})
-                            </button>
+                          <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+                            {/* 🔘 결제 상태 필터 (전체 / 결제완료 / 결제취소) */}
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                              <button
+                                onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  statusFilter === 'all'
+                                    ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                전체 ({dateFilteredHistory.length})
+                              </button>
+                              <button
+                                onClick={() => { setStatusFilter('completed'); setCurrentPage(1); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  statusFilter === 'completed'
+                                    ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                결제완료 ({completedList.length})
+                              </button>
+                              <button
+                                onClick={() => { setStatusFilter('cancelled'); setCurrentPage(1); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  statusFilter === 'cancelled'
+                                    ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                결제취소 ({cancelledList.length})
+                              </button>
+                            </div>
+
+                            {/* 📋 / ⊞ 뷰 모드 토글 (목록형 / 카드형) */}
+                            <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                              <button
+                                type="button"
+                                onClick={() => setViewMode('list')}
+                                title="목록형으로 보기"
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  viewMode === 'list'
+                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                <List className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">목록</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setViewMode('card')}
+                                title="카드형으로 보기"
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  viewMode === 'card'
+                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                <LayoutGrid className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">카드</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -1233,125 +1279,220 @@ export default function MyDonations() {
                           </Card>
                         ) : (
                           <>
-                            <div className="space-y-3">
-                              {paginatedHistory.map((item) => {
-                                const isCancelled = item.paymentStatus === 'cancelled';
-                                const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
+                            {viewMode === 'list' ? (
+                              /* ── 📋 컴팩트 목록형 뷰 (스크롤 최적화 & 행 클릭 시 상세 모달 오픈) ── */
+                              <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs divide-y divide-slate-100 dark:divide-zinc-800/80">
+                                {paginatedHistory.map((item) => {
+                                  const isCancelled = item.paymentStatus === 'cancelled';
+                                  const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
+                                  const cleanedMethod = cleanPaymentMethod(item.paymentMethod);
 
-                                return (
-                                  <div
-                                    key={item.id}
-                                    className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 sm:p-5 transition-all shadow-xs hover:shadow-sm ${
-                                      isCancelled
-                                        ? 'border-red-200/80 dark:border-red-950/60 bg-red-50/10'
-                                        : 'border-slate-200/80 dark:border-zinc-800'
-                                    }`}
-                                  >
-                                    {/* Header Row: Title, Badges & Status */}
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="flex-1 min-w-0">
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() => setSelectedDetailItem(item)}
+                                      className={`group px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                                        isCancelled
+                                          ? 'hover:bg-red-50/30 dark:hover:bg-red-950/20 bg-red-50/5'
+                                          : 'hover:bg-slate-50/90 dark:hover:bg-zinc-800/60'
+                                      }`}
+                                    >
+                                      {/* Left Column: Item Name & Badges & Meta */}
+                                      <div className="flex-1 min-w-0 pr-2">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-bold text-base text-slate-900 dark:text-zinc-100">
+                                          <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-zinc-100 group-hover:text-[#3182F6] dark:group-hover:text-blue-400 transition-colors truncate">
                                             {item.itemName}
                                           </span>
                                           {item.isRecurring && (
-                                            <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
+                                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
                                               정기
                                             </span>
                                           )}
                                           {isKiosk && (
-                                            <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
+                                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
                                               키오스크
+                                            </span>
+                                          )}
+                                          {isCancelled && (
+                                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
+                                              취소됨
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                                          <span className="font-mono text-slate-600 dark:text-zinc-300">{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-700">·</span>
+                                          <span className="truncate max-w-[130px] sm:max-w-[220px] text-slate-600 dark:text-zinc-400">
+                                            {cleanedMethod}
+                                          </span>
+                                          {isCancelled && item.cancelReason && (
+                                            <>
+                                              <span className="text-slate-300 dark:text-zinc-700 hidden sm:inline">·</span>
+                                              <span className="text-red-600 dark:text-red-400 font-medium truncate max-w-[180px] hidden sm:inline">
+                                                사유: {item.cancelReason}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Right Column: Amount & Status & Chevron */}
+                                      <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+                                        <div className="text-right">
+                                          <div
+                                            className={`text-sm sm:text-base font-extrabold font-mono tracking-tight ${
+                                              isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : 'text-slate-900 dark:text-zinc-100'
+                                            }`}
+                                            style={!isCancelled && currentTenant?.primaryColor ? { color: currentTenant.primaryColor } : undefined}
+                                          >
+                                            {item.amount.toLocaleString()}원
+                                          </div>
+                                          <div className="mt-0.5 flex items-center justify-end">
+                                            {isCancelled ? (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-300">
+                                                결제취소
+                                              </span>
+                                            ) : (
+                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
+                                                {item.status || '결제완료'}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-zinc-200 group-hover:translate-x-0.5 transition-all" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              /* ── ⊞ 카드형 뷰 (단건/소수 건수 확인 시 유용) ── */
+                              <div className="space-y-3">
+                                {paginatedHistory.map((item) => {
+                                  const isCancelled = item.paymentStatus === 'cancelled';
+                                  const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
+
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() => setSelectedDetailItem(item)}
+                                      className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 sm:p-5 transition-all shadow-xs hover:shadow-md cursor-pointer ${
+                                        isCancelled
+                                          ? 'border-red-200/80 dark:border-red-950/60 bg-red-50/10'
+                                          : 'border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700'
+                                      }`}
+                                    >
+                                      {/* Header Row: Title, Badges & Status */}
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-bold text-base text-slate-900 dark:text-zinc-100">
+                                              {item.itemName}
+                                            </span>
+                                            {item.isRecurring && (
+                                              <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
+                                                정기
+                                              </span>
+                                            )}
+                                            {isKiosk && (
+                                              <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
+                                                키오스크
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Status Badge */}
+                                        <div className="flex-shrink-0">
+                                          {isCancelled ? (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
+                                              결제취소
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
+                                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                              {item.status || '결제완료'}
                                             </span>
                                           )}
                                         </div>
                                       </div>
 
-                                      {/* Status Badge */}
-                                      <div className="flex-shrink-0">
-                                        {isCancelled ? (
-                                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
-                                            결제취소
-                                          </span>
-                                        ) : (
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
-                                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                                            {item.status || '결제완료'}
+                                      {/* Amount Row */}
+                                      <div className="flex items-baseline gap-2 mt-2">
+                                        <span
+                                          className={`text-2xl font-extrabold tracking-tight font-mono ${
+                                            isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : ''
+                                          }`}
+                                          style={!isCancelled && currentTenant?.primaryColor ? { color: currentTenant.primaryColor } : undefined}
+                                        >
+                                          {item.amount.toLocaleString()}원
+                                        </span>
+                                        {isCancelled && (
+                                          <span className="text-xs font-bold text-red-600 dark:text-red-400">
+                                            (승인 취소됨)
                                           </span>
                                         )}
                                       </div>
-                                    </div>
 
-                                    {/* Amount Row */}
-                                    <div className="flex items-baseline gap-2 mt-2">
-                                      <span
-                                        className={`text-2xl font-extrabold tracking-tight font-mono ${
-                                          isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : ''
-                                        }`}
-                                        style={!isCancelled ? { color: currentTenant.primaryColor } : undefined}
-                                      >
-                                        {item.amount.toLocaleString()}원
-                                      </span>
-                                      {isCancelled && (
-                                        <span className="text-xs font-bold text-red-600 dark:text-red-400">
-                                          (승인 취소됨)
-                                        </span>
+                                      {/* 취소 사유 표출 */}
+                                      {isCancelled && item.cancelReason && (
+                                        <div className="mt-2.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-3 py-2 rounded-xl border border-red-200/60 dark:border-red-900/50">
+                                          <span className="font-bold">취소 사유:</span> {item.cancelReason}
+                                          {item.cancelledAt && (
+                                            <span className="text-slate-400 dark:text-zinc-500 ml-2">
+                                              ({new Date(item.cancelledAt).toLocaleString('ko-KR')})
+                                            </span>
+                                          )}
+                                        </div>
                                       )}
-                                    </div>
 
-                                    {/* 취소 사유 표출 */}
-                                    {isCancelled && item.cancelReason && (
-                                      <div className="mt-2.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-3 py-2 rounded-xl border border-red-200/60 dark:border-red-900/50">
-                                        <span className="font-bold">취소 사유:</span> {item.cancelReason}
-                                        {item.cancelledAt && (
-                                          <span className="text-slate-400 dark:text-zinc-500 ml-2">
-                                            ({new Date(item.cancelledAt).toLocaleString('ko-KR')})
+                                      {/* Footer Meta & Action */}
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+                                        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
+                                          <span className="font-mono text-slate-600 dark:text-zinc-300">{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-700">·</span>
+                                          <span className="truncate max-w-[220px] sm:max-w-none text-slate-600 dark:text-zinc-300">
+                                            {cleanPaymentMethod(item.paymentMethod)}
                                           </span>
-                                        )}
-                                      </div>
-                                    )}
+                                        </div>
 
-                                    {/* Footer Meta & Action */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                                        <span className="font-mono text-slate-600 dark:text-zinc-300">{item.date}</span>
-                                        <span className="text-slate-300 dark:text-zinc-700">·</span>
-                                        <span className="truncate max-w-[220px] sm:max-w-none text-slate-600 dark:text-zinc-300">
-                                          {item.paymentMethod}
-                                        </span>
+                                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className={`h-8 px-3 text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-xs ${
+                                              isCancelled
+                                                ? 'text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-900'
+                                                : 'text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                                            }`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedReceiptData({
+                                                receiptId: item.id,
+                                                donorName: item.name,
+                                                donorPhone: item.phone,
+                                                amount: item.amount,
+                                                itemName: item.itemName,
+                                                date: item.date,
+                                                isCancelled,
+                                                cancelReason: item.cancelReason,
+                                                cancelledAt: item.cancelledAt,
+                                              });
+                                            }}
+                                          >
+                                            <Download className="h-3.5 w-3.5 mr-1 text-slate-400" />
+                                            {isCancelled ? '취소 영수증 PDF' : '영수증 PDF'}
+                                          </Button>
+                                        </div>
                                       </div>
-
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className={`h-8 px-3 text-xs font-bold rounded-xl cursor-pointer transition-colors self-end sm:self-auto shadow-xs ${
-                                          isCancelled
-                                            ? 'text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-900'
-                                            : 'text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
-                                        }`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedReceiptData({
-                                            receiptId: item.id,
-                                            donorName: item.name,
-                                            donorPhone: item.phone,
-                                            amount: item.amount,
-                                            itemName: item.itemName,
-                                            date: item.date,
-                                            isCancelled,
-                                            cancelReason: item.cancelReason,
-                                            cancelledAt: item.cancelledAt,
-                                          });
-                                        }}
-                                      >
-                                        <Download className="h-3.5 w-3.5 mr-1 text-slate-400" />
-                                        {isCancelled ? '취소 영수증 PDF' : '영수증 PDF'}
-                                      </Button>
                                     </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             {/* 📄 10개씩 페이징 컨트롤 바 */}
                             {totalPages > 1 && (
@@ -1438,6 +1579,189 @@ export default function MyDonations() {
           </div>
         )}
       </div>
+
+      {/* 🔍 헌금/봉헌 상세 내역 모달 */}
+      {selectedDetailItem && (
+        <Dialog open={!!selectedDetailItem} onOpenChange={(open) => !open && setSelectedDetailItem(null)}>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+            {/* 모달 헤더 */}
+            <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-zinc-800 text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#3182F6] flex items-center justify-center flex-shrink-0">
+                  <History className="h-4 w-4" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100">
+                    {terms.donation} 상세 내역
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    거래 승인 및 결제 상세 정보를 확인하실 수 있습니다.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              {/* 금액 & 상태 카드 */}
+              <div
+                className={`p-4 rounded-2xl border text-center ${
+                  selectedDetailItem.paymentStatus === 'cancelled'
+                    ? 'bg-red-50/40 dark:bg-red-950/30 border-red-200/80 dark:border-red-900/50'
+                    : 'bg-slate-50/80 dark:bg-zinc-800/40 border-slate-200/80 dark:border-zinc-700/60'
+                }`}
+              >
+                <div className="text-xs font-bold text-slate-500 dark:text-zinc-400 mb-1">
+                  {selectedDetailItem.paymentStatus === 'cancelled' ? '취소된 결제 금액' : '결제 금액'}
+                </div>
+                <div
+                  className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                    selectedDetailItem.paymentStatus === 'cancelled'
+                      ? 'line-through text-slate-400 dark:text-zinc-500'
+                      : 'text-slate-900 dark:text-zinc-100'
+                  }`}
+                  style={
+                    selectedDetailItem.paymentStatus !== 'cancelled' && currentTenant?.primaryColor
+                      ? { color: currentTenant.primaryColor }
+                      : undefined
+                  }
+                >
+                  {selectedDetailItem.amount.toLocaleString()}원
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-center gap-1.5 flex-wrap">
+                  {selectedDetailItem.paymentStatus === 'cancelled' ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">
+                      결제취소
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      {selectedDetailItem.status || '결제완료'}
+                    </span>
+                  )}
+                  {selectedDetailItem.isRecurring && (
+                    <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                      정기
+                    </span>
+                  )}
+                  {(selectedDetailItem.deviceType === 'KIOSK' || (selectedDetailItem.paymentMethod || '').includes('OffPG')) && (
+                    <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      키오스크
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 취소 사유 알림 박스 */}
+              {selectedDetailItem.paymentStatus === 'cancelled' && selectedDetailItem.cancelReason && (
+                <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    취소 정보
+                  </div>
+                  <p><span className="font-semibold">취소 사유:</span> {selectedDetailItem.cancelReason}</p>
+                  {selectedDetailItem.cancelledAt && (
+                    <p className="text-slate-500 dark:text-zinc-400">
+                      취소 일시: {new Date(selectedDetailItem.cancelledAt).toLocaleString('ko-KR')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 상세 정보 리스트 */}
+              <div className="bg-slate-50/60 dark:bg-zinc-800/30 rounded-2xl border border-slate-200/70 dark:border-zinc-800 p-4 space-y-2.5">
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">헌금 항목</span>
+                  <span className="font-bold text-slate-900 dark:text-zinc-100">{selectedDetailItem.itemName}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">납부 구분</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">
+                    {selectedDetailItem.isRecurring ? '정기 후원/헌금 (매월)' : '일시납 (단건)'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">결제 일시</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+                    {selectedDetailItem.date}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">결제 수단</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200">
+                    {cleanPaymentMethod(selectedDetailItem.paymentMethod)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">접수 경로</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200">
+                    {selectedDetailItem.deviceType === 'KIOSK' || (selectedDetailItem.paymentMethod || '').includes('OffPG')
+                      ? '현장 키오스크'
+                      : '온라인 (모바일/PC)'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">봉헌자명</span>
+                  <span className="font-bold text-slate-900 dark:text-zinc-100">{selectedDetailItem.name}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">연락처</span>
+                  <span className="font-mono text-slate-800 dark:text-zinc-200">
+                    {formatPhoneNumber(selectedDetailItem.phone) || selectedDetailItem.phone}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">승인/주문 번호</span>
+                  <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400 select-all truncate max-w-[200px]" title={selectedDetailItem.id}>
+                    {selectedDetailItem.id}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <DialogFooter className="p-4 sm:p-5 pt-2 border-t border-slate-100 dark:border-zinc-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedDetailItem(null)}
+                className="w-full sm:w-auto text-xs font-bold"
+              >
+                닫기
+              </Button>
+              <Button
+                className="w-full sm:w-auto text-xs font-bold gap-1.5 shadow-xs"
+                variant={selectedDetailItem.paymentStatus === 'cancelled' ? 'destructive' : 'default'}
+                onClick={() => {
+                  const isCancelled = selectedDetailItem.paymentStatus === 'cancelled';
+                  setSelectedReceiptData({
+                    receiptId: selectedDetailItem.id,
+                    donorName: selectedDetailItem.name,
+                    donorPhone: selectedDetailItem.phone,
+                    donorAddress: profileAddress ? (profileAddressDetail ? `${profileAddress} ${profileAddressDetail}` : profileAddress) : undefined,
+                    amount: selectedDetailItem.amount,
+                    itemName: selectedDetailItem.itemName,
+                    date: selectedDetailItem.date,
+                    isCancelled,
+                    cancelReason: selectedDetailItem.cancelReason,
+                    cancelledAt: selectedDetailItem.cancelledAt,
+                  });
+                  setSelectedDetailItem(null);
+                }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                {selectedDetailItem.paymentStatus === 'cancelled' ? '취소 영수증 PDF' : '기부금 영수증 PDF'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* 국세청 표준 기부금 영수증 모달 */}
       {selectedReceiptData && currentTenant && (
