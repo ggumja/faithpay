@@ -99,6 +99,8 @@ export default function AdminDashboard() {
   const [dbDonations, setDbDonations] = useState<any[]>([]);
   const [totalMonthlyAmount, setTotalMonthlyAmount] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalAllTimeAmount, setTotalAllTimeAmount] = useState<number>(0);
+  const [totalAllTimeCount, setTotalAllTimeCount] = useState<number>(0);
   const [memberCount, setMemberCount] = useState<number>(0);
   const [pendingPrayerCount, setPendingPrayerCount] = useState<number>(0);
 
@@ -159,9 +161,9 @@ export default function AdminDashboard() {
 
           // 1. 정상 결제완료(completed) 건만 수납 총액 및 건수 집계에 포함
           const completedDonations = list.filter((d) => d.paymentStatus === 'completed');
-          const totalSum = completedDonations.reduce((acc, d) => acc + (d.amount || 0), 0);
-          setTotalMonthlyAmount(totalSum);
-          setTotalCount(completedDonations.length);
+          const allTimeSum = completedDonations.reduce((acc, d) => acc + (d.amount || 0), 0);
+          setTotalAllTimeAmount(allTimeSum);
+          setTotalAllTimeCount(completedDonations.length);
 
           // 2. 신도 수 & 기도문 미인쇄 건수 실제 DB 계산
           const prayers = list.filter(d => d.prayerText && d.prayerText.trim().length > 0);
@@ -178,14 +180,21 @@ export default function AdminDashboard() {
             [ymKey2]: 0,
             [ymKey3]: 0,
           };
+          const monthlyCounts: Record<string, number> = {
+            [ymKey1]: 0,
+            [ymKey2]: 0,
+            [ymKey3]: 0,
+          };
 
           completedDonations.forEach(item => {
             if (item.createdAt) {
               const itemDate = new Date(item.createdAt);
               if (!isNaN(itemDate.getTime())) {
-                const itemYm = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+                const kst = new Date(itemDate.getTime() + 9 * 60 * 60 * 1000);
+                const itemYm = `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
                 if (monthlySums[itemYm] !== undefined) {
                   monthlySums[itemYm] += item.amount || 0;
+                  monthlyCounts[itemYm] = (monthlyCounts[itemYm] || 0) + 1;
                 }
               }
             }
@@ -194,6 +203,10 @@ export default function AdminDashboard() {
           const amt1 = monthlySums[ymKey1];
           const amt2 = monthlySums[ymKey2];
           const amt3 = monthlySums[ymKey3];
+
+          // 당월(이번 달) 수납액 및 건수 설정
+          setTotalMonthlyAmount(amt3);
+          setTotalCount(monthlyCounts[ymKey3] || 0);
 
           setChartData([
             { month: mLabel1, amount: amt1 },
@@ -337,7 +350,12 @@ export default function AdminDashboard() {
               <CardContent>
                 <div className="text-2xl font-bold">{totalMonthlyAmount.toLocaleString()}원</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  총 <span className="text-green-600 font-semibold">{totalCount}건</span> 결제 접수
+                  당월 <span className="text-green-600 font-semibold">{totalCount}건</span> 결제 완료
+                  {totalAllTimeAmount > totalMonthlyAmount && (
+                    <span className="text-slate-400 block sm:inline sm:ml-1.5 font-normal">
+                      (전체 누적 {totalAllTimeAmount.toLocaleString()}원 / {totalAllTimeCount}건)
+                    </span>
+                  )}
                 </p>
                 <div className="mt-2">
                   <TrendingUp className="h-4 w-4 inline text-green-600 mr-1" />
@@ -461,7 +479,13 @@ export default function AdminDashboard() {
                         <TableCell className="font-mono text-xs">{donation.id}</TableCell>
                         <TableCell className="font-medium">{donation.donorName}</TableCell>
                         <TableCell>{donation.itemName}</TableCell>
-                        <TableCell className="text-right font-semibold text-emerald-600">
+                        <TableCell className={`text-right font-semibold ${
+                          donation.paymentStatus === 'cancelled'
+                            ? 'text-slate-400 line-through'
+                            : donation.paymentStatus === 'failed'
+                            ? 'text-rose-500 line-through'
+                            : 'text-emerald-600'
+                        }`}>
                           {donation.amount.toLocaleString()}원
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
