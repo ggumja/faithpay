@@ -2293,14 +2293,17 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       }
     }
 
-    // 3) 그래도 못 찾은 경우 userId(휴대폰 번호) 기반으로 최신 pending 정기결제 내역 조회
+    // 3) 그래도 못 찾은 경우 userId(휴대폰 번호) 기반으로 최신 pending 정기결제 내역 조회 (하이픈 여부 무관)
     if (!pendingDonation && cleanPhone) {
       try {
         const sb = db.pgClient();
+        const hyphenPhone = cleanPhone.length === 11 
+          ? `${cleanPhone.slice(0, 3)}-${cleanPhone.slice(3, 7)}-${cleanPhone.slice(7)}` 
+          : cleanPhone;
         const { data } = await sb
           .from('donations')
           .select('*')
-          .eq('donor_phone', cleanPhone)
+          .or(`donor_phone.eq.${cleanPhone},donor_phone.eq.${hyphenPhone}`)
           .eq('is_recurring', true)
           .eq('payment_status', 'pending')
           .order('created_at', { ascending: false })

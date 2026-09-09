@@ -843,9 +843,17 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
   const finalTransactionId = donation.transactionId || '';
   const finalApproveNo = (donation as any).approveNo || finalTransactionId;
 
+  // tenant_id가 slug로 전달되었을 경우 UUID로 실측 변환하여 DB 외래키/UUID 타입 에러 원천 차단
+  let realTenantId = donation.tenantId;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(realTenantId || '');
+  if (!isUuid && realTenantId) {
+    const tenant = await getTenantBySlug(realTenantId) || await getTenantById(realTenantId);
+    if (tenant) realTenantId = tenant.id;
+  }
+
   const row = {
     id: donation.id,
-    tenant_id: donation.tenantId,
+    tenant_id: realTenantId,
     item_id: donation.itemId || '',
     item_name: donation.itemName || '',
     amount: donation.amount,
@@ -889,16 +897,18 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
   return newDonation;
 }
 
-export async function getDonationById(tenantId: string, id: string): Promise<Donation | null> {
+export async function getDonationById(tenantIdOrId: string, id?: string): Promise<Donation | null> {
   const sb = pgClient();
-  const { data } = await sb.from('donations').select('*').eq('id', id).maybeSingle();
+  const actualId = id !== undefined ? id : tenantIdOrId;
+  const tenantId = id !== undefined ? tenantIdOrId : undefined;
+  const { data } = await sb.from('donations').select('*').eq('id', actualId).maybeSingle();
   if (!data) return null;
 
   if (tenantId) {
     const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
     const tid = tenant?.id ?? tenantId;
     if (data.tenant_id !== tid && data.tenant_id !== tenantId) {
-      console.warn(`Tenant boundary mismatch: donation ${id} belongs to ${data.tenant_id}, requested by ${tenantId}`);
+      console.warn(`Tenant boundary mismatch: donation ${actualId} belongs to ${data.tenant_id}, requested by ${tenantId}`);
       return null;
     }
   }
@@ -1327,11 +1337,18 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
     }
   }
 
+  let realTenantId = sub.tenantId;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(realTenantId || '');
+  if (!isUuid && realTenantId) {
+    const tenant = await getTenantBySlug(realTenantId) || await getTenantById(realTenantId);
+    if (tenant) realTenantId = tenant.id;
+  }
+
   const { data, error } = await sb
     .from('subscriptions')
     .insert({
       id,
-      tenant_id: sub.tenantId,
+      tenant_id: realTenantId,
       donor_name: sub.donorName,
       donor_phone: sub.donorPhone.replace(/[^0-9]/g, ''),
       donor_email: sub.donorEmail ?? null,
@@ -1390,10 +1407,12 @@ export async function getSubscriptionsByPhone(phone: string): Promise<Subscripti
 
 export async function getSubscriptionsByTenant(tenantId: string): Promise<Subscription[]> {
   const sb = pgClient();
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
   const { data } = await sb
     .from('subscriptions')
     .select('*')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', tid)
     .order('created_at', { ascending: false });
   return (data ?? []).map((r: any) => ({
     id: r.id, tenantId: r.tenant_id, donorName: r.donor_name,
