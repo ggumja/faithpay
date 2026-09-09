@@ -573,11 +573,10 @@ export default function TenantStatisticsPage() {
           {/* Header & Title */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <BarChart3 className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">수납 마감 통계 센터</h1>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-zinc-400">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                수납 마감 통계 센터
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 전일 23:59:59 마감 스냅샷 데이터를 기반으로 정확하고 정제된 경영/출납 통계를 제공합니다.
               </p>
             </div>

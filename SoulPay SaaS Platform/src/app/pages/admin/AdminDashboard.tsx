@@ -348,8 +348,12 @@ export default function AdminDashboard() {
           <div className="mb-8">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-3xl font-bold mb-2">대시보드</h1>
-                <p className="text-muted-foreground">{currentTenant.name}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  대시보드
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+                  {currentTenant.name}
+                </p>
               </div>
               <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
                 {terms.donor} 페이지 보기
@@ -424,8 +428,12 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <Card>
               <CardHeader>
-                <CardTitle>월별 {terms.donation}액 추이</CardTitle>
-                <CardDescription>DB 수납 데이터 실시간 반영</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  월별 {terms.donation}액 추이
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  DB 수납 데이터 실시간 반영
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -442,8 +450,12 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>월별 {terms.donation}액 추이 (꺾은선)</CardTitle>
-                <CardDescription>월별 수납 금액 변동 추이 (결제완료 기준)</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  월별 {terms.donation}액 추이 (꺾은선)
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  월별 수납 금액 변동 추이 (결제완료 기준)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -469,8 +481,10 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
               <div>
-                <CardTitle>실시간 {terms.donation} 내역</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  실시간 {terms.donation} 내역
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   {donationViewMode === 'today'
                     ? `오늘(${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}) 접수된 ${terms.donation} 내역 (${todayDonations.length}건)`
                     : `최근 접수된 실시간 ${terms.donation} 내역 (최신 ${Math.min(dbDonations.length, 10)}건)`}

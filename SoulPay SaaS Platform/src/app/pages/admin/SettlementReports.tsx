@@ -424,12 +424,14 @@ export default function SettlementReports() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산(추정) & 수납 대사 리포트</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  정산(추정) & 수납 대사 리포트
+                </h1>
                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold">
                   플랫폼 수납 집계 기준
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 SoulPay 플랫폼 결제 완료 건을 바탕으로 수납 집계 및 추정 정산액을 확인하고, 국세청 전산제출 파일을 관리합니다.
               </p>
             </div>
@@ -638,8 +640,10 @@ export default function SettlementReports() {
             <TabsContent value="monthly" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>월별 정산(추정) 내역</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    월별 정산(추정) 내역
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '플랫폼 결제 성공 내역 기반 월별 수납·정산 집계'}
                   </CardDescription>
                 </CardHeader>
@@ -720,7 +724,9 @@ export default function SettlementReports() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>월별 추이</CardTitle>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    월별 추이
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
@@ -748,8 +754,10 @@ export default function SettlementReports() {
             <TabsContent value="daily" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     승인완료된 각 결제건별 기준 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일 기준 입금 대사 추정 명세입니다.
                   </CardDescription>
                 </CardHeader>
@@ -805,8 +813,10 @@ export default function SettlementReports() {
             <TabsContent value="negative" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>승인 취소 & 차기 정산 이월 차감 (Negative Settlement)</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    승인 취소 & 차기 정산 이월 차감 (Negative Settlement)
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     이미 단체 계좌로 입금 집계된 거래의 취소 발생 시 차기 정산액에서 자동 이월 차감되는 명세입니다.
                   </CardDescription>
                 </CardHeader>
@@ -882,8 +892,7 @@ export default function SettlementReports() {
           {/* Info */}
           <Card className="mt-8 bg-slate-50 border-slate-200 dark:bg-zinc-900 dark:border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-zinc-100">
-                <Info className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                 정산 및 대사 업무 안내
               </CardTitle>
             </CardHeader>

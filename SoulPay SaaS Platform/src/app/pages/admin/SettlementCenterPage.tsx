@@ -27,8 +27,8 @@ const S = {
   page: 'space-y-6 bg-slate-50/50 dark:bg-zinc-950 min-h-screen',
 
   head: 'flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800',
-  title: 'text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2.5',
-  desc: 'text-xs text-slate-500 dark:text-zinc-400 mt-1',
+  title: 'text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100',
+  desc: 'text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5',
 };
 
 const TABS = [
@@ -124,7 +124,6 @@ export default function SettlementCenterPage() {
       <div className={S.head}>
         <div>
           <h1 className={S.title}>
-            <span className="p-1.5 bg-blue-100 dark:bg-blue-950 text-blue-600 rounded-lg">🏦</span>
             정산 관리 센터 (Settlement Management Center)
           </h1>
           <p className={S.desc}>

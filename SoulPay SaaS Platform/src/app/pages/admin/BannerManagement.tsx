@@ -289,11 +289,10 @@ export default function BannerManagement() {
             <div className="w-full space-y-6">
               {/* Header */}
               <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <ImageIcon className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
-                  <h1 className="text-3xl font-bold">배너 관리</h1>
-                </div>
-                <p className="text-muted-foreground">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  배너 관리
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                   메인페이지에 표시될 배너 이미지를 관리하세요
                 </p>
               </div>
@@ -301,8 +300,10 @@ export default function BannerManagement() {
               {/* Add Banner Section */}
               <Card className="mb-8">
                 <CardHeader>
-                  <CardTitle>새 배너 추가</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    새 배너 추가
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     이미지 파일을 직접 업로드하거나 배너 이미지 URL을 입력하여 추가하세요 (권장 크기: 1200x500px)
                   </CardDescription>
                 </CardHeader>
@@ -323,12 +324,12 @@ export default function BannerManagement() {
 
                     <div className="flex flex-col justify-center border rounded-lg p-6 bg-slate-50/50">
                       <Label htmlFor="banner-url" className="mb-2 text-sm font-medium">
-                        또는 이미지 URL 입력
+                        또는 이미지 URL 직접 입력
                       </Label>
                       <div className="flex gap-2">
                         <Input
                           id="banner-url"
-                          placeholder="https://images.unsplash.com/photo-..."
+                          placeholder="https://example.com/banner.jpg"
                           value={newBannerUrl}
                           onChange={(e) => setNewBannerUrl(e.target.value)}
                           onKeyDown={(e) => {
@@ -356,8 +357,10 @@ export default function BannerManagement() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>배너 목록</CardTitle>
-                      <CardDescription>
+                      <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                        배너 목록
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                         드래그하여 순서를 변경할 수 있습니다
                       </CardDescription>
                     </div>

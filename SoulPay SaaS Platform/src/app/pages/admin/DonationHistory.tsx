@@ -818,11 +818,12 @@ export default function DonationHistory() {
             {/* Header */}
             <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Heart className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
-                  <h1 className="text-3xl font-bold">{terms.donationHistory} 관리</h1>
-                </div>
-                <p className="text-muted-foreground">{terms.donationHistory}을 조회하고 정기결제를 직접 관리하세요</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  {terms.donationHistory} 관리
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+                  {terms.donationHistory} 내역을 실시간 조회하고 정기결제 약정을 직접 관리합니다.
+                </p>
               </div>
             </div>
 
@@ -943,11 +944,10 @@ export default function DonationHistory() {
 
                 {/* Filters */}
                 <Card className="mb-6">
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-5 w-5" />
-                      <CardTitle>검색 및 필터</CardTitle>
-                    </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                      검색 및 필터
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -1111,8 +1111,10 @@ export default function DonationHistory() {
                 {/* Table */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>{terms.donation} 목록</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                      {terms.donation} 목록
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       {filteredDonations.length}건의 {terms.donation} 내역이 조회되었습니다
                     </CardDescription>
                   </CardHeader>

@@ -25,7 +25,6 @@ import {
   PauseCircle,
   PlayCircle,
   XCircle,
-  FileCheck,
   CreditCard,
   AlertCircle,
 } from 'lucide-react';
@@ -211,16 +210,15 @@ export default function RecurringPendingPage() {
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                   {terms.recurringPending} 관리 센터
                 </h1>
-                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-xs">
+                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold text-xs">
                   실시간 DB 실측 연동
                 </Badge>
               </div>
-              <p className="text-slate-500 dark:text-zinc-400 text-sm">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 {terms.donor}별 정기 결제 약정 마스터 계약 현황 및 차회 결제 예정일을 통합 관리합니다
               </p>
             </div>
@@ -291,11 +289,10 @@ export default function RecurringPendingPage() {
           <Card className="shadow-xs">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
               <div>
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <FileCheck className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                   정기 약정 마스터 계약 명세 ({filteredSubs.length}건)
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   {terms.donor}별 정기 결제 계약 정보입니다. 결제 주기, 다음 결제 예정일, 일시중지 및 해지 상태를 실시간 관리합니다.
                 </CardDescription>
               </div>

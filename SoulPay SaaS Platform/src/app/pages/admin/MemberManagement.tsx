@@ -400,11 +400,10 @@ export default function MemberManagement() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                <Users className="h-7 w-7 text-blue-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                 {currentTenant.name} {memberTerm} 통합 관리 센터
               </h1>
-              <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 등록된 {memberTerm}의 상세 정보, {donationTerm} 내역 및 납부확인서/영수증을 통합 관리합니다.
               </p>
             </div>
@@ -503,11 +502,10 @@ export default function MemberManagement() {
           {/* Members Main Table */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                 {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 {memberTerm} 행을 클릭하거나 [🔍 상세] 버튼을 눌러 개별 납부 확인서 및 메시지 이력을 확인하세요.
               </CardDescription>
             </CardHeader>

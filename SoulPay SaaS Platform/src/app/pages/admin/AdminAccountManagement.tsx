@@ -530,11 +530,10 @@ export default function AdminAccountManagement() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                <ShieldCheck className="h-7 w-7 text-indigo-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                 관리자 계정 및 그룹 권한 센터
               </h1>
-              <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 {currentTenant.name}의 관리자 계정 정보/그룹을 관리하고 메뉴별 접근 권한을 설정합니다.
               </p>
             </div>
@@ -550,7 +549,7 @@ export default function AdminAccountManagement() {
             ) : (
               <Button
                 onClick={() => handleOpenGroupModal()}
-                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold cursor-pointer self-start md:self-auto"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer self-start md:self-auto"
               >
                 <Plus className="h-4 w-4" />
                 신규 관리자 그룹 추가
@@ -618,10 +617,10 @@ export default function AdminAccountManagement() {
               {/* Staff List Table */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                     등록된 관리자 계정 목록 ({staffList.length}명)
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     소속된 관리자 그룹에 따라 수납 조회, 정산, 항목 등록 등 접근 가능한 기능이 자동 적용됩니다.
                   </CardDescription>
                 </CardHeader>
@@ -728,14 +727,13 @@ export default function AdminAccountManagement() {
 
             {/* 👥 TAB 2: 관리자 그룹 관리 (추가/수정/삭제) */}
             <TabsContent value="groups" className="space-y-6 mt-6">
-              <Card className="border-purple-100 dark:border-purple-950">
+              <Card className="border-slate-200 dark:border-zinc-800">
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-lg font-bold flex items-center gap-2">
-                      <Layers className="h-5 w-5 text-purple-600" />
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                       관리자 그룹 정의 및 커스텀 관리 ({adminGroups.length}개 그룹)
                     </CardTitle>
-                    <CardDescription className="mt-1">
+                    <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       단체 실무 구조에 맞춰 새로운 관리자 그룹(예: 축원 전담팀, 감사팀 등)을 자유롭게 추가 및 수정할 수 있습니다.
                     </CardDescription>
                   </div>

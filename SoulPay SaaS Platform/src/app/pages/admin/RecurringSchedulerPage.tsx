@@ -210,17 +210,14 @@ export default function RecurringSchedulerPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[var(--hm-border)]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-              <Clock size={20} />
-            </span>
-            <h1 className="text-xl font-extrabold text-[var(--hm-ink)] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
               정기결제 스케줄러 관리
             </h1>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
               배치 모니터링
             </span>
           </div>
-          <p className="text-xs text-[var(--hm-ink-3)]">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
             전체 단체의 정기 약정 큐(일/주/월)와 나노페이 빌키 자동 승인 실행 내역을 실시간 모니터링하고 수동 배치 가동을 제어합니다.
           </p>
         </div>

@@ -105,8 +105,8 @@ export default function CommissionStatsPage() {
       {/* ── 헤더 타이틀 & 액션 ── */}
       <div className="flex items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-xl font-bold text-[var(--hm-ink)] tracking-tight">수수료 통계</h1>
-          <p className="text-xs text-[var(--hm-ink-3)] mt-1">대리점 및 영업자별 정산 수수료 발생 및 수령 내역을 집계합니다.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">수수료 통계</h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">대리점 및 영업자별 정산 수수료 발생 및 수령 내역을 집계합니다.</p>
         </div>
         <button onClick={load} disabled={loading} className={S.btnGhost}>
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
