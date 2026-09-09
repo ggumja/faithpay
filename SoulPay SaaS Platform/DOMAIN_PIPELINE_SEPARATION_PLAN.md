@@ -33,7 +33,8 @@
 graph TD
     subgraph Users & DNS [사용자 인입 및 Cloudflare DNS]
         D_ROOT["soulpay.kr / soulpay.co.kr<br/>(공식 소개 / 가맹 상담 랜딩)"]
-        D_PAY["pay.soulpay.kr (또는 *.soulpay.kr)<br/>(기부자 모바일 웹 결제 & 현장 키오스크)"]
+        D_PAY["pay.soulpay.kr<br/>(기부자 모바일 웹 결제 & 스마트 헌금함)"]
+        D_KIOSK["kiosk.soulpay.kr / kiosk.soulpay.co.kr<br/>(현장 전용 터치 무인 키오스크)"]
         D_ADMIN["admin.soulpay.kr<br/>(단체 목회자/관리자 포털)"]
         D_PARTNER["partner.soulpay.kr<br/>(총판/대리점/영업 파트너)"]
         D_OPS["ops.soulpay.kr<br/>(최고 시스템 관리자 - Cloudflare Zero Trust)"]
@@ -41,6 +42,7 @@ graph TD
 
     subgraph Cloudflare Pages [독립 Cloudflare Pages 프로젝트]
         P_PAY["Cloudflare Pages: soulpay-pay<br/>(Build: pnpm build:pay / Output: dist/pay)"]
+        P_KIOSK["Cloudflare Pages: soulpay-kiosk<br/>(Build: pnpm build:kiosk / Output: dist/kiosk)"]
         P_ADMIN["Cloudflare Pages: soulpay-admin<br/>(Build: pnpm build:admin / Output: dist/admin)"]
         P_PARTNER["Cloudflare Pages: soulpay-partner<br/>(Build: pnpm build:partner / Output: dist/partner)"]
         P_OPS["Cloudflare Pages: soulpay-ops<br/>(Build: pnpm build:ops / Output: dist/ops)"]
@@ -57,11 +59,13 @@ graph TD
     end
 
     D_PAY --> WAF --> P_PAY
+    D_KIOSK --> WAF --> P_KIOSK
     D_ADMIN --> WAF --> P_ADMIN
     D_PARTNER --> WAF --> P_PARTNER
     D_OPS --> ZT --> P_OPS
 
     P_PAY --> API
+    P_KIOSK --> API
     P_ADMIN --> API
     P_PARTNER --> API
     P_OPS --> API
@@ -78,6 +82,7 @@ graph TD
    - `soulpay.kr` 및 `soulpay.co.kr`의 1차/2차 네임서버를 Cloudflare에서 지정해주는 2개의 네임서버(예: `***.ns.cloudflare.com`)로 변경.
 2. **Cloudflare DNS 레코드 구성**:
    - `pay.soulpay.kr` -> `soulpay-pay.pages.dev` (CNAME, Proxied: 켜짐 🟧)
+   - `kiosk.soulpay.kr` / `kiosk.soulpay.co.kr` -> `soulpay-kiosk.pages.dev` (CNAME, Proxied: 켜짐 🟧)
    - `admin.soulpay.kr` -> `soulpay-admin.pages.dev` (CNAME, Proxied: 켜짐 🟧)
    - `partner.soulpay.kr` -> `soulpay-partner.pages.dev` (CNAME, Proxied: 켜짐 🟧)
    - `ops.soulpay.kr` -> `soulpay-ops.pages.dev` (CNAME, Proxied: 켜짐 🟧)
@@ -86,11 +91,12 @@ graph TD
 
 ---
 
-### 3.2 [Step 2] Cloudflare Pages 4개 프로젝트 생성 명세
+### 3.2 [Step 2] Cloudflare Pages 5개 프로젝트 생성 명세
 
 | 프로젝트명 | 도메인 | 빌드 명령어 | 출력 디렉터리 | 환경 변수 |
 | :--- | :--- | :--- | :--- | :--- |
 | **`soulpay-pay`** | `pay.soulpay.kr` | `pnpm build:pay` | `dist/pay` | `VITE_SUPABASE_URL`<br/>`VITE_SUPABASE_ANON_KEY`<br/>`VITE_APP_MODE=pay` |
+| **`soulpay-kiosk`** | `kiosk.soulpay.kr`<br/>`kiosk.soulpay.co.kr` | `pnpm build:kiosk` | `dist/kiosk` | `VITE_SUPABASE_URL`<br/>`VITE_SUPABASE_ANON_KEY`<br/>`VITE_APP_MODE=kiosk` |
 | **`soulpay-admin`** | `admin.soulpay.kr` | `pnpm build:admin` | `dist/admin` | `VITE_SUPABASE_URL`<br/>`VITE_SUPABASE_ANON_KEY`<br/>`VITE_APP_MODE=admin` |
 | **`soulpay-partner`**| `partner.soulpay.kr`| `pnpm build:partner`| `dist/partner` | `VITE_SUPABASE_URL`<br/>`VITE_SUPABASE_ANON_KEY`<br/>`VITE_APP_MODE=partner` |
 | **`soulpay-ops`** | `ops.soulpay.kr` | `pnpm build:ops` | `dist/ops` | `VITE_SUPABASE_URL`<br/>`VITE_SUPABASE_ANON_KEY`<br/>`VITE_APP_MODE=ops` |
@@ -118,7 +124,9 @@ graph TD
 
 ### 4.1 앱별 독립 엔트리 및 라우터 구성
 - `src/entries/pay.tsx` & `src/routes/payRoutes.tsx`
-  - 기부자 메인, 결제 진행, 키오스크, 납부 내역, 영수증 센터
+  - 기부자 모바일 메인, 결제 진행, 납부 내역, 영수증 센터
+- `src/entries/kiosk.tsx` & `src/routes/kioskRoutes.tsx`
+  - 현장 무인 키오스크 전용 (가상 한글 키보드, 전신 터치 UI, 영수증 출력)
 - `src/entries/admin.tsx` & `src/routes/adminRoutes.tsx`
   - 단체 관리자 로그인, 헌금 내역, 마감 집계, 교인 관리, 정산 보고서, 단체 설정
 - `src/entries/partner.tsx` & `src/routes/partnerRoutes.tsx`
@@ -131,6 +139,7 @@ graph TD
 {
   "scripts": {
     "build:pay": "BUILD_TARGET=pay vite build && cp public/_redirects dist/pay/",
+    "build:kiosk": "BUILD_TARGET=kiosk vite build && cp public/_redirects dist/kiosk/",
     "build:admin": "BUILD_TARGET=admin vite build && cp public/_redirects dist/admin/",
     "build:partner": "BUILD_TARGET=partner vite build && cp public/_redirects dist/partner/",
     "build:ops": "BUILD_TARGET=ops vite build && cp public/_redirects dist/ops/"

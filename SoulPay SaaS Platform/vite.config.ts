@@ -5,10 +5,40 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const basePath = process.env.VITE_BASE_PATH || '/';
+const target = process.env.BUILD_TARGET; // 'pay' | 'kiosk' | 'admin' | 'partner' | 'ops'
+
+function targetEntryPlugin(target?: string) {
+  const titles: Record<string, string> = {
+    pay: 'SoulPay - 스마트 수납 & 모바일 헌금',
+    kiosk: 'SoulPay Kiosk - 현장 무인 헌금함',
+    admin: 'SoulPay Admin - 단체 관리자 포털',
+    partner: 'SoulPay Partner - 영업 파트너 포털',
+    ops: 'SoulPay Ops - 시스템 관리자',
+  };
+
+  return {
+    name: 'vite-plugin-target-entry',
+    enforce: 'pre' as const,
+    resolveId(id: string) {
+      if (target && (id.endsWith('/src/main.tsx') || id.endsWith('src/main.tsx') || id === '/src/main.tsx')) {
+        return path.resolve(__dirname, `src/entries/${target}.tsx`);
+      }
+      return null;
+    },
+    transformIndexHtml(html: string) {
+      let transformed = html;
+      if (target && titles[target]) {
+        transformed = transformed.replace(/<title>.*?<\/title>/, `<title>${titles[target]}</title>`);
+      }
+      return transformed;
+    },
+  };
+}
 
 export default defineConfig({
   base: basePath,
   plugins: [
+    targetEntryPlugin(target),
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
     react(),
@@ -83,6 +113,8 @@ export default defineConfig({
   },
 
   build: {
+    outDir: target ? `dist/${target}` : 'dist',
+    emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {

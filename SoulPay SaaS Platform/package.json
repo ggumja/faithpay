@@ -7,6 +7,12 @@
     "check:hardcoding": "node scripts/check-hardcoding.mjs",
     "prebuild": "node scripts/check-hardcoding.mjs",
     "build": "vite build && cp dist/index.html dist/404.html && touch dist/.nojekyll",
+    "build:pay": "BUILD_TARGET=pay vite build",
+    "build:kiosk": "BUILD_TARGET=kiosk vite build",
+    "build:admin": "BUILD_TARGET=admin vite build",
+    "build:partner": "BUILD_TARGET=partner vite build",
+    "build:ops": "BUILD_TARGET=ops vite build",
+    "build:all": "pnpm build:pay && pnpm build:kiosk && pnpm build:admin && pnpm build:partner && pnpm build:ops",
     "dev": "vite",
     "predeploy": "VITE_BASE_PATH=/soulpay/ pnpm run build",
     "deploy": "gh-pages -d dist"
