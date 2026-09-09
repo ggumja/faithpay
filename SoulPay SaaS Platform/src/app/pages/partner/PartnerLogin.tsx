@@ -225,7 +225,7 @@ export default function PartnerLogin() {
         </form>
 
         {/* 하단 링크 */}
-        <div className="text-center space-y-2">
+        <div className="text-center">
           <p className="text-xs text-slate-500">
             파트너 제휴를 원하신다면?{' '}
             <button
@@ -234,9 +234,6 @@ export default function PartnerLogin() {
             >
               제휴 신청하기 →
             </button>
-          </p>
-          <p className="text-[11px] text-slate-400 font-medium">
-            초기 비밀번호: <span className="font-mono text-slate-600 font-bold">admin1234!</span>
           </p>
         </div>
       </div>
