@@ -829,12 +829,12 @@ export default function DonationHistory() {
 
             {/* Subscriptions Self-Management Section */}
             {subscriptions.length > 0 && (
-              <div className="mb-8 border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-6 rounded-2xl">
-                <h3 className="text-lg font-bold text-indigo-950 dark:text-indigo-200 mb-1 flex items-center gap-2">
+              <div className="mb-8 border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-6 rounded-2xl">
+                <h3 className="text-lg font-bold text-blue-950 dark:text-blue-200 mb-1 flex items-center gap-2">
                   <span>⚡ 내 정기{terms.donation} 셀프 관리</span>
-                  <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+                  <Badge className="bg-blue-600 text-white text-[10px]">본인인증 완료</Badge>
                 </h3>
-                <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-4">매월 자동 청구되는 정기 {terms.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mb-4">매월 자동 청구되는 정기 {terms.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {subscriptions.map(sub => (
@@ -997,8 +997,8 @@ export default function DonationHistory() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">전체 기기</SelectItem>
-                          <SelectItem value="WEB_MOBILE">📱 모바일/웹</SelectItem>
-                          <SelectItem value="KIOSK">🖥️ 키오스크</SelectItem>
+                          <SelectItem value="WEB_MOBILE">모바일/웹</SelectItem>
+                          <SelectItem value="KIOSK">키오스크</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -1021,11 +1021,11 @@ export default function DonationHistory() {
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                             </span>
-                            <span>🔥 당일 실시간 핫 서빙 모드 (DB 과부하 0%, 15초 자동 갱신 중)</span>
+                            <span>당일 실시간 서빙 모드 (15초 자동 갱신 중)</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 px-3 py-1.5 rounded-xl">
-                            <span>📦 과거 내역 온디맨드(On-Demand) 정적 조회 모드 (실시간 동기화 오프, DB 서버 보호)</span>
+                            <span>과거 내역 온디맨드(On-Demand) 조회 모드</span>
                           </div>
                         )}
 
@@ -1040,28 +1040,28 @@ export default function DonationHistory() {
                                 : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                             }`}
                           >
-                            🔥 오늘 (실시간)
+                            오늘 (실시간)
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod('this_week')}
                             className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
                           >
-                            📅 이번 주
+                            이번 주
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod('this_month')}
                             className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
                           >
-                            🗓️ 이번 달
+                            이번 달
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod('all')}
                             className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
                           >
-                            📊 전체 보기
+                            전체 보기
                           </button>
                         </div>
                       </div>
@@ -1085,10 +1085,10 @@ export default function DonationHistory() {
                           type="checkbox"
                           checked={showFailed}
                           onChange={(e) => setShowFailed(e.target.checked)}
-                          className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                         <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                          ⚠️ 결제실패(중도이탈) 내역도 포함하여 함께 보기
+                          결제 실패/중도이탈 내역 포함
                         </span>
                       </label>
                       <span className="text-xs text-muted-foreground">

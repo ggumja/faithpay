@@ -118,7 +118,9 @@ export default function MemberManagement() {
                 }
               }
               if (existing.name === '무기명' && d.donorName) existing.name = d.donorName;
-              if (!existing.email && d.donorEmail) existing.email = d.donorEmail;
+              if (!existing.email && (d.donorEmail || d.email)) existing.email = d.donorEmail || d.email;
+              if (!existing.baptismName && d.baptismName) existing.baptismName = d.baptismName;
+              if (!existing.address && d.address) existing.address = d.address;
             }
           });
 
@@ -149,7 +151,7 @@ export default function MemberManagement() {
                   if (p.email) memberEntry.email = p.email;
                   if (p.fullAddress || p.address) memberEntry.address = p.fullAddress || p.address;
                   if (p.name && (memberEntry.name === '무기명' || !memberEntry.name)) memberEntry.name = p.name;
-                  if (p.baptismName && !memberEntry.baptismName) memberEntry.baptismName = p.baptismName;
+                  if (p.baptismName) memberEntry.baptismName = p.baptismName;
                 }
               } catch (e) {
                 console.warn('Failed to load extra data for member', phone, e);
@@ -254,9 +256,15 @@ export default function MemberManagement() {
     setIsAddMemberModalOpen(true);
   };
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (!memberName.trim()) {
       toast.error(`${memberTerm} 성명을 입력해 주세요.`);
+      return;
+    }
+
+    const cleanPhone = stripPhoneDigits(memberPhone);
+    if (!cleanPhone) {
+      toast.error('전화번호를 올바르게 입력해 주세요.');
       return;
     }
 
@@ -264,7 +272,7 @@ export default function MemberManagement() {
       id: `mem_${Date.now()}`,
       name: memberName.trim(),
       baptismName: memberTitle.trim(),
-      phone: stripPhoneDigits(memberPhone) || '',
+      phone: cleanPhone,
       email: memberEmail.trim(),
       address: memberAddress.trim(),
       rrn: memberRrn.trim() || '',
@@ -274,6 +282,19 @@ export default function MemberManagement() {
       recurringCount: 0,
       note: `신규 등록 ${memberTerm}`,
     };
+
+    // DB 영구 실측 저장
+    try {
+      await memberAPI.updateProfile(cleanPhone, {
+        name: memberName.trim(),
+        baptismName: memberTitle.trim(),
+        email: memberEmail.trim(),
+        address: memberAddress.trim(),
+        fullAddress: memberAddress.trim(),
+      });
+    } catch (err) {
+      console.warn('Failed to save new member to DB:', err);
+    }
 
     setMembers((prev) => [newMem, ...prev]);
     setIsAddMemberModalOpen(false);

@@ -319,11 +319,15 @@ export default function MemberDetailPage() {
                 beneficiaryName: d.donorName || rawMatch.donorName || terms.donor,
               }));
 
-            // 4. 회원 프로필 정보 동기화 (이메일, 주소, 직분 등 DB 및 settingsAPI 100% 실측 조회)
-            let resolvedEmail = rawMatch.donorEmail || '';
-            let resolvedAddress = rawMatch.address || '';
+            // 4. 회원 프로필 정보 동기화 (이메일, 주소, 직분 등 DB 실측 조회)
+            const nonNullBaptism = donorDonations.find((d: any) => d.baptismName)?.baptismName;
+            const nonNullEmail = donorDonations.find((d: any) => d.donorEmail || d.email)?.donorEmail || donorDonations.find((d: any) => d.donorEmail || d.email)?.email;
+            const nonNullAddress = donorDonations.find((d: any) => d.address)?.address;
+
+            let resolvedEmail = nonNullEmail || rawMatch.donorEmail || '';
+            let resolvedAddress = nonNullAddress || rawMatch.address || '';
             let resolvedName = rawMatch.donorName || '무기명';
-            let resolvedTitle = rawMatch.baptismName || '';
+            let resolvedTitle = nonNullBaptism || rawMatch.baptismName || '';
 
             if (digitsKey && digitsKey !== '미등록') {
               try {

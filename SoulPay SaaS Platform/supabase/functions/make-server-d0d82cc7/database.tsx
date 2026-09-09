@@ -2765,7 +2765,9 @@ export async function updateDonorProfile(
       .eq('key', `member_profile_${cleanPhone}`)
       .maybeSingle();
 
-    const currentVal = existingSetting?.value || {};
+    const currentVal = (existingSetting?.value && typeof existingSetting.value === 'object') ? { ...existingSetting.value } : {};
+    delete currentVal.value;
+
     const mergedVal = {
       phone: cleanPhone,
       ...currentVal,
@@ -2824,6 +2826,8 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   if (!cleanPhone) return null;
 
+  let profileData: any = null;
+
   try {
     const { data: setting } = await sb
       .from('system_settings')
@@ -2831,13 +2835,16 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
       .eq('key', `member_profile_${cleanPhone}`)
       .maybeSingle();
 
-    if (setting?.value) {
-      return setting.value;
+    if (setting?.value && typeof setting.value === 'object') {
+      const val = { ...setting.value };
+      delete val.value;
+      profileData = val;
     }
   } catch (err) {
     console.error('Error fetching member profile from system_settings:', err);
   }
 
+  // subscriptions 테이블에서 donor_email, donor_name 실측 보완
   try {
     const { data: sub } = await sb
       .from('subscriptions')
@@ -2848,17 +2855,58 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
       .maybeSingle();
 
     if (sub) {
-      return {
-        phone: cleanPhone,
-        name: sub.donor_name || '',
-        email: sub.donor_email || '',
-      };
+      if (!profileData) {
+        profileData = {
+          phone: cleanPhone,
+          name: sub.donor_name || '',
+          email: sub.donor_email || '',
+        };
+      } else {
+        if (!profileData.email && sub.donor_email) {
+          profileData.email = sub.donor_email;
+        }
+        if (!profileData.name && sub.donor_name) {
+          profileData.name = sub.donor_name;
+        }
+      }
     }
   } catch (err) {
     console.error('Error fetching member profile fallback from subscriptions:', err);
   }
 
-  return null;
+  // donations 테이블에서 최신 baptism_name 및 donor_name 보완
+  try {
+    const { data: don } = await sb
+      .from('donations')
+      .select('donor_name, baptism_name')
+      .eq('donor_phone', cleanPhone)
+      .not('baptism_name', 'is', null)
+      .neq('baptism_name', '')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (don) {
+      if (!profileData) {
+        profileData = {
+          phone: cleanPhone,
+          name: don.donor_name || '',
+          baptismName: don.baptism_name || '',
+        };
+      } else {
+        if (!profileData.baptismName && don.baptism_name) {
+          profileData.baptismName = don.baptism_name;
+        }
+        if (!profileData.name && don.donor_name) {
+          profileData.name = don.donor_name;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching baptism_name from donations:', err);
+  }
+
+  return profileData;
 }
 // ==================== DAILY CLOSING SNAPSHOTS ====================
 

@@ -100,6 +100,83 @@ export function PeriodRangePicker({
     });
   };
 
+  // Quick preset helper
+  const handleQuickPreset = (preset: 'today' | 'this_week' | 'this_month' | 'all') => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+    let label = '';
+    let targetUnit: PeriodUnit = 'daily';
+
+    if (preset === 'today') {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      label = `오늘 (${now.getMonth() + 1}월 ${now.getDate()}일)`;
+      targetUnit = 'daily';
+    } else if (preset === 'this_week') {
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0, 0);
+      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+      start = monday;
+      end = sunday;
+      label = `이번 주 (${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()})`;
+      targetUnit = 'weekly';
+    } else if (preset === 'this_month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      label = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+      targetUnit = 'monthly';
+    } else if (preset === 'all') {
+      start = new Date(2020, 0, 1, 0, 0, 0, 0);
+      end = new Date(2030, 11, 31, 23, 59, 59, 999);
+      label = '전체 기간';
+      targetUnit = 'yearly';
+    }
+
+    onUnitChange(targetUnit);
+    setTempStartDate(start);
+    setTempEndDate(end);
+    onSelectionChange({
+      unit: targetUnit,
+      startDate: start,
+      endDate: end,
+      label,
+    });
+  };
+
+  const isPresetActive = (preset: 'today' | 'this_week' | 'this_month' | 'all') => {
+    if (!selection.startDate || !selection.endDate) return false;
+    const s = new Date(selection.startDate);
+    const e = new Date(selection.endDate);
+    const now = new Date();
+
+    if (preset === 'today') {
+      return (
+        s.getFullYear() === now.getFullYear() &&
+        s.getMonth() === now.getMonth() &&
+        s.getDate() === now.getDate() &&
+        e.getDate() === now.getDate()
+      );
+    }
+    if (preset === 'all') {
+      return selection.label.includes('전체') || (s.getFullYear() <= 2020 && e.getFullYear() >= 2030);
+    }
+    if (preset === 'this_month') {
+      return (
+        s.getFullYear() === now.getFullYear() &&
+        s.getMonth() === now.getMonth() &&
+        s.getDate() === 1 &&
+        e.getMonth() === now.getMonth() &&
+        unit === 'monthly'
+      );
+    }
+    if (preset === 'this_week') {
+      return unit === 'weekly' && (selection.label.includes('이번 주') || selection.label.includes('주차'));
+    }
+    return false;
+  };
+
   // Reset temp dates
   const handleReset = () => {
     const now = new Date();
@@ -367,15 +444,63 @@ export function PeriodRangePicker({
   };
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex items-center gap-2.5 flex-wrap">
+      {/* Quick Preset Buttons */}
+      <div className="inline-flex bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-inner">
+        <button
+          type="button"
+          onClick={() => handleQuickPreset('today')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            isPresetActive('today')
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          오늘
+        </button>
+        <button
+          type="button"
+          onClick={() => handleQuickPreset('this_week')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            isPresetActive('this_week')
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          이번 주
+        </button>
+        <button
+          type="button"
+          onClick={() => handleQuickPreset('this_month')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            isPresetActive('this_month')
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          이번 달
+        </button>
+        <button
+          type="button"
+          onClick={() => handleQuickPreset('all')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            isPresetActive('all')
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          전체
+        </button>
+      </div>
+
       {/* Segmented Button Group [ 일별 | 주별 | 월별 | 년별 ] */}
       <div className="inline-flex bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-inner">
         <button
           type="button"
           onClick={() => handleUnitSwitch('daily')}
-          className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            unit === 'daily'
-              ? 'bg-[#1E3A8A] text-white shadow-sm'
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            unit === 'daily' && !isPresetActive('all')
+              ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -384,9 +509,9 @@ export function PeriodRangePicker({
         <button
           type="button"
           onClick={() => handleUnitSwitch('weekly')}
-          className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            unit === 'weekly'
-              ? 'bg-[#1E3A8A] text-white shadow-sm'
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            unit === 'weekly' && !isPresetActive('all')
+              ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -395,9 +520,9 @@ export function PeriodRangePicker({
         <button
           type="button"
           onClick={() => handleUnitSwitch('monthly')}
-          className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            unit === 'monthly'
-              ? 'bg-[#1E3A8A] text-white shadow-sm'
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            unit === 'monthly' && !isPresetActive('all')
+              ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -406,9 +531,9 @@ export function PeriodRangePicker({
         <button
           type="button"
           onClick={() => handleUnitSwitch('yearly')}
-          className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            unit === 'yearly'
-              ? 'bg-[#1E3A8A] text-white shadow-sm'
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            unit === 'yearly' && !isPresetActive('all')
+              ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
@@ -420,9 +545,9 @@ export function PeriodRangePicker({
       <button
         type="button"
         onClick={handleOpen}
-        className="bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-500 rounded-xl px-4 py-2 text-xs font-semibold text-slate-800 dark:text-zinc-100 flex items-center gap-2.5 shadow-sm transition-all cursor-pointer"
+        className="bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-400 rounded-xl px-3.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-zinc-100 flex items-center gap-2 shadow-xs transition-all cursor-pointer"
       >
-        <CalendarIcon className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
+        <CalendarIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
         <span>{selection.label}</span>
       </button>
 
@@ -439,7 +564,7 @@ export function PeriodRangePicker({
                   {unit === 'monthly' && '월 범위 선택'}
                   {unit === 'yearly' && '연도 범위 선택'}
                 </h3>
-                <Badge className={selectingMode === 'start' ? 'bg-blue-600 text-white text-[11px]' : 'bg-indigo-600 text-white text-[11px]'}>
+                <Badge className={selectingMode === 'start' ? 'bg-blue-600 text-white text-[11px]' : 'bg-slate-700 text-white text-[11px]'}>
                   {selectingMode === 'start' ? '1. 시작시점 선택 중' : '2. 종료시점 선택 중'}
                 </Badge>
               </div>
@@ -526,9 +651,9 @@ export function PeriodRangePicker({
                               onClick={() => handleDayClick(d)}
                               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                                 isSelectedDay(d)
-                                  ? 'bg-[#1E3A8A] text-white font-bold shadow-md'
+                                  ? 'bg-blue-600 text-white font-bold shadow-md'
                                   : isInRangeDay(d)
-                                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 font-semibold'
+                                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 font-semibold'
                                   : 'hover:bg-slate-100 dark:hover:bg-zinc-800'
                               }`}
                             >
@@ -561,9 +686,9 @@ export function PeriodRangePicker({
                               onClick={() => handleDayClick(d)}
                               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                                 isSelectedDay(d)
-                                  ? 'bg-[#1E3A8A] text-white font-bold shadow-md'
+                                  ? 'bg-blue-600 text-white font-bold shadow-md'
                                   : isInRangeDay(d)
-                                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 font-semibold'
+                                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 font-semibold'
                                   : 'hover:bg-slate-100 dark:hover:bg-zinc-800'
                               }`}
                             >
@@ -608,7 +733,7 @@ export function PeriodRangePicker({
                         onClick={() => handleWeekClick(w.startDate, w.endDate)}
                         className={`flex items-center justify-between p-3.5 text-xs font-semibold cursor-pointer transition-colors ${
                           isSelected
-                            ? 'bg-[#1E3A8A] text-white font-bold shadow-xs'
+                            ? 'bg-blue-600 text-white font-bold shadow-xs'
                             : 'hover:bg-slate-50 dark:hover:bg-zinc-800/60'
                         }`}
                       >
@@ -649,7 +774,7 @@ export function PeriodRangePicker({
                         onClick={() => handleMonthClick(pickerYear, mIdx)}
                         className={`py-3.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-[#1E3A8A] text-white shadow-md font-extrabold'
+                            ? 'bg-blue-600 text-white shadow-md font-extrabold'
                             : 'bg-slate-50 dark:bg-zinc-800/80 hover:bg-slate-100 dark:hover:bg-zinc-700'
                         }`}
                       >
@@ -691,7 +816,7 @@ export function PeriodRangePicker({
                         onClick={() => handleYearClick(y)}
                         className={`py-3.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-[#1E3A8A] text-white shadow-md font-extrabold'
+                            ? 'bg-blue-600 text-white shadow-md font-extrabold'
                             : 'bg-slate-50 dark:bg-zinc-800/80 hover:bg-slate-100 dark:hover:bg-zinc-700'
                         }`}
                       >
@@ -717,14 +842,14 @@ export function PeriodRangePicker({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="h-9 px-4 text-xs font-semibold"
+                  className="h-9 px-4 text-xs font-semibold cursor-pointer"
                 >
                   취소
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleApply}
-                  className="h-9 px-5 text-xs font-bold bg-[#1E3A8A] hover:bg-blue-900 text-white"
+                  className="h-9 px-5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                 >
                   적용
                 </Button>

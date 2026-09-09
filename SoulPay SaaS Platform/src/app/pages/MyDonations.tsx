@@ -126,24 +126,7 @@ export default function MyDonations() {
   };
 
   const loadSavedProfile = async (cleanPhone: string, donationsList: any[]) => {
-    try {
-      const localStr = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
-      if (localStr) {
-        const parsed = JSON.parse(localStr);
-        if (parsed.name) setProfileName(parsed.name);
-        if (parsed.baptismName) setProfileBaptismName(parsed.baptismName);
-        if (parsed.email) setProfileEmail(parsed.email);
-        if (parsed.zonecode) setProfileZonecode(parsed.zonecode);
-        if (parsed.address || parsed.addressBase) setProfileAddress(parsed.address || parsed.addressBase);
-        if (parsed.addressDetail) setProfileAddressDetail(parsed.addressDetail);
-        if (parsed.password) {
-          setProfilePassword(parsed.password);
-          setProfilePasswordConfirm(parsed.password);
-        }
-      }
-    } catch {}
-
-    // DB 실측 프로필 조회 연동 (다른 브라우저나 디바이스에서도 완벽 동기화)
+    // DB 실측 프로필 조회 연동 (100% 실제 DB 실측 조회)
     try {
       const profRes = await memberAPI.getProfile(cleanPhone);
       if (profRes.success && profRes.data) {
@@ -223,12 +206,6 @@ export default function MyDonations() {
         password: profilePassword,
         updatedAt: new Date().toISOString(),
       };
-      localStorage.setItem(`soulpay_profile_${cleanPhone}`, JSON.stringify(profileData));
-      localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(profileData));
-      if (profilePassword) {
-        localStorage.setItem(`soulpay_password_${cleanPhone}`, profilePassword);
-        localStorage.setItem(`faithpay_password_${cleanPhone}`, profilePassword);
-      }
 
       await memberAPI.updateProfile(cleanPhone, {
         name: profileName,

@@ -576,35 +576,27 @@ export const donationAPI = {
 // ==================== MEMBER / DONOR API ====================
 
 export const memberAPI = {
-  /** 신도/회원 프로필 조회 (DB 실측 + settingsAPI + localStorage) */
+  /** 신도/회원 프로필 조회 (DB 100% 실측 조회 - localStorage 미사용) */
   async getProfile(phone: string): Promise<APIResponse<{ name?: string; baptismName?: string; email?: string; address?: string; fullAddress?: string; zonecode?: string; addressDetail?: string }>> {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     if (!cleanPhone) return { success: false, error: '유효한 전화번호가 필요합니다.' };
 
-    // 1. system_settings DB 실측 조회 (기존 배포된 /settings/:key 엔드포인트 활용)
     try {
-      const setRes = await settingsAPI.get(`member_profile_${cleanPhone}`);
-      const val = setRes.data?.value !== undefined ? setRes.data.value : setRes.data;
-      if (setRes.success && val && typeof val === 'object' && (val.email || val.address || val.fullAddress || val.name)) {
-        return { success: true, data: val };
+      const res = await fetchAPI<any>(`/members/profile/${cleanPhone}`);
+      if (res.success && res.data) {
+        const raw = res.data;
+        const profile = (raw.value && typeof raw.value === 'object') ? { ...raw.value, ...raw } : { ...raw };
+        if (profile.value === null) delete profile.value;
+        return { success: true, data: profile };
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Failed to fetch member profile from API:', err);
+    }
 
-    // 2. localStorage 캐시 확인 (사용자가 마이페이지 브라우저에서 직접 입력/저장한 정보)
-    try {
-      const local = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
-      if (local) {
-        const parsed = JSON.parse(local);
-        if (parsed && typeof parsed === 'object' && (parsed.email || parsed.address || parsed.fullAddress || parsed.name)) {
-          return { success: true, data: parsed };
-        }
-      }
-    } catch {}
-
-    return { success: false };
+    return { success: false, data: undefined };
   },
 
-  /** 신도/회원 프로필 정보 업데이트 */
+  /** 신도/회원 프로필 정보 업데이트 (DB 100% 영구 실측 저장 - localStorage 미사용) */
   async updateProfile(
     phone: string,
     profile: { name?: string; baptismName?: string; email?: string; address?: string; fullAddress?: string; zonecode?: string; addressDetail?: string; password?: string }
@@ -618,35 +610,19 @@ export const memberAPI = {
       updatedAt: new Date().toISOString(),
     };
 
-    // 1. Supabase system_settings DB에 영구 실측 저장
+    // 백엔드 /members/update-profile 호출 (system_settings, donations, subscriptions DB 실측 저장)
     try {
-      await settingsAPI.set(`member_profile_${cleanPhone}`, payload);
-    } catch (e) {
-      console.warn('Failed to save member profile to settings DB:', e);
-    }
-
-    // 2. 백엔드 /members/update-profile 호출 (donations 및 subscriptions 동기화)
-    try {
-      await fetchAPI<any>('/members/update-profile', {
+      const res = await fetchAPI<any>('/members/update-profile', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-    } catch (err) {
-      console.warn('Remote updateProfile offline:', err);
-    }
-
-    // 3. localStorage 동기화 (동일 브라우저 즉각 반영)
-    try {
-      const existingStr = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || '{}';
-      const existing = JSON.parse(existingStr);
-      const merged = { ...existing, ...payload };
-      localStorage.setItem(`soulpay_profile_${cleanPhone}`, JSON.stringify(merged));
-      localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(merged));
-      if (profile.password) {
-        localStorage.setItem(`soulpay_password_${cleanPhone}`, profile.password);
-        localStorage.setItem(`faithpay_password_${cleanPhone}`, profile.password);
+      if (res.success) {
+        return res;
       }
-    } catch {}
+    } catch (err) {
+      console.error('Remote updateProfile failed:', err);
+      return { success: false, error: '프로필 저장에 실패했습니다.' };
+    }
 
     return { success: true, data: { updatedCount: 1 } };
   },

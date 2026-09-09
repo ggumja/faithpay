@@ -535,8 +535,8 @@ export default function PrayerManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">전체보기</SelectItem>
-                        <SelectItem value="unprinted">⏳ 미인쇄 대기만</SelectItem>
-                        <SelectItem value="printed">✅ 인쇄 완료만</SelectItem>
+                        <SelectItem value="unprinted">미인쇄 대기만</SelectItem>
+                        <SelectItem value="printed">인쇄 완료만</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -551,16 +551,16 @@ export default function PrayerManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="formtec_3108">
-                          🏆 폼텍 3108 / 애니라벨 (A4 16칸 / 99.1x33.9mm) [인기 1위]
+                          폼텍 3108 / 애니라벨 (A4 16칸 / 99.1x33.9mm) [추천]
                         </SelectItem>
                         <SelectItem value="formtec_3107">
-                          🥈 폼텍 3107 / 애니라벨 (A4 21칸 / 63.5x38.1mm)
+                          폼텍 3107 / 애니라벨 (A4 21칸 / 63.5x38.1mm)
                         </SelectItem>
                         <SelectItem value="roll_5030">
-                          🥉 감열식 롤 라벨 (1열 / 50x30mm 롤프린터)
+                          감열식 롤 라벨 (1열 / 50x30mm 롤프린터)
                         </SelectItem>
                         <SelectItem value="a4_report">
-                          📄 A4 서식 대장 (보고서 보관용)
+                          A4 서식 대장 (보고서 보관용)
                         </SelectItem>
                       </SelectContent>
                     </Select>

@@ -357,13 +357,13 @@ export default function OrganizationSettings() {
             </div>
 
             {/* Religion Type Info */}
-            <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <Card className="mb-6 bg-blue-50/60 border-blue-200/80 dark:bg-blue-950/20 dark:border-blue-900/50">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <Info className="h-5 w-5 text-blue-600" />
+                  <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <div>
-                    <p className="font-semibold text-blue-900">단체 유형</p>
-                    <p className="text-sm text-blue-700">{getReligionLabel(currentTenant.religionType)}</p>
+                    <p className="font-semibold text-blue-900 dark:text-blue-300">단체 유형</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-400">{getReligionLabel(currentTenant.religionType)}</p>
                   </div>
                 </div>
               </CardContent>
