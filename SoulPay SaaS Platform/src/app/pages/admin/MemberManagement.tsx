@@ -43,7 +43,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
-import { ChurchTitleSelect } from '../../components/common/ChurchTitleSelect';
+import { MemberTitleSelect } from '../../components/common/MemberTitleSelect';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
@@ -655,7 +655,7 @@ export default function MemberManagement() {
               />
             </div>
 
-            <ChurchTitleSelect
+            <MemberTitleSelect
               value={memberTitle}
               onChange={setMemberTitle}
               religionType={currentTenant.religionType}
@@ -736,7 +736,7 @@ export default function MemberManagement() {
               />
             </div>
 
-            <ChurchTitleSelect
+            <MemberTitleSelect
               value={memberTitle}
               onChange={setMemberTitle}
               religionType={currentTenant.religionType}

@@ -32,7 +32,7 @@ import TaxReceiptModal from '../components/TaxReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
 import { openDaumPostcode } from '../utils/daumPostcode';
 import { useTenantTerms } from '../hooks/useTenantTerms';
-import { ChurchTitleSelect } from '../components/common/ChurchTitleSelect';
+import { MemberTitleSelect } from '../components/common/MemberTitleSelect';
 
 export interface HistoryItem {
   id: string;
@@ -814,7 +814,7 @@ export default function MyDonations() {
                       />
                     </div>
 
-                    <ChurchTitleSelect
+                    <MemberTitleSelect
                       value={profileBaptismName}
                       onChange={setProfileBaptismName}
                       religionType={currentTenant.religionType}

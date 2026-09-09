@@ -51,7 +51,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
-import { ChurchTitleSelect } from '../../components/common/ChurchTitleSelect';
+import { MemberTitleSelect } from '../../components/common/MemberTitleSelect';
 import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
@@ -1556,7 +1556,7 @@ export default function MemberDetailPage() {
               />
             </div>
 
-            <ChurchTitleSelect
+            <MemberTitleSelect
               value={editTitle}
               onChange={setEditTitle}
               religionType={currentTenant.religionType}
