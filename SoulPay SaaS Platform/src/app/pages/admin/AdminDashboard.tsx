@@ -130,13 +130,23 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
-    const tenant = tenants.find(
-      (t) =>
-        (t.slug && t.slug.toLowerCase() === decodedSlug) ||
-        (t.id && t.id.toLowerCase() === decodedSlug) ||
-        (t.name && t.name.toLowerCase() === decodedSlug) ||
-        (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
-    ) || currentTenant;
+    
+    // 예약어 경로(partner, system, agency 등) 예외 방어
+    const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
+    if (reservedSlugs.includes(decodedSlug)) {
+      setIsLoading(false);
+      return;
+    }
+
+    const tenant = decodedSlug
+      ? tenants.find(
+          (t) =>
+            (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+            (t.id && t.id.toLowerCase() === decodedSlug) ||
+            (t.name && t.name.toLowerCase() === decodedSlug) ||
+            (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+        )
+      : currentTenant;
 
     if (tenant) {
       setCurrentTenant(tenant);
@@ -207,8 +217,47 @@ export default function AdminDashboard() {
       }).finally(() => {
         setIsLoading(false);
       });
+    } else {
+      setIsLoading(false);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+  const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
+  const isInvalidTenantSlug = Boolean(
+    tenantSlug &&
+    (reservedSlugs.includes(decodedSlug) ||
+      !tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug)
+      ))
+  );
+
+  if (isInvalidTenantSlug) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <Card className="max-w-md w-full border-slate-200 shadow-sm rounded-2xl bg-white p-6 text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-50 text-amber-600 mx-auto">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold text-slate-900">가맹 단체를 찾을 수 없습니다</h2>
+            <p className="text-xs text-slate-500">
+              요청하신 경로('{tenantSlug}')에 해당하는 가맹 단체 정보가 존재하지 않습니다.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate('/admin/login')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold h-10 cursor-pointer"
+          >
+            단체 관리자 로그인으로 이동
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   if (!currentTenant) {
     return (
