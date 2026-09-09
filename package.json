@@ -3,6 +3,11 @@
   "private": true,
   "scripts": {
     "build": "pnpm --prefix \"SoulPay SaaS Platform\" run build",
+    "build:pay": "pnpm --prefix \"SoulPay SaaS Platform\" run build:pay",
+    "build:kiosk": "pnpm --prefix \"SoulPay SaaS Platform\" run build:kiosk",
+    "build:admin": "pnpm --prefix \"SoulPay SaaS Platform\" run build:admin",
+    "build:partner": "pnpm --prefix \"SoulPay SaaS Platform\" run build:partner",
+    "build:ops": "pnpm --prefix \"SoulPay SaaS Platform\" run build:ops",
     "dev": "pnpm --prefix \"SoulPay SaaS Platform\" run dev"
   }
 }
