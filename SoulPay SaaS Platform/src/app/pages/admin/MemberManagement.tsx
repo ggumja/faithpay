@@ -213,8 +213,9 @@ export default function MemberManagement() {
   const totalMembersCount = members.length;
   const recurringMembersCount = members.filter((m) => m.recurringCount > 0).length;
   const newThisMonthCount = members.filter((m) => m.registeredDate && m.registeredDate.startsWith(currentMonthStr)).length;
+  const totalDonationsAmount = members.reduce((sum, m) => sum + (m.totalDonation || 0), 0);
   const avgDonationAmount = members.length > 0
-    ? Math.round(members.reduce((sum, m) => sum + (m.totalDonation || 0), 0) / members.length)
+    ? Math.round(totalDonationsAmount / members.length)
     : 0;
 
   // Search & Filter Logic
