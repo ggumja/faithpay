@@ -97,6 +97,7 @@ export default function AdminDashboard() {
   const terms = useTenantTerms(currentTenant);
 
   const [dbDonations, setDbDonations] = useState<any[]>([]);
+  const [donationViewMode, setDonationViewMode] = useState<'today' | 'recent'>('today');
   const [totalMonthlyAmount, setTotalMonthlyAmount] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [totalAllTimeAmount, setTotalAllTimeAmount] = useState<number>(0);
@@ -303,6 +304,22 @@ export default function AdminDashboard() {
 
   const currentPath = `/${tenantSlug}/admin`;
 
+  const todayKstStr = (() => {
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+  })();
+
+  const todayDonations = dbDonations.filter((d) => {
+    if (!d.createdAt) return false;
+    const dDate = new Date(d.createdAt);
+    if (isNaN(dDate.getTime())) return false;
+    const kst = new Date(dDate.getTime() + 9 * 60 * 60 * 1000);
+    const dStr = `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+    return dStr === todayKstStr;
+  });
+
+  const displayedDonations = donationViewMode === 'today' ? todayDonations : dbDonations.slice(0, 10);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Desktop Sidebar */}
@@ -450,9 +467,39 @@ export default function AdminDashboard() {
 
           {/* Recent Donations */}
           <Card>
-            <CardHeader>
-              <CardTitle>실시간 {terms.donation} 내역</CardTitle>
-              <CardDescription>오늘 접수된 최근 {terms.donation}</CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
+              <div>
+                <CardTitle>실시간 {terms.donation} 내역</CardTitle>
+                <CardDescription>
+                  {donationViewMode === 'today'
+                    ? `오늘(${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}) 접수된 ${terms.donation} 내역 (${todayDonations.length}건)`
+                    : `최근 접수된 실시간 ${terms.donation} 내역 (최신 ${Math.min(dbDonations.length, 10)}건)`}
+                </CardDescription>
+              </div>
+              <div className="inline-flex rounded-lg bg-slate-100 dark:bg-zinc-800 p-1 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setDonationViewMode('today')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    donationViewMode === 'today'
+                      ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                  }`}
+                >
+                  오늘 접수 ({todayDonations.length}건)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDonationViewMode('recent')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    donationViewMode === 'recent'
+                      ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                  }`}
+                >
+                  전체 최근 10건
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -467,14 +514,28 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dbDonations.length === 0 ? (
+                  {displayedDonations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        접수된 {terms.donation} 내역이 없습니다. ({terms.donor} 페이지에서 테스트 결제를 진행해보세요)
+                        {donationViewMode === 'today' ? (
+                          <div className="space-y-2">
+                            <p>오늘 접수된 {terms.donation} 내역이 없습니다.</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDonationViewMode('recent')}
+                              className="text-xs h-8"
+                            >
+                              전체 최근 내역 보기
+                            </Button>
+                          </div>
+                        ) : (
+                          `접수된 ${terms.donation} 내역이 없습니다.`
+                        )}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    dbDonations.slice(0, 10).map((donation) => (
+                    displayedDonations.map((donation) => (
                       <TableRow key={donation.id}>
                         <TableCell className="font-mono text-xs">{donation.id}</TableCell>
                         <TableCell className="font-medium">{donation.donorName}</TableCell>
