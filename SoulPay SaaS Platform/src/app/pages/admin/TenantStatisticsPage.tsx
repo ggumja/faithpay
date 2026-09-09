@@ -687,43 +687,43 @@ export default function TenantStatisticsPage() {
           {/* TAB 1: 종합 수납 통계 */}
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                  <CardHeader className="pb-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <CardHeader className="p-4 sm:p-5 pb-1">
                     <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       전일 마감 총 봉헌액
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-indigo-600">
+                  <CardContent className="p-4 sm:p-5 pt-0">
+                    <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
                       {overviewStats.totalAmount.toLocaleString()}원
                     </div>
                     <p className="text-xs text-slate-400 mt-1">선택 기간 마감 완료 합계</p>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2">
+                <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <CardHeader className="p-4 sm:p-5 pb-1">
                     <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       총 마감 수납 건수
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-blue-600">
+                  <CardContent className="p-4 sm:p-5 pt-0">
+                    <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
                       {overviewStats.totalCount.toLocaleString()}건
                     </div>
                     <p className="text-xs text-slate-400 mt-1">선택 기간 정상 승인 완료 건수</p>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2">
+                <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <CardHeader className="p-4 sm:p-5 pb-1">
                     <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       평균 결제금액
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-emerald-600">
+                  <CardContent className="p-4 sm:p-5 pt-0">
+                    <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                       {overviewStats.avgAmount.toLocaleString()}원
                     </div>
                     <p className="text-xs text-slate-400 mt-1">1회 결제 시 평균 봉헌 금액</p>
@@ -752,11 +752,11 @@ export default function TenantStatisticsPage() {
 
               {/* TAB 1 전용: 기간별 총 수납 집계표 */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold">기간별 총 수납 집계표</CardTitle>
-                  <CardDescription>선택한 기간 단위별 수납 건수 및 금액 내역입니다</CardDescription>
+                <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">기간별 총 수납 집계표</CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">선택한 기간 단위별 수납 건수 및 금액 내역입니다</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -774,7 +774,7 @@ export default function TenantStatisticsPage() {
                           <TableCell className="text-right text-slate-600">
                             {(row.totalCount > 0 ? Math.round(row.totalAmount / row.totalCount) : 0).toLocaleString()}원
                           </TableCell>
-                          <TableCell className="text-right font-bold text-indigo-600 dark:text-indigo-400">
+                          <TableCell className="text-right font-bold text-blue-600 dark:text-blue-400">
                             {row.totalAmount.toLocaleString()}원
                           </TableCell>
                         </TableRow>
@@ -786,12 +786,12 @@ export default function TenantStatisticsPage() {
 
               {/* TAB 1 전용: 선택 기간 수납 상세 거래 명세 내역 테이블 */}
               <Card>
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-4">
                   <div>
-                    <CardTitle className="text-lg font-bold">
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                       선택 기간 수납 상세 거래 명세 ({totalTransactionCount.toLocaleString()}건)
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       선택한 기간 및 마감 시점 스냅샷에 포함된 정제 완료 수납 내역 목록입니다
                     </CardDescription>
                   </div>
@@ -810,7 +810,7 @@ export default function TenantStatisticsPage() {
                   </div>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="p-0">
                   <Table>
                     <TableHeader>
                       <TableRow>

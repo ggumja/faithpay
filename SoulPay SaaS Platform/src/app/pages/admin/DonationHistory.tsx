@@ -894,48 +894,50 @@ export default function DonationHistory() {
 
 
                 {/* Statistics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                    <CardHeader className="p-4 sm:p-5 pb-1">
+                      <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         조회 기간 {terms.donation}액
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold" style={{ color: currentTenant.primaryColor }}>
+                    <CardContent className="p-4 sm:p-5 pt-0">
+                      <div className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: currentTenant.primaryColor }}>
                         {totalAmount.toLocaleString()}원
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-slate-400 mt-1">
                         조회 {completedCount}건 승인
                       </p>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                    <CardHeader className="p-4 sm:p-5 pb-1">
+                      <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         결제완료 건수
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-green-600">{completedCount}건</div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                    <CardContent className="p-4 sm:p-5 pt-0">
+                      <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                        {completedCount}건
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
                         정상 승인된 {terms.donation}
                       </p>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                    <CardHeader className="p-4 sm:p-5 pb-1">
+                      <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         누적 결제 금액
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-indigo-600">
+                    <CardContent className="p-4 sm:p-5 pt-0">
+                      <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
                         {cumulativeAmount.toLocaleString()}원
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-slate-400 mt-1">
                         전체 누적 {cumulativeCount}건 승인
                       </p>
                     </CardContent>
@@ -1110,7 +1112,7 @@ export default function DonationHistory() {
 
                 {/* Table */}
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
                     <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                       {terms.donation} 목록
                     </CardTitle>
@@ -1118,7 +1120,7 @@ export default function DonationHistory() {
                       {filteredDonations.length}건의 {terms.donation} 내역이 조회되었습니다
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>

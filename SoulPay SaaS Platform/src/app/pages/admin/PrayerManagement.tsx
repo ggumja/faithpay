@@ -488,56 +488,61 @@ export default function PrayerManagement() {
           </div>
 
           {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   전체 {terms.prayer} 건수
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
                   {prayers.length}건
                 </div>
+                <p className="text-xs text-slate-400 mt-1">접수 완료된 전체 {terms.prayer} 내역</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   미인쇄 대기
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
                   {unprintedCount}건
                 </div>
+                <p className="text-xs text-slate-400 mt-1">라벨지 미출력 대기 건수</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   인쇄 출력 완료
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                   {prayers.length - unprintedCount}건
                 </div>
+                <p className="text-xs text-slate-400 mt-1">라벨지 출력 완료 건수</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Filters and Label Format Selector Card */}
-          <Card className="border-indigo-100 dark:border-indigo-900/40">
-            <CardContent className="pt-6">
+          <Card className="border-slate-200/80 dark:border-zinc-800">
+            <CardContent className="p-4 sm:p-5">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
                   <div className="flex items-center gap-2">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">조회 필터:</label>
-                    <Select value={filter} onValueChange={setFilter}>
-                      <SelectTrigger className="w-[140px] bg-white text-xs">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      조회 필터:
+                    </label>
+                    <Select value={filter} onValueChange={(val) => setFilter(val as any)}>
+                      <SelectTrigger className="w-[140px] bg-white text-xs font-semibold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -553,7 +558,7 @@ export default function PrayerManagement() {
                       라벨지 폼 규격:
                     </label>
                     <Select value={labelFormat} onValueChange={(val) => setLabelFormat(val as LabelFormatType)}>
-                      <SelectTrigger className="w-[250px] bg-white text-xs font-bold border-indigo-200">
+                      <SelectTrigger className="w-[250px] bg-white text-xs font-bold border-slate-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -585,9 +590,9 @@ export default function PrayerManagement() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => handlePrint(filteredPrayers.filter(p => !p.printed).map(p => p.id))}
+                    onClick={() => handlePrint(filteredPrayers.filter((p) => !p.printed).map((p) => p.id))}
                     disabled={unprintedCount === 0}
-                    className="gap-2 cursor-pointer"
+                    className="cursor-pointer"
                   >
                     미인쇄 전체 일괄 인쇄
                   </Button>
@@ -598,7 +603,7 @@ export default function PrayerManagement() {
 
           {/* Prayer List Table */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-4">
               <div>
                 <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                   {terms.prayer} 명세 목록 ({filteredPrayers.length}건)
@@ -609,7 +614,7 @@ export default function PrayerManagement() {
               </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>

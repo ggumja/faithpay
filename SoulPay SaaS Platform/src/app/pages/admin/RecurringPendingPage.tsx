@@ -235,15 +235,15 @@ export default function RecurringPendingPage() {
           </div>
 
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-emerald-500 shadow-xs">
-              <CardHeader className="pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   활성 정기 약정 수 (Active)
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                   {activeCount}건
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
@@ -252,14 +252,14 @@ export default function RecurringPendingPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500 shadow-xs">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   월 약정 예상 수납 총액
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
                   {totalMonthlyCommitment.toLocaleString()}원
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
@@ -268,14 +268,14 @@ export default function RecurringPendingPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500 shadow-xs">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   일시중지 / 해지 약정 현황
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
                   {pausedCount + cancelledCount}건
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
@@ -314,7 +314,7 @@ export default function RecurringPendingPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/70 dark:bg-zinc-900/50">
+                  <TableRow>
                     <TableHead className="w-[140px]">약정 번호</TableHead>
                     <TableHead>약정자 성명</TableHead>
                     <TableHead>연락처</TableHead>

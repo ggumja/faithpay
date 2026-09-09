@@ -421,56 +421,60 @@ export default function MemberManagement() {
           </div>
 
           {/* Stats Summary Cards (No Mock Data) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   전체 등록 {memberTerm}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
                   {totalMembersCount}명
                 </div>
+                <p className="text-xs text-slate-400 mt-1">등록된 전체 회원 명부</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   정기 약정 {memberTerm}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
                   {recurringMembersCount}명
                 </div>
+                <p className="text-xs text-slate-400 mt-1">정기 후원 납부 회원</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  이번 달 신규 가입
+                  총 누적 {donationTerm}액
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  {newThisMonthCount}명
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                  ₩ {totalDonationsAmount.toLocaleString()}원
                 </div>
+                <p className="text-xs text-slate-400 mt-1">정상 승인 완료 총액</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
-              <CardHeader className="pb-2">
+            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <CardHeader className="p-4 sm:p-5 pb-1">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   평균 누적 {donationTerm}액
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-slate-900 dark:text-zinc-100">
+              <CardContent className="p-4 sm:p-5 pt-0">
+                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
                   ₩ {avgDonationAmount.toLocaleString()}원
                 </div>
+                <p className="text-xs text-slate-400 mt-1">회원 1인당 평균 후원</p>
               </CardContent>
             </Card>
           </div>
@@ -501,7 +505,7 @@ export default function MemberManagement() {
 
           {/* Members Main Table */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
               <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                 {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
               </CardTitle>
@@ -510,7 +514,7 @@ export default function MemberManagement() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="p-0">
               {isLoading ? (
                 <div className="py-12 text-center text-sm font-semibold text-slate-500">
                   {memberTerm} 데이터를 불러오는 중입니다...
