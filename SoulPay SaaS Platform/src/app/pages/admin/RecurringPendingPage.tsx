@@ -69,10 +69,13 @@ export default function RecurringPendingPage() {
   const pageSize = 10;
 
   useEffect(() => {
+    if (!tenants || tenants.length === 0) return;
     const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
       fetchSubscriptions(tenant.id);
+    } else {
+      setIsLoading(false);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
@@ -341,7 +344,11 @@ export default function RecurringPendingPage() {
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-16 text-slate-400 space-y-2">
                         <Calendar className="h-8 w-8 mx-auto text-slate-300 dark:text-zinc-600 mb-2" />
-                        <p className="font-semibold text-sm">등록된 정기 약정 계약 정보가 없습니다.</p>
+                        <p className="font-semibold text-sm">
+                          {!currentTenant
+                            ? `'${tenantSlug}' 단체 정보를 찾을 수 없습니다. 올바른 단체 주소(예: /dream/admin/recurring-pending)로 접속해 주세요.`
+                            : '등록된 정기 약정 계약 정보가 없습니다.'}
+                        </p>
                       </TableCell>
                     </TableRow>
                   ) : (
