@@ -633,7 +633,7 @@ export default function SettlementReports() {
             {/* Monthly Settlement */}
             <TabsContent value="monthly" className="space-y-6">
               <Card>
-                <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                     월별 정산(추정) 내역
                   </CardTitle>
@@ -641,7 +641,7 @@ export default function SettlementReports() {
                     {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '플랫폼 결제 성공 내역 기반 월별 수납·정산 집계'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -747,7 +747,7 @@ export default function SettlementReports() {
             {/* Daily Settlement Breakdown */}
             <TabsContent value="daily" className="space-y-6">
               <Card>
-                <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                     일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세
                   </CardTitle>
@@ -755,7 +755,7 @@ export default function SettlementReports() {
                     승인완료된 각 결제건별 기준 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일 기준 입금 대사 추정 명세입니다.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -806,7 +806,7 @@ export default function SettlementReports() {
             {/* Negative Settlement / Refund Adjustments */}
             <TabsContent value="negative" className="space-y-6">
               <Card>
-                <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                     승인 취소 & 차기 정산 이월 차감 (Negative Settlement)
                   </CardTitle>
@@ -814,7 +814,7 @@ export default function SettlementReports() {
                     이미 단체 계좌로 입금 집계된 거래의 취소 발생 시 차기 정산액에서 자동 이월 차감되는 명세입니다.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>

@@ -591,7 +591,7 @@ export default function PrayerManagement() {
 
           {/* Prayer List Table */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-4">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
               <div>
                 <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                   {terms.prayer} 명세 목록 ({filteredPrayers.length}건)
@@ -602,7 +602,7 @@ export default function PrayerManagement() {
               </div>
             </CardHeader>
 
-            <CardContent className="p-0">
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>

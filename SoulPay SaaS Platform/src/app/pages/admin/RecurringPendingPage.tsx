@@ -275,7 +275,7 @@ export default function RecurringPendingPage() {
 
           {/* 정기결제 약정 마스터 목록 */}
           <Card className="shadow-xs">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
               <div>
                 <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                   정기 약정 마스터 계약 명세 ({filteredSubs.length}건)
@@ -299,7 +299,7 @@ export default function RecurringPendingPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="p-0">
+            <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -439,7 +439,7 @@ export default function RecurringPendingPage() {
 
               {/* 페이지네이션 (건수가 10건 초과일 때 노출) */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 text-xs text-slate-500">
+                <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 text-xs text-slate-500">
                   <div>
                     전체 {filteredSubs.length}건 중 {(currentPage - 1) * pageSize + 1} -{' '}
                     {Math.min(currentPage * pageSize, filteredSubs.length)}건 표시

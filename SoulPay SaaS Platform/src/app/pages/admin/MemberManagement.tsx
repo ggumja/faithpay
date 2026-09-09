@@ -490,7 +490,7 @@ export default function MemberManagement() {
 
           {/* Members Main Table */}
           <Card>
-            <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+            <CardHeader className="pb-4">
               <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                 {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
               </CardTitle>
@@ -499,7 +499,7 @@ export default function MemberManagement() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="p-0">
+            <CardContent>
               {isLoading ? (
                 <div className="py-12 text-center text-sm font-semibold text-slate-500">
                   {memberTerm} 데이터를 불러오는 중입니다...

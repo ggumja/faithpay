@@ -740,11 +740,11 @@ export default function TenantStatisticsPage() {
 
               {/* TAB 1 전용: 기간별 총 수납 집계표 */}
               <Card>
-                <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">기간별 총 수납 집계표</CardTitle>
                   <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">선택한 기간 단위별 수납 건수 및 금액 내역입니다</CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -774,7 +774,7 @@ export default function TenantStatisticsPage() {
 
               {/* TAB 1 전용: 선택 기간 수납 상세 거래 명세 내역 테이블 */}
               <Card>
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-zinc-800 pb-4">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
                   <div>
                     <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                       선택 기간 수납 상세 거래 명세 ({totalTransactionCount.toLocaleString()}건)
@@ -798,7 +798,7 @@ export default function TenantStatisticsPage() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-0">
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>

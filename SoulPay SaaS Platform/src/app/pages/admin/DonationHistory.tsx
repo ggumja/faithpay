@@ -1100,7 +1100,7 @@ export default function DonationHistory() {
 
                 {/* Table */}
                 <Card>
-                  <CardHeader className="border-b border-slate-100 dark:border-zinc-800 pb-4">
+                  <CardHeader className="pb-4">
                     <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                       {terms.donation} 목록
                     </CardTitle>
@@ -1108,7 +1108,7 @@ export default function DonationHistory() {
                       {filteredDonations.length}건의 {terms.donation} 내역이 조회되었습니다
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-0">
+                  <CardContent>
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>

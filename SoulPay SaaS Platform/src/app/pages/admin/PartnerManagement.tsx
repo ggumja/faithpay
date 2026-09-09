@@ -294,15 +294,15 @@ export default function PartnerManagement() {
       {/* ══ 대리점 탭 ══ */}
       {tab === 'agency' && (
         <Card className="border-purple-100">
-          <CardHeader className="pb-3 bg-purple-50/50 border-b border-purple-100">
-            <CardTitle className="text-[14px] font-bold text-purple-900 flex items-center gap-2">
-              <Building2 className="h-4 w-4" /> 영업 대리점 (Tier-1) 관리
+          <CardHeader className="pb-3">
+            <CardTitle className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-slate-500" /> 영업 대리점 (Tier-1) 관리
             </CardTitle>
             <CardDescription className="text-[11.5px]">
               대리점은 하위 영업자를 모집하고 오버라이딩 방식으로 수수료를 수령합니다.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 text-[11px]">
@@ -407,15 +407,15 @@ export default function PartnerManagement() {
       {/* ══ 영업자 탭 ══ */}
       {tab === 'agent' && (
         <Card className="border-indigo-100">
-          <CardHeader className="pb-3 bg-indigo-50/50 border-b border-indigo-100">
-            <CardTitle className="text-[14px] font-bold text-indigo-900 flex items-center gap-2">
-              <Users className="h-4 w-4" /> 영업자 (Tier-2) 관리
+          <CardHeader className="pb-3">
+            <CardTitle className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
+              <Users className="h-4 w-4 text-slate-500" /> 영업자 (Tier-2) 관리
             </CardTitle>
             <CardDescription className="text-[11.5px]">
               영업자는 사찰·교회를 현장 개설하고 결제액에 대한 수수료를 수령합니다.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
