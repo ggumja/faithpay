@@ -51,6 +51,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { ChurchTitleSelect } from '../../components/common/ChurchTitleSelect';
 import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
@@ -1555,14 +1556,15 @@ export default function MemberDetailPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">{getTitleLabel()}</Label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
-              />
-            </div>
+            <ChurchTitleSelect
+              value={editTitle}
+              onChange={setEditTitle}
+              religionType={currentTenant.religionType}
+              showLabel={true}
+              label={getTitleLabel()}
+              selectClassName="rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
+              inputClassName="rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
+            />
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">휴대폰 번호</Label>

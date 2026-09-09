@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { donationItemsAPI } from '../api/client';
+import { ChurchTitleSelect } from '../components/common/ChurchTitleSelect';
 
 interface FamilyMember {
   name: string;
@@ -490,23 +491,15 @@ export default function DonationFlow() {
                       <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                         🏛️ 교회 직분 정보
                       </span>
-                      <div>
-                        <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
-                          교회 직분 선택
-                        </label>
-                        <select 
-                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150 cursor-pointer"
-                          value={baptismName || '성도'}
-                          onChange={(e) => setBaptismName(e.target.value)}
-                        >
-                          <option value="성도">성도</option>
-                          <option value="집사">집사</option>
-                          <option value="권사">권사</option>
-                          <option value="장로">장로</option>
-                          <option value="청년/학생">청년/학생</option>
-                          <option value="목회자/교역자">목회자/교역자</option>
-                        </select>
-                      </div>
+                      <ChurchTitleSelect
+                        value={baptismName || '성도'}
+                        onChange={setBaptismName}
+                        religionType="protestant"
+                        showLabel={true}
+                        label="교회 직분 선택"
+                        selectClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                        inputClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                      />
                     </div>
                   )}
 

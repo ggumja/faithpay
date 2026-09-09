@@ -43,6 +43,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
+import { ChurchTitleSelect } from '../../components/common/ChurchTitleSelect';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
@@ -654,14 +655,13 @@ export default function MemberManagement() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
-              <Input
-                placeholder={`예: ${getTitleLabel()} 입력`}
-                value={memberTitle}
-                onChange={(e) => setMemberTitle(e.target.value)}
-              />
-            </div>
+            <ChurchTitleSelect
+              value={memberTitle}
+              onChange={setMemberTitle}
+              religionType={currentTenant.religionType}
+              showLabel={true}
+              label={getTitleLabel()}
+            />
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold">휴대폰 번호</Label>
@@ -736,13 +736,13 @@ export default function MemberManagement() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
-              <Input
-                value={memberTitle}
-                onChange={(e) => setMemberTitle(e.target.value)}
-              />
-            </div>
+            <ChurchTitleSelect
+              value={memberTitle}
+              onChange={setMemberTitle}
+              religionType={currentTenant.religionType}
+              showLabel={true}
+              label={getTitleLabel()}
+            />
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold">휴대폰 번호</Label>

@@ -32,6 +32,7 @@ import TaxReceiptModal from '../components/TaxReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
 import { openDaumPostcode } from '../utils/daumPostcode';
 import { useTenantTerms } from '../hooks/useTenantTerms';
+import { ChurchTitleSelect } from '../components/common/ChurchTitleSelect';
 
 export interface HistoryItem {
   id: string;
@@ -813,18 +814,13 @@ export default function MyDonations() {
                       />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                        {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'}
-                      </Label>
-                      <Input
-                        type="text"
-                        value={profileBaptismName}
-                        onChange={(e) => setProfileBaptismName(e.target.value)}
-                        placeholder={currentTenant.religionType === 'catholic' ? '예: 요한' : currentTenant.religionType === 'buddhist' ? '예: 보현행' : currentTenant.religionType === 'protestant' ? '예: 안수집사' : '호칭 입력'}
-                        className="text-xs h-10 font-semibold bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                      />
-                    </div>
+                    <ChurchTitleSelect
+                      value={profileBaptismName}
+                      onChange={setProfileBaptismName}
+                      religionType={currentTenant.religionType}
+                      showLabel={true}
+                      id="profile-baptism-name"
+                    />
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
