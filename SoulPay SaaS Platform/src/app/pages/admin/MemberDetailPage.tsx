@@ -847,56 +847,50 @@ export default function MemberDetailPage() {
           {/* Member Profile Card & Unified Metrics Strip (Hallmark Cobalt-01 Light) */}
           <div className="rounded-2xl border border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-2xs p-6 sm:p-7 space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--hm-accent-bg)] border border-[var(--hm-accent-border)] flex items-center justify-center text-xl sm:text-2xl font-bold text-[var(--hm-accent)] font-[family-name:var(--font-display)] shrink-0 select-none shadow-2xs">
-                  {member.name.slice(0, 1)}
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                    {member.name}
+                  </h1>
+                  {member.baptismName && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                      {getTitleLabel()}: {member.baptismName}
+                    </span>
+                  )}
+                  {member.recurringCount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                      정기 약정 {member.recurringCount}건
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                      일반 회원
+                    </span>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-2xl font-extrabold text-[var(--hm-ink)] tracking-tight font-[family-name:var(--font-display)]">
-                      {member.name}
-                    </h1>
-                    {member.baptismName && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-2)] border border-[var(--hm-border)]">
-                        {getTitleLabel()}: {member.baptismName}
-                      </span>
-                    )}
-                    {member.recurringCount > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[oklch(0.55_0.17_148_/_0.10)] text-[var(--hm-success)] border border-[oklch(0.55_0.17_148_/_0.25)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--hm-success)]"></span>
-                        정기 약정 {member.recurringCount}건
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)]">
-                        일반 회원
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--hm-ink-3)] font-normal">
-                    <span className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
-                      <span className="font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink-2)] font-semibold">
-                        {formatPhoneNumber(member.phone)}
-                      </span>
-                      <button
-                        onClick={handleCopyPhone}
-                        title="연락처 복사"
-                        className="text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)] transition-colors p-0.5 cursor-pointer"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </button>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="tabular-nums text-slate-700 font-semibold">
+                      {formatPhoneNumber(member.phone)}
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
-                      <span className="text-[var(--hm-ink-2)]">{member.email || '이메일 미등록'}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
-                      <span className="font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink-2)]">가입일: {member.registeredDate}</span>
-                    </span>
-                  </div>
+                    <button
+                      onClick={handleCopyPhone}
+                      title="연락처 복사"
+                      className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-slate-600">{member.email || '이메일 미등록'}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="tabular-nums text-slate-600">가입일: {member.registeredDate}</span>
+                  </span>
                 </div>
               </div>
 

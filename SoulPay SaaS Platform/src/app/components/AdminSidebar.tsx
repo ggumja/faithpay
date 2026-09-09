@@ -88,41 +88,30 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
           '대표 관리자';
 
         const adminRole = currentAdmin?.role === 'system_admin' ? 'tenant_admin' : (currentAdmin?.role || 'tenant_admin');
-        const initialChar = adminDisplayName ? adminDisplayName[0] : '관';
 
         return (
           <div className="mb-6 p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-2xs relative overflow-hidden">
             {/* Top accent line */}
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600" />
             
-            <div className="flex items-start gap-3 pt-1">
-              {/* Avatar Circle */}
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-xs ring-2 ring-white mt-0.5">
-                {initialChar}
-              </div>
-
-              {/* Text Container */}
-              <div className="min-w-0 flex-1 space-y-1">
-                {/* Organization Name */}
+            <div className="space-y-1.5 pt-0.5">
+              {/* Organization Name & Role */}
+              <div className="flex items-center justify-between gap-2">
                 {currentTenant?.name && (
-                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
-                    <Building2 className="h-3 w-3 text-blue-600 shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 min-w-0">
+                    <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                     <span className="truncate">{currentTenant.name}</span>
                   </div>
                 )}
-
-                {/* Admin Display Name */}
-                <p className="font-extrabold text-sm text-slate-900 truncate leading-snug">
-                  {adminDisplayName}
-                </p>
-
-                {/* Role Badge */}
-                <div className="pt-0.5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 bg-white text-blue-700 text-[11px] font-bold rounded-full border border-blue-200 shadow-2xs whitespace-nowrap">
-                    {getRoleName(adminRole)}
-                  </span>
-                </div>
+                <span className="inline-flex items-center px-2 py-0.5 bg-white text-blue-700 text-[11px] font-bold rounded-full border border-blue-200 shadow-2xs whitespace-nowrap shrink-0">
+                  {getRoleName(adminRole)}
+                </span>
               </div>
+
+              {/* Admin Display Name */}
+              <p className="font-extrabold text-sm text-slate-900 truncate leading-snug">
+                {adminDisplayName}
+              </p>
             </div>
           </div>
         );
