@@ -574,7 +574,7 @@ export default function TenantStatisticsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <BarChart3 className="h-8 w-8 text-indigo-600" />
+                <BarChart3 className="h-8 w-8 text-blue-600" />
                 <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">수납 마감 통계 센터</h1>
               </div>
               <p className="text-sm text-slate-500 dark:text-zinc-400">
@@ -591,7 +591,7 @@ export default function TenantStatisticsPage() {
                 <RefreshCw className="h-3.5 w-3.5" />
                 마감 재집계
               </Button>
-              <Button onClick={handleExportCSV} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-xs font-semibold">
+              <Button onClick={handleExportCSV} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 text-xs font-semibold">
                 <Download className="h-3.5 w-3.5" />
                 마감 통계 엑셀 다운로드
               </Button>
@@ -632,7 +632,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('overview')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -643,7 +643,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('method')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'method'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -654,7 +654,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('device')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'device'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -665,7 +665,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('item')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'item'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -676,7 +676,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('subscription')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'subscription'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >

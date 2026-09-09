@@ -205,7 +205,7 @@ export default function RecurringSchedulerPage() {
   }, [recurringDonations, tenantFilter, searchTerm]);
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-6">
+    <div className="p-6 lg:p-8 space-y-6 w-full">
       {/* ── 1. Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[var(--hm-border)]">
         <div>

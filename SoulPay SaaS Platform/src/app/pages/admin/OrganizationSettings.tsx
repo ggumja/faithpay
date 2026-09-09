@@ -1158,13 +1158,13 @@ export default function OrganizationSettings() {
                 />
               ) : (
                 <div className="text-center p-8">
-                  <FileCheck size={48} className="mx-auto text-indigo-500 mb-3" />
+                  <FileCheck size={48} className="mx-auto text-blue-500 mb-3" />
                   <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">서류 파일이 등록되어 있습니다</p>
                   <p className="text-[11px] text-slate-400 mt-1 font-mono">{previewDoc.fileName || '서류 파일'}</p>
                   <a
                     href={previewDoc.fileUrl}
                     download={previewDoc.fileName || 'document'}
-                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-sm hover:bg-indigo-700"
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700"
                   >
                     <Download size={14} /> 다운로드하여 열기
                   </a>

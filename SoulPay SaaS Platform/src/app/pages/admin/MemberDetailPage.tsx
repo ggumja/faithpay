@@ -812,7 +812,7 @@ export default function MemberDetailPage() {
 
       {/* Main Content Page */}
       <div className="flex-1 min-w-0 overflow-auto">
-        <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="p-6 lg:p-8 space-y-6 w-full">
           {/* Navigation Bar & Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <Button

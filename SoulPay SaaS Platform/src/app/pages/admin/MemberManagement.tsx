@@ -401,7 +401,7 @@ export default function MemberManagement() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                <Users className="h-7 w-7 text-indigo-600" />
+                <Users className="h-7 w-7 text-blue-600" />
                 {currentTenant.name} {memberTerm} 통합 관리 센터
               </h1>
               <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
@@ -414,7 +414,7 @@ export default function MemberManagement() {
                 <Download className="h-4 w-4 text-emerald-600" />
                 엑셀 다운로드
               </Button>
-              <Button onClick={handleOpenAddModal} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer">
+              <Button onClick={handleOpenAddModal} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer">
                 <UserPlus className="h-4 w-4" />
                 신규 {memberTerm} 추가
               </Button>
@@ -423,7 +423,7 @@ export default function MemberManagement() {
 
           {/* Stats Summary Cards (No Mock Data) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border-l-4 border-l-purple-500">
+            <Card className="border-l-4 border-l-blue-500">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   전체 등록 {memberTerm}
@@ -504,7 +504,7 @@ export default function MemberManagement() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-indigo-600" />
+                <UserCheck className="h-5 w-5 text-blue-600" />
                 {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
               </CardTitle>
               <CardDescription>
@@ -540,13 +540,13 @@ export default function MemberManagement() {
                     {filteredMembers.map((m) => (
                       <TableRow
                         key={m.id}
-                        className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 cursor-pointer transition-colors"
+                        className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 cursor-pointer transition-colors"
                         onClick={() => handleOpenDetail(m)}
                       >
                         <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
                           {m.name}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                        <TableCell className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                           {m.baptismName || '-'}
                         </TableCell>
                         <TableCell className="font-mono text-xs text-slate-700 dark:text-zinc-300">
@@ -586,7 +586,7 @@ export default function MemberManagement() {
                               size="sm"
                               title={`${memberTerm} 상세 정보 및 결제내역`}
                               onClick={() => handleOpenDetail(m)}
-                              className="h-7 px-2 text-xs gap-1 cursor-pointer bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold border-indigo-200"
+                              className="h-7 px-2 text-xs gap-1 cursor-pointer bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold border-blue-200"
                             >
                               <Eye className="h-3.5 w-3.5" />
                               상세보기
@@ -627,7 +627,7 @@ export default function MemberManagement() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-indigo-600" />
+              <UserPlus className="h-5 w-5 text-blue-600" />
               신규 {memberTerm} 등록
             </DialogTitle>
             <DialogDescription>
@@ -697,7 +697,7 @@ export default function MemberManagement() {
               <Button variant="outline" type="button" onClick={() => setIsAddMemberModalOpen(false)}>
                 취소
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
                 등록 완료
               </Button>
             </DialogFooter>
@@ -710,7 +710,7 @@ export default function MemberManagement() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit2 className="h-5 w-5 text-indigo-600" />
+              <Edit2 className="h-5 w-5 text-blue-600" />
               {memberTerm} 정보 수정
             </DialogTitle>
             <DialogDescription>
@@ -775,7 +775,7 @@ export default function MemberManagement() {
               <Button variant="outline" type="button" onClick={() => setIsEditMemberModalOpen(false)}>
                 취소
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
                 수정 사항 저장
               </Button>
             </DialogFooter>

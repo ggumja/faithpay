@@ -207,12 +207,12 @@ export default function RecurringPendingPage() {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 lg:p-8 space-y-6 w-full max-w-7xl mx-auto">
+        <div className="p-6 lg:p-8 space-y-6 w-full">
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <Calendar className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100">
                   {terms.recurringPending} 관리 센터
                 </h1>
@@ -254,14 +254,14 @@ export default function RecurringPendingPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-indigo-500 shadow-xs">
+            <Card className="border-l-4 border-l-blue-500 shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   월 약정 예상 수납 총액
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
+                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
                   {totalMonthlyCommitment.toLocaleString()}원
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
@@ -292,7 +292,7 @@ export default function RecurringPendingPage() {
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
               <div>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <FileCheck className="h-5 w-5 text-indigo-600" />
+                  <FileCheck className="h-5 w-5 text-blue-600" />
                   정기 약정 마스터 계약 명세 ({filteredSubs.length}건)
                 </CardTitle>
                 <CardDescription>
@@ -335,7 +335,7 @@ export default function RecurringPendingPage() {
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-16 text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
-                          <RefreshCw className="h-6 w-6 animate-spin text-indigo-600" />
+                          <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
                           <p className="text-sm font-medium">정기 약정 데이터를 실시간 조회 중입니다...</p>
                         </div>
                       </TableCell>
@@ -366,13 +366,13 @@ export default function RecurringPendingPage() {
                         <TableCell className="font-medium text-slate-700 dark:text-zinc-300">
                           {sub.itemName || '정기 헌금'}
                         </TableCell>
-                        <TableCell className="text-right font-black text-indigo-600 dark:text-indigo-400">
+                        <TableCell className="text-right font-black text-blue-600 dark:text-blue-400">
                           {Number(sub.amount || 0).toLocaleString()}원
                         </TableCell>
                         <TableCell className="text-xs font-bold text-amber-700 dark:text-amber-400">
                           {formatInterval(sub)}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                        <TableCell className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                           {sub.nextPaymentDate || '-'}
                         </TableCell>
                         <TableCell className="text-xs text-slate-600 dark:text-zinc-400">

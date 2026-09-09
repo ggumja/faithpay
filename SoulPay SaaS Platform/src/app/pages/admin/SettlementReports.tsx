@@ -533,7 +533,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('today')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'daily' && periodSelection.startDate
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -544,7 +544,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('this_week')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'weekly'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -555,7 +555,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('this_month')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'monthly'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -566,7 +566,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('all')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'all'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >

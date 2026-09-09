@@ -388,7 +388,7 @@ export default function DonationMenuManagement() {
 
       {/* Main Content Workbench */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5">
+        <div className="w-full p-6 lg:p-8 space-y-6">
           
           {/* Header Banner: Compact & Typographic Focus */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-zinc-800">

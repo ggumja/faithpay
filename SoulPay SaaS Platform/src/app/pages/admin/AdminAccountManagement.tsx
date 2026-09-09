@@ -542,7 +542,7 @@ export default function AdminAccountManagement() {
             {activeTab === 'accounts' ? (
               <Button
                 onClick={() => setIsAddStaffModalOpen(true)}
-                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer self-start md:self-auto"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer self-start md:self-auto"
               >
                 <UserPlus className="h-4 w-4" />
                 신규 관리자 추가
@@ -940,7 +940,7 @@ export default function AdminAccountManagement() {
             <Button variant="outline" onClick={() => setIsAddStaffModalOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleAddStaff} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+            <Button onClick={handleAddStaff} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
               계정 생성 완료
             </Button>
           </DialogFooter>
@@ -1032,7 +1032,7 @@ export default function AdminAccountManagement() {
             <Button variant="outline" onClick={() => setIsEditStaffModalOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleSaveEditStaff} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+            <Button onClick={handleSaveEditStaff} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
               수정 사항 저장
             </Button>
           </DialogFooter>
