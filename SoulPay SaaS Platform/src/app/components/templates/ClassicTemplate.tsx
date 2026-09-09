@@ -152,11 +152,6 @@ const RESPONSIVE_CSS = `
   padding: 6px 10px;
   font-size: 12px;
 }
-.th-btn-donate {
-  height: 36px;
-  padding: 0 16px;
-  font-size: 13px;
-}
 
 @media (max-width: 640px) {
   .th-header-inner {
@@ -178,11 +173,6 @@ const RESPONSIVE_CSS = `
   }
   .th-btn-admin {
     padding: 5px 7px !important;
-    font-size: 11px !important;
-  }
-  .th-btn-donate {
-    height: 32px !important;
-    padding: 0 10px !important;
     font-size: 11px !important;
   }
 }
@@ -294,14 +284,6 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               <span className="th-admin-label-full">관리자 로그인</span>
               <span className="th-admin-label-short">관리자</span>
             </button>
-            <button
-              className="th-btn-spring th-btn-donate"
-              onClick={() => {
-                const firstItem = allItems && allItems.length > 0 ? allItems[0] : undefined;
-                navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
-              }}
-              style={{ fontWeight: 700, borderRadius: 8, background: ft.primary, color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap', flexShrink: 0 }}
-            >{terms.donation}하기</button>
           </div>
         </div>
 
@@ -359,25 +341,13 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               <div className="th-hero-cta" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24 }}>
                 <button
                   className="th-btn-spring"
-                  onClick={() => {
-                    const firstItem = allItems && allItems.length > 0 ? allItems[0] : undefined;
-                    navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
-                  }}
+                  onClick={() => { document.getElementById('items-section')?.scrollIntoView({ behavior: 'smooth' }); }}
                   style={{ height: 48, padding: '0 26px', background: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 800, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', whiteSpace: 'nowrap' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.35)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'; }}
                 >
                   <Motif kind={ft.motif} size={15} color={ft.primary} />
-                  {terms.donation}하기
-                </button>
-                <button
-                  className="th-btn-spring"
-                  onClick={() => { document.getElementById('items-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  style={{ height: 48, padding: '0 22px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, fontSize: 15, fontWeight: 600, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', backdropFilter: 'blur(12px)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
-                >
-                  항목 보기 <ChevronRight size={15} />
+                  <span>{terms.donationItems} 둘러보기 ↓</span>
                 </button>
               </div>
 
@@ -486,13 +456,12 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               <button
                 className="th-btn-spring"
                 onClick={() => {
-                  const firstItem = allItems && allItems.length > 0 ? allItems[0] : undefined;
-                  navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: firstItem } });
+                  document.getElementById('items-section')?.scrollIntoView({ behavior: 'smooth' });
                 }}
                 style={{ width: '100%', height: 42, background: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
               >
                 <Motif kind={ft.motif} size={14} color={ft.primary} />
-                <span>{terms.donation}하기</span>
+                <span>{terms.donationItems} 선택하기</span>
               </button>
             </div>
           </div>
