@@ -3946,6 +3946,7 @@ const handleRecurringBatchRun = async (c: any) => {
         }
 
         const donationRecord = await db.createDonation({
+          id: `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
           tenantId: sub.tenantId,
           itemId: sub.itemId,
           itemName: sub.itemName,
@@ -3991,6 +3992,7 @@ const handleRecurringBatchRun = async (c: any) => {
         console.error(`[Recurring Batch Scheduler] Failed for sub ${sub.id}:`, err);
         try {
           await db.createDonation({
+            id: `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
             tenantId: sub.tenantId,
             itemId: sub.itemId,
             itemName: sub.itemName,

@@ -851,8 +851,10 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
     if (tenant) realTenantId = tenant.id;
   }
 
+  const finalId = donation.id || `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+
   const row = {
-    id: donation.id,
+    id: finalId,
     tenant_id: realTenantId,
     item_id: donation.itemId || '',
     item_name: donation.itemName || '',
