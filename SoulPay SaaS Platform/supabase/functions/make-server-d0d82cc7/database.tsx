@@ -2908,6 +2908,68 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
 
   return profileData;
 }
+
+// 📱 신도/회원 이메일 로그인 조회 (DB 100% 실측 조회)
+export async function loginDonorWithEmail(tenantId: string, email: string, password?: string): Promise<{ phone: string; donorName: string; profile: any } | null> {
+  const sb = pgClient();
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail) return null;
+
+  // 1. system_settings 테이블에서 member_profile_% 검색
+  try {
+    const { data: settings } = await sb
+      .from('system_settings')
+      .select('key, value')
+      .like('key', 'member_profile_%');
+
+    if (settings && settings.length > 0) {
+      for (const s of settings) {
+        const val = (s.value && typeof s.value === 'object') ? s.value : {};
+        const profileEmail = (val.email || '').trim().toLowerCase();
+        if (profileEmail === cleanEmail) {
+          // 비밀번호가 설정되어 있는 경우 일치 여부 확인
+          if (val.password && password && val.password !== password) {
+            return null; // 비밀번호 불일치
+          }
+          const phone = (val.phone || s.key.replace('member_profile_', '')).replace(/[^0-9]/g, '');
+          return {
+            phone,
+            donorName: val.name || '성도',
+            profile: val,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error finding member by email in system_settings:', err);
+  }
+
+  // 2. subscriptions 테이블에서 donor_email 검색
+  try {
+    const { data: subs } = await sb
+      .from('subscriptions')
+      .select('donor_phone, donor_name, donor_email')
+      .ilike('donor_email', cleanEmail)
+      .limit(1);
+
+    if (subs && subs.length > 0) {
+      const sub = subs[0];
+      const phone = (sub.donor_phone || '').replace(/[^0-9]/g, '');
+      if (phone) {
+        const profile = await getDonorProfile(phone);
+        return {
+          phone,
+          donorName: sub.donor_name || profile?.name || '성도',
+          profile: profile || { phone, name: sub.donor_name, email: sub.donor_email },
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Error finding member by email in subscriptions:', err);
+  }
+
+  return null;
+}
 // ==================== DAILY CLOSING SNAPSHOTS ====================
 
 export interface DailyClosingSummary {

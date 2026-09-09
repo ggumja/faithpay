@@ -4136,6 +4136,27 @@ app.get("/members/profile/:phone", handleGetProfile);
 app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
 app.post("/members/update-profile", handleUpdateProfile);
 
+// 📱 신도/회원 이메일 로그인 API (DB 100% 실측 조회)
+const handleMemberLogin = async (c: any) => {
+  try {
+    const body = await c.req.json();
+    const { tenantId, email, password } = body;
+    if (!email) {
+      return c.json({ success: false, error: '이메일 주소를 입력해 주세요.' }, 400);
+    }
+    const result = await db.loginDonorWithEmail(tenantId, email, password);
+    if (!result) {
+      return c.json({ success: false, error: '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다.' }, 401);
+    }
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error during member email login:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+app.post("/make-server-d0d82cc7/members/login", handleMemberLogin);
+app.post("/members/login", handleMemberLogin);
+
 // ======================================================================
 // SYSTEM ADMINS API
 // ======================================================================

@@ -627,35 +627,35 @@ export const memberAPI = {
     return { success: true, data: { updatedCount: 1 } };
   },
 
+  /** 신도/회원 이메일 로그인 (DB 100% 실측 조회) */
   async loginWithEmail(
     tenantId: string,
     email: string,
     pass?: string
-  ): Promise<APIResponse<{ found: boolean; phone?: string; donorName?: string; donations?: any[] }>> {
+  ): Promise<APIResponse<{ found: boolean; phone?: string; donorName?: string; profile?: any }>> {
     const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return { success: false, error: '이메일 주소를 입력해 주세요.' };
+
     try {
-      const listRes = await donationAPI.getByTenant(tenantId);
-      if (listRes.success && Array.isArray(listRes.data)) {
-        const matched = listRes.data.filter(
-          (d: any) => (d.donorEmail || d.email || '').trim().toLowerCase() === cleanEmail
-        );
-        if (matched.length > 0) {
-          const last = matched[0];
-          return {
-            success: true,
-            data: {
-              found: true,
-              phone: last.donorPhone,
-              donorName: last.donorName,
-              donations: matched,
-            },
-          };
-        }
+      const res = await fetchAPI<any>('/members/login', {
+        method: 'POST',
+        body: JSON.stringify({ tenantId, email: cleanEmail, password: pass }),
+      });
+      if (res.success && res.data) {
+        return {
+          success: true,
+          data: {
+            found: true,
+            phone: res.data.phone,
+            donorName: res.data.donorName,
+            profile: res.data.profile,
+          },
+        };
       }
-    } catch (err) {
-      console.error('Error during donor email login lookup:', err);
+      return { success: false, error: res.error || '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다.' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || '이메일 로그인 중 오류가 발생했습니다.' };
     }
-    return { success: true, data: { found: false } };
   },
 };
 

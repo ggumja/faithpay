@@ -240,42 +240,18 @@ export default function MyDonations() {
     setIsLoading(true);
     try {
       const res = await memberAPI.loginWithEmail(currentTenant.id, loginEmail, loginPassword);
-      if (res.success && res.data && res.data.found) {
+      if (res.success && res.data && res.data.found && res.data.phone) {
         setIsAuthenticated(true);
-        const userPhone = res.data.phone || '';
+        const userPhone = res.data.phone.replace(/[^0-9]/g, '');
         setPhoneNumber(userPhone);
-
-        const completedDonations = (res.data.donations || []).filter(
-          (d: any) => !d.paymentStatus || d.paymentStatus === 'completed'
-        );
-        const matched: HistoryItem[] = completedDonations.map((d: any) => ({
-          id: d.id,
-          itemId: d.itemId,
-          itemName: d.itemName,
-          amount: d.amount,
-          name: d.donorName,
-          phone: d.donorPhone,
-          date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-          rawDate: d.createdAt,
-          status: '결제완료',
-          isRecurring: d.isRecurring,
-          deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-          paymentMethod: cleanPaymentMethod(d.paymentMethod),
-        }));
-        setHistory(matched);
-        loadSavedProfile(userPhone.replace(/[^0-9]/g, ''), completedDonations);
+        sessionStorage.setItem('soulpay_donor_session', userPhone);
+        await fetchDonorData(userPhone);
         toast.success(`이메일 로그인 성공! ${res.data.donorName || terms.donor}님의 마이페이지입니다.`);
       } else {
-        setIsAuthenticated(true);
-        const targetPh = (phoneNumber || sessionStorage.getItem('soulpay_donor_session') || '').replace(/[^0-9]/g, '');
-        if (targetPh) {
-          setPhoneNumber(targetPh);
-          fetchDonorData(targetPh);
-        }
-        toast.success('로그인에 성공하였습니다.');
+        toast.error(res.error || '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다. 휴대폰 1초 인증으로 로그인하신 후 프로필에서 이메일과 비밀번호를 등록해 주세요.');
       }
-    } catch (err) {
-      toast.error('이메일 로그인 중 오류가 발생했습니다.');
+    } catch (err: any) {
+      toast.error(err?.message || '이메일 로그인 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
