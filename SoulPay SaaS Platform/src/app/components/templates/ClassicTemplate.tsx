@@ -338,19 +338,6 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                 {currentTenant.description}
               </p>
 
-              <div className="th-hero-cta" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24 }}>
-                <button
-                  className="th-btn-spring"
-                  onClick={() => { document.getElementById('items-section')?.scrollIntoView({ behavior: 'smooth' }); }}
-                  style={{ height: 48, padding: '0 26px', background: 'white', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 800, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', whiteSpace: 'nowrap' }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.35)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'; }}
-                >
-                  <Motif kind={ft.motif} size={15} color={ft.primary} />
-                  <span>{terms.donationItems} 둘러보기 ↓</span>
-                </button>
-              </div>
-
               <div className="th-trust-badges" style={{ gap: 20, flexWrap: 'wrap' }}>
                 {[['ISMS-P', '정보보호 인증'], ['PCI-DSS', '결제 보안'], ['SSL', '256-bit']].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
