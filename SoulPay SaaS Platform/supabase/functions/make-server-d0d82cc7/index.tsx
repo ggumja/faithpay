@@ -2729,6 +2729,18 @@ const handleGetSubscriptionsByTenant = async (c: any) => {
 app.get("/make-server-d0d82cc7/subscriptions/tenant/:tenantId", handleGetSubscriptionsByTenant);
 app.get("/subscriptions/tenant/:tenantId", handleGetSubscriptionsByTenant);
 
+// 전체 단체 정기결제 약정 목록 조회 (시스템 관리자용)
+const handleGetAllSubscriptions = async (c: any) => {
+  try {
+    const subscriptions = await db.getAllSubscriptions();
+    return c.json({ success: true, data: subscriptions });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to fetch all subscriptions" }, 500);
+  }
+};
+app.get("/make-server-d0d82cc7/subscriptions", handleGetAllSubscriptions);
+app.get("/subscriptions", handleGetAllSubscriptions);
+
 // 비회원 정기결제 중단/일시정지/재개 상태 변경
 const handleUpdateSubscriptionStatus = async (c: any) => {
   try {

@@ -420,6 +420,29 @@ export const subscriptionAPI = {
     });
   },
 
+  async getAll(): Promise<APIResponse<any[]>> {
+    try {
+      const res = await fetchAPI<any[]>(`/subscriptions`, { silentFail: true } as any);
+      if (res.success) return res;
+      return { success: true, data: [] };
+    } catch {
+      return { success: true, data: [] };
+    }
+  },
+
+  async runBatch(): Promise<APIResponse<{
+    executedAtKst: string;
+    processedCount: number;
+    successCount: number;
+    failedCount: number;
+    results: any[];
+  }>> {
+    return fetchAPI('/payment/recurring/batch-run', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  },
+
   async register(subData: any): Promise<APIResponse<any>> {
     return fetchAPI<any>(`/subscriptions/register`, {
       method: 'POST',
