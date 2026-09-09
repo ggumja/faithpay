@@ -423,60 +423,44 @@ export default function MemberManagement() {
 
           {/* Stats Summary Cards (No Mock Data) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  전체 등록 {memberTerm}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
-                  {totalMembersCount}명
-                </div>
-                <p className="text-xs text-slate-400 mt-1">등록된 전체 회원 명부</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                전체 등록 {memberTerm}
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                {totalMembersCount}명
+              </div>
+              <p className="text-xs text-slate-400">등록된 전체 회원 명부</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  정기 약정 {memberTerm}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
-                  {recurringMembersCount}명
-                </div>
-                <p className="text-xs text-slate-400 mt-1">정기 후원 납부 회원</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                정기 약정 {memberTerm}
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                {recurringMembersCount}명
+              </div>
+              <p className="text-xs text-slate-400">정기 후원 납부 회원</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  총 누적 {donationTerm}액
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  ₩ {totalDonationsAmount.toLocaleString()}원
-                </div>
-                <p className="text-xs text-slate-400 mt-1">정상 승인 완료 총액</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                총 누적 {donationTerm}액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                ₩ {totalDonationsAmount.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">정상 승인 완료 총액</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  평균 누적 {donationTerm}액
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
-                  ₩ {avgDonationAmount.toLocaleString()}원
-                </div>
-                <p className="text-xs text-slate-400 mt-1">회원 1인당 평균 후원</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                평균 누적 {donationTerm}액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                ₩ {avgDonationAmount.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">회원 1인당 평균 후원</p>
             </Card>
           </div>
 

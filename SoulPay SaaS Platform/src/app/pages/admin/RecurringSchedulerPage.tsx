@@ -246,10 +246,9 @@ export default function RecurringSchedulerPage() {
       {/* ── 2. KPI Summary Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: 오늘 결제 도래/대상 */}
-        <div className="p-4 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-[var(--hm-ink-3)] font-semibold">
-            <span>오늘 결제 대상 큐</span>
-            <Calendar size={15} className="text-blue-600" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-1.5">
+          <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+            오늘 결제 대상 큐
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-[var(--hm-ink)]">
@@ -260,16 +259,15 @@ export default function RecurringSchedulerPage() {
               KST {todayKstStr}
             </span>
           </div>
-          <p className="text-[11px] text-[var(--hm-ink-3)]">
+          <p className="text-xs text-slate-400">
             오늘 이전/당일 결제일이 도래한 정기 약정
           </p>
         </div>
 
         {/* Card 2: 오늘 승인 성공 건수 */}
-        <div className="p-4 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-[var(--hm-ink-3)] font-semibold">
-            <span>오늘 승인 완료 건수</span>
-            <CheckCircle2 size={15} className="text-emerald-600" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-1.5">
+          <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+            오늘 승인 완료 건수
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-emerald-600">
@@ -280,36 +278,34 @@ export default function RecurringSchedulerPage() {
               승인 완료
             </span>
           </div>
-          <p className="text-[11px] text-[var(--hm-ink-3)]">
+          <p className="text-xs text-slate-400">
             오늘자 나노페이 정상 승인 완료 건
           </p>
         </div>
 
         {/* Card 3: 오늘 승인 총 금액 */}
-        <div className="p-4 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-[var(--hm-ink-3)] font-semibold">
-            <span>오늘 승인 총 금액</span>
-            <CreditCard size={15} className="text-purple-600" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-1.5">
+          <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+            오늘 승인 총 금액
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-[var(--hm-ink)]">
               {stats.todaySuccessAmount.toLocaleString()}
               <span className="text-sm font-semibold text-[var(--hm-ink-3)] ml-1">원</span>
             </span>
-            <span className="text-[11px] font-bold text-purple-600 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">
               실 결제
             </span>
           </div>
-          <p className="text-[11px] text-[var(--hm-ink-3)]">
+          <p className="text-xs text-slate-400">
             금일 정기결제로 정산 원장에 집계된 총액
           </p>
         </div>
 
         {/* Card 4: 전체 활성 정기구독 */}
-        <div className="p-4 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-[var(--hm-ink-3)] font-semibold">
-            <span>전체 활성 정기 약정</span>
-            <Clock size={15} className="text-slate-600" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--hm-paper)] border border-[var(--hm-border)] shadow-2xs space-y-1.5">
+          <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+            전체 활성 정기 약정
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-[var(--hm-ink)]">
@@ -320,7 +316,7 @@ export default function RecurringSchedulerPage() {
               총 {subscriptions.length}건 등록
             </span>
           </div>
-          <p className="text-[11px] text-[var(--hm-ink-3)]">
+          <p className="text-xs text-slate-400">
             현재 유지 중인 전체 단체 빌키 약정 건
           </p>
         </div>

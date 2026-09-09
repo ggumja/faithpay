@@ -236,52 +236,40 @@ export default function RecurringPendingPage() {
 
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  활성 정기 약정 수 (Active)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  {activeCount}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  전체 {subscriptions.length}건 중 결제 진행 중 (해지 {cancelledCount}건)
-                </p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                활성 정기 약정 수 (Active)
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {activeCount}건
+              </div>
+              <p className="text-xs text-slate-400">
+                전체 {subscriptions.length}건 중 결제 진행 중 (해지 {cancelledCount}건)
+              </p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  월 약정 예상 수납 총액
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
-                  {totalMonthlyCommitment.toLocaleString()}원
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  월 환산 예상액 (회차별 합계: {totalPerRunAmount.toLocaleString()}원)
-                </p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                월 약정 예상 수납 총액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                {totalMonthlyCommitment.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">
+                월 환산 예상액 (회차별 합계: {totalPerRunAmount.toLocaleString()}원)
+              </p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  일시중지 / 해지 약정 현황
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
-                  {pausedCount + cancelledCount}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  일시중지 {pausedCount}건 · 해지 완료 {cancelledCount}건
-                </p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                일시중지 / 해지 약정 현황
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {pausedCount + cancelledCount}건
+              </div>
+              <p className="text-xs text-slate-400">
+                일시중지 {pausedCount}건 · 해지 완료 {cancelledCount}건
+              </p>
             </Card>
           </div>
 

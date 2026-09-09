@@ -489,46 +489,34 @@ export default function PrayerManagement() {
 
           {/* Stats Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  전체 {terms.prayer} 건수
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
-                  {prayers.length}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">접수 완료된 전체 {terms.prayer} 내역</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                전체 {terms.prayer} 건수
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                {prayers.length}건
+              </div>
+              <p className="text-xs text-slate-400">접수 완료된 전체 {terms.prayer} 내역</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  미인쇄 대기
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
-                  {unprintedCount}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">라벨지 미출력 대기 건수</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                미인쇄 대기
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {unprintedCount}건
+              </div>
+              <p className="text-xs text-slate-400">라벨지 미출력 대기 건수</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  인쇄 출력 완료
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  {prayers.length - unprintedCount}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">라벨지 출력 완료 건수</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                인쇄 출력 완료
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {prayers.length - unprintedCount}건
+              </div>
+              <p className="text-xs text-slate-400">라벨지 출력 완료 건수</p>
             </Card>
           </div>
 

@@ -592,34 +592,34 @@ export default function SettlementReports() {
 
           {/* Current Month Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">기간 총 봉헌 수납액 ({summaryStats.currentMonthName})</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-zinc-100">{summaryStats.monthlyTotal.toLocaleString()}원</div>
-                <p className="text-xs text-slate-400 mt-1">플랫폼 결제 성공 건 단순 합산</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                기간 총 봉헌 수납액 ({summaryStats.currentMonthName})
+              </div>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-zinc-100">
+                {summaryStats.monthlyTotal.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">플랫폼 결제 성공 건 단순 합산</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">수수료 공제 추정액 ({contractRate}%)</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{summaryStats.pgFee.toLocaleString()}원</div>
-                <p className="text-xs text-slate-400 mt-1">기준 수수료율 {contractRate}% (VAT/우대율 별도)</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                수수료 공제 추정액 ({contractRate}%)
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {summaryStats.pgFee.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">기준 수수료율 {contractRate}% (VAT/우대율 별도)</p>
             </Card>
 
-            <Card className="hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader className="p-4 sm:p-5 pb-1">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">단체 계좌 입금 추정액</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">{summaryStats.finalDeposit.toLocaleString()}원</div>
-                <p className="text-xs text-slate-400 mt-1">정산 예정: {summaryStats.settlementDateStr}</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                단체 계좌 입금 추정액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {summaryStats.finalDeposit.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">정산 예정: {summaryStats.settlementDateStr}</p>
             </Card>
           </div>
 
