@@ -818,140 +818,139 @@ export default function MemberDetailPage() {
             <Button
               variant="ghost"
               onClick={() => navigate(`/${tenantSlug}/admin/members`)}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 -ml-2 self-start cursor-pointer transition-colors"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--hm-ink-2)] hover:text-[var(--hm-ink)] hover:bg-[var(--hm-paper-2)] -ml-2 self-start cursor-pointer transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 text-[var(--hm-ink-3)]" />
               <span>{memberTerm} 목록으로 돌아가기</span>
             </Button>
 
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              <Button
-                variant="outline"
-                size="sm"
+              <button
+                type="button"
                 onClick={handleOpenEditModal}
-                className="gap-1.5 cursor-pointer font-medium text-xs text-slate-700 bg-white hover:bg-slate-50 border-slate-200 h-8 px-3 rounded-lg shadow-2xs"
+                className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-xs text-[var(--hm-ink-2)] bg-[var(--hm-paper)] hover:bg-[var(--hm-paper-2)] border border-[var(--hm-border)] h-8 px-3 rounded-lg shadow-2xs transition-colors"
               >
-                <Edit2 className="h-3.5 w-3.5 text-slate-500" />
+                <Edit2 className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                 <span>정보 수정</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
+                type="button"
                 onClick={handleDelete}
-                className="gap-1.5 cursor-pointer font-medium text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-rose-200 h-8 px-3 rounded-lg shadow-2xs transition-colors"
+                className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-xs text-[var(--hm-danger)] hover:bg-[oklch(0.52_0.20_27_/_0.08)] border border-[oklch(0.52_0.20_27_/_0.25)] h-8 px-3 rounded-lg shadow-2xs transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span>회원 삭제</span>
-              </Button>
+              </button>
             </div>
           </div>
 
-          {/* Member Profile Card & Unified Metrics Strip */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white dark:bg-zinc-900 shadow-xs p-6 sm:p-7 space-y-6">
+          {/* Member Profile Card & Unified Metrics Strip (Hallmark Cobalt-01 Light) */}
+          <div className="rounded-2xl border border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-2xs p-6 sm:p-7 space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 border border-slate-200/70 dark:border-zinc-700 flex items-center justify-center text-xl sm:text-2xl font-bold text-slate-700 dark:text-zinc-200 shrink-0 select-none shadow-2xs">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--hm-accent-bg)] border border-[var(--hm-accent-border)] flex items-center justify-center text-xl sm:text-2xl font-bold text-[var(--hm-accent)] font-[family-name:var(--font-display)] shrink-0 select-none shadow-2xs">
                   {member.name.slice(0, 1)}
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    <h1 className="text-2xl font-extrabold text-[var(--hm-ink)] tracking-tight font-[family-name:var(--font-display)]">
                       {member.name}
                     </h1>
                     {member.baptismName && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200/80 dark:border-zinc-700">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-2)] border border-[var(--hm-border)]">
                         {getTitleLabel()}: {member.baptismName}
                       </span>
                     )}
                     {member.recurringCount > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[oklch(0.55_0.17_148_/_0.10)] text-[var(--hm-success)] border border-[oklch(0.55_0.17_148_/_0.25)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--hm-success)]"></span>
                         정기 약정 {member.recurringCount}건
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200/60">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)]">
                         일반 회원
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 dark:text-zinc-400 font-normal">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--hm-ink-3)] font-normal">
                     <span className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="font-mono text-slate-700 dark:text-zinc-300 font-medium">
+                      <Phone className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                      <span className="font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink-2)] font-semibold">
                         {formatPhoneNumber(member.phone)}
                       </span>
                       <button
                         onClick={handleCopyPhone}
                         title="연락처 복사"
-                        className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 cursor-pointer"
+                        className="text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)] transition-colors p-0.5 cursor-pointer"
                       >
                         <Copy className="h-3 w-3" />
                       </button>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{member.email || '이메일 미등록'}</span>
+                      <Mail className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                      <span className="text-[var(--hm-ink-2)]">{member.email || '이메일 미등록'}</span>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <span>가입일: {member.registeredDate}</span>
+                      <Calendar className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                      <span className="font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink-2)]">가입일: {member.registeredDate}</span>
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2 self-start lg:self-center">
-                <Button
-                  variant="outline"
+              <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+                <button
+                  type="button"
                   onClick={handleOpenTaxModal}
-                  className="bg-white hover:bg-slate-50 text-slate-700 border-slate-200 font-medium text-xs h-9 px-3.5 rounded-lg shadow-2xs gap-1.5 cursor-pointer transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-[var(--hm-paper)] hover:bg-[var(--hm-paper-2)] text-[var(--hm-ink)] border border-[var(--hm-border)] font-semibold text-xs h-9 px-3.5 rounded-lg shadow-2xs cursor-pointer transition-colors"
                 >
-                  <FileText className="h-3.5 w-3.5 text-slate-500" />
+                  <FileText className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                   <span>소득공제 영수증 발급</span>
-                </Button>
-                <Button
+                </button>
+                <button
+                  type="button"
                   onClick={() => handlePrintReceipt()}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs h-9 px-3.5 rounded-lg shadow-2xs gap-1.5 cursor-pointer transition-colors"
+                  className="inline-flex items-center gap-1.5 bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
                 >
                   <Printer className="h-3.5 w-3.5" />
                   <span>전체 {donationTerm} 확인서</span>
-                </Button>
+                </button>
               </div>
             </div>
 
             {/* Quiet 4-Column Metric Strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-6 border-t border-slate-100 dark:border-zinc-800">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-6 border-t border-[var(--hm-border)]">
               <div className="space-y-1">
-                <span className="text-xs font-medium text-slate-500 block">총 누적 {donationTerm}액</span>
-                <span className="text-2xl font-bold text-slate-900 dark:text-zinc-100 font-mono tracking-tight block">
+                <span className="text-xs font-medium text-[var(--hm-ink-3)] block">총 누적 {donationTerm}액</span>
+                <span className="text-2xl font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums tracking-tight block">
                   ₩ {member.totalDonation.toLocaleString()}
                 </span>
-                <span className="text-[11px] text-slate-400 block">실측 결제 완료 기준</span>
+                <span className="text-[11px] text-[var(--hm-ink-3)] block">실측 결제 완료 기준</span>
               </div>
 
               <div className="space-y-1">
-                <span className="text-xs font-medium text-slate-500 block">최근 {donationTerm}일</span>
-                <span className="text-base font-semibold text-slate-800 dark:text-zinc-200 block pt-0.5">
+                <span className="text-xs font-medium text-[var(--hm-ink-3)] block">최근 {donationTerm}일</span>
+                <span className="text-base font-bold text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums block pt-0.5">
                   {member.lastDonation || '기록 없음'}
                 </span>
-                <span className="text-[11px] text-slate-400 block">최근 납부 일자</span>
+                <span className="text-[11px] text-[var(--hm-ink-3)] block">최근 납부 일자</span>
               </div>
 
               <div className="space-y-1">
-                <span className="text-xs font-medium text-slate-500 block">정기 약정 현황</span>
-                <span className="text-base font-semibold text-slate-800 dark:text-zinc-200 block pt-0.5">
+                <span className="text-xs font-medium text-[var(--hm-ink-3)] block">정기 약정 현황</span>
+                <span className="text-base font-bold text-[var(--hm-ink)] font-[family-name:var(--font-display)] block pt-0.5">
                   {member.recurringCount > 0 ? `${member.recurringCount}건 활성 유지` : '1회성 전용'}
                 </span>
-                <span className="text-[11px] text-slate-400 block">자동 이체 등록 여부</span>
+                <span className="text-[11px] text-[var(--hm-ink-3)] block">자동 이체 등록 여부</span>
               </div>
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="text-xs font-medium text-[var(--hm-ink-3)] flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-[var(--hm-ink-3)] shrink-0" />
                     주소
                   </span>
                   {member.address && (
@@ -961,14 +960,14 @@ export default function MemberDetailPage() {
                         toast.success('주소가 클립보드에 복사되었습니다.');
                       }}
                       title="주소 복사"
-                      className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 cursor-pointer"
+                      className="text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)] transition-colors p-0.5 cursor-pointer"
                     >
                       <Copy className="h-3 w-3" />
                     </button>
                   )}
                 </div>
                 <span
-                  className="text-xs text-slate-700 dark:text-zinc-300 block leading-relaxed break-keep break-words select-text pt-0.5"
+                  className="text-xs text-[var(--hm-ink-2)] block leading-relaxed break-keep break-words select-text pt-0.5"
                   title={member.address}
                 >
                   {member.address || '주소 미입력'}
@@ -978,45 +977,45 @@ export default function MemberDetailPage() {
           </div>
 
           {/* Main Content Tabs */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white dark:bg-zinc-900 shadow-xs p-6 sm:p-7">
+          <div className="rounded-2xl border border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-2xs p-6 sm:p-7">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-              {/* Calm, Modern Tab Bar */}
-              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-slate-100/80 dark:bg-zinc-800/80 p-1 rounded-xl border border-slate-200/50 dark:border-zinc-700/60 mb-6 h-auto">
+              {/* Hallmark Modern Tab Bar */}
+              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-[var(--hm-paper-2)] p-1 rounded-xl border border-[var(--hm-border)] mb-6 h-auto">
                 <TabsTrigger
                   value="history"
-                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-slate-600 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-zinc-100 data-[state=active]:shadow-2xs transition-all cursor-pointer"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
                 >
-                  <CreditCard className="h-3.5 w-3.5 text-slate-400" />
+                  <CreditCard className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                   <span>{donationTerm} 내역</span>
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-semibold">
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-[var(--hm-paper-3)] text-[var(--hm-ink-2)] font-[family-name:var(--font-mono)] tabular-nums font-semibold">
                     {donations.length}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="recurring"
-                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-slate-600 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-zinc-100 data-[state=active]:shadow-2xs transition-all cursor-pointer"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
                 >
-                  <RefreshCw className="h-3.5 w-3.5 text-slate-400" />
+                  <RefreshCw className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                   <span>정기 약정</span>
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-semibold">
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-[var(--hm-paper-3)] text-[var(--hm-ink-2)] font-[family-name:var(--font-mono)] tabular-nums font-semibold">
                     {subscriptions.length}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="prayers"
-                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-slate-600 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-zinc-100 data-[state=active]:shadow-2xs transition-all cursor-pointer"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-slate-400" />
+                  <Sparkles className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                   <span>{prayerTerm} 이력</span>
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-semibold">
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-[var(--hm-paper-3)] text-[var(--hm-ink-2)] font-[family-name:var(--font-mono)] tabular-nums font-semibold">
                     {prayers.length}
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="note"
-                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-slate-600 dark:text-zinc-400 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-slate-900 dark:data-[state=active]:text-zinc-100 data-[state=active]:shadow-2xs transition-all cursor-pointer"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
                 >
-                  <FileText className="h-3.5 w-3.5 text-slate-400" />
+                  <FileText className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                   <span>관리자 메모</span>
                 </TabsTrigger>
               </TabsList>
@@ -1025,33 +1024,32 @@ export default function MemberDetailPage() {
               <TabsContent value="history" className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base flex items-center gap-2">
+                    <h3 className="font-bold text-[var(--hm-ink)] text-base flex items-center gap-2 font-[family-name:var(--font-display)]">
                       <span>{member.name} {memberTerm}의 {donationTerm} 내역</span>
-                      <span className="text-xs font-normal text-slate-500 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700">
+                      <span className="text-xs font-semibold text-[var(--hm-ink-3)] bg-[var(--hm-paper-2)] px-2.5 py-0.5 rounded-full border border-[var(--hm-border)] font-[family-name:var(--font-mono)] tabular-nums">
                         {filteredDonationsHistory.length}건 / 전체 {donations.length}건
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
                       기간 검색 필터 조회를 제공하며 건별 확인서 인쇄가 가능합니다.
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
+                    type="button"
                     onClick={() => handlePrintReceipt()}
-                    className="gap-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border-slate-200 h-8 px-3 rounded-lg shadow-2xs self-start sm:self-auto cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[var(--hm-paper)] hover:bg-[var(--hm-paper-2)] text-[var(--hm-ink)] border border-[var(--hm-border)] h-8 px-3 rounded-lg shadow-2xs self-start sm:self-auto cursor-pointer transition-colors"
                   >
-                    <Printer className="h-3.5 w-3.5 text-slate-500" />
+                    <Printer className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                     <span>납부확인서 인쇄</span>
-                  </Button>
+                  </button>
                 </div>
 
                 {/* 기간 지정 필터 모듈 */}
-                <div className="bg-slate-50/70 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-zinc-700/80 p-3.5 sm:p-4 rounded-xl space-y-3">
+                <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] p-3.5 sm:p-4 rounded-xl space-y-3">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-slate-600 dark:text-zinc-300 flex items-center gap-1.5 whitespace-nowrap">
-                        <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                      <span className="text-xs font-semibold text-[var(--hm-ink-2)] flex items-center gap-1.5 whitespace-nowrap">
+                        <Calendar className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                         기간:
                       </span>
                       <PeriodRangePicker
@@ -1062,132 +1060,131 @@ export default function MemberDetailPage() {
                       />
                     </div>
 
-                    <div className="flex items-center gap-3 self-end lg:self-auto text-xs font-normal text-slate-600 dark:text-zinc-400">
+                    <div className="flex items-center gap-3 self-end lg:self-auto text-xs font-normal text-[var(--hm-ink-3)]">
                       <span>
-                        조회 건수: <strong className="text-slate-900 dark:text-zinc-100 font-bold">{filteredDonationsHistory.length}건</strong>
+                        조회 건수: <strong className="text-[var(--hm-ink)] font-bold font-[family-name:var(--font-mono)] tabular-nums">{filteredDonationsHistory.length}건</strong>
                         {nonCompletedDonationCount > 0 && (
-                          <span className="text-[11px] text-slate-400 ml-1">
+                          <span className="text-[11px] text-[var(--hm-ink-3)] ml-1 font-[family-name:var(--font-mono)] tabular-nums">
                             (완료 {completedDonationCount}건 / 취소·실패 {nonCompletedDonationCount}건)
                           </span>
                         )}
                       </span>
-                      <span className="text-slate-300 dark:text-zinc-600">|</span>
+                      <span className="text-[var(--hm-border)]">|</span>
                       <span>
-                        기간 실납부 합계: <strong className="text-slate-900 dark:text-zinc-100 font-bold font-mono">₩ {filteredCompletedSum.toLocaleString()}원</strong>
+                        기간 실납부 합계: <strong className="text-[var(--hm-ink)] font-black font-[family-name:var(--font-mono)] tabular-nums">₩ {filteredCompletedSum.toLocaleString()}원</strong>
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Table */}
-                <div className="rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-hidden bg-white dark:bg-zinc-900 shadow-2xs">
+                <div className="rounded-xl border border-[var(--hm-border)] overflow-hidden bg-[var(--hm-paper)] shadow-2xs">
                   <Table>
-                    <TableHeader className="bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200/80 dark:border-zinc-700/80">
+                    <TableHeader className="bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)]">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">결제일시</TableHead>
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">{donationTerm} 항목</TableHead>
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">구분</TableHead>
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">결제 수단</TableHead>
-                        <TableHead className="text-right font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">결제 금액</TableHead>
-                        <TableHead className="text-center font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">결제 상태</TableHead>
-                        <TableHead className="text-center font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">영수증</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제일시</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">{donationTerm} 항목</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">구분</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제 수단</TableHead>
+                        <TableHead className="text-right font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제 금액</TableHead>
+                        <TableHead className="text-center font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제 상태</TableHead>
+                        <TableHead className="text-center font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">영수증</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredDonationsHistory.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                          <TableCell colSpan={7} className="text-center py-12 text-[var(--hm-ink-3)]">
                             <div className="space-y-1">
-                              <p className="font-medium text-slate-700 dark:text-zinc-300">선택하신 기간에 해당하는 내역이 없습니다.</p>
-                              <p className="text-xs text-slate-400">기간 설정을 변경하거나 '전체 기간'을 눌러 확인해보세요.</p>
+                              <p className="font-semibold text-[var(--hm-ink)]">선택하신 기간에 해당하는 내역이 없습니다.</p>
+                              <p className="text-xs text-[var(--hm-ink-3)]">기간 설정을 변경하거나 '전체 기간'을 눌러 확인해보세요.</p>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : (
                         filteredDonationsHistory.map((don) => (
-                          <TableRow key={don.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 border-b border-slate-100 dark:border-zinc-800 transition-colors">
-                            <TableCell className="font-mono text-xs whitespace-nowrap py-3">
-                              <div className="font-medium text-slate-800 dark:text-zinc-200">{don.date}</div>
+                          <TableRow key={don.id} className="hover:bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)] transition-colors">
+                            <TableCell className="font-[family-name:var(--font-mono)] tabular-nums text-xs whitespace-nowrap py-3">
+                              <div className="font-semibold text-[var(--hm-ink)]">{don.date}</div>
                               {don.time && (
-                                <div className="text-[11px] text-slate-400 font-mono mt-0.5">{don.time}</div>
+                                <div className="text-[11px] text-[var(--hm-ink-3)] mt-0.5">{don.time}</div>
                               )}
                             </TableCell>
-                            <TableCell className="font-medium text-slate-900 dark:text-zinc-100 py-3 text-sm">
+                            <TableCell className="font-semibold text-[var(--hm-ink)] py-3 text-sm">
                               {don.itemName}
                             </TableCell>
                             <TableCell className="py-3">
                               {don.type === 'recurring' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200/80 dark:border-zinc-700">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--hm-accent-bg)] text-[var(--hm-accent)] border border-[var(--hm-accent-border)] font-[family-name:var(--font-mono)]">
                                   정기
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-slate-500 dark:bg-zinc-900 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)] font-[family-name:var(--font-mono)]">
                                   1회성
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-slate-600 dark:text-zinc-400 py-3 font-normal">
+                            <TableCell className="text-xs text-[var(--hm-ink-2)] py-3 font-normal">
                               {don.paymentMethod}
                             </TableCell>
-                            <TableCell className="text-right py-3 font-mono">
+                            <TableCell className="text-right py-3 font-[family-name:var(--font-mono)] tabular-nums">
                               {don.status === 'completed' ? (
-                                <span className="font-bold text-slate-900 dark:text-zinc-100 text-sm">
+                                <span className="font-black text-[var(--hm-ink)] text-sm">
                                   ₩ {don.amount.toLocaleString()}원
                                 </span>
                               ) : (
-                                <span className="font-normal text-slate-400 line-through text-sm">
+                                <span className="font-normal text-[var(--hm-ink-3)] line-through text-sm">
                                   ₩ {don.amount.toLocaleString()}원
                                 </span>
                               )}
                             </TableCell>
                             <TableCell className="text-center py-3">
                               {don.status === 'completed' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[oklch(0.55_0.17_148_/_0.12)] text-[var(--hm-success)] border border-[oklch(0.55_0.17_148_/_0.25)]">
                                   정상 완료
                                 </span>
                               ) : don.status === 'cancelled' ? (
                                 <div className="space-y-0.5 inline-block">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200/70">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[oklch(0.52_0.20_27_/_0.12)] text-[var(--hm-danger)] border border-[oklch(0.52_0.20_27_/_0.25)]">
                                     결제 취소
                                   </span>
                                   {don.cancelReason && (
-                                    <span className="block text-[10px] text-rose-600 font-normal max-w-[130px] truncate" title={don.cancelReason}>
+                                    <span className="block text-[10px] text-[var(--hm-danger)] font-normal max-w-[130px] truncate" title={don.cancelReason}>
                                       사유: {don.cancelReason}
                                     </span>
                                   )}
                                 </div>
                               ) : don.status === 'failed' ? (
                                 <div className="space-y-0.5 inline-block">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/70">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[oklch(0.65_0.16_65_/_0.12)] text-[oklch(0.65_0.16_65)] border border-[oklch(0.65_0.16_65_/_0.25)]">
                                     결제 실패
                                   </span>
                                   {don.failureReason && (
-                                    <span className="block text-[10px] text-amber-700 font-normal max-w-[130px] truncate" title={don.failureReason}>
+                                    <span className="block text-[10px] text-[oklch(0.65_0.16_65)] font-normal max-w-[130px] truncate" title={don.failureReason}>
                                       {don.failureReason}
                                     </span>
                                   )}
                                 </div>
                               ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)]">
                                   대기
                                 </span>
                               )}
                             </TableCell>
                             <TableCell className="text-center py-3">
                               {don.status === 'completed' ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                                <button
+                                  type="button"
                                   onClick={() => handlePrintReceipt(don)}
-                                  className="h-7 px-2 text-xs font-medium gap-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer rounded-md transition-colors"
+                                  className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-semibold text-[var(--hm-accent)] hover:bg-[var(--hm-accent-bg)] cursor-pointer rounded-md transition-colors"
                                 >
                                   <Printer className="h-3 w-3" />
                                   <span>인쇄</span>
-                                </Button>
+                                </button>
                               ) : don.status === 'cancelled' ? (
-                                <span className="text-xs text-rose-500 font-normal">취소</span>
+                                <span className="text-xs text-[var(--hm-danger)] font-medium">취소</span>
                               ) : (
-                                <span className="text-xs text-slate-300 font-normal">-</span>
+                                <span className="text-xs text-[var(--hm-ink-3)] font-normal">-</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -1201,10 +1198,10 @@ export default function MemberDetailPage() {
               {/* TAB 2: 정기 약정 현황 */}
               <TabsContent value="recurring" className="space-y-4">
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
+                  <h3 className="font-bold text-[var(--hm-ink)] text-base font-[family-name:var(--font-display)]">
                     자동 이체 / 정기결제 약정 목록
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
                     매월 또는 매주 자동 수납되는 정기 약정을 확인하고 일시정지 또는 해지 관리합니다.
                   </p>
                 </div>
@@ -1242,100 +1239,96 @@ export default function MemberDetailPage() {
                       return (
                         <div
                           key={sub.id}
-                          className="rounded-xl border border-slate-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 p-5 shadow-2xs space-y-4 hover:border-slate-300 transition-colors"
+                          className="rounded-xl border border-[var(--hm-border)] bg-[var(--hm-paper)] p-5 shadow-2xs space-y-4 hover:border-[var(--hm-accent-border)] transition-colors"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <h4 className="text-base font-bold text-slate-900 dark:text-zinc-100">{sub.itemName}</h4>
-                              <span className="text-xs text-slate-500 font-normal">{intervalLabel} 자동 납부</span>
+                              <h4 className="text-base font-bold text-[var(--hm-ink)] font-[family-name:var(--font-display)]">{sub.itemName}</h4>
+                              <span className="text-xs text-[var(--hm-ink-3)] font-normal">{intervalLabel} 자동 납부</span>
                             </div>
                             {sub.status === 'active' ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[oklch(0.55_0.17_148_/_0.12)] text-[var(--hm-success)] border border-[oklch(0.55_0.17_148_/_0.25)]">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--hm-success)]"></span>
                                 약정 유지 중
                               </span>
                             ) : sub.status === 'paused' ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/70">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[oklch(0.65_0.16_65_/_0.12)] text-[oklch(0.65_0.16_65)] border border-[oklch(0.65_0.16_65_/_0.25)]">
                                 일시 정지
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)]">
                                 약정 해지됨
                               </span>
                             )}
                           </div>
 
                           <div className="flex items-baseline justify-between pt-1">
-                            <span className="text-xs font-medium text-slate-500">약정 금액</span>
-                            <span className="text-lg font-bold text-slate-900 dark:text-zinc-100 font-mono">
+                            <span className="text-xs font-medium text-[var(--hm-ink-3)]">약정 금액</span>
+                            <span className="text-lg font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums">
                               ₩ {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
                             </span>
                           </div>
 
-                          <div className="text-xs text-slate-600 dark:text-zinc-400 space-y-1.5 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                          <div className="text-xs text-[var(--hm-ink-2)] space-y-1.5 pt-3 border-t border-[var(--hm-border)]">
                             {sub.cardName && (
                               <div className="flex justify-between">
-                                <span className="text-slate-500">결제 수단</span>
-                                <span className="font-medium text-slate-800 dark:text-zinc-200">{sub.cardName}</span>
+                                <span className="text-[var(--hm-ink-3)]">결제 수단</span>
+                                <span className="font-semibold text-[var(--hm-ink)]">{sub.cardName}</span>
                               </div>
                             )}
                             <div className="flex justify-between">
-                              <span className="text-slate-500">결제 주기</span>
-                              <span className="font-medium text-slate-800 dark:text-zinc-200">{cycleDesc}</span>
+                              <span className="text-[var(--hm-ink-3)]">결제 주기</span>
+                              <span className="font-semibold text-[var(--hm-ink)]">{cycleDesc}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-slate-500">다음 결제 예정일</span>
-                              <span className="font-medium text-slate-900 dark:text-zinc-100 font-mono">{sub.nextPaymentDate || '-'}</span>
+                              <span className="text-[var(--hm-ink-3)]">다음 결제 예정일</span>
+                              <span className="font-bold text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums">{sub.nextPaymentDate || '-'}</span>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-2 pt-1">
                             {sub.status === 'active' && (
                               <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                <button
+                                  type="button"
                                   onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
-                                  className="flex-1 text-xs font-medium h-8 rounded-lg gap-1 border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 border border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] hover:bg-[var(--hm-paper-2)] cursor-pointer transition-colors"
                                 >
-                                  <PauseCircle className="h-3.5 w-3.5 text-slate-400" />
+                                  <PauseCircle className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
                                   <span>일시정지</span>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
-                                  className="flex-1 text-xs font-medium h-8 rounded-lg gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer transition-colors"
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 text-[var(--hm-danger)] hover:bg-[oklch(0.52_0.20_27_/_0.08)] border border-[oklch(0.52_0.20_27_/_0.25)] cursor-pointer transition-colors"
                                 >
                                   <XCircle className="h-3.5 w-3.5" />
                                   <span>약정 해지</span>
-                                </Button>
+                                </button>
                               </>
                             )}
                             {sub.status === 'paused' && (
                               <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                <button
+                                  type="button"
                                   onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
-                                  className="flex-1 text-xs font-medium h-8 rounded-lg gap-1 text-emerald-700 hover:bg-emerald-50 border-emerald-200 cursor-pointer transition-colors"
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 text-[var(--hm-success)] hover:bg-[oklch(0.55_0.17_148_/_0.10)] border border-[oklch(0.55_0.17_148_/_0.25)] cursor-pointer transition-colors"
                                 >
                                   <RefreshCw className="h-3.5 w-3.5" />
                                   <span>약정 재개</span>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
-                                  className="flex-1 text-xs font-medium h-8 rounded-lg gap-1 text-rose-600 hover:bg-rose-50 border-rose-200 cursor-pointer transition-colors"
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 text-[var(--hm-danger)] hover:bg-[oklch(0.52_0.20_27_/_0.08)] border border-[oklch(0.52_0.20_27_/_0.25)] cursor-pointer transition-colors"
                                 >
                                   <XCircle className="h-3.5 w-3.5" />
                                   <span>약정 해지</span>
-                                </Button>
+                                </button>
                               </>
                             )}
                             {sub.status === 'cancelled' && (
-                              <div className="w-full text-center py-2 text-xs font-normal text-slate-400 bg-slate-50 dark:bg-zinc-800 rounded-lg">
+                              <div className="w-full text-center py-2 text-xs font-normal text-[var(--hm-ink-3)] bg-[var(--hm-paper-2)] rounded-lg border border-[var(--hm-border)]">
                                 해지된 정기결제 약정입니다.
                               </div>
                             )}
@@ -1345,7 +1338,7 @@ export default function MemberDetailPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-200/70 dark:border-zinc-700 text-slate-500 text-xs">
+                  <div className="text-center py-12 bg-[var(--hm-paper-2)] rounded-xl border border-[var(--hm-border)] text-[var(--hm-ink-3)] text-xs">
                     등록된 정기 결제 약정이 없습니다.
                   </div>
                 )}
@@ -1354,42 +1347,42 @@ export default function MemberDetailPage() {
               {/* TAB 3: 메시지 신청 이력 */}
               <TabsContent value="prayers" className="space-y-4">
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
+                  <h3 className="font-bold text-[var(--hm-ink)] text-base font-[family-name:var(--font-display)]">
                     {prayerTerm} 및 기부 메시지 내역
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
                     회원이 신청 시 함께 남긴 전달 메시지 목록입니다.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200/80 dark:border-zinc-700/80 overflow-hidden bg-white dark:bg-zinc-900 shadow-2xs">
+                <div className="rounded-xl border border-[var(--hm-border)] overflow-hidden bg-[var(--hm-paper)] shadow-2xs">
                   <Table>
-                    <TableHeader className="bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200/80 dark:border-zinc-700/80">
+                    <TableHeader className="bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)]">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">신청일자</TableHead>
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">구분</TableHead>
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">메시지 내용</TableHead>
-                        <TableHead className="font-semibold text-xs text-slate-600 dark:text-zinc-300 py-3">대상자 성명</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">신청일자</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">구분</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">메시지 내용</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">대상자 성명</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {prayers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-12 text-slate-400 text-xs">
+                          <TableCell colSpan={4} className="text-center py-12 text-[var(--hm-ink-3)] text-xs">
                             등록된 {prayerTerm} 및 메시지 내역이 없습니다.
                           </TableCell>
                         </TableRow>
                       ) : (
                         prayers.map((pr) => (
-                          <TableRow key={pr.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 border-b border-slate-100 dark:border-zinc-800">
-                            <TableCell className="font-mono text-xs text-slate-500 py-3">{pr.date}</TableCell>
+                          <TableRow key={pr.id} className="hover:bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)]">
+                            <TableCell className="font-[family-name:var(--font-mono)] tabular-nums text-xs text-[var(--hm-ink-3)] py-3">{pr.date}</TableCell>
                             <TableCell className="py-3">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink)] border border-[var(--hm-border)]">
                                 {pr.category}
                               </span>
                             </TableCell>
-                            <TableCell className="font-medium text-slate-900 dark:text-zinc-100 py-3 text-sm">{pr.title}</TableCell>
-                            <TableCell className="text-xs font-normal text-slate-600 py-3">{pr.beneficiaryName}</TableCell>
+                            <TableCell className="font-semibold text-[var(--hm-ink)] py-3 text-sm">{pr.title}</TableCell>
+                            <TableCell className="text-xs font-normal text-[var(--hm-ink-2)] py-3">{pr.beneficiaryName}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -1401,10 +1394,10 @@ export default function MemberDetailPage() {
               {/* TAB 4: 관리자 메모 */}
               <TabsContent value="note" className="space-y-4">
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
+                  <h3 className="font-bold text-[var(--hm-ink)] text-base font-[family-name:var(--font-display)]">
                     {member.name} {memberTerm} 특이사항 메모
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
                     회원과의 상담 내역, 영수증 합산 요청 등 관리자 전용 기록입니다 (외부 미노출).
                   </p>
                 </div>
@@ -1414,17 +1407,18 @@ export default function MemberDetailPage() {
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
                     placeholder={terms.adminNotePlaceholder}
-                    className="min-h-[160px] rounded-xl p-4 text-sm bg-slate-50/60 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-700 focus:bg-white transition-colors"
+                    className="min-h-[160px] rounded-xl p-4 text-sm bg-[var(--hm-paper-2)] border-[var(--hm-border)] text-[var(--hm-ink)] placeholder:text-[var(--hm-ink-3)] focus:bg-[var(--hm-paper)] transition-colors"
                   />
 
                   <div className="flex justify-end">
-                    <Button
+                    <button
+                      type="button"
                       onClick={handleSaveNote}
-                      className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs h-9 px-4 rounded-lg shadow-2xs cursor-pointer"
+                      className="inline-flex items-center gap-1.5 bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
                     >
                       <Check className="h-3.5 w-3.5" />
                       <span>메모 저장</span>
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </TabsContent>
@@ -1435,65 +1429,65 @@ export default function MemberDetailPage() {
 
       {/* 🧾 소득공제용 기부금영수증 발급 전용 온디맨드 일시 입력 모달 */}
       <Dialog open={isTaxModalOpen} onOpenChange={setIsTaxModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-slate-200 shadow-xl">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-slate-700" />
+            <DialogTitle className="text-lg font-bold text-[var(--hm-ink)] flex items-center gap-2 font-[family-name:var(--font-display)]">
+              <FileText className="h-4 w-4 text-[var(--hm-accent)]" />
               <span>소득공제용 기부금영수증 발급</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 mt-1">
+            <DialogDescription className="text-xs text-[var(--hm-ink-3)] mt-1">
               국세청 별지 제45호 서식 기부금영수증 출력을 위한 발급 정보를 입력합니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-1 text-xs text-slate-600">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                <ShieldCheck className="h-4 w-4 text-slate-500 shrink-0" />
+            <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] rounded-xl p-3.5 space-y-1 text-xs text-[var(--hm-ink-2)]">
+              <div className="flex items-center gap-1.5 font-semibold text-[var(--hm-ink)]">
+                <ShieldCheck className="h-4 w-4 text-[var(--hm-accent)] shrink-0" />
                 <span>개인정보보호법에 따른 안전 안내</span>
               </div>
-              <p className="text-[11.5px] leading-relaxed text-slate-600">
+              <p className="text-[11.5px] leading-relaxed text-[var(--hm-ink-2)]">
                 {terms.donor}(기부자)의 <strong>주민등록번호</strong>는 영수증 출력 시에만 일시 사용되며, <strong>DB에 영구 저장되지 않으므로</strong> 안심하고 발급하실 수 있습니다.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">귀속 연도</Label>
+                <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">귀속 연도</Label>
                 <Input
                   type="text"
                   value={taxYear}
                   onChange={(e) => setTaxYear(e.target.value)}
-                  className="text-xs bg-slate-50 border-slate-200 font-mono font-medium rounded-lg"
+                  className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums font-semibold rounded-lg"
                   placeholder="2026"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">연간 기부 총액</Label>
+                <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">연간 기부 총액</Label>
                 <Input
                   type="text"
                   readOnly
                   value={`₩ ${member.totalDonation.toLocaleString()}원`}
-                  className="text-xs bg-slate-100 border-slate-200 font-bold font-mono text-slate-800 cursor-not-allowed rounded-lg"
+                  className="text-xs bg-[var(--hm-paper-2)] border-[var(--hm-border)] font-bold font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink)] cursor-not-allowed rounded-lg"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700">{terms.donor} 성명 (기부자)</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">{terms.donor} 성명 (기부자)</Label>
               <Input
                 type="text"
                 value={taxDonorName}
                 onChange={(e) => setTaxDonorName(e.target.value)}
                 placeholder="성명 입력 (부양가족 신청 시 변경 가능)"
-                className="text-xs border-slate-200 rounded-lg"
+                className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] text-[var(--hm-ink)] rounded-lg"
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-900 flex items-center justify-between">
-                <span>주민등록번호 <span className="text-rose-500 font-normal">* (필수 13자리)</span></span>
-                <span className="text-[11px] font-normal text-slate-400">일시 사용 / DB 미저장</span>
+              <Label className="text-xs font-semibold text-[var(--hm-ink)] flex items-center justify-between">
+                <span>주민등록번호 <span className="text-[var(--hm-danger)] font-normal">* (필수 13자리)</span></span>
+                <span className="text-[11px] font-normal text-[var(--hm-ink-3)] font-[family-name:var(--font-mono)]">일시 사용 / DB 미저장</span>
               </Label>
               <Input
                 type="text"
@@ -1501,19 +1495,19 @@ export default function MemberDetailPage() {
                 onChange={(e) => setTaxRrn(formatRrnInput(e.target.value))}
                 placeholder="주민등록번호 13자리 (예: 850101-1234567)"
                 maxLength={14}
-                className="text-xs border-slate-200 focus:border-slate-400 font-mono font-medium tracking-wider rounded-lg"
+                className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] focus:border-[var(--hm-accent)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums font-semibold tracking-wider rounded-lg"
                 autoFocus
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700">{terms.donor} 주소 (기부자)</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">{terms.donor} 주소 (기부자)</Label>
               <Input
                 type="text"
                 value={taxAddress}
                 onChange={(e) => setTaxAddress(e.target.value)}
                 placeholder="서울특별시 강남구..."
-                className="text-xs border-slate-200 rounded-lg"
+                className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] text-[var(--hm-ink)] rounded-lg"
               />
             </div>
           </div>
@@ -1523,14 +1517,14 @@ export default function MemberDetailPage() {
               type="button"
               variant="outline"
               onClick={() => setIsTaxModalOpen(false)}
-              className="text-xs border-slate-200 rounded-lg cursor-pointer"
+              className="text-xs border-[var(--hm-border)] text-[var(--hm-ink-2)] rounded-lg cursor-pointer"
             >
               취소
             </Button>
             <Button
               type="button"
               onClick={handleGenerateTaxReceipt}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs gap-1.5 cursor-pointer rounded-lg shadow-2xs"
+              className="bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs gap-1.5 cursor-pointer rounded-lg shadow-sm"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>영수증 출력 / PDF 저장</span>
@@ -1541,72 +1535,72 @@ export default function MemberDetailPage() {
 
       {/* ✏️ 회원 정보 수정 모달 */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-slate-200 shadow-xl">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Edit2 className="h-4 w-4 text-slate-700" />
+            <DialogTitle className="text-lg font-bold text-[var(--hm-ink)] flex items-center gap-2 font-[family-name:var(--font-display)]">
+              <Edit2 className="h-4 w-4 text-[var(--hm-accent)]" />
               <span>{memberTerm} 정보 수정</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 mt-1">
+            <DialogDescription className="text-xs text-[var(--hm-ink-3)] mt-1">
               선택한 {memberTerm}의 기본 정보를 수정합니다.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} autoComplete="off" className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">성명 (이름) *</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">성명 (이름) *</Label>
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 required
-                className="text-xs rounded-lg border-slate-200"
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">{getTitleLabel()}</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">{getTitleLabel()}</Label>
               <Input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="text-xs rounded-lg border-slate-200"
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">휴대폰 번호</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">휴대폰 번호</Label>
               <Input
                 type="tel"
                 value={formatPhoneNumber(editPhone)}
                 onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
-                className="text-xs rounded-lg border-slate-200 font-mono"
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">이메일 주소</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">이메일 주소</Label>
               <Input
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                className="text-xs rounded-lg border-slate-200"
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">주소</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">주소</Label>
               <Input
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
-                className="text-xs rounded-lg border-slate-200"
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-500 space-y-1">
-              <p className="font-semibold text-slate-700 flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-slate-500" />
+            <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] rounded-xl p-3 text-xs text-[var(--hm-ink-3)] space-y-1">
+              <p className="font-semibold text-[var(--hm-ink)] flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-[var(--hm-accent)]" />
                 <span>주민등록번호 보안 방침 안내</span>
               </p>
-              <p className="text-[11px] leading-relaxed text-slate-500">
+              <p className="text-[11px] leading-relaxed text-[var(--hm-ink-3)]">
                 개인정보보호법에 따라 주민등록번호는 회원 DB에 저장을 허용하지 않으며, 영수증 발급 시 1회성으로 안전하게 입력받습니다.
               </p>
             </div>
@@ -1616,13 +1610,13 @@ export default function MemberDetailPage() {
                 variant="outline"
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-xs border-slate-200 rounded-lg cursor-pointer"
+                className="text-xs border-[var(--hm-border)] text-[var(--hm-ink-2)] rounded-lg cursor-pointer"
               >
                 취소
               </Button>
               <Button
                 type="submit"
-                className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg shadow-2xs cursor-pointer"
+                className="bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs rounded-lg shadow-sm cursor-pointer"
               >
                 수정 사항 저장
               </Button>
