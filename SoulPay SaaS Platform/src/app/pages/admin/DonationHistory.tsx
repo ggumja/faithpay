@@ -49,7 +49,7 @@ import {
   CalendarX,
   AlertCircle,
 } from 'lucide-react';
-import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
+import { donationAPI, paymentAPI, subscriptionAPI } from '../../api/client';
 import { toast } from 'sonner';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 
