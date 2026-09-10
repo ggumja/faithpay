@@ -28,6 +28,7 @@ export const opsRouter = createBrowserRouter([
       { path: "/", element: <Navigate to="/system/admin" replace /> },
       { path: "/login", Component: SystemAdminLogin },
       { path: "/system/login", Component: SystemAdminLogin },
+      { path: "/system/admin/login", Component: SystemAdminLogin },
       { path: "/scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
       { path: "/recurring-scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
       { path: "/tenants/new", element: <Navigate to="/system/admin/tenants/new" replace /> },

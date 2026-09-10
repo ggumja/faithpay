@@ -133,6 +133,10 @@ export const router = createBrowserRouter([
         path: "/system/login",
         Component: SystemAdminLogin,
       },
+      {
+        path: "/system/admin/login",
+        Component: SystemAdminLogin,
+      },
       // ── System Admin (공통 사이드바 셸) ──
       {
         Component: SystemAdminShell,
