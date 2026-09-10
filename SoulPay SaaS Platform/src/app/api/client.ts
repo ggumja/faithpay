@@ -392,50 +392,49 @@ export const kakaoAuthAPI = {
   },
 
   async exchangeToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
-    // 1. 서버 사이드 토큰 교환 시도
+    // 1. 브라우저 직접 교환 (kauth.kakao.com 공식 CORS 엔드포인트 - 즉시 응답 및 불필요한 404 방지)
     try {
-      const backendRes = await fetchAPI<{ access_token: string }>('/auth/kakao/token', {
-        method: 'POST',
-        body: JSON.stringify({ code, redirectUri }),
-        silentFail: true,
-      } as any);
-      if (backendRes.success && backendRes.data?.access_token) {
-        return backendRes.data;
+      const fetchToken = async (includeSecret: boolean) => {
+        const params: Record<string, string> = {
+          grant_type: 'authorization_code',
+          client_id: KAKAO_CONFIG.REST_API_KEY,
+          redirect_uri: redirectUri,
+          code,
+        };
+        if (includeSecret) {
+          params.client_secret = '3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol';
+        }
+        return fetch('https://kauth.kakao.com/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+          },
+          body: new URLSearchParams(params).toString(),
+        });
+      };
+
+      let res = await fetchToken(false);
+      let data = await res.json().catch(() => ({}));
+      if (!res.ok && (data.error_code === 'KOE010' || data.error === 'invalid_client')) {
+        res = await fetchToken(true);
+        data = await res.json().catch(() => ({}));
+      }
+      if (res.ok && data?.access_token) {
+        return data;
       }
     } catch {
-      // fallback
+      // direct fetch failed, try backend proxy fallback
     }
 
-    // 2. 브라우저 직접 교환 (kauth.kakao.com CORS 허용)
-    const fetchToken = async (includeSecret: boolean) => {
-      const params: Record<string, string> = {
-        grant_type: 'authorization_code',
-        client_id: KAKAO_CONFIG.REST_API_KEY,
-        redirect_uri: redirectUri,
-        code,
-      };
-      if (includeSecret) {
-        params.client_secret = '3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol';
-      }
-      return fetch('https://kauth.kakao.com/oauth/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-        },
-        body: new URLSearchParams(params).toString(),
-      });
-    };
-
-    let res = await fetchToken(false);
-    let data = await res.json().catch(() => ({}));
-    if (!res.ok && (data.error_code === 'KOE010' || data.error === 'invalid_client')) {
-      res = await fetchToken(true);
-      data = await res.json().catch(() => ({}));
+    // 2. 백엔드 프록시 폴백
+    const backendRes = await fetchAPI<{ access_token: string }>('/auth/kakao/token', {
+      method: 'POST',
+      body: JSON.stringify({ code, redirectUri }),
+    } as any);
+    if (backendRes.success && backendRes.data?.access_token) {
+      return backendRes.data;
     }
-    if (!res.ok) {
-      throw new Error(data.error_description || data.msg || '카카오 인증 토큰 발급에 실패했습니다.');
-    }
-    return data;
+    throw new Error('카카오 인증 토큰 발급에 실패했습니다.');
   },
 
   async getUserInfo(accessToken: string): Promise<{
@@ -445,42 +444,41 @@ export const kakaoAuthAPI = {
     phone?: string;
     rawPhone?: string;
   }> {
-    // 1. 서버 사이드 조회 시도
+    // 1. 브라우저 직접 조회 (kapi.kakao.com 공식 CORS 엔드포인트)
     try {
-      const backendRes = await fetchAPI<any>('/auth/kakao/user', {
-        method: 'POST',
-        body: JSON.stringify({ accessToken }),
-        silentFail: true,
-      } as any);
-      if (backendRes.success && backendRes.data) {
-        return backendRes.data;
+      const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const rawPhone = data.kakao_account?.phone_number || '';
+        const phone = rawPhone ? rawPhone.replace('+82 ', '0').replace(/[^0-9]/g, '') : '';
+        const email = data.kakao_account?.email || '';
+        const nickname = data.kakao_account?.profile?.nickname || data.properties?.nickname || '';
+        return {
+          id: data.id,
+          nickname,
+          email,
+          phone,
+          rawPhone,
+        };
       }
     } catch {
-      // fallback
+      // direct fetch failed, try backend fallback
     }
 
-    // 2. 브라우저 직접 조회
-    const res = await fetch('https://kapi.kakao.com/v2/user/me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-      },
-    });
-    if (!res.ok) {
-      throw new Error('카카오 사용자 정보 조회에 실패했습니다.');
+    // 2. 백엔드 프록시 폴백
+    const backendRes = await fetchAPI<any>('/auth/kakao/user', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken }),
+    } as any);
+    if (backendRes.success && backendRes.data) {
+      return backendRes.data;
     }
-    const data = await res.json();
-    const rawPhone = data.kakao_account?.phone_number || '';
-    const phone = rawPhone ? rawPhone.replace('+82 ', '0').replace(/[^0-9]/g, '') : '';
-    const email = data.kakao_account?.email || '';
-    const nickname = data.kakao_account?.profile?.nickname || data.properties?.nickname || '';
-    return {
-      id: data.id,
-      nickname,
-      email,
-      phone,
-      rawPhone,
-    };
+    throw new Error('카카오 사용자 정보 조회에 실패했습니다.');
   },
 };
 
