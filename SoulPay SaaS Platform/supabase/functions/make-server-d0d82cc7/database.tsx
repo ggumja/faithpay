@@ -712,15 +712,35 @@ export function normalizePaymentMethod(rawMethod?: string, isRecurring?: boolean
 export async function recordDonationToLedger(donation: Donation): Promise<any> {
   try {
     const supabase = pgClient();
+    const donationId = donation.id || donation.transactionId || `DON-${Date.now()}`;
+
+    // 0. 멱등성 보장: 이미 원장에 등록된 건인지 확인
+    const { data: existingRecord } = await supabase
+      .from('partner_commissions')
+      .select('*')
+      .eq('donation_id', donationId)
+      .maybeSingle();
+
+    if (existingRecord) {
+      // 이미 원장에 존재하는 경우 상태 변경(예: 취소) 여부만 확인 후 반환
+      if (donation.paymentStatus === 'cancelled' && existingRecord.settlement_status !== 'cancelled') {
+        await supabase
+          .from('partner_commissions')
+          .update({ settlement_status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('id', existingRecord.id);
+      }
+      return existingRecord;
+    }
 
     // 1. 가맹 단체 정보 조회 (ID 또는 slug 기준)
-    const kvTenant = await getTenantById(donation.tenantId) || await getTenantBySlug(donation.tenantId);
+    const tid = donation.tenantId || (donation as any).tenant_id;
+    const kvTenant = await getTenantById(tid) || await getTenantBySlug(tid);
     let tenantDb: any = null;
     try {
       const { data } = await supabase
         .from('tenants')
         .select('*')
-        .eq('id', donation.tenantId)
+        .eq('id', tid)
         .maybeSingle();
       tenantDb = data;
     } catch (e) {
@@ -768,8 +788,8 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
     const pgFeeAmount = Math.round(grossAmount * 0.015);
     const platformFeeAmount = Math.round(grossAmount * 0.005);
     const commissionAmount = Math.round(grossAmount * (contractRate / 100));
-    const currentMonth = (donation.createdAt ? new Date(donation.createdAt) : new Date()).toISOString().slice(0, 7);
-    const donationId = donation.id || donation.transactionId || `DON-${Date.now()}`;
+    const txDateIso = donation.createdAt ? new Date(donation.createdAt).toISOString() : new Date().toISOString();
+    const currentMonth = txDateIso.slice(0, 7);
 
     // 개인정보 마스킹 처리 적용 (홍*동, 010-****-5678)
     const maskedDonorName = maskName(donation.donorName);
@@ -777,13 +797,27 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
     const maskedBaptismName = maskName(donation.baptismName);
     const cleanMethod = normalizePaymentMethod(donation.paymentMethod, donation.isRecurring);
 
+    // PG사 판별 (토스 vs 나노페이 vs 현장단말기)
+    let pgProvider: string = (donation as any).pgProvider || '';
+    if (!pgProvider) {
+      if ((cleanMethod || '').includes('OffPG')) {
+        pgProvider = 'van';
+      } else if (donation.transactionId && (donation.transactionId.startsWith('2609') || donation.transactionId.startsWith('NANO'))) {
+        pgProvider = 'nanopay';
+      } else {
+        pgProvider = 'toss';
+      }
+    }
+
+    const settlementStatus = donation.paymentStatus === 'cancelled' ? 'cancelled' : 'pending';
+
     // 3. partner_commissions 원장에 4자간 분구 내역 기입 (확장 필드 적용)
     const { data: inserted, error } = await supabase
       .from('partner_commissions')
       .insert({
         partner_id: partnerId,
         partner_role: partnerRole,
-        tenant_id: donation.tenantId,
+        tenant_id: tid,
         tenant_name: tenantName,
         donation_id: donationId,
         donation_amount: grossAmount,
@@ -791,10 +825,10 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
         contract_rate: contractRate,
         agency_rate: agencyRate,
         agent_rate: agentRate,
-        settlement_status: 'pending',
+        settlement_status: settlementStatus,
         settlement_month: currentMonth,
         payment_method: cleanMethod,
-        pg_provider: 'toss',
+        pg_provider: pgProvider,
         pg_tid: donation.transactionId || donationId,
         item_name: donation.itemName || '일반 헌금',
         donor_name: maskedDonorName,
@@ -806,7 +840,8 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
         platform_fee_amount: platformFeeAmount,
         is_recurring: donation.isRecurring || false,
         payment_type: donation.isRecurring ? 'BILLING' : 'AUTH',
-        device_type: donation.deviceType || ((cleanMethod || '').includes('OffPG') || (cleanMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+        device_type: (donation as any).deviceType || ((cleanMethod || '').includes('OffPG') || (cleanMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+        created_at: txDateIso,
       })
       .select()
       .maybeSingle();
@@ -974,7 +1009,18 @@ export async function updateDonation(tenantId: string, id: string, updates: Part
 
   const { data, error } = await sb.from('donations').update(row).eq('id', id).select('*').maybeSingle();
   if (error || !data) { console.error('updateDonation failed:', error?.message); return null; }
-  return rowToDonation(data);
+  const updatedDonation = rowToDonation(data);
+
+  // 결제 완료(completed) 상태로 변경된 경우 원장에 즉시 동기화
+  if (updatedDonation.paymentStatus === 'completed') {
+    try {
+      await recordDonationToLedger(updatedDonation);
+    } catch (ledgerErr) {
+      console.warn('Failed to record ledger on updateDonation:', ledgerErr);
+    }
+  }
+
+  return updatedDonation;
 }
 
 export async function cancelDonationAndLedger(
@@ -2172,14 +2218,46 @@ export async function getAdminSettlementLedger(opts?: {
   limit?: number;
 }): Promise<any[]> {
   const supabase = pgClient();
+
+  // 1. 혹시 donations 테이블의 결제 건 중 partner_commissions에 누락된 건이 있다면 자동 정합성 동기화 (Auto-Reconcile)
+  try {
+    const { data: missingCandidates } = await supabase
+      .from('donations')
+      .select('*')
+      .in('payment_status', ['completed', 'cancelled'])
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (missingCandidates && missingCandidates.length > 0) {
+      const donationIds = missingCandidates.map((d: any) => d.id);
+      const { data: existingComms } = await supabase
+        .from('partner_commissions')
+        .select('donation_id')
+        .in('donation_id', donationIds);
+
+      const existingSet = new Set((existingComms || []).map((c: any) => c.donation_id));
+      for (const d of missingCandidates) {
+        if (!existingSet.has(d.id)) {
+          console.log(`[Auto-Reconcile] Backfilling missing ledger entry for donation: ${d.id}`);
+          await recordDonationToLedger(rowToDonation(d));
+        }
+      }
+    }
+  } catch (syncErr) {
+    console.warn('[Auto-Reconcile] Settlement ledger auto-sync warning:', syncErr);
+  }
+
   let query = supabase
     .from('partner_commissions')
     .select('*, partners!partner_id(name, role, parent_id)')
     .order('created_at', { ascending: false })
-    .limit(opts?.limit ?? 100);
+    .limit(opts?.limit ?? 200);
 
   if (opts?.startDate) query = query.gte('created_at', opts.startDate);
-  if (opts?.endDate)   query = query.lte('created_at', opts.endDate);
+  if (opts?.endDate) {
+    const endStr = opts.endDate.length === 10 ? `${opts.endDate}T23:59:59.999Z` : opts.endDate;
+    query = query.lte('created_at', endStr);
+  }
   if (opts?.status && opts.status !== 'ALL') {
     query = query.eq('settlement_status', opts.status.toLowerCase());
   }
