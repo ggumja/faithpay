@@ -387,8 +387,10 @@ export default function MyDonations() {
   useEffect(() => {
     if (!currentTenant) return;
 
-    // 결제 완료 후 또는 이전 인증 세션 복원
-    const savedPhone = sessionStorage.getItem('soulpay_donor_session') || sessionStorage.getItem('faithpay_donor_session') || localStorage.getItem('soulpay_last_donor_phone') || localStorage.getItem('faithpay_last_donor_phone');
+    // 결제 완료 후 또는 이전 인증 세션 복원 (URL 파라미터 phone 포함)
+    const searchParams = new URLSearchParams(location.search);
+    const queryPhone = searchParams.get('phone');
+    const savedPhone = queryPhone || sessionStorage.getItem('soulpay_donor_session') || sessionStorage.getItem('faithpay_donor_session') || localStorage.getItem('soulpay_last_donor_phone') || localStorage.getItem('faithpay_last_donor_phone');
     if (savedPhone) {
       const clean = savedPhone.replace(/[^0-9]/g, '');
       if (clean) {
