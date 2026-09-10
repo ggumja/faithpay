@@ -987,10 +987,31 @@ export async function getDonationsByTenant(tenantId: string): Promise<Donation[]
   return (data ?? []).map(rowToDonation);
 }
 
-export async function getAllDonations(): Promise<Donation[]> {
+export async function getAllDonations(): Promise<any[]> {
   const sb = pgClient();
-  const { data } = await sb.from('donations').select('*').order('created_at', { ascending: false });
-  return (data ?? []).map(rowToDonation);
+  const [donationsRes, tenantsRes] = await Promise.all([
+    sb.from('donations').select('*').order('created_at', { ascending: false }),
+    sb.from('tenants').select('id, slug, name, religion_type'),
+  ]);
+
+  const tenantMap = new Map<string, any>();
+  for (const t of tenantsRes.data ?? []) {
+    tenantMap.set(String(t.id), t);
+    if (t.slug) tenantMap.set(t.slug, t);
+  }
+
+  return (donationsRes.data ?? []).map((d: any) => {
+    const base = rowToDonation(d);
+    const tenant = tenantMap.get(String(d.tenant_id));
+    return {
+      ...base,
+      deviceType: d.device_type || ((d.payment_method || '').includes('OffPG') || (d.payment_method || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+      pgProvider: d.pg_provider || (d.transaction_id && (d.transaction_id.startsWith('2609') || d.transaction_id.startsWith('NANO')) ? 'nanopay' : 'toss'),
+      tenantName: tenant?.name || d.tenant_name || '가맹 단체',
+      tenantSlug: tenant?.slug || '',
+      religionType: tenant?.religion_type || '',
+    };
+  });
 }
 
 export async function updateDonation(tenantId: string, id: string, updates: Partial<Donation>): Promise<Donation | null> {
