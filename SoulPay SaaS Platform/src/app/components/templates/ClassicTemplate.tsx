@@ -433,24 +433,177 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
         </main>
 
         <aside className="th-sidebar">
-          <div style={{ background: ft.heroGradient, borderRadius: 16, padding: '26px 20px', position: 'relative', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-            <div style={{ position: 'absolute', top: -10, right: -10, width: 90, height: 90, opacity: 0.12, pointerEvents: 'none' }}>
-              <MotifLarge kind={ft.motif} color="white" opacity={1} />
-            </div>
-            <div style={{ position: 'relative' }}>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'rgba(255, 255, 255, 0.7)', letterSpacing: '0.06em', marginBottom: 8, fontWeight: 700 }}>온라인 {terms.donation}</div>
-              <p style={{ fontSize: 15, fontWeight: 800, color: 'white', lineHeight: 1.45, marginBottom: 16 }}>{ft.tagline}</p>
-              <button
-                className="th-btn-spring"
-                onClick={() => {
-                  document.getElementById('items-section')?.scrollIntoView({ behavior: 'smooth' });
+          {/* 📢 사이드바 광고/프로모션 배너 영역 (Sidebar Promo & Ad Banner) */}
+          <div
+            className="sidebar-ad-banner-container"
+            style={{
+              width: '100%',
+              minHeight: 148,
+              borderRadius: 16,
+              overflow: 'hidden',
+              position: 'relative',
+              boxShadow: '0 4px 18px rgba(0, 0, 0, 0.07)',
+              border: `1px solid ${C.border}`,
+              background: C.card,
+            }}
+          >
+            {currentTenant.bannerImages && currentTenant.bannerImages.length > 0 ? (
+              // 1. 관리자가 등록한 광고/프로모션 배너 이미지가 있는 경우 (자동 전환 캐러셀)
+              <div style={{ position: 'relative', width: '100%', height: 148, overflow: 'hidden' }}>
+                {currentTenant.bannerImages.map((imgSrc, idx) => (
+                  <div
+                    key={`${imgSrc}-${idx}`}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      opacity: idx === (bannerIndex % currentTenant.bannerImages.length) ? 1 : 0,
+                      transition: 'opacity 500ms ease-in-out',
+                      pointerEvents: idx === (bannerIndex % currentTenant.bannerImages.length) ? 'auto' : 'none',
+                    }}
+                  >
+                    <img
+                      src={imgSrc}
+                      alt={`${currentTenant.name} 프로모션 배너`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                ))}
+
+                {/* AD 뱃지 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    background: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(4px)',
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    padding: '2px 7px',
+                    borderRadius: 4,
+                    letterSpacing: '0.04em',
+                    zIndex: 2,
+                  }}
+                >
+                  AD
+                </div>
+
+                {/* 배너 인디케이터 (2장 이상일 때) */}
+                {currentTenant.bannerImages.length > 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 8,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      gap: 4,
+                      zIndex: 2,
+                    }}
+                  >
+                    {currentTenant.bannerImages.map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: i === (bannerIndex % currentTenant.bannerImages.length) ? 14 : 5,
+                          height: 5,
+                          borderRadius: 3,
+                          background: i === (bannerIndex % currentTenant.bannerImages.length) ? 'white' : 'rgba(255,255,255,0.5)',
+                          transition: 'all 300ms ease',
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // 2. 기본 광고성 배너 영역 (배너 규격: 340 × 148px)
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: 148,
+                  padding: '18px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
                 }}
-                style={{ width: '100%', height: 42, background: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, color: ft.primary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
+                onClick={() => {
+                  window.open('https://soulpay.kr', '_blank');
+                }}
               >
-                <Motif kind={ft.motif} size={14} color={ft.primary} />
-                <span>{terms.donationItems} 선택하기</span>
-              </button>
-            </div>
+                {/* 배경 장식 글로우 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -20,
+                    right: -20,
+                    width: 110,
+                    height: 110,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(99, 102, 241, 0) 70%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        background: 'rgba(99, 102, 241, 0.25)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        color: '#a5b4fc',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      광고 / 프로모션
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: '1px 5px',
+                        borderRadius: 3,
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        color: 'rgba(255, 255, 255, 0.7)',
+                      }}
+                    >
+                      AD
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.35, color: '#ffffff', margin: 0 }}>
+                    소울페이 스마트 헌금 솔루션
+                  </h4>
+                  <p style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.65)', marginTop: 4, lineHeight: 1.4 }}>
+                    언제 어디서나 간편하고 투명한 모바일 헌금
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: 8,
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700 }}>배너 등록 및 제휴 문의</span>
+                  <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 800 }}>→</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: C.shadow }}>
