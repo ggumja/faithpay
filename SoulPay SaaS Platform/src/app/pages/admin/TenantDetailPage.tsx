@@ -40,6 +40,7 @@ import {
   X,
   Info,
   Sliders,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '../../components/ui/separator';
