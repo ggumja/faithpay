@@ -482,9 +482,6 @@ export default function MyDonations() {
         {!isAuthenticated ? (
           <Card className="shadow-lg border-none rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
             <CardHeader className="pb-4 border-b border-zinc-100 dark:border-zinc-800 text-center">
-              <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center text-3xl mb-3 shadow-xs">
-                💬
-              </div>
               <div className="flex items-center justify-center gap-2 mb-1">
                 <CardTitle className="text-xl font-bold text-slate-900 dark:text-zinc-100">
                   {terms.donor} 마이페이지
