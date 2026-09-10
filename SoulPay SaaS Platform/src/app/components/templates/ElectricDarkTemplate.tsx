@@ -121,7 +121,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
     const matchTab =
       activeFilter === 'all' ||
       (activeFilter === 'recurring' && item.allowRecurring) ||
-      (activeFilter === 'onetime' && item.allowOneTime && !item.allowRecurring);
+      (activeFilter === 'onetime' && item.allowOneTime !== false);
     return matchSearch && matchTab && item.enabled;
   });
 
@@ -454,6 +454,18 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
                             borderRadius: 9999,
                           }}>
                             정기
+                          </span>
+                        )}
+                        {item.allowOneTime !== false && (
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            backgroundColor: isDarkCard ? 'rgba(56, 189, 248, 0.18)' : 'rgba(56, 189, 248, 0.12)',
+                            color: isDarkCard ? '#38bdf8' : '#0284c7',
+                            padding: '3px 8px',
+                            borderRadius: 9999,
+                          }}>
+                            1회성
                           </span>
                         )}
                       </div>
