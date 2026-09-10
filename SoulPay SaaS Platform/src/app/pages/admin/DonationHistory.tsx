@@ -940,8 +940,8 @@ export default function DonationHistory() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                      <div className="lg:col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-3 items-center">
+                      <div className="sm:col-span-2 md:col-span-3 lg:col-span-4">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
@@ -953,63 +953,71 @@ export default function DonationHistory() {
                         </div>
                       </div>
 
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="결제상태" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 상태</SelectItem>
-                          <SelectItem value="completed">결제완료</SelectItem>
-                          <SelectItem value="pending">결제대기</SelectItem>
-                          <SelectItem value="failed">결제실패</SelectItem>
-                          <SelectItem value="cancelled">결제취소</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="lg:col-span-2">
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="결제상태" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">전체 상태</SelectItem>
+                            <SelectItem value="completed">결제완료</SelectItem>
+                            <SelectItem value="pending">결제대기</SelectItem>
+                            <SelectItem value="failed">결제실패</SelectItem>
+                            <SelectItem value="cancelled">결제취소</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                      <Select
-                        value={methodFilter}
-                        onValueChange={(val) => {
-                          setMethodFilter(val);
-                          setCurrentPage(1);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="결제방법" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 결제방법</SelectItem>
-                          <SelectItem value="신용카드">신용카드</SelectItem>
-                          <SelectItem value="간편결제">간편결제 (전체)</SelectItem>
-                          <SelectItem value="가상계좌">가상계좌</SelectItem>
-                          <SelectSeparator />
-                          <SelectGroup>
-                            <SelectLabel className="text-[11px] font-semibold text-slate-400">간편결제 세부</SelectLabel>
-                            <SelectItem value="카카오페이">카카오페이</SelectItem>
-                            <SelectItem value="네이버페이">네이버페이</SelectItem>
-                            <SelectItem value="토스페이">토스페이</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      <div className="lg:col-span-2">
+                        <Select
+                          value={methodFilter}
+                          onValueChange={(val) => {
+                            setMethodFilter(val);
+                            setCurrentPage(1);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="결제방법" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">전체 결제방법</SelectItem>
+                            <SelectItem value="신용카드">신용카드</SelectItem>
+                            <SelectItem value="간편결제">간편결제 (전체)</SelectItem>
+                            <SelectItem value="가상계좌">가상계좌</SelectItem>
+                            <SelectSeparator />
+                            <SelectGroup>
+                              <SelectLabel className="text-[11px] font-semibold text-slate-400">간편결제 세부</SelectLabel>
+                              <SelectItem value="카카오페이">카카오페이</SelectItem>
+                              <SelectItem value="네이버페이">네이버페이</SelectItem>
+                              <SelectItem value="토스페이">토스페이</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                      <Select value={deviceFilter} onValueChange={setDeviceFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="접수 기기" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체 기기</SelectItem>
-                          <SelectItem value="WEB_MOBILE">모바일/웹</SelectItem>
-                          <SelectItem value="KIOSK">키오스크</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="lg:col-span-2">
+                        <Select value={deviceFilter} onValueChange={setDeviceFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="접수 기기" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">전체 기기</SelectItem>
+                            <SelectItem value="WEB_MOBILE">모바일/웹</SelectItem>
+                            <SelectItem value="KIOSK">키오스크</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                      <Button
-                        variant="outline"
-                        onClick={handleExport}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        엑셀 다운로드
-                      </Button>
+                      <div className="lg:col-span-2">
+                        <Button
+                          variant="outline"
+                          onClick={handleExport}
+                          className="w-full gap-2 font-medium"
+                        >
+                          <Download className="h-4 w-4" />
+                          엑셀 다운로드
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Hot-Cold Hybrid Data Loading Control Banner */}
@@ -1028,42 +1036,6 @@ export default function DonationHistory() {
                             <span>과거 내역 온디맨드(On-Demand) 조회 모드</span>
                           </div>
                         )}
-
-                        {/* Quick Preset Buttons */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => setQuickPeriod('today')}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                              isTodayMode
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                                : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            오늘 (실시간)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQuickPeriod('this_week')}
-                            className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
-                          >
-                            이번 주
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQuickPeriod('this_month')}
-                            className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
-                          >
-                            이번 달
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQuickPeriod('all')}
-                            className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
-                          >
-                            전체 보기
-                          </button>
-                        </div>
                       </div>
 
                       <div className="pt-2">
