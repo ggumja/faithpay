@@ -722,26 +722,9 @@ export default function PaymentSelection() {
         console.log('[Nanopay Cert] processCertRequest response:', res);
 
         const certData = (res as any)?.data || res;
-        let redirectUrl = certData?.redirectUrl || (res as any)?.redirectUrl;
+        const redirectUrl = certData?.redirectUrl || (res as any)?.redirectUrl;
         const html = certData?.html || (res as any)?.html;
         const donationId = certData?.donationId || (res as any)?.donationId;
-
-        // 🚀 모바일 결제창 80번 포트(HTTP) 타임아웃 방지 및 안전한 HTTPS 직접 연결 정규화:
-        // 나노페이/메인페이 모바일 엔드포인트(/mobile?aid=...)는 서버측 302 리다이렉트 시 비보안 평문인 http://... (포트 80)으로 전달되어
-        // 모바일 브라우저 연결 타임아웃 및 결제창 미표출 현상이 발생함.
-        // aid를 추출하여 직접 정상 200 OK 응답하는 https://[host]/mobile/step2/[aid] 로 안전하게 정규화.
-        if (isMobile && redirectUrl) {
-          const aidMatch = redirectUrl.match(/aid=([^&]+)/);
-          if (aidMatch && (redirectUrl.includes('/mobile?') || redirectUrl.includes('/mobile/'))) {
-            try {
-              const parsed = new URL(redirectUrl);
-              redirectUrl = `https://${parsed.host}/mobile/step2/${aidMatch[1]}`;
-              console.log('✅ [Nanopay Cert] Normalized mobile payment URL to direct HTTPS step2:', redirectUrl);
-            } catch (e) {
-              console.warn('URL normalization warning:', e);
-            }
-          }
-        }
 
         if (!res.success || (!redirectUrl && !html)) {
           if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
