@@ -291,7 +291,7 @@ export default function Root() {
             <img
               src="/images/logo_soulpay.png"
               alt="SoulPay"
-              style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+              style={{ height: 34, width: 'auto', objectFit: 'contain' }}
             />
           </a>
 
