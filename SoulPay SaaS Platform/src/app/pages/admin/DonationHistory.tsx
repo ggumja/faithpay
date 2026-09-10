@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
@@ -1823,9 +1823,9 @@ export default function DonationHistory() {
                         ) : (
                           <>
                             {terms.receiptGratitudeText.split('\n').map((line: string, idx: number) => (
-                              <React.Fragment key={idx}>
+                              <Fragment key={idx}>
                                 {line}<br />
-                              </React.Fragment>
+                              </Fragment>
                             ))}
                           </>
                         )}
