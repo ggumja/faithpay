@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { ArrowLeft, Lock, Mail, Building2, ChevronRight, Phone, Search, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { isAdminPortalDomain } from '../utils/domainUtils';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -171,7 +172,8 @@ export default function AdminLogin() {
         setCurrentAdmin(tenantAdmin);
         setCurrentTenant(urlTenant);
         toast.success(`환영합니다, ${tenantAdmin.name}님 (${cleanEmail})!`);
-        navigate(`/${urlTenant.slug}/admin`);
+        const targetDashboard = isAdminPortalDomain() ? `/${urlTenant.slug}` : `/${urlTenant.slug}/admin`;
+        navigate(targetDashboard);
         return;
       }
     }
@@ -218,7 +220,8 @@ export default function AdminLogin() {
     setCurrentAdmin(tenantAdmin);
     setCurrentTenant(targetTenant);
     toast.success(`환영합니다, ${tenantAdmin.name}님 (${cleanEmail})!`);
-    navigate(`/${targetTenant.slug}/admin`);
+    const targetDashboard = isAdminPortalDomain() ? `/${targetTenant.slug}` : `/${targetTenant.slug}/admin`;
+    navigate(targetDashboard);
   };
 
   const handleSelectTenantAndLogin = (targetTenant: any) => {
