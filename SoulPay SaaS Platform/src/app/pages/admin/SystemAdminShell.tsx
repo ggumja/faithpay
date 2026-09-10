@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext';
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
   Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins, UserCog,
+  LayoutDashboard, Activity,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -15,11 +16,13 @@ import { tenantAPI } from '../../api/client';
 
 /* ─── active key ─────────────────────────────── */
 function useActiveKey(pathname: string) {
+  if (pathname === '/system/admin' || pathname === '/system/admin/' || pathname === '/system/admin/dashboard') return 'dashboard';
   if (pathname.includes('/system-admin-accounts')) return 'sysAdmins';
   if (pathname.includes('/scheduler'))       return 'scheduler';
   if (pathname.includes('/tenants/new'))     return 'tenantNew';
   if (pathname.match(/\/tenants\/pending\/.+/)) return 'pendingDetail';
   if (pathname.includes('/tenants/pending')) return 'pending';
+  if (pathname.includes('/tenants'))         return 'tenants';
   if (pathname.includes('/settlement-center')) return 'settlementCenter';
   if (pathname.includes('/stats'))           return 'stats';
   if (pathname.match(/\/partners\/.+/))      return 'partnerDetail';
@@ -28,11 +31,12 @@ function useActiveKey(pathname: string) {
   if (pathname.includes('/ledger'))          return 'ledger';
   if (pathname.includes('/settings'))        return 'settings';
   if (pathname.match(/\/tenant\/[^/]+/))     return 'tenantDetail';
-  return 'tenants';
+  return 'dashboard';
 }
 
 
 const META: Record<string, { title: string; section: string }> = {
+  dashboard:        { title: '플랫폼 통합 대시보드', section: '통합 관제' },
   sysAdmins:        { title: '시스템 관리자 계정',     section: '시스템 설정' },
   scheduler:        { title: '정기결제 스케줄러',     section: '정산 & 배치 관리' },
   tenants:          { title: '단체 목록',           section: '단체 목록 관리' },
@@ -140,9 +144,21 @@ export default function SystemAdminShell() {
 
           <nav className={S.nav}>
 
-            {/* Overview — 단체 목록 관리 (collapsible) */}
+            {/* 통합 관제 — 대시보드 */}
             <div>
-              <p className={S.navSection}>Overview</p>
+              <p className={S.navSection}>통합 관제</p>
+              <button
+                onClick={() => navigate('/system/admin')}
+                className={S.navItem(active === 'dashboard')}
+              >
+                <LayoutDashboard size={13} className={active === 'dashboard' ? 'text-white' : 'text-indigo-600'} />
+                <span className="font-semibold">대시보드 (통합 관제)</span>
+              </button>
+            </div>
+
+            {/* 단체 목록 관리 (collapsible) */}
+            <div>
+              <p className={S.navSection}>단체 관리</p>
               <button
                 onClick={() => setTenantsOpen(p => !p)}
                 className={S.navParent(['tenants','pending','tenantDetail','tenantNew'].includes(active))}
