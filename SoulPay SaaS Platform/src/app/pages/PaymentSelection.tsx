@@ -480,10 +480,13 @@ export default function PaymentSelection() {
     if (donationFormData.isRecurring && isNanopay) {
       setIsProcessing(true);
       toast.info('정기결제 카드 등록창을 연결하고 있습니다...');
+
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth <= 768);
       
-      try {
+      let paymentWindow: Window | null = null;
+      if (!isMobile) {
         const windowName = `NanopayBillKey_${Date.now()}`;
-        const paymentWindow = window.open('about:blank', windowName, 'width=520,height=860,scrollbars=yes,resizable=yes');
+        paymentWindow = window.open('about:blank', windowName, 'width=520,height=860,scrollbars=yes,resizable=yes');
         if (!paymentWindow) {
           toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
           setIsProcessing(false);
@@ -495,7 +498,9 @@ export default function PaymentSelection() {
         } catch (e) {
           console.warn('Initial popup write skipped:', e);
         }
+      }
 
+      try {
         const tempDonationId = generateTransactionId();
         const donorPhone = (donationFormData.phone || "").replace(/[^0-9]/g, '');
         const popupOpenedAt = Date.now();
@@ -520,13 +525,20 @@ export default function PaymentSelection() {
         const html = billKeyData?.html || (res as any)?.html;
 
         if (!res.success || !html) {
-          paymentWindow.close();
+          if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
           toast.error(res.error || (billKeyData as any)?.error || '나노페이 정기결제 카드 등록창 요청에 실패했습니다.');
           setIsProcessing(false);
           return;
         }
 
-        // Smartro 카드 등록창 HTML 주입
+        // Smartro 카드 등록창 주입 (모바일: 현재 창 직접 주입, PC: 팝업 창 주입)
+        if (isMobile) {
+          document.open();
+          document.write(html);
+          document.close();
+          return;
+        }
+
         try {
           if (paymentWindow && !paymentWindow.closed) {
             paymentWindow.document.open();
@@ -674,18 +686,27 @@ export default function PaymentSelection() {
     if (isNanopay && cardPaymentType === 'cert' && !donationFormData.isRecurring) {
       setIsProcessing(true);
       toast.info('나노페이 결제창을 준비하고 있습니다...');
+
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth <= 768);
       
-      try {
-        const paymentWindow = window.open('about:blank', 'NanopayPayment', 'width=650,height=700,scrollbars=yes,resizable=yes');
+      let paymentWindow: Window | null = null;
+      if (!isMobile) {
+        // PC 환경에서만 팝업 사전 오픈 (모바일에서는 팝업 차단 및 앱카드 딥링크 차단 방지를 위해 현재 창 직접 이동)
+        paymentWindow = window.open('about:blank', 'NanopayPayment', 'width=650,height=700,scrollbars=yes,resizable=yes');
         if (!paymentWindow) {
           toast.error('팝업 차단이 설정되어 있습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
           setIsProcessing(false);
           return;
         }
 
-        paymentWindow.document.write('<p style="text-align:center;padding-top:60px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;color:#334155;">나노페이 안전 결제창으로 연결 중입니다...</p>');
+        try {
+          paymentWindow.document.write('<p style="text-align:center;padding-top:60px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:15px;color:#334155;">나노페이 안전 결제창으로 연결 중입니다...</p>');
+        } catch (e) {
+          console.warn('Initial popup write skipped:', e);
+        }
+      }
 
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth <= 768);
+      try {
         const donorEmailToSend = donationFormData.email || '';
 
         const res = await paymentAPI.processCertRequest({
@@ -701,33 +722,79 @@ export default function PaymentSelection() {
         console.log('[Nanopay Cert] processCertRequest response:', res);
 
         const certData = (res as any)?.data || res;
-        const redirectUrl = certData?.redirectUrl || (res as any)?.redirectUrl;
+        let redirectUrl = certData?.redirectUrl || (res as any)?.redirectUrl;
         const html = certData?.html || (res as any)?.html;
         const donationId = certData?.donationId || (res as any)?.donationId;
 
+        // 🚀 모바일 결제창 80번 포트(HTTP) 타임아웃 방지 및 안전한 HTTPS 직접 연결 정규화:
+        // 나노페이/메인페이 모바일 엔드포인트(/mobile?aid=...)는 서버측 302 리다이렉트 시 비보안 평문인 http://... (포트 80)으로 전달되어
+        // 모바일 브라우저 연결 타임아웃 및 결제창 미표출 현상이 발생함.
+        // aid를 추출하여 직접 정상 200 OK 응답하는 https://[host]/mobile/step2/[aid] 로 안전하게 정규화.
+        if (isMobile && redirectUrl) {
+          const aidMatch = redirectUrl.match(/aid=([^&]+)/);
+          if (aidMatch && (redirectUrl.includes('/mobile?') || redirectUrl.includes('/mobile/'))) {
+            try {
+              const parsed = new URL(redirectUrl);
+              redirectUrl = `https://${parsed.host}/mobile/step2/${aidMatch[1]}`;
+              console.log('✅ [Nanopay Cert] Normalized mobile payment URL to direct HTTPS step2:', redirectUrl);
+            } catch (e) {
+              console.warn('URL normalization warning:', e);
+            }
+          }
+        }
+
         if (!res.success || (!redirectUrl && !html)) {
-          paymentWindow.close();
+          if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
           toast.error(res.error || (certData as any)?.error || '결제창 요청에 실패했습니다.');
           setIsProcessing(false);
           return;
         }
 
-        if (redirectUrl) {
-          paymentWindow.location.href = redirectUrl;
-        } else if (html) {
-          paymentWindow.document.open();
-          paymentWindow.document.write(html);
-          paymentWindow.document.close();
-        } else {
-          paymentWindow.close();
-          toast.error('결제창 URL을 가져오지 못했습니다.');
-          setIsProcessing(false);
-          return;
-        }
+        // 스냅샷 저장 (DonationComplete 페이지 복원용)
+        const snapPayload = {
+          tenant: currentTenant,
+          donationId,
+          formData: donationFormData,
+          savedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem('pending_donation_latest', JSON.stringify(snapPayload));
+          localStorage.setItem(`pending_donation_${donationId}`, JSON.stringify(snapPayload));
+          sessionStorage.setItem('pending_donation_latest', JSON.stringify(snapPayload));
+          sessionStorage.setItem(`pending_donation_${donationId}`, JSON.stringify(snapPayload));
+        } catch (e) {}
 
-        toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
-        pollDonationStatus(donationId);
+        if (isMobile) {
+          // 📱 모바일: 팝업이 아닌 현재 창 전체 이동 (Self-Redirect)
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+            return;
+          } else if (html) {
+            document.open();
+            document.write(html);
+            document.close();
+            return;
+          }
+        } else {
+          // 💻 PC: 팝업 창에 결제 화면 주입
+          if (redirectUrl && paymentWindow) {
+            paymentWindow.location.href = redirectUrl;
+          } else if (html && paymentWindow) {
+            paymentWindow.document.open();
+            paymentWindow.document.write(html);
+            paymentWindow.document.close();
+          } else {
+            if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
+            toast.error('결제창 URL을 가져오지 못했습니다.');
+            setIsProcessing(false);
+            return;
+          }
+
+          toast.success('결제창이 생성되었습니다. 팝업 창에서 결제를 완료해주세요.');
+          pollDonationStatus(donationId);
+        }
       } catch (error: any) {
+        if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
         console.error('Cert payment error:', error);
         toast.error(error?.message || '결제 요청 중 오류가 발생했습니다.');
         setIsProcessing(false);

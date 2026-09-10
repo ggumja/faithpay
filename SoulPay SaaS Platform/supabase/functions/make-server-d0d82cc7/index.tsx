@@ -1233,7 +1233,24 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
 
     // script location.href 추출
     const match = nanoHtml.match(/location\.href=[\x27\x22]([^\x27\x22]+)[\x27\x22]/);
-    const redirectUrl = match ? match[1] : null;
+    let redirectUrl = match ? match[1] : null;
+
+    // 🚀 모바일 결제창 80번 포트(HTTP) 타임아웃 방지 및 안전한 HTTPS 직접 연결 정규화:
+    // 나노페이/메인페이 모바일 엔드포인트(/mobile?aid=...&key=...)는 302 리다이렉트 시 비보안 평문인 http://... (포트 80)으로 전달되어
+    // 모바일 기기 브라우저에서 방화벽 포트 80 차단으로 인한 타임아웃 및 결제창 미표출 현상이 발생함.
+    // aid 값을 추출하여 직접 정상 200 OK 응답하는 https://[host]/mobile/step2/[aid] 로 즉시 정규화.
+    if (redirectUrl && isMobileClient) {
+      const aidMatch = redirectUrl.match(/aid=([^&]+)/);
+      if (aidMatch && (redirectUrl.includes('/mobile?') || redirectUrl.includes('/mobile/'))) {
+        try {
+          const parsedUrl = new URL(redirectUrl);
+          redirectUrl = `https://${parsedUrl.host}/mobile/step2/${aidMatch[1]}`;
+          console.log("✅ Normalized Nanopay mobile URL to direct HTTPS step2:", redirectUrl);
+        } catch (e) {
+          console.warn("URL normalization error:", e);
+        }
+      }
+    }
 
     return c.json({
       success: true,
@@ -2484,6 +2501,19 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
             : `카드 등록에 실패했습니다. (오류코드: ${smartroCode || '알 수 없음'})`)
     );
 
+    let tenantSlug = '';
+    const tenantIdForUrl = meta.tenantId || donationData.tenantId;
+    if (tenantIdForUrl) {
+      try {
+        const tenant = await db.getTenant(tenantIdForUrl);
+        if (tenant?.slug) tenantSlug = tenant.slug;
+      } catch (_) {}
+    }
+
+    const billCompleteUrl = tenantSlug
+      ? `https://pay.soulpay.kr/${tenantSlug}/complete?donId=${donationRecord?.id || ''}&type=nano_billing${firstPaymentCharged ? '&charged=true' : '&registeredOnly=true'}${nextPaymentDate ? `&nextDate=${encodeURIComponent(nextPaymentDate)}` : ''}`
+      : 'https://pay.soulpay.kr';
+
     // 사용자 팝업 창에 응답할 안내 화면 및 postMessage 스크립트 반환
     const html = `<!DOCTYPE html>
 <html>
@@ -2616,7 +2646,11 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       </div>
     </div>
     ` : `
-    <div class="footer">잠시 후 결제 완료 화면으로 자동 이동합니다...</div>
+    <div class="footer">
+      <a href="${billCompleteUrl}" style="color: #3D47B8; font-weight: 700; text-decoration: none;">
+        잠시 후 결제 완료 화면으로 자동 이동합니다 (터치 시 즉시 이동)
+      </a>
+    </div>
     `}
   </div>
   <script>
@@ -2637,17 +2671,25 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           nextPaymentDate: ${JSON.stringify(nextPaymentDate || '')},
           compData: ${JSON.stringify(compData || '')}
         }, '*');
+        ${isSuccess ? `
+        setTimeout(function() {
+          window.close();
+        }, 1500);
+        ` : ``}
+      } else {
+        // 모바일 등 window.opener 없는 환경 (Self-Redirect)
+        ${isSuccess ? `
+        setTimeout(function() {
+          window.location.href = '${billCompleteUrl}';
+        }, 1500);
+        ` : ``}
       }
     } catch (e) {
       console.error('postMessage error:', e);
+      ${isSuccess ? `
+      window.location.href = '${billCompleteUrl}';
+      ` : ``}
     }
-    ${isSuccess ? `
-    setTimeout(function() {
-      window.close();
-    }, 1500);
-    ` : `
-    // 실패 시 팝업창을 즉시 닫지 않고 사용자가 원인을 확인하고 [다시 시도하기] 버튼을 누를 수 있도록 대기
-    `}
   </script>
 </body>
 </html>`;
@@ -3027,11 +3069,20 @@ const handleCertCallback = async (c: any) => {
 
     const isSuccess = resultCode === "0000";
 
+    let tenantSlug = '';
+
     if (donationId) {
       const sb = db.pgClient();
       const { data: donation } = await sb.from('donations').select('*').eq('id', donationId).maybeSingle();
       
       if (donation) {
+        if (donation.tenant_id) {
+          try {
+            const tenant = await db.getTenant(donation.tenant_id);
+            if (tenant?.slug) tenantSlug = tenant.slug;
+          } catch (_) {}
+        }
+
         if (isSuccess) {
           await db.updateDonation(donation.tenant_id, donation.id, {
             paymentStatus: 'completed',
@@ -3052,6 +3103,7 @@ const handleCertCallback = async (c: any) => {
         const allTenants = await db.getAllTenants();
         const matchedTenant = allTenants.find((t: any) => t.id === body.tenantId || t.slug === body.tenantId) || allTenants[0];
         if (matchedTenant) {
+          tenantSlug = matchedTenant.slug || '';
           await db.createDonation({
             id: donationId,
             tenantId: matchedTenant.id,
@@ -3070,22 +3122,33 @@ const handleCertCallback = async (c: any) => {
       }
     }
 
+    const completeUrl = tenantSlug
+      ? `https://pay.soulpay.kr/${tenantSlug}/complete?donId=${donationId || ''}&type=nano_cert`
+      : 'https://pay.soulpay.kr';
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>결제 결과</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; }
-    .card { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; max-width: 360px; }
+    .card { background: white; padding: 32px 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; max-width: 360px; width: 90%; }
     .title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: ${isSuccess ? '#16a34a' : '#dc2626'}; }
-    .desc { font-size: 14px; color: #64748b; }
+    .desc { font-size: 14px; color: #64748b; margin-bottom: 16px; }
+    .btn { display: inline-block; padding: 11px 22px; background: #4f46e5; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="title">${isSuccess ? '결제가 완료되었습니다' : '결제 실패'}</div>
-    <div class="desc">${isSuccess ? '창이 곧 자동으로 닫힙니다.' : (resultMsg || '결제를 완료하지 못했습니다.')}</div>
+    <div class="desc">${isSuccess ? '잠시 후 결제 완료 화면으로 자동 이동합니다.' : (resultMsg || '결제를 완료하지 못했습니다.')}</div>
+    <div>
+      <a href="${completeUrl}" class="btn">
+        ${isSuccess ? '봉헌 완료 확인하기' : '돌아가기'}
+      </a>
+    </div>
   </div>
   <script>
     try {
@@ -3097,6 +3160,14 @@ const handleCertCallback = async (c: any) => {
           resultCode: '${resultCode}',
           resultMsg: '${resultMsg}'
         }, '*');
+        setTimeout(function() {
+          window.close();
+        }, 1200);
+      } else {
+        // 모바일 환경 (window.opener 없음): 완료 페이지로 자동 리다이렉트
+        setTimeout(function() {
+          window.location.href = '${completeUrl}';
+        }, 1200);
       }
       localStorage.setItem('nanoPayResData${donationId || ''}', JSON.stringify({
         success: ${isSuccess},
@@ -3104,10 +3175,8 @@ const handleCertCallback = async (c: any) => {
       }));
     } catch (e) {
       console.error(e);
+      window.location.href = '${completeUrl}';
     }
-    setTimeout(function() {
-      window.close();
-    }, 1200);
   </script>
 </body>
 </html>`;
