@@ -5,8 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
-import { Motif } from '../components/Motif';
-import { Building2, MapPin, Phone, Mail, Palette, Globe, Check, ArrowRight, ArrowLeft, Search, Lock, Eye, EyeOff, FileText, Upload, Trash2, ShieldCheck, ChevronDown, ChevronUp, AlertCircle, FileCheck } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, Search, Eye, EyeOff, FileText, Upload, Trash2, ChevronDown, ChevronUp, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { convertKoreanToQwerty } from '../utils/koreanConverter';
 import { openDaumPostcode } from '../utils/daumPostcode';
@@ -286,37 +285,45 @@ export default function OnboardingFlow() {
         </div>
 
         {/* Stepper Progress Indicator */}
-        <section className="mb-10 max-w-lg mx-auto">
+        <section className="mb-10 max-w-xl mx-auto px-2">
           <div className="flex justify-between items-center relative mb-4">
-            {STEPS.map((s, i) => (
-              <div key={s} className="flex flex-col items-center gap-2 flex-1 relative z-10">
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 border-2"
-                  style={{
-                    background: i <= currentIndex ? ft.heroGradient : undefined,
-                    color: i <= currentIndex ? '#fff' : 'var(--fp-fg-tertiary)',
-                    borderColor: i === currentIndex ? ft.primary : (i < currentIndex ? ft.primary : 'transparent'),
-                    boxShadow: i === currentIndex ? `0 0 0 4px ${ft.primaryBg}` : 'none',
-                  }}
-                >
-                  {i < currentIndex ? <Check size={14} /> : (i + 1)}
+            {STEPS.map((s, i) => {
+              const isPast = i < currentIndex;
+              const isCurrent = i === currentIndex;
+              return (
+                <div key={s} className="flex flex-col items-center gap-2 flex-1 relative z-10">
+                  <div 
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-200 border-2 ${
+                      isCurrent
+                        ? 'bg-[#191F28] dark:bg-white text-white dark:text-zinc-900 border-[#191F28] dark:border-white shadow-xs'
+                        : isPast
+                        ? 'bg-[#3182F6] text-white border-[#3182F6]'
+                        : 'bg-white dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    {isPast ? <Check size={14} strokeWidth={2.5} /> : (i + 1)}
+                  </div>
+                  <span 
+                    className={`text-xs sm:text-[13px] tracking-tight transition-colors text-center ${
+                      isCurrent
+                        ? 'font-extrabold text-zinc-950 dark:text-white'
+                        : isPast
+                        ? 'font-bold text-zinc-700 dark:text-zinc-300'
+                        : 'font-medium text-zinc-400 dark:text-zinc-500'
+                    }`}
+                  >
+                    {STEP_LABELS[i]}
+                  </span>
                 </div>
-                <span 
-                  className="text-[10px] font-bold tracking-wide transition-colors"
-                  style={{ color: i <= currentIndex ? ft.primary : 'var(--fp-fg-tertiary)' }}
-                >
-                  {STEP_LABELS[i]}
-                </span>
-              </div>
-            ))}
+              );
+            })}
             
             {/* Stepper Background Track bar */}
-            <div className="absolute top-5 left-8 right-8 h-0.5 bg-zinc-200 dark:bg-zinc-800 -z-0">
+            <div className="absolute top-4 sm:top-4.5 left-10 right-10 h-0.5 bg-zinc-200 dark:bg-zinc-800 -z-0">
               <div 
-                className="h-full rounded-full transition-all duration-300"
+                className="h-full bg-[#3182F6] rounded-full transition-all duration-300"
                 style={{
                   width: `${(currentIndex / (STEPS.length - 1)) * 100}%`,
-                  background: ft.heroGradient,
                 }}
               />
             </div>
@@ -326,12 +333,14 @@ export default function OnboardingFlow() {
         {/* Form Step Display */}
         <div className="animate-slide-up">
           
-          {/* ── Step 1: 종교 타입 선택 ── */}
+          {/* ── Step 1: 조직 및 모금 유형 선택 ── */}
           {step === 'religion' && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-sm">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-xs">
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold tracking-tight mb-2">조직 및 모금 유형 선택</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-950 dark:text-white tracking-tight mb-2">
+                  조직 및 모금 유형 선택
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                   해당되는 조직 단체 유형을 선택해 주세요. 선택에 따라 단체 고유 용어(헌금/보시/후원금/기부금)와 테마가 자동으로 사전 맵핑됩니다.
                 </p>
               </div>
@@ -343,43 +352,34 @@ export default function OnboardingFlow() {
                   return (
                     <button
                       key={id}
+                      type="button"
                       onClick={() => setFormData({ ...formData, religion: id })}
-                      className="group text-left border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all duration-350 relative overflow-hidden"
-                      style={{
-                        borderColor: isSelected ? t.primary : 'var(--border)',
-                        color: isSelected ? '#fff' : 'inherit',
-                        background: isSelected ? t.primary : 'var(--card)',
-                      }}
+                      className={`group text-left rounded-xl p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer transition-all duration-200 ${
+                        isSelected
+                          ? 'border-2 border-[#3182F6] bg-blue-50/25 dark:bg-blue-950/20 ring-2 ring-[#3182F6]/10 shadow-xs'
+                          : 'border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50/60 dark:hover:bg-zinc-850/60'
+                      }`}
                     >
-
-
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
-                        style={{
-                          background: isSelected ? 'rgba(255,255,255,0.18)' : t.primaryBg,
-                        }}
-                      >
-                        <Motif kind={t.motif} size={24} color={isSelected ? '#fff' : t.primary} />
-                      </div>
-
-                      <div className="flex-1 min-w-0 z-10">
-                        <h4 className="text-base font-bold tracking-tight">{t.name}</h4>
-                        <p 
-                          className="text-xs mt-0.5 font-medium transition-colors"
-                          style={{ color: isSelected ? 'rgba(255,255,255,0.88)' : 'var(--fp-fg-tertiary)' }}
-                        >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-[15px] sm:text-[16px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                            {t.name}
+                          </h4>
+                        </div>
+                        <p className="text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 font-medium leading-relaxed">
                           {t.tagline}
                         </p>
                       </div>
 
+                      {/* Clean Modern Radio Indicator */}
                       <div 
-                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-                        style={{
-                          borderColor: isSelected ? '#fff' : 'rgba(112, 115, 124, 0.4)',
-                          background: isSelected ? '#fff' : 'transparent',
-                        }}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                          isSelected
+                            ? 'border-[#3182F6] bg-[#3182F6]'
+                            : 'border-zinc-300 dark:border-zinc-600 bg-transparent group-hover:border-zinc-400'
+                        }`}
                       >
-                        {isSelected && <div className="w-2.5 h-2.5 rounded-full" style={{ background: t.primary }} />}
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
                     </button>
                   );
@@ -387,9 +387,9 @@ export default function OnboardingFlow() {
               </div>
 
               <button
+                type="button"
                 onClick={() => setStep('basic')}
-                className="w-full h-13 rounded-xl text-white font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 mt-4 shadow-md"
-                style={{ background: ft.heroGradient }}
+                className="w-full h-12 sm:h-13 rounded-xl bg-[#191F28] hover:bg-[#000000] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 mt-4 shadow-sm hover:shadow"
               >
                 <span>다음 단계로</span>
                 <ArrowRight size={16} />
@@ -405,17 +405,20 @@ export default function OnboardingFlow() {
               <input type="password" name="fake_password_remember" tabIndex={-1} className="sr-only" aria-hidden="true" autoComplete="new-password" />
 
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold tracking-tight mb-2">기본 정보 설정</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-950 dark:text-white tracking-tight mb-2">
+                  기본 정보 설정
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                   단체명, 전용 접속 도메인 슬러그와 주요 연락 정보를 지정합니다.
                 </p>
               </div>
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <Label htmlFor="name" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">단체 명칭 *</Label>
-                  <div className="relative mt-2 flex items-center">
-                    <Building2 size={18} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
+                  <Label htmlFor="name" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    단체 명칭 *
+                  </Label>
+                  <div className="mt-1.5">
                     <Input 
                       id="name" 
                       name="org_name_nofill"
@@ -424,7 +427,7 @@ export default function OnboardingFlow() {
                       autoCapitalize="off"
                       spellCheck={false}
                       placeholder={`예: 페이쓰페이 ${ft.placeNoun}`} 
-                      className="pl-10 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                      className="px-3.5 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                       value={formData.name} 
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
                     />
@@ -432,13 +435,17 @@ export default function OnboardingFlow() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <Label htmlFor="slug" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">단축 주소 접속 URL *</Label>
-                    <span className="text-[11px] text-zinc-400 font-semibold">영문 소문자, 숫자, 하이픈(-)만 가능</span>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <Label htmlFor="slug" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      단축 주소 접속 URL *
+                    </Label>
+                    <span className="text-[11px] text-zinc-400 font-medium">영문 소문자, 숫자, 하이픈(-)만 가능</span>
                   </div>
-                  <div className="flex gap-2 mt-1">
-                    <div className="relative flex-1 flex items-center">
-                      <div className="absolute left-3.5 text-xs text-zinc-400 font-bold select-none">soulpay.kr/</div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center">
+                      <span className="h-11 sm:h-12 px-3.5 bg-zinc-50 dark:bg-zinc-850 border border-r-0 border-zinc-200 dark:border-zinc-800 rounded-l-xl flex items-center text-xs font-bold text-zinc-500 select-none">
+                        soulpay.kr/
+                      </span>
                       <Input 
                         id="slug" 
                         name="org_slug_nofill"
@@ -447,8 +454,7 @@ export default function OnboardingFlow() {
                         autoCapitalize="off"
                         spellCheck={false}
                         placeholder="my-church" 
-                        className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
-                        style={{ paddingLeft: '110px' }}
+                        className="rounded-l-none h-11 sm:h-12 px-3 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                         value={formData.slug} 
                         onChange={(e) => handleSlugChange(e.target.value)} 
                       />
@@ -456,7 +462,7 @@ export default function OnboardingFlow() {
                     <button
                       type="button"
                       onClick={handleCheckSlugDuplicate}
-                      className="h-12 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 text-white dark:text-zinc-900 font-bold text-xs cursor-pointer shadow-xs whitespace-nowrap transition-colors"
+                      className="h-11 sm:h-12 px-4 rounded-xl bg-[#191F28] hover:bg-[#000000] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-bold text-xs cursor-pointer shadow-xs whitespace-nowrap transition-colors"
                     >
                       중복 확인
                     </button>
@@ -469,8 +475,10 @@ export default function OnboardingFlow() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <Label htmlFor="address" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">기본 주소 *</Label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <Label htmlFor="address" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      기본 주소 *
+                    </Label>
                     <button
                       type="button"
                       onClick={() => openDaumPostcode((res) => {
@@ -483,28 +491,25 @@ export default function OnboardingFlow() {
                       <span>우편번호 검색</span>
                     </button>
                   </div>
-                  <div className="flex gap-2 mt-1">
-                    <div className="relative flex-1 flex items-center">
-                      <MapPin size={18} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
-                      <Input 
-                        id="address" 
-                        name="org_address_nofill"
-                        autoComplete="off"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        placeholder="주소 검색 버튼을 누르시거나 기본 주소를 입력하세요" 
-                        className="pl-10 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
-                        value={formData.address} 
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
-                      />
-                    </div>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="address" 
+                      name="org_address_nofill"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      placeholder="주소 검색 버튼을 누르시거나 기본 주소를 입력하세요" 
+                      className="flex-1 px-3.5 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
+                      value={formData.address} 
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
+                    />
                     <button
                       type="button"
                       onClick={() => openDaumPostcode((res) => {
                         setFormData(prev => ({ ...prev, address: `[${res.zonecode}] ${res.address}` }));
                         setTimeout(() => addressDetailRef.current?.focus(), 100);
                       })}
-                      className="h-12 px-4 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-slate-800 dark:text-zinc-100 font-bold text-xs cursor-pointer shadow-xs whitespace-nowrap transition-colors flex items-center gap-1.5"
+                      className="h-11 sm:h-12 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-800 dark:text-zinc-200 font-bold text-xs cursor-pointer shadow-xs whitespace-nowrap transition-colors flex items-center gap-1.5"
                     >
                       <Search size={14} />
                       <span>주소 검색</span>
@@ -518,7 +523,7 @@ export default function OnboardingFlow() {
                     autoCorrect="off"
                     spellCheck={false}
                     placeholder="상세 주소를 입력하세요 (예: 2층 종무소 / 101동 202호)" 
-                    className="h-11 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-medium text-xs mt-2 focus:ring-2 focus:ring-[#3182F6]"
+                    className="px-3.5 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-xs mt-2 text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                     value={formData.addressDetail} 
                     onChange={(e) => setFormData({ ...formData, addressDetail: e.target.value })} 
                   />
@@ -526,9 +531,10 @@ export default function OnboardingFlow() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="phone" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">공식 연락처 *</Label>
-                    <div className="relative mt-2 flex items-center">
-                      <Phone size={18} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
+                    <Label htmlFor="phone" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      공식 연락처 *
+                    </Label>
+                    <div className="mt-1.5">
                       <Input 
                         id="phone" 
                         name="org_phone_nofill"
@@ -536,16 +542,17 @@ export default function OnboardingFlow() {
                         autoCorrect="off"
                         spellCheck={false}
                         placeholder="02-123-4567" 
-                        className="pl-10 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                        className="px-3.5 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                         value={formData.phone} 
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="email" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">담당자 이메일 *</Label>
-                    <div className="relative mt-2 flex items-center">
-                      <Mail size={18} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
+                    <Label htmlFor="email" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      담당자 이메일 *
+                    </Label>
+                    <div className="mt-1.5">
                       <Input 
                         id="email" 
                         name="org_email_nofill"
@@ -555,7 +562,7 @@ export default function OnboardingFlow() {
                         autoCapitalize="off"
                         spellCheck={false}
                         placeholder="admin@example.com" 
-                        className="pl-10 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                        className="px-3.5 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                         value={formData.email} 
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
                       />
@@ -565,9 +572,10 @@ export default function OnboardingFlow() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="password" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">관리자 비밀번호 *</Label>
-                    <div className="relative mt-2 flex items-center">
-                      <Lock size={18} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
+                    <Label htmlFor="password" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      관리자 비밀번호 *
+                    </Label>
+                    <div className="relative mt-1.5 flex items-center">
                       <Input 
                         id="password" 
                         name="org_password_nofill"
@@ -577,7 +585,7 @@ export default function OnboardingFlow() {
                         autoCapitalize="off"
                         spellCheck={false}
                         placeholder="6자리 이상 입력" 
-                        className="pl-10 pr-10 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                        className="px-3.5 pr-10 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                         value={formData.password} 
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
                       />
@@ -591,9 +599,10 @@ export default function OnboardingFlow() {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="passwordConfirm" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">비밀번호 확인 *</Label>
-                    <div className="relative mt-2 flex items-center">
-                      <Lock size={18} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
+                    <Label htmlFor="passwordConfirm" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      비밀번호 확인 *
+                    </Label>
+                    <div className="relative mt-1.5 flex items-center">
                       <Input 
                         id="passwordConfirm" 
                         name="org_password_confirm_nofill"
@@ -603,7 +612,7 @@ export default function OnboardingFlow() {
                         autoCapitalize="off"
                         spellCheck={false}
                         placeholder="비밀번호 재입력" 
-                        className="pl-10 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 font-semibold"
+                        className="px-3.5 h-11 sm:h-12 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-sm text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all"
                         value={formData.passwordConfirm} 
                         onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })} 
                       />
@@ -890,16 +899,17 @@ export default function OnboardingFlow() {
 
               <div className="flex gap-3 mt-8">
                 <button 
+                  type="button"
                   onClick={() => setStep('religion')} 
-                  className="h-12 flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                  className="h-12 flex-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <ArrowLeft size={14} />
                   <span>이전으로</span>
                 </button>
                 <button 
+                  type="button"
                   onClick={handleNextFromBasic} 
-                  className="h-12 flex-[2] rounded-xl text-white font-bold text-xs tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
-                  style={{ background: ft.heroGradient }}
+                  className="h-12 flex-[2] rounded-xl bg-[#191F28] hover:bg-[#000000] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-bold text-xs tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
                 >
                   <span>브랜딩 설정 단계로</span>
                   <ArrowRight size={14} />
@@ -910,85 +920,102 @@ export default function OnboardingFlow() {
 
           {/* ── Step 3: 브랜딩 및 소개 ── */}
           {step === 'branding' && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-sm">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-xs">
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold tracking-tight mb-2">브랜딩 및 소개글</h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-950 dark:text-white tracking-tight mb-2">
+                  브랜딩 및 소개글
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                   기본 테마 색상 칩 선택 및 단체 홍보 문구를 작성합니다.
                 </p>
               </div>
 
               <div className="flex flex-col gap-6">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Palette size={15} className="text-zinc-500" />
-                    <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">브랜드 주 컬러 칩 선택</span>
+                  <div className="mb-3">
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      브랜드 주 색상 선택
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {['#3D47B8', '#C16314', '#345785', '#2e7d32', '#c62828', '#37474f'].map((color) => {
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {['#3182F6', '#1E40AF', '#059669', '#D97706', '#DC2626', '#475569'].map((color) => {
                       const isChosen = formData.primaryColor === color;
                       return (
                         <button
                           key={color}
+                          type="button"
                           onClick={() => setFormData({ ...formData, primaryColor: color })}
-                          className="w-10 h-10 rounded-full cursor-pointer transition-all duration-150"
+                          className="w-9 h-9 rounded-full cursor-pointer transition-all duration-150 flex items-center justify-center"
                           style={{
                             background: color,
-                            border: isChosen ? `3px solid ${ft.primary}` : '3px solid transparent',
-                            boxShadow: isChosen ? '0 0 0 2px #fff, 0 0 0 4px var(--primary)' : 'none',
-                            transform: isChosen ? 'scale(1.08)' : 'scale(1)',
+                            boxShadow: isChosen ? '0 0 0 2px #fff, 0 0 0 4px #3182F6' : 'none',
+                            transform: isChosen ? 'scale(1.05)' : 'scale(1)',
                           }}
-                        />
+                        >
+                          {isChosen && <Check size={14} className="text-white" strokeWidth={3} />}
+                        </button>
                       );
                     })}
-                    <input
-                      type="color"
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      className="w-10 h-10 rounded-full border-0 cursor-pointer p-0 bg-transparent outline-none"
-                    />
+                    <div className="relative flex items-center">
+                      <input
+                        type="color"
+                        value={formData.primaryColor}
+                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                        className="w-9 h-9 rounded-full border border-zinc-200 dark:border-zinc-700 cursor-pointer p-0 bg-transparent outline-none"
+                        title="직접 색상 선택"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="description" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">단체 소개글</Label>
+                  <Label htmlFor="description" className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    단체 소개글 (선택)
+                  </Label>
                   <Textarea
                     id="description" 
-                    className="mt-2 rounded-xl bg-zinc-50 dark:bg-zinc-850 border-zinc-200 dark:border-zinc-800 text-sm font-semibold" 
+                    className="mt-1.5 rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-950 dark:text-white placeholder:text-zinc-400 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10" 
                     rows={4}
-                    placeholder="단체를 신도들에게 알리는 환영 문구나 한 주 말씀 공지를 짧게 남겨주세요."
+                    placeholder="단체를 신도 및 후원자에게 알리는 환영 문구나 한 주 말씀 공지를 짧게 남겨주세요."
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
 
                 {/* Upload Section placeholder */}
-                <div className="p-6 rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-800 flex flex-col items-center gap-2 text-center text-zinc-400">
-                  <Globe size={32} className="opacity-40" />
-                  <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">단체 메인 로고 및 대표 배너 파일 (준비 중)</span>
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500">지원포맷: JPG, PNG / 권장 해상도 800 x 600</span>
+                <div className="p-6 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex flex-col items-center gap-1.5 text-center">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    단체 대표 로고 및 배너 이미지 (선택)
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-medium">
+                    가입 완료 후 관리자 설정 &gt; 브랜딩 메뉴에서 언제든지 등록하실 수 있습니다.
+                  </span>
                 </div>
               </div>
 
               <div className="flex gap-3 mt-8">
                 <button 
+                  type="button"
                   onClick={() => setStep('basic')} 
-                  className="h-12 flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                  className="h-12 flex-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <ArrowLeft size={14} />
                   <span>이전으로</span>
                 </button>
                 <button
+                  type="button"
                   onClick={handleSubmit}
                   disabled={isLoading}
-                  className="h-12 flex-[2] rounded-xl text-white font-bold text-xs tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-md disabled:opacity-60"
-                  style={{ background: ft.heroGradient }}
+                  className="h-12 flex-[2] rounded-xl bg-[#191F28] hover:bg-[#000000] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-bold text-xs tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm hover:shadow disabled:opacity-60"
                 >
                   {isLoading ? (
-                    <span>공간 생성 중...</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>신청 처리 중...</span>
+                    </div>
                   ) : (
                     <>
-                      <span>모바일 헌금함 개설 완료</span>
+                      <span>단체 개설 신청 완료</span>
                       <Check size={16} />
                     </>
                   )}
@@ -999,44 +1026,35 @@ export default function OnboardingFlow() {
 
           {/* ── Step 4: 개설 신청 완료 ── */}
           {step === 'complete' && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center gap-6 shadow-sm">
-              <div 
-                className="w-20 h-20 rounded-2xl text-white flex items-center justify-center animate-ring-in shadow-md"
-                style={{ background: ft.heroGradient }}
-              >
-                <Check size={36} strokeWidth={2.5} />
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center gap-6 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                <Check size={32} strokeWidth={2.5} />
               </div>
 
-              <div>
-                <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
-                  개설신청이 완료되었습니다.
+              <div className="space-y-2">
+                <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-white tracking-tight">
+                  개설 신청이 완료되었습니다
                 </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium max-w-sm mx-auto">
-                  서류검토 후 개설이 완료됩니다. 운영팀의 확인 및 승인이 완료되면 등록하신 연락처/이메일로 안내 드리며 서비스가 즉시 활성화됩니다.
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium max-w-sm mx-auto">
+                  운영팀의 검토 및 승인이 완료되면 등록하신 연락처/이메일로 안내 드리며, 전용 수납 서비스가 즉시 활성화됩니다.
                 </p>
               </div>
 
               {/* Shared Link Card */}
-              <div 
-                className="w-full rounded-2xl p-5 border text-center"
-                style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
-              >
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-450 block mb-2" style={{ color: ft.primaryDark }}>
-                  신청된 전용 URL 주소 (승인 후 활성화)
+              <div className="w-full rounded-2xl p-5 border border-blue-100 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/20 text-center">
+                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 block mb-1.5">
+                  신청된 전용 접속 URL 주소 (승인 후 활성화)
                 </span>
-                <h3 
-                  className="font-display text-lg sm:text-xl font-extrabold tracking-tight break-all mb-4"
-                  style={{ color: ft.primary }}
-                >
+                <h3 className="font-mono text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 break-all mb-3">
                   soulpay.kr/{formData.slug || 'church-name'}
                 </h3>
                 <button
+                  type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(`soulpay.kr/${formData.slug || 'church-name'}`);
                     toast.success('주소가 클립보드에 복사되었습니다.');
                   }}
-                  className="h-10 px-5 rounded-full bg-white dark:bg-zinc-950 text-xs font-bold cursor-pointer shadow-xs border transition-colors"
-                  style={{ color: ft.primary, borderColor: ft.primaryBgStrong }}
+                  className="h-9 px-4 rounded-xl bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer shadow-2xs border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 transition-colors"
                 >
                   단축 주소 복사하기
                 </button>
@@ -1044,15 +1062,16 @@ export default function OnboardingFlow() {
 
               <div className="flex flex-col gap-2.5 w-full mt-2">
                 <button
+                  type="button"
                   onClick={() => navigate('/')}
-                  className="w-full h-13 rounded-xl text-white font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer shadow-md"
-                  style={{ background: ft.heroGradient }}
+                  className="w-full h-12 sm:h-13 rounded-xl bg-[#191F28] hover:bg-[#000000] text-white dark:bg-white dark:text-zinc-900 font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer shadow-sm hover:shadow"
                 >
                   메인 홈 페이지로 가기
                 </button>
                 <button
+                  type="button"
                   onClick={() => navigate(`/${formData.slug || 'church-name'}/admin/login`)}
-                  className="w-full h-12 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  className="w-full h-11 sm:h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer shadow-2xs"
                 >
                   단체 관리자 로그인 페이지 확인
                 </button>
