@@ -13,3 +13,7 @@
 
 ## 3. Commit Message Rule (이중 언어 커밋)
 - All git commit messages must be written in both English and Korean.
+
+## 4. Branch Management Rule (main 브랜치 임의 머지 금지)
+- **개발 및 작업은 오직 `dev` 브랜치에서만 수행**: 모든 신규 기능, 버그 수정, 스타일 변경 및 테스트 작업은 오직 `dev` 브랜치에만 커밋하고 푸시합니다.
+- **`main` 브랜치 머지 통제**: `main`은 상용(Production) 배포 브랜치이므로, Dev 환경에서 사용자의 실측 테스트가 완전히 완료된 후 **사용자가 명시적으로 "main으로 머지해줘"라고 요청할 때에만** `dev` -> `main` 머지를 수행합니다. AI가 임의로 `main`으로 머지하거나 푸시하는 행위를 엄격히 금지합니다.
