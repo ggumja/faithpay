@@ -977,6 +977,7 @@ export async function cancelDonationAndLedger(
     cancel_transaction_id: cancelData.cancelTransactionId ?? null,
     cancel_approved_at: cancelData.cancelApprovedAt || now,
     cancel_reason: cancelData.cancelReason ?? null,
+    cancel_failure_reason: null,
     updated_at: now,
   };
 

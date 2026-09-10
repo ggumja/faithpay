@@ -481,6 +481,8 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
 
         const isAlreadyCancelled = result.code === 'ALREADY_CANCELED_PAYMENT' ||
           (typeof result.message === 'string' && (result.message.includes('이미 취소') || result.message.includes('취소된 결제')));
+        const isNotFoundPayment = result.code === 'NOT_FOUND_PAYMENT' ||
+          (typeof result.message === 'string' && (result.message.includes('존재하지 않는 결제') || result.message.includes('원거래') || result.message.includes('거래없음')));
 
         if (tossCancelResponse.ok && (result.status === "CANCELED" || result.status === "PARTIAL_CANCELED" || result.cancels)) {
           const cancelTransactionKey = result.cancels?.[0]?.transactionKey || `TC-${Date.now().toString().slice(-8)}`;
@@ -499,13 +501,17 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
             cancelApproveNo: cancelTransactionKey,
             toss: result
           });
-        } else if (isAlreadyCancelled) {
-          // PG사에서 이미 전액 취소 완료된 거래건인 경우 DB 원장 상태를 동기화
+        } else if (isAlreadyCancelled || isNotFoundPayment) {
+          // PG사에서 이미 전액 취소 완료되었거나 결제 내역이 존재하지 않는 경우 (미출금) DB 원장 상태를 안전하게 취소/동기화
           const cancelApprovedAt = new Date().toISOString();
+          const finalCancelReason = isNotFoundPayment
+            ? `${reasonText || '관리자 취소'} (PG사 원거래 없음 확인 - 시스템 무효/취소 동기화)`
+            : (reasonText || '관리자 취소');
+
           const updatedDonation = await db.cancelDonationAndLedger(tenantId, donationId, {
             cancelTransactionId: donation.transactionId,
             cancelApprovedAt: cancelApprovedAt,
-            cancelReason: reasonText,
+            cancelReason: finalCancelReason,
           });
 
           return c.json({
@@ -515,6 +521,7 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
             cancelApproveNo: donation.transactionId,
             cancelApprovedAt: cancelApprovedAt,
             syncedFromPg: true,
+            notice: isNotFoundPayment ? "PG사에 원거래가 존재하지 않아(실제 미출금), 플랫폼 및 정산 원장에서 즉시 무효/취소 처리되었습니다." : undefined,
             toss: result
           });
         } else {
@@ -597,16 +604,23 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
     const isNanoAlreadyCancelled = result.resultMsg === "중복취소" ||
       (typeof result.resultMsg === "string" && (result.resultMsg.includes("이미 취소") || result.resultMsg.includes("취소완료")));
 
-    if (result.resultCode === "0000" || isNanoAlreadyCancelled) {
+    const isNoOriginalTransaction = typeof result.resultMsg === "string" &&
+      (result.resultMsg.includes("원거래") || result.resultMsg.includes("거래없음") || result.resultMsg.includes("존재하지 않는") || result.resultMsg.includes("거래번호 오류"));
+
+    if (result.resultCode === "0000" || isNanoAlreadyCancelled || isNoOriginalTransaction) {
       const cancelTransactionKey = result.apprNo || result.cancelTranNo || result.apprTranNo || donation.transactionId;
       const cancelApprovedAt = result.cancelDate && result.cancelTime
         ? `${result.cancelDate.slice(0, 4)}-${result.cancelDate.slice(4, 6)}-${result.cancelDate.slice(6, 8)}T${result.cancelTime.slice(0, 2)}:${result.cancelTime.slice(2, 4)}:${result.cancelTime.slice(4, 6)}+09:00`
         : new Date().toISOString();
 
+      const finalCancelReason = isNoOriginalTransaction
+        ? `${reasonText || '관리자 취소'} (PG사 원거래 없음 확인 - 시스템 무효/취소 동기화)`
+        : (reasonText || '관리자 취소');
+
       const updatedDonation = await db.cancelDonationAndLedger(tenantId, donationId, {
         cancelTransactionId: cancelTransactionKey,
         cancelApprovedAt: cancelApprovedAt,
-        cancelReason: reasonText,
+        cancelReason: finalCancelReason,
       });
       return c.json({
         success: true,
@@ -614,7 +628,8 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
         approveNo: donation.approveNo || donation.transactionId,
         cancelApproveNo: cancelTransactionKey,
         cancelApprovedAt: cancelApprovedAt,
-        syncedFromPg: isNanoAlreadyCancelled
+        syncedFromPg: isNanoAlreadyCancelled || isNoOriginalTransaction,
+        notice: isNoOriginalTransaction ? "PG사에 원거래가 존재하지 않아(실제 미출금), 플랫폼 및 정산 원장에서 즉시 무효/취소 처리되었습니다." : undefined,
       });
     } else {
       const cancelFailMsg = result.resultMsg || `PG 결제 취소 거부 (${result.resultCode || response.status})`;
@@ -2694,6 +2709,11 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
       subscriptions,
       donations
     });
+  } catch (error) {
+    return c.json({ success: false, error: "OTP Verification failed" }, 500);
+  }
+});
+
 // 💬 카카오 로그인 토큰 교환
 const handleKakaoToken = async (c: any) => {
   try {
@@ -4035,6 +4055,9 @@ const handleRecurringBatchRun = async (c: any) => {
           });
 
           if (billpayData) {
+            if (billpayData.resultCode && billpayData.resultCode !== "0000") {
+              throw new Error(billpayData.resultMsg || `빌키 승인 실패 (응답코드: ${billpayData.resultCode})`);
+            }
             tranNo = billpayData.tranNo || tranNo;
             apprNo = billpayData.apprNo || apprNo;
           }
