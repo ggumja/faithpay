@@ -266,6 +266,14 @@ export function MemberDetailModal({
 
   // 납부 확인서 / 영수증 브라우저 1:1 인쇄 엔진
   const handlePrintReceipt = (donationItem?: any) => {
+    if (donationItem) {
+      const status = donationItem.status || donationItem.paymentStatus;
+      if (status && status !== 'completed') {
+        toast.error('결제가 완료된 건만 영수증 출력이 가능합니다.');
+        return;
+      }
+    }
+
     const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow) {
       toast.error('팝업 차단이 활성화되어 있습니다. 팝업 허용 후 다시 시도해 주세요.');
@@ -545,15 +553,31 @@ export function MemberDetailModal({
                         ₩ {don.amount.toLocaleString()}원
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePrintReceipt(don)}
-                          className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          인쇄
-                        </Button>
+                        {(don.status === 'completed' || don.paymentStatus === 'completed' || (!don.status && !don.paymentStatus)) ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePrintReceipt(don)}
+                            className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                            title="영수증 인쇄"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            인쇄
+                          </Button>
+                        ) : don.status === 'cancelled' || don.paymentStatus === 'cancelled' ? (
+                          <span className="text-xs text-red-500 font-medium">취소</span>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            className="h-7 px-2 text-xs gap-1 text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-40 hover:bg-transparent"
+                            title="결제 미완료(대기/실패) 건은 영수증 출력이 불가합니다."
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            인쇄
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

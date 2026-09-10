@@ -229,7 +229,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
     const matchTab =
       activeTab === 'all' ||
       (activeTab === 'recurring' && item.allowRecurring) ||
-      (activeTab === 'onetime' && item.allowOneTime && !item.allowRecurring);
+      (activeTab === 'onetime' && item.allowOneTime !== false);
     return matchSearch && matchTab && item.enabled;
   });
 
@@ -415,7 +415,12 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                 item={item}
                 terminology={terms.donation}
                 delay={Math.min(i + 1, 3)}
-                onClick={() => navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: item } })}
+                onClick={() => navigate(`/${currentTenant.slug}/donate`, { 
+                  state: { 
+                    selectedItem: item,
+                    isRecurring: activeTab === 'recurring' ? true : activeTab === 'onetime' ? false : undefined,
+                  } 
+                })}
               />
             ))}
           </div>
@@ -727,6 +732,11 @@ function ClassicItemRow({ item, terminology, delay, onClick }: { item: DonationI
             {item.allowRecurring && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, color: C.cobalt, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, padding: '2px 7px', borderRadius: 6, letterSpacing: '0.02em' }}>
                 <Repeat size={10} /> 정기
+              </span>
+            )}
+            {item.allowOneTime !== false && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, color: '#059669', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 7px', borderRadius: 6, letterSpacing: '0.02em' }}>
+                1회성
               </span>
             )}
             {item.amountType === 'fixed' && item.fixedAmount && (

@@ -141,7 +141,7 @@ export default function DonationFlow() {
     if (location.state?.isRecurring !== undefined) return location.state.isRecurring;
     // 항목이 정기결제만 허용하는 경우 자동으로 정기결제 선택
     const item = location.state?.selectedItem as DonationItem | undefined;
-    if (item && item.allowRecurring && !item.allowOneTime) return true;
+    if (item && item.allowRecurring && item.allowOneTime === false) return true;
     return false;
   });
   const [recurringInterval, setRecurringInterval] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
@@ -180,7 +180,7 @@ export default function DonationFlow() {
       // 항목이 정기결제만 허용하는 경우 자동으로 정기결제 선택
       if (location.state?.isRecurring !== undefined) {
         setIsRecurring(location.state.isRecurring);
-      } else if (item.allowRecurring && !item.allowOneTime) {
+      } else if (item.allowRecurring && item.allowOneTime === false) {
         setIsRecurring(true);
       }
     } else if (location.state?.isRecurring !== undefined) {
@@ -197,6 +197,15 @@ export default function DonationFlow() {
       }
     }
   }, [selectedItem]);
+
+  const hasPrayerStep = Boolean(selectedItem?.enablePrayerField ?? true);
+  const totalSteps = hasPrayerStep ? 4 : 3;
+
+  useEffect(() => {
+    if (step > totalSteps) {
+      setStep(totalSteps);
+    }
+  }, [totalSteps, step]);
 
   // 테넌트 로딩 중
   if (!currentTenant) {
@@ -245,14 +254,6 @@ export default function DonationFlow() {
   }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-  const hasPrayerStep = Boolean(selectedItem.enablePrayerField ?? true);
-  const totalSteps = hasPrayerStep ? 4 : 3;
-
-  useEffect(() => {
-    if (step > totalSteps) {
-      setStep(totalSteps);
-    }
-  }, [totalSteps, step]);
 
   const chips = [1000, 5000, 10000, 50000, 100000, 500000];
 
@@ -694,7 +695,7 @@ export default function DonationFlow() {
               <div className="flex flex-col gap-6">
                 <div>
                   <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight mb-2 font-display">
-                    {selectedItem.allowRecurring && !selectedItem.allowOneTime
+                    {selectedItem.allowRecurring && selectedItem.allowOneTime === false
                       ? '정기 결제 주기를 선택해주세요'
                       : '결제 방식을 선택해주세요'}
                   </h3>
@@ -706,7 +707,7 @@ export default function DonationFlow() {
                 </div>
 
                 {/* 단건/정기 선택 (둘 다 허용되는 경우만 표시) */}
-                {selectedItem.allowOneTime && selectedItem.allowRecurring && (
+                {selectedItem.allowOneTime !== false && selectedItem.allowRecurring && (
                   <div className="flex flex-col gap-3">
                     <RecurringOption
                       id="onetime" 
@@ -727,7 +728,7 @@ export default function DonationFlow() {
                   </div>
                 )}
                 {/* 단건만 허용 */}
-                {selectedItem.allowOneTime && !selectedItem.allowRecurring && (
+                {selectedItem.allowOneTime !== false && !selectedItem.allowRecurring && (
                   <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-600">
                     1회성 {currentTenant.terminology.donation}으로 진행됩니다.
                   </div>

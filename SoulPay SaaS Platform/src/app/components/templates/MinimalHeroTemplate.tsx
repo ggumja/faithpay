@@ -190,7 +190,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
     const matchTab =
       activeFilter === 'all' ||
       (activeFilter === 'recurring' && item.allowRecurring) ||
-      (activeFilter === 'onetime' && item.allowOneTime && !item.allowRecurring);
+      (activeFilter === 'onetime' && item.allowOneTime !== false);
     return matchSearch && matchTab && item.enabled;
   });
 
@@ -504,14 +504,24 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              onClick={() => navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: item } })}
+              onClick={() => navigate(`/${currentTenant.slug}/donate`, { 
+                state: { 
+                  selectedItem: item,
+                  isRecurring: activeFilter === 'recurring' ? true : activeFilter === 'onetime' ? false : undefined,
+                } 
+              })}
               className="mh-card mh-btn-spring"
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  navigate(`/${currentTenant.slug}/donate`, { state: { selectedItem: item } });
+                  navigate(`/${currentTenant.slug}/donate`, { 
+                    state: { 
+                      selectedItem: item,
+                      isRecurring: activeFilter === 'recurring' ? true : activeFilter === 'onetime' ? false : undefined,
+                    } 
+                  });
                 }
               }}
             >
@@ -545,22 +555,38 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
                     </span>
                   </div>
 
-                  {item.allowRecurring && (
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      backgroundColor: `${ft.primary}12`,
-                      color: ft.primary,
-                      padding: '2px 7px',
-                      borderRadius: 6,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      flexShrink: 0,
-                    }}>
-                      <Repeat size={10} /> 정기
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {item.allowRecurring && (
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        backgroundColor: `${ft.primary}12`,
+                        color: ft.primary,
+                        padding: '2px 7px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                      }}>
+                        <Repeat size={10} /> 정기
+                      </span>
+                    )}
+                    {item.allowOneTime !== false && (
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        color: '#059669',
+                        padding: '2px 7px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                      }}>
+                        1회성
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Description */}
