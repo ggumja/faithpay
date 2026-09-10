@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation } from 'react-router';
 import { useApp, Tenant } from '../../context/AppContext';
+import { getPayPortalUrl } from '../../utils/domainUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -380,7 +381,7 @@ export default function OrganizationSettings() {
                     variant="outline"
                     size="sm"
                     className="text-xs gap-1 font-semibold"
-                    onClick={() => window.open(`/${currentTenant.slug}`, '_blank')}
+                    onClick={() => window.open(getPayPortalUrl(currentTenant.slug), '_blank')}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     현재 메인 랜딩 새창으로 미리보기

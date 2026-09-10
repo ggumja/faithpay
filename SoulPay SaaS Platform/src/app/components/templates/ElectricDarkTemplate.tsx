@@ -6,6 +6,7 @@ import { Motif } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
 import { donationAPI } from '../../api/client';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { navigateToAdminPortal } from '../../utils/domainUtils';
 import {
   ChevronRight, Heart, Landmark, Star, Repeat, Shield, MapPin, Phone, Mail, Clock, ArrowLeft, Search, Sparkles, UserCheck
 } from 'lucide-react';
@@ -219,7 +220,7 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
             {/* Quick Action Icon */}
             <button
               className="neo-pill-btn"
-              onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}
+              onClick={() => navigateToAdminPortal(currentTenant.slug, navigate)}
               style={{
                 width: 44,
                 height: 44,

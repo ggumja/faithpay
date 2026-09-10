@@ -6,6 +6,7 @@ import { Motif, MotifLarge } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
+import { navigateToAdminPortal } from '../../utils/domainUtils';
 import {
   MapPin, Phone, Mail, Clock, ChevronRight,
   Shield, Repeat, Landmark, Heart, Search, Star, Sparkles
@@ -275,7 +276,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
             </button>
             <button
               className="th-btn-spring th-btn-admin"
-              onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}
+              onClick={() => navigateToAdminPortal(currentTenant.slug, navigate)}
               title="관리자 로그인"
               style={{ background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.ink3, fontFamily: 'inherit', fontWeight: 600, borderRadius: 8, whiteSpace: 'nowrap' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobaltBorder; e.currentTarget.style.color = C.cobalt; }}
