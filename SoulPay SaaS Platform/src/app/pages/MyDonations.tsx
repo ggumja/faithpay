@@ -14,6 +14,7 @@ import {
   Calendar, 
   ChevronRight, 
   Download,
+  Receipt,
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
@@ -38,6 +39,7 @@ import {
 } from '../components/ui/dialog';
 
 import TaxReceiptModal from '../components/TaxReceiptModal';
+import DonationReceiptModal from '../components/DonationReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
 import { openDaumPostcode } from '../utils/daumPostcode';
 import { useTenantTerms } from '../hooks/useTenantTerms';
@@ -88,6 +90,7 @@ export default function MyDonations() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReceiptData, setSelectedReceiptData] = useState<any | null>(null);
+  const [selectedReceiptDonation, setSelectedReceiptDonation] = useState<any | null>(null);
 
   // ⚡ 해지되지 않은 실제 유지/이용 중인 정기결제 건수만 카운트 (해지 완료 건 제외)
   const activeSubscriptionsCount = useMemo(() => {
@@ -1325,21 +1328,11 @@ export default function MyDonations() {
                                             }`}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              setSelectedReceiptData({
-                                                receiptId: item.id,
-                                                donorName: item.name,
-                                                donorPhone: item.phone,
-                                                amount: item.amount,
-                                                itemName: item.itemName,
-                                                date: item.date,
-                                                isCancelled,
-                                                cancelReason: item.cancelReason,
-                                                cancelledAt: item.cancelledAt,
-                                              });
+                                              setSelectedReceiptDonation(item);
                                             }}
                                           >
-                                            <Download className="h-3.5 w-3.5 mr-1 text-slate-400" />
-                                            {isCancelled ? '취소 영수증 PDF' : '영수증 PDF'}
+                                            <Receipt className="h-3.5 w-3.5 mr-1 text-slate-400" />
+                                            {isCancelled ? '취소 영수증보기' : '영수증보기'}
                                           </Button>
                                         </div>
                                       </div>
@@ -1405,7 +1398,7 @@ export default function MyDonations() {
                     </div>
                   </CardHeader>
                   <CardContent className="text-sm text-amber-700">
-                    기부금 영수증 발급을 원하시는 경우 각 항목 옆의 <strong>[기부금 영수증 PDF]</strong> 버튼을 누르시면 국세청 표준 양식 영수증을 즉시 출력/저장하실 수 있습니다.
+                    영수증 출력을 원하시는 경우 각 내역의 <strong>[영수증보기]</strong> 버튼을 누르시면 정식 영수증 확인 및 프린트/PDF 저장이 가능합니다.
                   </CardContent>
                   <CardFooter>
                     <Button 
@@ -1526,14 +1519,14 @@ export default function MyDonations() {
               {/* 상세 정보 리스트 */}
               <div className="bg-slate-50/60 dark:bg-zinc-800/30 rounded-2xl border border-slate-200/70 dark:border-zinc-800 p-4 space-y-2.5">
                 <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
-                  <span className="text-slate-500 dark:text-zinc-400 font-medium">헌금 항목</span>
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">{terms.donation} 항목</span>
                   <span className="font-bold text-slate-900 dark:text-zinc-100">{selectedDetailItem.itemName}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
                   <span className="text-slate-500 dark:text-zinc-400 font-medium">납부 구분</span>
                   <span className="font-bold text-slate-800 dark:text-zinc-200">
-                    {selectedDetailItem.isRecurring ? '정기 후원/헌금 (매월)' : '일시납 (단건)'}
+                    {selectedDetailItem.isRecurring ? `정기 ${terms.donation} (매월)` : '일시납 (단건)'}
                   </span>
                 </div>
 
@@ -1561,7 +1554,7 @@ export default function MyDonations() {
                 </div>
 
                 <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
-                  <span className="text-slate-500 dark:text-zinc-400 font-medium">봉헌자명</span>
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">{terms.donor}명</span>
                   <span className="font-bold text-slate-900 dark:text-zinc-100">{selectedDetailItem.name}</span>
                 </div>
 
@@ -1591,31 +1584,42 @@ export default function MyDonations() {
                 닫기
               </Button>
               <Button
-                className="w-full sm:w-auto text-xs font-bold gap-1.5 shadow-xs"
+                className="w-full sm:w-auto text-xs font-bold gap-1.5 shadow-xs cursor-pointer"
                 variant={selectedDetailItem.paymentStatus === 'cancelled' ? 'destructive' : 'default'}
                 onClick={() => {
-                  const isCancelled = selectedDetailItem.paymentStatus === 'cancelled';
-                  setSelectedReceiptData({
-                    receiptId: selectedDetailItem.id,
-                    donorName: selectedDetailItem.name,
-                    donorPhone: selectedDetailItem.phone,
-                    donorAddress: profileAddress ? (profileAddressDetail ? `${profileAddress} ${profileAddressDetail}` : profileAddress) : undefined,
-                    amount: selectedDetailItem.amount,
-                    itemName: selectedDetailItem.itemName,
-                    date: selectedDetailItem.date,
-                    isCancelled,
-                    cancelReason: selectedDetailItem.cancelReason,
-                    cancelledAt: selectedDetailItem.cancelledAt,
-                  });
+                  setSelectedReceiptDonation(selectedDetailItem);
                   setSelectedDetailItem(null);
                 }}
               >
-                <Download className="h-3.5 w-3.5" />
-                {selectedDetailItem.paymentStatus === 'cancelled' ? '취소 영수증 PDF' : '기부금 영수증 PDF'}
+                <Receipt className="h-3.5 w-3.5" />
+                {selectedDetailItem.paymentStatus === 'cancelled' ? '취소 영수증보기' : '영수증보기'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* 🧾 정식 보시/헌금/후원 결제 영수증 모달 */}
+      {selectedReceiptDonation && currentTenant && (
+        <DonationReceiptModal
+          tenant={currentTenant}
+          donation={selectedReceiptDonation}
+          onClose={() => setSelectedReceiptDonation(null)}
+          onOpenTaxReceipt={() => {
+            setSelectedReceiptData({
+              receiptId: selectedReceiptDonation.id,
+              donorName: selectedReceiptDonation.name || selectedReceiptDonation.donorName,
+              donorPhone: selectedReceiptDonation.phone || selectedReceiptDonation.donorPhone,
+              donorAddress: profileAddress ? (profileAddressDetail ? `${profileAddress} ${profileAddressDetail}` : profileAddress) : undefined,
+              amount: selectedReceiptDonation.amount,
+              itemName: selectedReceiptDonation.itemName,
+              date: selectedReceiptDonation.date,
+              isCancelled: selectedReceiptDonation.paymentStatus === 'cancelled',
+              cancelReason: selectedReceiptDonation.cancelReason,
+              cancelledAt: selectedReceiptDonation.cancelledAt,
+            });
+          }}
+        />
       )}
 
       {/* 국세청 표준 기부금 영수증 모달 */}
