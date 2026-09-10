@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
 import { Shield, Repeat, Smartphone, BarChart3, ArrowRight, CheckCircle, Heart } from 'lucide-react';
+import { navigateToAdminPortal } from '../utils/domainUtils';
 
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  * macrostructure: Bento Grid + Hero Visual Split · nav: N1b Canonical SaaS · footer: Ft5 Statement
@@ -311,7 +312,7 @@ export default function Root() {
               💼 영업 파트너 신청
             </button>
             <button
-              onClick={() => navigate('/admin/login')}
+              onClick={() => navigateToAdminPortal(undefined, navigate)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '6px 10px', borderRadius: 6, fontFamily: 'inherit',
@@ -522,7 +523,7 @@ export default function Root() {
               </div>
 
               <div style={{ marginTop: 32 }}>
-                <button className="rp-btn-ghost" onClick={() => navigate('/admin/login')}>
+                <button className="rp-btn-ghost" onClick={() => navigateToAdminPortal(undefined, navigate)}>
                   관리자 기능 미리보기 →
                 </button>
               </div>
@@ -722,7 +723,7 @@ export default function Root() {
               {[
                 { label: '서비스 특징', action: () => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }) },
                 { label: '관리자 대시보드', action: () => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' }) },
-                { label: '관리자 로그인', action: () => navigate('/admin/login') },
+                { label: '관리자 로그인', action: () => navigateToAdminPortal(undefined, navigate) },
                 { label: '서비스 신청', action: () => navigate('/onboarding') },
                 { label: '영업자 대시보드', action: () => navigate('/partner/login'), highlight: true },
               ].map(({ label, action, highlight }) => (

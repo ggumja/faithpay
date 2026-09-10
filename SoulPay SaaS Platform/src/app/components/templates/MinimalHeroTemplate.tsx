@@ -6,6 +6,7 @@ import { Motif } from '../Motif';
 import { InstallBanner } from '../pwa/InstallBanner';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
+import { navigateToAdminPortal } from '../../utils/domainUtils';
 import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Heart, Star } from 'lucide-react';
 
 interface MinimalHeroTemplateProps {
@@ -225,7 +226,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
             </button>
             <button
               className="mh-btn-spring mh-btn-admin"
-              onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}
+              onClick={() => navigateToAdminPortal(currentTenant.slug, navigate)}
             >
               관리자
             </button>

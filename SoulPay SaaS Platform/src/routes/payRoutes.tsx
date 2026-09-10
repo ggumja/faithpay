@@ -13,6 +13,7 @@ const MyDonations = lazy(() => import("../app/pages/MyDonations"));
 const TaxReceiptCenter = lazy(() => import("../app/pages/TaxReceiptCenter"));
 const KakaoPaySandbox = lazy(() => import("../app/pages/KakaoPaySandbox"));
 const KakaoPayApprovePage = lazy(() => import("../app/pages/KakaoPayApprovePage"));
+const PayToAdminRedirect = lazy(() => import("../app/pages/PayToAdminRedirect"));
 
 export const payRouter = createBrowserRouter([
   {
@@ -21,6 +22,12 @@ export const payRouter = createBrowserRouter([
       { path: "/", Component: Root },
       { path: "/kakaopay/sandbox", Component: KakaoPaySandbox },
       { path: "/kakaopay/approve", Component: KakaoPayApprovePage },
+      { path: "/admin", Component: PayToAdminRedirect },
+      { path: "/admin/*", Component: PayToAdminRedirect },
+      { path: "/login", Component: PayToAdminRedirect },
+      { path: "/:tenantSlug/admin", Component: PayToAdminRedirect },
+      { path: "/:tenantSlug/admin/*", Component: PayToAdminRedirect },
+      { path: "/:tenantSlug/login", Component: PayToAdminRedirect },
       { path: "/:tenantSlug", Component: TenantHome },
       { path: "/:tenantSlug/donate", Component: DonationFlow },
       { path: "/:tenantSlug/payment", Component: PaymentSelection },
