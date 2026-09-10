@@ -9,7 +9,7 @@ import { formatPhoneNumber } from '../../utils/phoneUtils';
 import { navigateToAdminPortal } from '../../utils/domainUtils';
 import {
   MapPin, Phone, Mail, Clock, ChevronRight,
-  Shield, Repeat, Landmark, Heart, Search, Star, Sparkles
+  Shield, Repeat, Landmark, Heart, Search, Star, Sparkles, ExternalLink
 } from 'lucide-react';
 
 const C = {
@@ -448,78 +448,108 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               background: C.card,
             }}
           >
-            {currentTenant.bannerImages && currentTenant.bannerImages.length > 0 ? (
-              // 1. 관리자가 등록한 광고/프로모션 배너 이미지가 있는 경우 (자동 전환 캐러셀)
-              <div style={{ position: 'relative', width: '100%', height: 148, overflow: 'hidden' }}>
-                {currentTenant.bannerImages.map((imgSrc, idx) => (
-                  <div
-                    key={`${imgSrc}-${idx}`}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      opacity: idx === (bannerIndex % currentTenant.bannerImages.length) ? 1 : 0,
-                      transition: 'opacity 500ms ease-in-out',
-                      pointerEvents: idx === (bannerIndex % currentTenant.bannerImages.length) ? 'auto' : 'none',
-                    }}
-                  >
-                    <img
-                      src={imgSrc}
-                      alt={`${currentTenant.name} 프로모션 배너`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                ))}
+            {(() => {
+              const sideBanners: any[] = ((currentTenant as any).sidebarBanners || [])
+                .map((b: any, idx: number) => typeof b === 'string' ? { id: `sb-${idx}`, imageUrl: b, order: idx, enabled: true } : b)
+                .filter((b: any) => b && b.enabled !== false && b.imageUrl);
 
-                {/* AD 뱃지 */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 10,
-                    background: 'rgba(15, 23, 42, 0.65)',
-                    backdropFilter: 'blur(4px)',
-                    color: 'white',
-                    fontSize: 10,
-                    fontWeight: 800,
-                    padding: '2px 7px',
-                    borderRadius: 4,
-                    letterSpacing: '0.04em',
-                    zIndex: 2,
-                  }}
-                >
-                  AD
-                </div>
-
-                {/* 배너 인디케이터 (2장 이상일 때) */}
-                {currentTenant.bannerImages.length > 1 && (
+              if (sideBanners.length > 0) {
+                const activeBanner = sideBanners[bannerIndex % sideBanners.length];
+                return (
                   <div
                     style={{
-                      position: 'absolute',
-                      bottom: 8,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      display: 'flex',
-                      gap: 4,
-                      zIndex: 2,
+                      position: 'relative',
+                      width: '100%',
+                      height: 148,
+                      overflow: 'hidden',
+                      cursor: activeBanner?.linkUrl ? 'pointer' : 'default',
                     }}
+                    onClick={() => {
+                      if (activeBanner?.linkUrl) {
+                        window.open(activeBanner.linkUrl, '_blank');
+                      }
+                    }}
+                    title={activeBanner?.title || '프로모션 배너'}
                   >
-                    {currentTenant.bannerImages.map((_, i) => (
+                    {sideBanners.map((sb: any, idx: number) => {
+                      const isCurrent = idx === (bannerIndex % sideBanners.length);
+                      return (
+                        <div
+                          key={sb.id || `${sb.imageUrl}-${idx}`}
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            opacity: isCurrent ? 1 : 0,
+                            transition: 'opacity 500ms ease-in-out',
+                            pointerEvents: isCurrent ? 'auto' : 'none',
+                          }}
+                        >
+                          <img
+                            src={sb.imageUrl}
+                            alt={sb.title || `${currentTenant.name} 프로모션 배너`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      );
+                    })}
+
+                    {/* AD 뱃지 및 외부링크 아이콘 */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        background: 'rgba(15, 23, 42, 0.70)',
+                        backdropFilter: 'blur(4px)',
+                        color: 'white',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        letterSpacing: '0.04em',
+                        zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                      }}
+                    >
+                      {activeBanner?.linkUrl && <ExternalLink size={10} />}
+                      <span>AD</span>
+                    </div>
+
+                    {/* 배너 인디케이터 (2장 이상일 때) */}
+                    {sideBanners.length > 1 && (
                       <div
-                        key={i}
                         style={{
-                          width: i === (bannerIndex % currentTenant.bannerImages.length) ? 14 : 5,
-                          height: 5,
-                          borderRadius: 3,
-                          background: i === (bannerIndex % currentTenant.bannerImages.length) ? 'white' : 'rgba(255,255,255,0.5)',
-                          transition: 'all 300ms ease',
+                          position: 'absolute',
+                          bottom: 8,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          display: 'flex',
+                          gap: 4,
+                          zIndex: 2,
                         }}
-                      />
-                    ))}
+                      >
+                        {sideBanners.map((_: any, i: number) => (
+                          <div
+                            key={i}
+                            style={{
+                              width: i === (bannerIndex % sideBanners.length) ? 14 : 5,
+                              height: 5,
+                              borderRadius: 3,
+                              background: i === (bannerIndex % sideBanners.length) ? 'white' : 'rgba(255,255,255,0.5)',
+                              transition: 'all 300ms ease',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ) : (
-              // 2. 기본 광고성 배너 영역 (배너 규격: 340 × 148px)
+                );
+              }
+
+              // 2. 기본 광고성 배너 영역 (등록된 사이드 배너가 없을 때)
+              return (
               <div
                 style={{
                   position: 'relative',
@@ -604,8 +634,9 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                   <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 800 }}>→</span>
                 </div>
               </div>
-            )}
-          </div>
+            );
+          })()}
+        </div>
 
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: C.shadow }}>
             <div style={{ padding: '16px 18px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>

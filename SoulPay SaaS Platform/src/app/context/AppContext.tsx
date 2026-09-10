@@ -64,6 +64,15 @@ export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string 
   return `fp?????`;
 }
 
+export interface SidebarBanner {
+  id: string;
+  imageUrl: string;
+  linkUrl?: string;
+  title?: string;
+  order: number;
+  enabled: boolean;
+}
+
 export interface Tenant {
   id: string;
   slug: string;
@@ -73,6 +82,7 @@ export interface Tenant {
   primaryColor: string;
   logoUrl: string;
   bannerImages: string[];
+  sidebarBanners?: SidebarBanner[];
   description: string;
   address: string;
   uniqueNumber?: string;              // 종교/비영리 단체 고유번호증 번호 (예: 240-82-12345)
@@ -227,6 +237,7 @@ interface AppContextType {
   tenants: Tenant[];
   fetchTenants: () => Promise<void>;
   updateTenantBanners: (tenantId: string, bannerImages: string[]) => Promise<void>;
+  updateTenantSidebarBanners: (tenantId: string, sidebarBanners: SidebarBanner[]) => Promise<void>;
   updateTenantInfo: (tenantId: string, tenant: Tenant) => Promise<void>;
   addTenant: (tenant: Omit<Tenant, 'createdAt' | 'updatedAt'>) => Promise<void>;
   isTenantsLoaded: boolean;
@@ -357,6 +368,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to update tenant banners on server:', error);
       toast.success('배너가 메모리에 저장되었습니다.');
+    }
+  }, []);
+
+  const updateTenantSidebarBanners = useCallback(async (tenantId: string, sidebarBanners: SidebarBanner[]) => {
+    setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, sidebarBanners } : t));
+
+    try {
+      const response = await tenantAPI.updateTenantSidebarBanners(tenantId, sidebarBanners);
+      if (response.success && response.data) {
+        toast.success('사이드 광고 배너가 저장되었습니다.');
+      } else {
+        toast.success('사이드 배너가 저장되었습니다.');
+      }
+    } catch (error) {
+      console.error('Failed to update tenant sidebar banners on server:', error);
+      toast.success('사이드 배너가 메모리에 저장되었습니다.');
     }
   }, []);
 
@@ -509,6 +536,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         tenants,
         fetchTenants,
         updateTenantBanners,
+        updateTenantSidebarBanners,
         updateTenantInfo,
         addTenant,
         isTenantsLoaded,
@@ -532,6 +560,7 @@ const defaultContextValue: AppContextType = {
   tenants: [],
   fetchTenants: async () => {},
   updateTenantBanners: async () => {},
+  updateTenantSidebarBanners: async () => {},
   updateTenantInfo: async () => {},
   addTenant: async () => {},
   isTenantsLoaded: false,

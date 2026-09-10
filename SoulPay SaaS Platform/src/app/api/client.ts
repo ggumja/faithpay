@@ -194,6 +194,13 @@ export const tenantAPI = {
     });
   },
 
+  async updateTenantSidebarBanners(id: string, sidebarBanners: any[]): Promise<APIResponse<Tenant>> {
+    return fetchAPI<Tenant>(`/tenants/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ sidebarBanners }),
+    });
+  },
+
   async approveTenant(id: string, tempPassword?: string): Promise<APIResponse<{ tenant: Tenant; tempPassword: string }>> {
     return fetchAPI<{ tenant: Tenant; tempPassword: string }>(`/tenants/${id}/approve`, {
       method: 'POST',

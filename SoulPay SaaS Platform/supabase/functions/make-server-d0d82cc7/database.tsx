@@ -12,6 +12,15 @@
 export type ReligionType = 'protestant' | 'buddhist' | 'catholic';
 export type UserRole = 'system_admin' | 'tenant_admin' | 'finance_manager' | 'member';
 
+export interface SidebarBanner {
+  id: string;
+  imageUrl: string;
+  linkUrl?: string;
+  title?: string;
+  order: number;
+  enabled: boolean;
+}
+
 export interface Tenant {
   id: string;
   slug: string;
@@ -20,6 +29,7 @@ export interface Tenant {
   primaryColor: string;
   logoUrl: string;
   bannerImages: string[];
+  sidebarBanners?: SidebarBanner[];
   description: string;
   address: string;
   templateId?: string;
@@ -241,6 +251,7 @@ function rowToTenant(r: any, paymentCfg?: any): Tenant {
     primaryColor: r.primary_color ?? '#4F46E5',
     logoUrl: r.logo_url ?? '',
     bannerImages: r.banner_images ?? [],
+    sidebarBanners: r.sidebar_banners ?? r.business_info?.sidebar_banners ?? r.business_info?.sidebarBanners ?? [],
     description: r.description ?? '',
     address: r.address ?? '',
     uniqueNumber: r.unique_number,
@@ -277,7 +288,12 @@ function tenantToRow(t: Partial<Tenant>): Record<string, any> {
   if (t.description   !== undefined) row.description    = t.description;
   if (t.address       !== undefined) row.address        = t.address;
   if (t.uniqueNumber  !== undefined) row.unique_number  = t.uniqueNumber;
-  if (t.businessInfo  !== undefined) row.business_info  = t.businessInfo;
+  if (t.businessInfo  !== undefined || t.sidebarBanners !== undefined) {
+    row.business_info = {
+      ...(t.businessInfo || {}),
+      ...(t.sidebarBanners !== undefined ? { sidebar_banners: t.sidebarBanners } : {}),
+    };
+  }
   if (t.contact       !== undefined) row.contact        = t.contact;
   if (t.schedule      !== undefined) row.schedule       = t.schedule;
   if (t.terminology   !== undefined) row.terminology    = t.terminology;
