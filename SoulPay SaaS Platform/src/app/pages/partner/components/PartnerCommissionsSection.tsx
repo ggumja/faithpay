@@ -522,20 +522,6 @@ export function PartnerCommissionsSection({
             ))}
           </div>
 
-          {/* 정산 주기 안내 배너 */}
-          <div className="p-4 bg-slate-900 text-white rounded-xl flex items-center justify-between gap-3 shadow">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-500 text-white font-bold text-[10px]">D+1 영업일 자동 정산</Badge>
-                <span className="text-xs font-bold text-slate-200">다음 입금 예정일: 익일 09:00</span>
-              </div>
-              <p className="text-[11px] text-slate-400">* 토스페이먼츠 정산 주기에 따라 카드 승인 후 D+1 영업일에 계좌 자동 송금됩니다.</p>
-            </div>
-            <span className="text-[11px] font-mono px-2.5 py-1 bg-slate-800 rounded-lg text-emerald-400 font-bold border border-slate-700 shrink-0">
-              ⚡ Payouts v2
-            </span>
-          </div>
-
           {/* 사업자 유형별 세무 산식 */}
           <div className="p-4 bg-[var(--hm-paper)] border border-[var(--hm-border)] rounded-xl space-y-3">
             <div className="flex items-center justify-between">
