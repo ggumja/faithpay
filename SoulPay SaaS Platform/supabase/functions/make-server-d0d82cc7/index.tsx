@@ -2701,17 +2701,32 @@ const handleKakaoToken = async (c: any) => {
     if (!code || !redirectUri) {
       return c.json({ success: false, error: "code and redirectUri are required" }, 400);
     }
-    const tokenRes = await fetch("https://kauth.kakao.com/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
-      body: new URLSearchParams({
+    const sendTokenRequest = async (includeSecret: boolean) => {
+      const params: Record<string, string> = {
         grant_type: "authorization_code",
         client_id: "9a0d1863232123049b37547090372fc5",
         redirect_uri: redirectUri,
         code,
-      }),
-    });
-    const tokenData = await tokenRes.json();
+      };
+      if (includeSecret) {
+        params.client_secret = "3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol";
+      }
+      return fetch("https://kauth.kakao.com/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+        body: new URLSearchParams(params),
+      });
+    };
+
+    let tokenRes = await sendTokenRequest(false);
+    let tokenData = await tokenRes.json();
+
+    // If client secret is required by Kakao console (KOE010 or invalid_client), auto-retry with secret
+    if (!tokenRes.ok && (tokenData.error_code === "KOE010" || tokenData.error === "invalid_client")) {
+      tokenRes = await sendTokenRequest(true);
+      tokenData = await tokenRes.json();
+    }
+
     if (!tokenRes.ok) {
       return c.json({ success: false, error: tokenData.error_description || tokenData.msg || "Failed to exchange token" }, 400);
     }

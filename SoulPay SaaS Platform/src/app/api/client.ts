@@ -387,7 +387,6 @@ export const kakaoAuthAPI = {
       redirect_uri: redirectUri,
       response_type: 'code',
       state: tenantSlug,
-      scope: 'profile_nickname,account_email,phone_number',
     });
     return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
   },
@@ -408,24 +407,35 @@ export const kakaoAuthAPI = {
     }
 
     // 2. 브라우저 직접 교환 (kauth.kakao.com CORS 허용)
-    const bodyParams = new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: KAKAO_CONFIG.REST_API_KEY,
-      redirect_uri: redirectUri,
-      code,
-    });
-    const res = await fetch('https://kauth.kakao.com/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-      },
-      body: bodyParams.toString(),
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error_description || errData.msg || '카카오 인증 토큰 발급에 실패했습니다.');
+    const fetchToken = async (includeSecret: boolean) => {
+      const params: Record<string, string> = {
+        grant_type: 'authorization_code',
+        client_id: KAKAO_CONFIG.REST_API_KEY,
+        redirect_uri: redirectUri,
+        code,
+      };
+      if (includeSecret) {
+        params.client_secret = '3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol';
+      }
+      return fetch('https://kauth.kakao.com/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+        body: new URLSearchParams(params).toString(),
+      });
+    };
+
+    let res = await fetchToken(false);
+    let data = await res.json().catch(() => ({}));
+    if (!res.ok && (data.error_code === 'KOE010' || data.error === 'invalid_client')) {
+      res = await fetchToken(true);
+      data = await res.json().catch(() => ({}));
     }
-    return res.json();
+    if (!res.ok) {
+      throw new Error(data.error_description || data.msg || '카카오 인증 토큰 발급에 실패했습니다.');
+    }
+    return data;
   },
 
   async getUserInfo(accessToken: string): Promise<{
