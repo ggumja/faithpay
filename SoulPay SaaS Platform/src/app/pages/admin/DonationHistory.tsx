@@ -638,6 +638,12 @@ export default function DonationHistory() {
   };
 
   const handlePrintReceipt = (donation: any) => {
+    if (!donation) return;
+    const status = donation.paymentStatus || donation.status;
+    if (status !== 'completed' && status !== 'cancelled' && status !== 'cancel_failed') {
+      toast.error('결제 완료 또는 취소된 건만 영수증 출력이 가능합니다. (결제 대기/실패 건은 출력 불가)');
+      return;
+    }
     setReceiptDonation(donation);
   };
 
@@ -1197,17 +1203,41 @@ export default function DonationHistory() {
                                         <Eye className="h-3.5 w-3.5 mr-1 text-slate-500" />
                                         상세
                                       </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 px-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                        onClick={() => handlePrintReceipt(donation)}
-                                        title="영수증 출력"
-                                      >
-                                        <Receipt className="h-3.5 w-3.5 mr-1 text-slate-500" />
-                                        영수증
-                                      </Button>
-                                      {donation.paymentStatus === 'completed' || donation.paymentStatus === 'cancel_failed' ? (
+                                      {donation.paymentStatus === 'cancelled' ? (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 px-2 text-xs font-bold border-red-200 text-red-700 bg-red-50/80 hover:bg-red-100 cursor-pointer"
+                                          onClick={() => handlePrintReceipt(donation)}
+                                          title="취소 영수증 출력"
+                                        >
+                                          <Receipt className="h-3.5 w-3.5 mr-1 text-red-600" />
+                                          취소 영수증
+                                        </Button>
+                                      ) : donation.paymentStatus === 'completed' || donation.paymentStatus === 'cancel_failed' ? (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 px-2 text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                          onClick={() => handlePrintReceipt(donation)}
+                                          title="영수증 출력"
+                                        >
+                                          <Receipt className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                                          영수증
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled
+                                          className="h-8 px-2 text-xs font-medium text-slate-300 dark:text-zinc-600 cursor-not-allowed opacity-40 hover:bg-transparent"
+                                          title="결제 미완료(대기/실패) 건은 영수증 출력이 불가합니다."
+                                        >
+                                          <Receipt className="h-3.5 w-3.5 mr-1 text-slate-300 dark:text-zinc-600" />
+                                          영수증
+                                        </Button>
+                                      )}
+                                      {(donation.paymentStatus === 'completed' || donation.paymentStatus === 'cancel_failed') && (
                                         isExpiredForCancel(donation) ? (
                                           <Button
                                             variant="outline"
@@ -1232,18 +1262,7 @@ export default function DonationHistory() {
                                             {isCancelling ? '취소 중...' : donation.paymentStatus === 'cancel_failed' ? '취소 재시도' : '결제 취소'}
                                           </Button>
                                         )
-                                      ) : donation.paymentStatus === 'cancelled' ? (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8 px-2 text-xs font-bold border-red-200 text-red-700 bg-red-50/80 hover:bg-red-100 cursor-pointer"
-                                          onClick={() => handlePrintReceipt(donation)}
-                                          title="취소 영수증 출력"
-                                        >
-                                          <Receipt className="h-3.5 w-3.5 mr-1 text-red-600" />
-                                          취소 영수증
-                                        </Button>
-                                      ) : null}
+                                      )}
                                     </div>
                                   </TableCell>
                                 </TableRow>
@@ -1430,8 +1449,20 @@ export default function DonationHistory() {
                         </Button>
                       )}
                       <Button
-                        className={selectedDonation.paymentStatus === 'cancelled' ? "flex-1 bg-red-600 hover:bg-red-700 font-bold" : "flex-1 font-bold"}
+                        disabled={selectedDonation.paymentStatus !== 'completed' && selectedDonation.paymentStatus !== 'cancelled' && selectedDonation.paymentStatus !== 'cancel_failed'}
+                        className={
+                          selectedDonation.paymentStatus === 'cancelled'
+                            ? "flex-1 bg-red-600 hover:bg-red-700 font-bold cursor-pointer"
+                            : selectedDonation.paymentStatus === 'completed' || selectedDonation.paymentStatus === 'cancel_failed'
+                            ? "flex-1 font-bold cursor-pointer"
+                            : "flex-1 font-bold opacity-40 cursor-not-allowed bg-slate-200 text-slate-400 dark:bg-zinc-800 dark:text-zinc-500 hover:bg-slate-200"
+                        }
                         onClick={() => handlePrintReceipt(selectedDonation)}
+                        title={
+                          selectedDonation.paymentStatus === 'completed' || selectedDonation.paymentStatus === 'cancelled' || selectedDonation.paymentStatus === 'cancel_failed'
+                            ? (selectedDonation.paymentStatus === 'cancelled' ? '취소 영수증 출력' : '영수증 출력')
+                            : '결제 미완료(대기/실패) 건은 영수증 출력이 불가합니다.'
+                        }
                       >
                         <Receipt className="h-4 w-4 mr-2" />
                         {selectedDonation.paymentStatus === 'cancelled' ? '취소 영수증 출력' : '영수증 출력'}
@@ -1640,7 +1671,7 @@ export default function DonationHistory() {
             )}
 
             {/* Printable Receipt Modal */}
-            {receiptDonation && (
+            {receiptDonation && (receiptDonation.paymentStatus === 'completed' || receiptDonation.paymentStatus === 'cancelled' || receiptDonation.paymentStatus === 'cancel_failed') && (
               <div
                 className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto"
                 onClick={() => setReceiptDonation(null)}
