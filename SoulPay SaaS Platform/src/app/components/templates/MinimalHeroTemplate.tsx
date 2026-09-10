@@ -243,7 +243,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
           overflow: 'hidden',
           color: '#FFFFFF',
           backgroundImage: heroBgImage
-            ? `linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(15, 23, 42, 0.90) 100%), url("${heroBgImage}")`
+            ? `url("${heroBgImage}")`
             : 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
