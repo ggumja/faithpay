@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { ShieldCheck, Lock, Mail, ArrowLeft, KeyRound } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { systemAdminAPI } from '../../api/client';
 
@@ -77,9 +77,15 @@ export default function SystemAdminLogin() {
       <main className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-md space-y-6">
           
-          <div className="text-center space-y-2.5">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/15">
-              <ShieldCheck className="h-7 w-7" />
+          <div className="text-center space-y-2">
+            <div className="flex justify-center mb-1">
+              <a href="/" className="inline-block">
+                <img
+                  src="/images/logo_soulpay.png"
+                  alt="SoulPay"
+                  style={{ height: 38, width: 'auto', objectFit: 'contain' }}
+                />
+              </a>
             </div>
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">
