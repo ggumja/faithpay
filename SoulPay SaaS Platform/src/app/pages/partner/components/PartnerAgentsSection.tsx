@@ -159,6 +159,9 @@ export function PartnerAgentsSection({
         savingAgentId={savingAgentId}
         setSavingAgentId={setSavingAgentId}
         tenants={tenants}
+        agencyName={partner.businessName || partner.name}
+        pgCost={pgCost2}
+        platformMargin={platformMargin2}
       />
     );
   }

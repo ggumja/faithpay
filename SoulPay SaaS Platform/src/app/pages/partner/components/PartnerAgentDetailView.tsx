@@ -19,6 +19,9 @@ interface PartnerAgentDetailViewProps {
   savingAgentId: string | null;
   setSavingAgentId: (id: string | null) => void;
   tenants: any[];
+  agencyName?: string;
+  pgCost?: number;
+  platformMargin?: number;
 }
 
 interface HistoryEntry {
@@ -39,8 +42,17 @@ export function PartnerAgentDetailView({
   savingAgentId,
   setSavingAgentId,
   tenants,
+  agencyName,
+  pgCost,
+  platformMargin,
 }: PartnerAgentDetailViewProps) {
   const navigate = useNavigate();
+
+  const currentRate = agentRates[selectedAgent.id] ?? (selectedAgent as any)?.agencyRate ?? (selectedAgent as any)?.agency_rate ?? editAgencyRate ?? 0;
+  const prevRate = (selectedAgent as any)?.agencyRate ?? (selectedAgent as any)?.agency_rate ?? currentRate;
+  const pgCost2 = pgCost ?? 1.5;
+  const platformMargin2 = platformMargin ?? 0.5;
+  const subAgentFloor = +(pgCost2 + platformMargin2 + currentRate).toFixed(2);
 
   // 영업자 동적 이력 생성 (실제 DB 정보 기반)
   const agentTenants = tenants.filter(t =>
@@ -111,7 +123,7 @@ export function PartnerAgentDetailView({
                   </Badge>
                 </div>
                 <p className="text-[12.5px] text-slate-500 mt-1">
-                  소속 대리점: <strong>한국불교문화원</strong> · 등록 가맹점: <strong>{agentTenants.length}개소</strong>
+                  {agencyName ? <>소속 대리점: <strong>{agencyName}</strong> · </> : null}등록 가맹점: <strong>{agentTenants.length}개소</strong>
                 </p>
               </div>
             </div>
