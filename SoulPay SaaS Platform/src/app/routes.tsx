@@ -46,6 +46,7 @@ const AgentDashboard = lazy(() => import("./pages/agent/AgentDashboard"));
 
 // ── [Group 4] 시스템 최고 관리자 포털 (System Admin Portal) ──
 const SystemAdminShell = lazy(() => import("./pages/admin/SystemAdminShell"));
+const SystemAdminOverview = lazy(() => import("./pages/admin/SystemAdminOverview"));
 const SystemAdminDashboard = lazy(() => import("./pages/admin/SystemAdminDashboard"));
 const SystemAdminTenantCreate = lazy(() => import("./pages/admin/SystemAdminTenantCreate"));
 const PendingTenantDetailPage = lazy(() => import("./pages/admin/PendingTenantDetailPage"));
@@ -132,11 +133,16 @@ export const router = createBrowserRouter([
         path: "/system/login",
         Component: SystemAdminLogin,
       },
+      {
+        path: "/system/admin/login",
+        Component: SystemAdminLogin,
+      },
       // ── System Admin (공통 사이드바 셸) ──
       {
         Component: SystemAdminShell,
         children: [
-          { path: "/system/admin",                  Component: SystemAdminDashboard },
+          { path: "/system/admin",                  Component: SystemAdminOverview },
+          { path: "/system/admin/dashboard",        Component: SystemAdminOverview },
           { path: "/system/admin/tenants",          Component: SystemAdminDashboard },
           { path: "/system/admin/tenants/new",      Component: SystemAdminTenantCreate },
           { path: "/system/admin/tenants/pending",  Component: SystemAdminDashboard },

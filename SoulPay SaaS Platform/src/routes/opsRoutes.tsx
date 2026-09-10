@@ -5,6 +5,7 @@ import RootLayout from "../app/layouts/RootLayout";
 // ── 시스템 최고 관리자 포털 전용 컴포넌트 ──
 const SystemAdminLogin = lazy(() => import("../app/pages/admin/SystemAdminLogin"));
 const SystemAdminShell = lazy(() => import("../app/pages/admin/SystemAdminShell"));
+const SystemAdminOverview = lazy(() => import("../app/pages/admin/SystemAdminOverview"));
 const SystemAdminDashboard = lazy(() => import("../app/pages/admin/SystemAdminDashboard"));
 const SystemAdminTenantCreate = lazy(() => import("../app/pages/admin/SystemAdminTenantCreate"));
 const PendingTenantDetailPage = lazy(() => import("../app/pages/admin/PendingTenantDetailPage"));
@@ -27,13 +28,15 @@ export const opsRouter = createBrowserRouter([
       { path: "/", element: <Navigate to="/system/admin" replace /> },
       { path: "/login", Component: SystemAdminLogin },
       { path: "/system/login", Component: SystemAdminLogin },
+      { path: "/system/admin/login", Component: SystemAdminLogin },
       { path: "/scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
       { path: "/recurring-scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
       { path: "/tenants/new", element: <Navigate to="/system/admin/tenants/new" replace /> },
       {
         Component: SystemAdminShell,
         children: [
-          { path: "/system/admin", Component: SystemAdminDashboard },
+          { path: "/system/admin", Component: SystemAdminOverview },
+          { path: "/system/admin/dashboard", Component: SystemAdminOverview },
           { path: "/system/admin/tenants", Component: SystemAdminDashboard },
           { path: "/system/admin/tenants/new", Component: SystemAdminTenantCreate },
           { path: "/system/admin/tenants/pending", Component: SystemAdminDashboard },
