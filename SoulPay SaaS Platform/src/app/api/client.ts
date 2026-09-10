@@ -552,6 +552,13 @@ export const subscriptionAPI = {
     });
   },
 
+  async chargeNow(subscriptionId: string): Promise<APIResponse<any>> {
+    return fetchAPI('/payment/recurring/charge-sub', {
+      method: 'POST',
+      body: JSON.stringify({ subscriptionId }),
+    });
+  },
+
   async register(subData: any): Promise<APIResponse<any>> {
     return fetchAPI<any>(`/subscriptions/register`, {
       method: 'POST',

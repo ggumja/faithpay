@@ -4150,6 +4150,124 @@ const handleRecurringBatchRun = async (c: any) => {
 app.post("/make-server-d0d82cc7/payment/recurring/batch-run", handleRecurringBatchRun);
 app.post("/payment/recurring/batch-run", handleRecurringBatchRun);
 
+// 단일 정기결제 약정 즉시 청구 (Dev 테스트 및 관리자 즉시 청구)
+const handleChargeSubscriptionNow = async (c: any) => {
+  try {
+    const { subscriptionId } = await c.req.json();
+    if (!subscriptionId) {
+      return c.json({ success: false, error: 'subscriptionId is required' }, 400);
+    }
+
+    const sb = db.pgClient();
+    const { data: sub, error: subErr } = await sb
+      .from('subscriptions')
+      .select('*')
+      .eq('id', subscriptionId)
+      .maybeSingle();
+
+    if (subErr || !sub) {
+      return c.json({ success: false, error: '해당 정기 약정을 찾을 수 없습니다.' }, 404);
+    }
+
+    if (!sub.bill_key && !sub.billKey) {
+      return c.json({ success: false, error: '등록된 빌키(billKey)가 없는 약정입니다.' }, 400);
+    }
+
+    const tenantId = sub.tenant_id || sub.tenantId;
+    const config = await db.getPaymentConfig(tenantId);
+    const billingCfg = config?.providerConfigs?.billing;
+    const isTest = config?.devMode !== undefined
+      ? Boolean(config.devMode)
+      : (!billingCfg?.apiKey || billingCfg?.mid === "240000005" || billingCfg?.ver === "240000005" || config?.mid === "240000006");
+
+    const formattedSub = {
+      id: sub.id,
+      tenantId,
+      userId: sub.user_id || sub.userId || `u${sub.donor_phone}`,
+      billKey: sub.bill_key || sub.billKey,
+      donorName: sub.donor_name || sub.donorName,
+      donorPhone: sub.donor_phone || sub.donorPhone,
+      donorEmail: sub.donor_email || sub.donorEmail,
+      itemId: sub.item_id || sub.itemId,
+      itemName: sub.item_name || sub.itemName,
+      amount: Number(sub.amount),
+      recurringInterval: sub.recurring_interval || sub.recurringInterval,
+      recurringDay: sub.recurring_day || sub.recurringDay,
+      recurringDayOfWeek: sub.recurring_day_of_week ?? sub.recurringDayOfWeek,
+    };
+
+    let tranNo = `NANO_TRAN_${Date.now()}`;
+    let apprNo = `APPR_${Date.now()}`;
+
+    const billpayData = await executeNanoPayBillPay({
+      sub: formattedSub,
+      billingCfg,
+      isTest,
+      amount: formattedSub.amount,
+      orderName: formattedSub.itemName || "정기 봉헌금",
+    });
+
+    if (billpayData) {
+      if (billpayData.resultCode && billpayData.resultCode !== "0000") {
+        throw new Error(billpayData.resultMsg || `빌키 승인 실패 (응답코드: ${billpayData.resultCode})`);
+      }
+      tranNo = billpayData.tranNo || tranNo;
+      apprNo = billpayData.apprNo || apprNo;
+    }
+
+    const donationRecord = await db.createDonation({
+      id: `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      tenantId: formattedSub.tenantId,
+      itemId: formattedSub.itemId,
+      itemName: formattedSub.itemName,
+      amount: formattedSub.amount,
+      donorName: formattedSub.donorName,
+      donorPhone: formattedSub.donorPhone,
+      donorEmail: formattedSub.donorEmail || '',
+      paymentMethod: 'card',
+      paymentStatus: 'completed',
+      transactionId: tranNo,
+      approveNo: apprNo,
+      isRecurring: true,
+      receiptIssued: true,
+    });
+
+    const nextDate = calculateNextPaymentDate(
+      formattedSub.recurringInterval || 'monthly',
+      formattedSub.recurringDayOfWeek,
+      formattedSub.recurringDay,
+      true
+    );
+
+    try {
+      await sb
+        .from('subscriptions')
+        .update({ next_payment_date: nextDate, updated_at: new Date().toISOString() })
+        .eq('id', sub.id);
+    } catch (updateErr) {
+      console.error('[Charge Now] Failed to update next_payment_date:', updateErr);
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        subscriptionId: sub.id,
+        donation: donationRecord,
+        approveNo: apprNo,
+        transactionId: tranNo,
+        nextPaymentDate: nextDate,
+        pgResponse: billpayData,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error charging subscription now:', error);
+    return c.json({ success: false, error: error?.message || '결제 승인 처리 중 오류가 발생했습니다.' }, 500);
+  }
+};
+
+app.post("/make-server-d0d82cc7/payment/recurring/charge-sub", handleChargeSubscriptionNow);
+app.post("/payment/recurring/charge-sub", handleChargeSubscriptionNow);
+
 // Admin 샌드박스 테스트 결제 생성 (실제 PostgreSQL 원장 분구 반영)
 app.post("/make-server-d0d82cc7/admin/test-donations", async (c) => {
   try {

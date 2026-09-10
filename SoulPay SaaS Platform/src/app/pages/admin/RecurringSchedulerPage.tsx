@@ -97,6 +97,35 @@ export default function RecurringSchedulerPage() {
     loadData();
   }, [loadData]);
 
+  // 개별 약정 즉시 청구 테스트 핸들러
+  const [chargingSubId, setChargingSubId] = useState<string | null>(null);
+
+  const handleChargeNow = async (sub: SubscriptionRecord) => {
+    if (chargingSubId) return;
+    const confirmed = window.confirm(
+      `[${sub.donorName}] 성도의 정기 약정(${Number(sub.amount).toLocaleString()}원)에 대해\nPG사 빌키 결제 승인을 즉시 테스트 실행하시겠습니까?`
+    );
+    if (!confirmed) return;
+
+    setChargingSubId(sub.id);
+    try {
+      const res = await subscriptionAPI.chargeNow(sub.id);
+      if (res.success && res.data) {
+        toast.success(
+          `즉시 결제 테스트 승인 완료! (승인번호: ${res.data.approveNo || '정상'})\n다음 결제 예정일이 ${res.data.nextPaymentDate}로 갱신되었습니다.`
+        );
+        await loadData();
+      } else {
+        toast.error(`결제 승인 실패: ${res.error || '알 수 없는 오류'}`);
+      }
+    } catch (e: any) {
+      console.error('Charge now error:', e);
+      toast.error(`결제 요청 중 오류가 발생했습니다: ${e?.message || e}`);
+    } finally {
+      setChargingSubId(null);
+    }
+  };
+
   // 배치 즉시 실행 핸들러
   const handleExecuteBatch = async () => {
     if (isExecutingBatch) return;
@@ -434,12 +463,13 @@ export default function RecurringSchedulerPage() {
                   <th className="px-4 py-3">결제 카드</th>
                   <th className="px-4 py-3 text-center">상태</th>
                   <th className="px-4 py-3 text-center">다음 결제일</th>
+                  <th className="px-4 py-3 text-center">동작 / 테스트</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--hm-border)]">
                 {filteredSubs.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-16 text-center text-[var(--hm-ink-3)] font-semibold">
+                    <td colSpan={11} className="py-16 text-center text-[var(--hm-ink-3)] font-semibold">
                       조회된 정기 약정 내역이 없습니다.
                     </td>
                   </tr>
@@ -499,6 +529,30 @@ export default function RecurringSchedulerPage() {
                             >
                               {sub.nextPaymentDate || '-'}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {sub.status === 'active' ? (
+                              <button
+                                onClick={() => handleChargeNow(sub)}
+                                disabled={chargingSubId === sub.id}
+                                className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                title="현재 약정에 대해 PG 빌키 승인을 즉시 테스트 실행합니다"
+                              >
+                                {chargingSubId === sub.id ? (
+                                  <>
+                                    <RefreshCw size={11} className="animate-spin" />
+                                    승인 중...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play size={10} />
+                                    즉시 결제 테스트
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-[var(--hm-ink-3)]">-</span>
+                            )}
                           </td>
                         </tr>
                       );
