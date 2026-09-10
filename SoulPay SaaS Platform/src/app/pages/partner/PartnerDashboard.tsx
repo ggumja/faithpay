@@ -1,13 +1,10 @@
-/* Hallmark · shell: N3 Side-rail (persistent) · genre: modern-minimal · theme: Emerald */
-/* Partner Admin Portal — design parity with SystemAdminShell */
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 
 import {
   LayoutDashboard, Building2, TrendingUp, Users, UserCircle,
-  LogOut, Bell, Search, Menu, ChevronRight,
+  LogOut, Bell, Search, Menu, ChevronRight, ExternalLink, Briefcase, Plus,
 } from 'lucide-react';
 import { Partner, PartnerCommission, partnerAPI } from '../../api/client';
 import { toast } from 'sonner';
@@ -31,22 +28,6 @@ const NAV_ALL: NavItem[] = [
   { key: 'agents',      icon: Users,            label: '영업자 관리',    section: '소속 영업자 관리'   },
   { key: 'myinfo',      icon: UserCircle,       label: '내 정보 수정',   section: '계좌 · 연락처'      },
 ];
-
-/* ─── style tokens (mirror SystemAdminShell) ────── */
-const S = {
-  shell:      'flex h-screen overflow-hidden bg-[var(--hm-paper-2)]',
-  sidebar:    'w-52 shrink-0 flex flex-col bg-[var(--hm-paper)] border-r border-[var(--hm-border)] h-screen',
-  brand:      'flex items-center gap-2.5 px-4 py-3.5 border-b border-[var(--hm-border)]',
-  brandDot:   'w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 text-white text-[11px] font-bold',
-  nav:        'flex-1 overflow-y-auto py-2 px-2 space-y-0.5',
-  navSection: 'text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--hm-ink-3)] px-2.5 pt-3 pb-0.5',
-  navItem:    (on: boolean) =>
-    `w-full flex items-center gap-2 px-2.5 py-[7px] rounded-[6px] text-[12.5px] cursor-pointer border-none transition-colors text-left
-     ${on ? 'bg-emerald-600 text-white font-medium' : 'bg-transparent text-[var(--hm-ink-2)] hover:bg-[var(--hm-paper-2)] hover:text-[var(--hm-ink)]'}`,
-  sidefoot:   'px-2 py-2.5 border-t border-[var(--hm-border)]',
-  header:     'h-[50px] bg-[var(--hm-paper)] border-b border-[var(--hm-border)] flex items-center px-5 gap-3 shrink-0',
-  iconBtn:    'p-1.5 rounded-md text-[var(--hm-ink-3)] hover:bg-[var(--hm-paper-2)] transition-colors cursor-pointer border-none bg-transparent',
-};
 
 /* ─── nav label lookup ─── */
 const navMeta = Object.fromEntries(NAV_ALL.map(n => [n.key, n]));
@@ -210,10 +191,10 @@ export default function PartnerDashboard() {
   /* ── 로딩 / 인증 가드 ── */
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--hm-paper-2)] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-[3px] border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-[var(--hm-ink-3)] font-semibold">파트너 포털 로딩 중...</p>
+          <div className="w-8 h-8 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-500 font-semibold">파트너 포털 로딩 중...</p>
         </div>
       </div>
     );
@@ -231,65 +212,79 @@ export default function PartnerDashboard() {
   };
 
   return (
-    <div className={S.shell}>
+    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
 
-      {/* ══ N3 Side-rail ══════════════════════════════════ */}
+      {/* ══ Sidebar ══════════════════════════════════ */}
       {sidebarOpen && (
-        <aside className={S.sidebar}>
+        <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-slate-200/80 h-screen sticky top-0 p-6 z-20 font-sans">
 
-          {/* 브랜드 */}
-          <div className={S.brand}>
-            <div className={S.brandDot}>SP</div>
-            <div>
-              <div className="text-[13px] font-semibold text-[var(--hm-ink)] leading-none">SoulPay</div>
-              <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">
-                {isAgency ? '대리점 포털' : '영업자 포털'}
-              </div>
-            </div>
+          {/* 로고 & 서브타이틀 */}
+          <div className="mb-6">
+            <a href="/partner/dashboard" className="inline-block">
+              <img
+                src="/images/logo_soulpay.png"
+                alt="SoulPay"
+                style={{ height: 28, width: 'auto', objectFit: 'contain' }}
+              />
+            </a>
+            <p className="text-xs text-slate-400 font-medium mt-1">
+              {isAgency ? '마스터 대리점 포털' : '영업 파트너 포털'}
+            </p>
           </div>
 
-          {/* 파트너 프로필 미니 카드 */}
-          <div className="mx-2 mt-2 mb-1 px-3 py-2.5 rounded-[8px] bg-[var(--hm-paper-2)] border border-[var(--hm-border)] flex items-center gap-2.5">
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
-              isAgency
-                ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                : 'bg-amber-100 text-amber-700 border border-amber-200'
-            }`}>
-              {partner.name?.charAt(0)}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-[12px] font-bold text-[var(--hm-ink)] truncate leading-none">{partner.name}</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0 rounded-full ${
-                  isAgency ? 'bg-purple-600 text-white' : 'bg-amber-500 text-white'
-                }`}>
+          {/* 파트너 프로필 카드 (AdminSidebar 스타일) */}
+          <div className="mb-6 p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-2xs relative overflow-hidden">
+            {/* Top accent line */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600" />
+            
+            <div className="space-y-1.5 pt-0.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 min-w-0">
+                  <Briefcase className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                  <span className="truncate">{partner.referralCode}</span>
+                </div>
+                <span className="inline-flex items-center px-2 py-0.5 bg-white text-blue-700 text-[11px] font-bold rounded-full border border-blue-200 shadow-2xs whitespace-nowrap shrink-0">
                   {isAgency ? '대리점' : '영업자'}
                 </span>
-                <span className="text-[10px] text-[var(--hm-ink-3)] font-mono">{partner.referralCode}</span>
               </div>
+              <p className="font-extrabold text-sm text-slate-900 truncate leading-snug">
+                {partner.name}
+              </p>
             </div>
           </div>
 
           {/* 메인 내비게이션 */}
-          <nav className={S.nav}>
-            <p className={S.navSection}>영업 포털</p>
+          <nav className="space-y-1 flex-1 overflow-y-auto">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 pb-2 pt-1">
+              영업 포털 메뉴
+            </p>
             {navItems.map(item => {
               const Icon = item.icon;
-              const on = section === item.key;
+              const isActive = section === item.key;
               return (
-                <button key={item.key} onClick={() => handleNav(item.key)} className={S.navItem(on)}>
-                  <Icon size={13} className={on ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
-                  <span>{item.label}</span>
+                <button
+                  key={item.key}
+                  onClick={() => handleNav(item.key)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-colors cursor-pointer border-none text-left ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                  }`}
+                >
+                  <div className="flex items-center min-w-0">
+                    <Icon className={`h-4 w-4 mr-2.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
                   {item.key === 'commissions' && commissions.length > 0 && (
-                    <span className={`ml-auto text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${
-                      on ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'
+                    <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 leading-none shrink-0 ${
+                      isActive ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
                     }`}>
                       {commissions.length}
                     </span>
                   )}
                   {item.key === 'agents' && subAgents.length > 0 && (
-                    <span className={`ml-auto text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${
-                      on ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
+                    <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 leading-none shrink-0 ${
+                      isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
                     }`}>
                       {subAgents.length}명
                     </span>
@@ -299,8 +294,15 @@ export default function PartnerDashboard() {
             })}
           </nav>
 
-          {/* 로그아웃 */}
-          <div className={S.sidefoot}>
+          {/* 사이드바 하단 액션 */}
+          <div className="pt-4 border-t border-slate-200/80 space-y-1.5 mt-auto">
+            <button
+              onClick={() => navigate('/partner/tenants/new')}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            >
+              <span className="truncate">신규 가맹점 개설</span>
+              <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0 ml-1" />
+            </button>
             <button
               onClick={() => {
                 sessionStorage.removeItem('soulpay_partner_session');
@@ -308,9 +310,10 @@ export default function PartnerDashboard() {
                 toast.success('파트너 포털에서 로그아웃 되었습니다.');
                 navigate('/partner/login');
               }}
-              className="flex items-center gap-2 w-full px-2.5 py-[7px] rounded-[6px] text-[12.5px] text-[var(--hm-ink-3)] bg-transparent border-none cursor-pointer hover:bg-red-50 hover:text-red-500 transition-colors"
+              className="w-full flex items-center justify-start px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border-none bg-transparent"
             >
-              <LogOut size={13} /> 로그아웃
+              <LogOut className="h-4 w-4 mr-2.5 text-rose-500" />
+              로그아웃
             </button>
           </div>
         </aside>
@@ -320,27 +323,30 @@ export default function PartnerDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* ─ Top Bar (헤더) ─ */}
-        <header className={S.header}>
+        <header className="h-16 bg-white border-b border-slate-200/80 flex items-center px-6 gap-3 shrink-0">
           {/* 사이드바 토글 */}
-          <button onClick={() => setSidebarOpen(p => !p)} className={S.iconBtn}>
-            <Menu size={16} />
+          <button
+            onClick={() => setSidebarOpen(p => !p)}
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer border-none bg-transparent"
+          >
+            <Menu size={18} />
           </button>
 
           {/* 브레드크럼 */}
-          <nav className="flex items-center gap-1 text-[12px] text-[var(--hm-ink-3)]">
-            <span>파트너 포털</span>
-            <ChevronRight size={12} className="opacity-40" />
+          <nav className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="font-semibold text-slate-700">파트너 포털</span>
+            <ChevronRight size={13} className="text-slate-300" />
             <span>{meta.section}</span>
-            <ChevronRight size={12} className="opacity-40" />
-            <span className="text-[var(--hm-ink)] font-medium">{meta.label}</span>
+            <ChevronRight size={13} className="text-slate-300" />
+            <span className="text-blue-600 font-bold">{meta.label}</span>
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             {/* 단체 검색 */}
             <div className="relative hidden md:flex items-center">
-              <Search size={12} className="absolute left-2.5 text-[var(--hm-ink-3)] pointer-events-none" />
+              <Search size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
               <input
-                className="pl-7 pr-3 py-[5px] text-[12px] border border-[var(--hm-border)] rounded-[7px] bg-[var(--hm-paper-2)] text-[var(--hm-ink)] placeholder:text-[var(--hm-ink-3)] focus:outline-none focus:ring-1 focus:ring-emerald-500 w-40 transition"
+                className="pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 w-44 transition"
                 placeholder="단체명 검색..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -349,8 +355,8 @@ export default function PartnerDashboard() {
               />
               {/* 검색 드롭다운 */}
               {searchFocus && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-[var(--hm-paper)] border border-[var(--hm-border)] rounded-xl shadow-xl z-50 overflow-hidden">
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-[var(--hm-ink-3)] uppercase border-b border-[var(--hm-border)]">
+                <div className="absolute top-full left-0 mt-1.5 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 overflow-hidden">
+                  <div className="px-3.5 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 bg-slate-50/50">
                     관리 단체 ({searchResults.length}건)
                   </div>
                   {searchResults.map((t: any) => (
@@ -358,44 +364,43 @@ export default function PartnerDashboard() {
                       key={t.slug}
                       type="button"
                       onClick={() => { setSection('tenants'); setSearchQuery(''); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--hm-paper-2)] text-left cursor-pointer border-none bg-transparent transition-colors"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left cursor-pointer border-none bg-transparent transition-colors"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-[var(--hm-paper-2)] flex items-center justify-center shrink-0 text-[12px]">
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold">
                         {t.type === 'protestant' ? '⛪' : t.type === 'catholic' ? '✝️' : '🛷'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-semibold text-[var(--hm-ink)] truncate">{t.name}</div>
-                        <div className="text-[10px] text-[var(--hm-ink-3)] font-mono">{t.slug}</div>
+                        <div className="text-xs font-bold text-slate-800 truncate">{t.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{t.slug}</div>
                       </div>
                     </button>
                   ))}
                 </div>
               )}
               {searchFocus && searchQuery.trim().length >= 1 && searchResults.length === 0 && (
-                <div className="absolute top-full left-0 mt-1 w-52 bg-[var(--hm-paper)] border border-[var(--hm-border)] rounded-xl shadow-xl z-50 px-4 py-3 text-[11.5px] text-[var(--hm-ink-3)]">
+                <div className="absolute top-full left-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-lg z-50 px-4 py-3 text-xs text-slate-500">
                   검색 결과가 없습니다.
                 </div>
               )}
             </div>
 
-            {/* 알림 벨 */}
-            <div className="relative">
-              <button className="w-8 h-8 flex items-center justify-center rounded-[7px] border border-[var(--hm-border)] bg-[var(--hm-paper)] cursor-pointer hover:bg-[var(--hm-paper-2)] transition-colors">
-                <Bell size={14} className="text-[var(--hm-ink-3)]" />
-              </button>
-            </div>
+            {/* 신규 가맹 등록 바로가기 버튼 */}
+            <button
+              onClick={() => navigate('/partner/tenants/new')}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer border-none transition-all active:scale-[0.98]"
+            >
+              <Plus size={14} /> 가맹점 신규 개설
+            </button>
 
             {/* 파트너 프로필 (헤더 우측) */}
-            <div className="flex items-center gap-2 pl-2.5 border-l border-[var(--hm-border)]">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-semibold shrink-0 ${
-                isAgency ? 'bg-purple-600' : 'bg-amber-500'
-              }`}>
+            <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold bg-blue-600 shadow-2xs shrink-0">
                 {partner.name?.charAt(0)}
               </div>
-              <div className="hidden sm:block">
-                <div className="text-[12px] font-medium text-[var(--hm-ink)] leading-none">{partner.name}</div>
-                <div className="text-[10px] text-[var(--hm-ink-3)] mt-0.5">
-                  {isAgency ? '영업 대리점' : '영업자'} · {partner.referralCode}
+              <div className="hidden sm:block text-left">
+                <div className="text-xs font-bold text-slate-900 leading-none">{partner.name}</div>
+                <div className="text-[10px] text-slate-400 mt-1 font-medium">
+                  {isAgency ? '마스터 대리점' : '영업 에이전트'} · {partner.referralCode}
                 </div>
               </div>
             </div>

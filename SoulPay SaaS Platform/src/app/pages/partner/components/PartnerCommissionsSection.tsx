@@ -352,30 +352,30 @@ export function PartnerCommissionsSection({
   ];
 
   return (
-    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
+    <div className="p-6 sm:p-8 space-y-6 bg-slate-50 min-h-full font-sans">
 
       {/* 헤더 */}
       <div>
-        <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">정산 관리</h1>
-        <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">정산 관리</h1>
+        <p className="text-xs text-slate-500 mt-1 font-medium">
           수수료 발생 원장 · 메인 관리자 입금 확정 · {isAgency ? '영업자별 하위 지급 현황' : '내 정산 수령 내역'}
         </p>
       </div>
 
       {/* 메인 탭 */}
-      <div className="flex items-center gap-1 bg-[var(--hm-paper)] border border-[var(--hm-border)] p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/80">
         {TABS.map(({ key, icon: Icon, label, badge }) => {
           const on = mainTab === key;
           return (
             <button key={key} onClick={() => setMainTab(key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12.5px] font-semibold transition-all cursor-pointer border-0 ${
-                on ? 'bg-emerald-600 text-white shadow' : 'bg-transparent text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)]'
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border-0 ${
+                on ? 'bg-blue-600 text-white shadow-xs' : 'bg-transparent text-slate-600 hover:text-slate-900'
               }`}>
-              <Icon size={13} className={on ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
+              <Icon size={14} className={on ? 'text-white' : 'text-slate-400'} />
               {label}
               {badge !== undefined && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
-                  on ? 'bg-white/20 text-white' : 'bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)]'
+                  on ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                 }`}>{badge}</span>
               )}
             </button>
