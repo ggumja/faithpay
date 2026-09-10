@@ -229,9 +229,9 @@ const ROOT_CSS = `
 
 const FEATURES = [
   {
-    tag: '정산 보고서',
-    title: '실시간 정산 및 통계 리포트',
-    desc: '봉헌 및 기부 내역을 실시간으로 확인하고, 월별 정산 내역과 기부금 영수증 기초 데이터를 자동으로 관리합니다.',
+    tag: '수납 및 정산 리포트',
+    title: '실시간 결제 내역 및 정산(추정) 리포트',
+    desc: '실시간 결제 승인 내역을 정확하게 대사하고, 승인 원장을 기반으로 산출되는 월별 정산 추정액과 기부금 영수증 기초 데이터를 투명하게 관리합니다.',
   },
   {
     tag: '보안 표준',
@@ -416,7 +416,7 @@ export default function Root() {
               {[
                 { title: 'PCI-DSS 인증', desc: '국제 결제 보안 표준 준수' },
                 { title: 'SSL 256-bit', desc: '금융권 수준 데이터 암호화' },
-                { title: '실시간 정산', desc: '투명한 수납 내역 조회' },
+                { title: '실시간 수납 집계', desc: '정확한 결제 및 정산(추정) 대사' },
               ].map(({ title, desc }) => (
                 <div key={title} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#191F28' }}>{title}</span>
