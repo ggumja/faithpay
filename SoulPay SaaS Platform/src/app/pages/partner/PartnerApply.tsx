@@ -21,11 +21,14 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { partnerAPI } from '../../api/client';
 
 export default function PartnerApply() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedInfo, setSubmittedInfo] = useState<{ name: string; roleLabel: string } | null>(null);
 
   // URL ?type=agency|agent, ?ref=코드 지원
   const typeParam = searchParams.get('type');
@@ -50,21 +53,39 @@ export default function PartnerApply() {
   const [memo, setMemo] = useState('');
   const [referrerCode] = useState(refParam);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !email) {
-      toast.error('필수 정보를 모두 입력해 주세요.');
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      toast.error('성함, 연락처, 이메일은 필수 입력 항목입니다.');
       return;
     }
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      const res = await partnerAPI.apply({
+        role,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        region: region.trim() || undefined,
+        memo: memo.trim() || undefined,
+        referrerCode: referrerCode.trim() || undefined,
+      });
+
+      if (res.success) {
+        const roleLabel = isAgencyMode ? '영업 대리점(Tier-1)' : '영업자(Tier-2)';
+        setSubmittedInfo({ name: name.trim(), roleLabel });
+        setIsSubmitted(true);
+        toast.success(`${roleLabel} 제휴 신청이 정상적으로 접수되었습니다!\n담당자가 심사 후 24시간 이내에 연락 드립니다.`);
+      } else {
+        toast.error(res.error || '제휴 신청 처리 중 오류가 발생했습니다.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
       setIsSubmitting(false);
-      const roleLabel = isAgencyMode ? '영업 대리점' : '영업자';
-      toast.success(`${roleLabel} 제휴 신청이 정상적으로 접수되었습니다!\n담당자가 24시간 이내에 연락 드립니다.`);
-      navigate('/');
-    }, 800);
+    }
   };
 
   return (
@@ -237,120 +258,169 @@ export default function PartnerApply() {
               )}
             </CardHeader>
 
-            <form onSubmit={handleSubmit}>
-              <CardContent className="p-6 sm:p-7 space-y-6">
-                
-                {/* 파트너 역할 선택 Toggle */}
+            {isSubmitted && submittedInfo ? (
+              <CardContent className="p-8 sm:p-10 text-center space-y-6">
+                <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-[#333D4B]">희망 제휴 구분 *</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setRole('master_agency')}
-                      className={`p-3.5 rounded-2xl border text-xs font-bold text-center cursor-pointer transition-all duration-200 ${
-                        role === 'master_agency'
-                          ? 'bg-[#F3E8FF] border-[#9333EA] text-[#6B21A8] shadow-xs ring-2 ring-[#9333EA]/20'
-                          : 'bg-[#F9FAFB] border-[#E5E8EB] text-[#6B7684] hover:bg-[#F2F4F6]'
-                      }`}
-                    >
-                      Tier-1 대리점 <br />
-                      <span className="text-[11px] font-medium text-[#7E22CE] mt-0.5 block">
-                        (영업자 모집 + 오버라이딩)
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('sales_agent')}
-                      className={`p-3.5 rounded-2xl border text-xs font-bold text-center cursor-pointer transition-all duration-200 ${
-                        role === 'sales_agent'
-                          ? 'bg-[#E8F3FF] border-[#3182F6] text-[#1B64DA] shadow-xs ring-2 ring-[#3182F6]/20'
-                          : 'bg-[#F9FAFB] border-[#E5E8EB] text-[#6B7684] hover:bg-[#F2F4F6]'
-                      }`}
-                    >
-                      Tier-2 영업자 / 프리랜서 <br />
-                      <span className="text-[11px] font-medium text-[#3182F6] mt-0.5 block">
-                        (사찰·교회·재단 현장 개설)
-                      </span>
-                    </button>
-                  </div>
+                  <h3 className="text-xl font-extrabold text-[#191F28]">
+                    {submittedInfo.name}님의 제휴 신청이 접수되었습니다!
+                  </h3>
+                  <p className="text-sm text-[#4E5968] leading-relaxed">
+                    선택 구분: <strong className="text-[#191F28]">{submittedInfo.roleLabel}</strong><br />
+                    본사 관리자가 접수된 신청 내용을 검토한 후<br className="hidden sm:inline" />
+                    24시간 이내에 등록하신 연락처 또는 이메일로 안내 드립니다.
+                  </p>
                 </div>
-
-                {/* 파트너 정보 입력 (Toss Style Inputs) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">성함 / 법인명 *</Label>
-                    <Input 
-                      placeholder="홍길동 / (주)파트너스" 
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">연락처 *</Label>
-                    <Input 
-                      placeholder="010-1234-5678" 
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
+                <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={() => navigate('/')}
+                    className="h-12 px-6 rounded-xl font-bold bg-[#3182F6] hover:bg-[#2563EB] text-white cursor-pointer"
+                  >
+                    SoulPay 메인으로 이동
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setName('');
+                      setPhone('');
+                      setEmail('');
+                      setRegion('');
+                      setMemo('');
+                    }}
+                    className="h-12 px-6 rounded-xl font-bold border-[#E5E8EB] text-[#4E5968] hover:bg-[#F2F4F6] cursor-pointer"
+                  >
+                    추가 신청서 작성
+                  </Button>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">담당자 이메일 *</Label>
-                    <Input 
-                      type="email"
-                      placeholder="partner@example.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">주요 영업 지역</Label>
-                    <Input 
-                      placeholder="예: 서울 강남구 / 경기 성남시" 
-                      value={region}
-                      onChange={(e) => setRegion(e.target.value)}
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#333D4B]">보유 네트워크 및 관련 경험 (선택)</Label>
-                  <Textarea
-                    placeholder="예: 경기 지역 사찰 10여 곳 네트워크 보유, 교구 연동 경험 보유 등"
-                    value={memo}
-                    onChange={(e) => setMemo(e.target.value)}
-                    rows={3}
-                    className="bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl text-xs leading-relaxed"
-                  />
-                </div>
-
               </CardContent>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                <CardContent className="p-6 sm:p-7 space-y-6">
+                  
+                  {/* 파트너 역할 선택 Toggle */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-[#333D4B]">희망 제휴 구분 *</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setRole('master_agency')}
+                        className={`p-3.5 rounded-2xl border text-xs font-bold text-center cursor-pointer transition-all duration-200 ${
+                          role === 'master_agency'
+                            ? 'bg-[#F3E8FF] border-[#9333EA] text-[#6B21A8] shadow-xs ring-2 ring-[#9333EA]/20'
+                            : 'bg-[#F9FAFB] border-[#E5E8EB] text-[#6B7684] hover:bg-[#F2F4F6]'
+                        }`}
+                      >
+                        Tier-1 대리점 <br />
+                        <span className="text-[11px] font-medium text-[#7E22CE] mt-0.5 block">
+                          (영업자 모집 + 오버라이딩)
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole('sales_agent')}
+                        className={`p-3.5 rounded-2xl border text-xs font-bold text-center cursor-pointer transition-all duration-200 ${
+                          role === 'sales_agent'
+                            ? 'bg-[#E8F3FF] border-[#3182F6] text-[#1B64DA] shadow-xs ring-2 ring-[#3182F6]/20'
+                            : 'bg-[#F9FAFB] border-[#E5E8EB] text-[#6B7684] hover:bg-[#F2F4F6]'
+                        }`}
+                      >
+                        Tier-2 영업자 / 프리랜서 <br />
+                        <span className="text-[11px] font-medium text-[#3182F6] mt-0.5 block">
+                          (사찰·교회·재단 현장 개설)
+                        </span>
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Submit Footer */}
-              <CardFooter className="bg-[#FAFAFB] p-6 sm:p-7 border-t border-[#F2F4F6]">
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className={`w-full font-bold h-13 text-base rounded-2xl shadow-md cursor-pointer transition-all duration-200 text-white ${
-                    isAgencyMode
-                      ? 'bg-gradient-to-r from-[#9333EA] to-[#6366F1] hover:opacity-95'
-                      : 'bg-gradient-to-r from-[#3182F6] to-[#2563EB] hover:opacity-95'
-                  }`}
-                >
-                  <CheckCircle2 className="h-5 w-5 mr-2" />
-                  {isAgencyMode ? '영업 대리점 제휴 신청서 제출' : '영업자 제휴 신청서 제출'}
-                </Button>
-              </CardFooter>
-            </form>
+                  {/* 파트너 정보 입력 (Toss Style Inputs) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">성함 / 법인명 *</Label>
+                      <Input 
+                        placeholder="홍길동 / (주)파트너스" 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">연락처 *</Label>
+                      <Input 
+                        placeholder="010-1234-5678" 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">담당자 이메일 *</Label>
+                      <Input 
+                        type="email"
+                        placeholder="partner@example.com" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">주요 영업 지역</Label>
+                      <Input 
+                        placeholder="예: 서울 강남구 / 경기 성남시" 
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-[#333D4B]">보유 네트워크 및 관련 경험 (선택)</Label>
+                    <Textarea
+                      placeholder="예: 경기 지역 사찰 10여 곳 네트워크 보유, 교구 연동 경험 보유 등"
+                      value={memo}
+                      onChange={(e) => setMemo(e.target.value)}
+                      rows={3}
+                      className="bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl text-xs leading-relaxed"
+                    />
+                  </div>
+
+                </CardContent>
+
+                {/* Submit Footer */}
+                <CardFooter className="bg-[#FAFAFB] p-6 sm:p-7 border-t border-[#F2F4F6]">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className={`w-full font-bold h-13 text-base rounded-2xl shadow-md cursor-pointer transition-all duration-200 text-white ${
+                      isAgencyMode
+                        ? 'bg-gradient-to-r from-[#9333EA] to-[#6366F1] hover:opacity-95'
+                        : 'bg-gradient-to-r from-[#3182F6] to-[#2563EB] hover:opacity-95'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>신청서 접수 처리 중...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-5 w-5 mr-2" />
+                        {isAgencyMode ? '영업 대리점 제휴 신청서 제출' : '영업자 제휴 신청서 제출'}
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
           </Card>
         </div>
 

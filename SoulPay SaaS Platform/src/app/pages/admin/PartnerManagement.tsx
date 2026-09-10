@@ -26,11 +26,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   Briefcase, Users, Plus, CheckCircle, FileText, Search,
   Building2, UserCheck, Ban, Copy, ChevronDown, ChevronUp, Eye, ExternalLink,
+  Clock, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Partner, partnerAPI } from '../../api/client';
 
-type TabKey = 'agency' | 'agent';
+type TabKey = 'agency' | 'agent' | 'pending';
 
 export default function PartnerManagement() {
   const navigate = useNavigate();
@@ -93,12 +94,16 @@ export default function PartnerManagement() {
   // 파생 목록
   const agencies = partners.filter(p => p.role === 'master_agency');
   const agents   = partners.filter(p => p.role === 'sales_agent');
+  const pendingPartners = partners.filter(p => p.status === 'pending');
 
   const filteredAgencies = agencies.filter(p =>
-    p.name.includes(searchTerm) || p.referralCode.includes(searchTerm)
+    p.name.includes(searchTerm) || p.referralCode.includes(searchTerm) || (p.email && p.email.includes(searchTerm)) || (p.phone && p.phone.includes(searchTerm))
   );
   const filteredAgents = agents.filter(p =>
-    p.name.includes(searchTerm) || p.referralCode.includes(searchTerm)
+    p.name.includes(searchTerm) || p.referralCode.includes(searchTerm) || (p.email && p.email.includes(searchTerm)) || (p.phone && p.phone.includes(searchTerm))
+  );
+  const filteredPending = pendingPartners.filter(p =>
+    p.name.includes(searchTerm) || p.referralCode.includes(searchTerm) || (p.email && p.email.includes(searchTerm)) || (p.phone && p.phone.includes(searchTerm)) || (p.region && p.region.includes(searchTerm)) || (p.memo && p.memo.includes(searchTerm))
   );
 
   // 승인 / 정지 confirmation 팝업 상태
@@ -108,6 +113,13 @@ export default function PartnerManagement() {
     partnerName: string;
     targetStatus: 'active' | 'suspended';
   }>({ open: false, partnerId: '', partnerName: '', targetStatus: 'active' });
+
+  // 신청 반려 / 파트너 삭제 팝업 상태
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    partnerId: string;
+    partnerName: string;
+  }>({ open: false, partnerId: '', partnerName: '' });
 
   const requestApprove = (partner: Partner) => {
     setConfirmDialog({
@@ -127,6 +139,14 @@ export default function PartnerManagement() {
     });
   };
 
+  const requestDelete = (partner: Partner) => {
+    setDeleteDialog({
+      open: true,
+      partnerId: partner.id,
+      partnerName: partner.name,
+    });
+  };
+
   const handleConfirmStatusChange = async () => {
     const { partnerId, partnerName, targetStatus } = confirmDialog;
     if (!partnerId) return;
@@ -135,17 +155,33 @@ export default function PartnerManagement() {
       const res = await partnerAPI.updateStatus(partnerId, targetStatus);
       if (res.success && res.data) {
         setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, status: targetStatus } : p));
-        toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 DB에 완료되었습니다.` : `${partnerName} 계정이 DB에서 정지 처리되었습니다.`);
+        toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 완료되었습니다.` : `${partnerName} 계정이 정지 처리되었습니다.`);
       } else {
-        // DB 응답 없을 경우에도 local state 동기화
-        setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, status: targetStatus } : p));
-        toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 완료되었습니다.` : `${partnerName} 계정이 정지되었습니다.`);
+        toast.error(res.error || '파트너 상태 DB 변경에 실패했습니다.');
       }
-    } catch (e) {
-      setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, status: targetStatus } : p));
-      toast.success(targetStatus === 'active' ? `${partnerName} 파트너 승인이 완료되었습니다.` : `${partnerName} 계정이 정지되었습니다.`);
+    } catch (e: any) {
+      toast.error(e?.message || '파트너 상태 변경 중 오류가 발생했습니다.');
     } finally {
       setConfirmDialog({ open: false, partnerId: '', partnerName: '', targetStatus: 'active' });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    const { partnerId, partnerName } = deleteDialog;
+    if (!partnerId) return;
+
+    try {
+      const res = await partnerAPI.delete(partnerId);
+      if (res.success) {
+        setPartners(prev => prev.filter(p => p.id !== partnerId));
+        toast.success(`${partnerName} 신청 내역이 삭제(반려)되었습니다.`);
+      } else {
+        toast.error(res.error || '삭제 처리에 실패했습니다.');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || '삭제 처리 중 오류가 발생했습니다.');
+    } finally {
+      setDeleteDialog({ open: false, partnerId: '', partnerName: '' });
     }
   };
 
@@ -227,22 +263,29 @@ export default function PartnerManagement() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: '영업 대리점', value: `${agencies.length}개`, color: 'text-purple-600', bg: 'bg-purple-50', icon: Building2 },
-          { label: '영업자',     value: `${agents.length}명`,   color: 'text-indigo-600', bg: 'bg-indigo-50',  icon: Users },
-          { label: '승인 대기',  value: `${partners.filter(p => p.status === 'pending').length}건`, color: 'text-amber-600',  bg: 'bg-amber-50',  icon: UserCheck },
+          { label: '영업 대리점', value: `${agencies.length}개`, color: 'text-purple-600', bg: 'bg-purple-50', icon: Building2, targetTab: 'agency' as const },
+          { label: '영업자',     value: `${agents.length}명`,   color: 'text-indigo-600', bg: 'bg-indigo-50',  icon: Users, targetTab: 'agent' as const },
+          { label: '승인 대기',  value: `${pendingPartners.length}건`, color: 'text-amber-600',  bg: 'bg-amber-50',  icon: UserCheck, targetTab: 'pending' as const },
           {
             label: '당월 정산 예정',
             value: `${partners.reduce((sum, p) => sum + Math.floor((p as any).pendingAmount ?? 0), 0).toLocaleString()}원`,
-            color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Briefcase,
+            color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Briefcase, targetTab: null,
           },
-        ].map(({ label, value, color, bg, icon: Icon }) => (
-          <Card key={label} className="border-slate-200">
+        ].map(({ label, value, color, bg, icon: Icon, targetTab }) => (
+          <Card 
+            key={label} 
+            onClick={targetTab ? () => setTab(targetTab) : undefined}
+            className={`border-slate-200 transition-all ${targetTab ? 'cursor-pointer hover:border-slate-300 hover:shadow-xs' : ''}`}
+          >
             <CardContent className="p-4">
               <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mb-2`}>
                 <Icon className={`h-4 w-4 ${color}`} />
               </div>
               <div className={`text-[20px] font-bold leading-none ${color}`}>{value}</div>
-              <div className="text-[10.5px] text-slate-400 mt-1">{label}</div>
+              <div className="text-[10.5px] text-slate-400 mt-1 flex items-center justify-between">
+                <span>{label}</span>
+                {targetTab && <span className="text-[9.5px] text-slate-400 font-medium">보기 →</span>}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -266,6 +309,18 @@ export default function PartnerManagement() {
           >
             💼 영업자 ({agents.length})
           </button>
+          <button
+            onClick={() => setTab('pending')}
+            className={`px-4 py-1.5 rounded-lg text-[12.5px] font-bold transition-all cursor-pointer border-0 flex items-center gap-1.5
+              ${tab === 'pending' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent'}`}
+          >
+            <span>🕒 신규 신청 / 승인 대기</span>
+            {pendingPartners.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${tab === 'pending' ? 'bg-amber-500 text-white' : 'bg-amber-200 text-amber-900'}`}>
+                {pendingPartners.length}
+              </span>
+            )}
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -273,16 +328,16 @@ export default function PartnerManagement() {
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input
-              placeholder="이름·코드 검색"
+              placeholder="이름·코드·연락처 검색"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="pl-8 h-8 text-xs w-44"
+              className="pl-8 h-8 text-xs w-48"
             />
           </div>
           {/* 등록 */}
           <Button
             size="sm"
-            className={`text-xs font-bold ${tab === 'agency' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            className={`text-xs font-bold cursor-pointer ${tab === 'agency' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             onClick={() => openModal(tab === 'agency' ? 'master_agency' : 'sales_agent')}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
@@ -530,6 +585,133 @@ export default function PartnerManagement() {
         </Card>
       )}
 
+      {/* ══ 신규 제휴 신청 / 승인 대기 탭 ══ */}
+      {tab === 'pending' && (
+        <Card className="border-amber-200 shadow-sm">
+          <CardHeader className="pb-3 bg-amber-50/40 rounded-t-xl border-b border-amber-100">
+            <CardTitle className="text-[14px] font-bold text-amber-950 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-600" /> 신규 제휴 신청 / 승인 대기 목록
+              </span>
+              <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs px-2.5 py-0.5 font-bold">
+                총 {filteredPending.length}건 대기 중
+              </Badge>
+            </CardTitle>
+            <CardDescription className="text-[11.5px] text-amber-800/80">
+              공개 웹 신청서(/partner/apply)를 통해 접수된 영업 파트너 제휴 신청 목록입니다. 검토 후 [승인]하시면 파트너 계정이 활성화됩니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/80 text-[11px]">
+                  <TableHead className="text-[11px]">신청자 / 법인명</TableHead>
+                  <TableHead className="text-[11px]">희망 구분</TableHead>
+                  <TableHead className="text-[11px]">연락처 / 이메일</TableHead>
+                  <TableHead className="text-[11px]">희망 영업 지역</TableHead>
+                  <TableHead className="text-[11px]">추천인 코드</TableHead>
+                  <TableHead className="text-[11px]">신청 메모 / 보유 경험</TableHead>
+                  <TableHead className="text-[11px]">신청일시</TableHead>
+                  <TableHead className="text-center text-[11px]">심사 및 조치</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPending.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-slate-400 text-sm">
+                      현재 승인 대기 중인 신규 제휴 신청이 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPending.map(p => {
+                  const parentAgency = agencies.find(a => a.id === p.parentId);
+                  return (
+                    <TableRow key={p.id} className="hover:bg-amber-50/30">
+                      <TableCell>
+                        <button
+                          onClick={() => navigate(`/system/admin/partners/${p.id}`)}
+                          className="font-bold text-[13px] text-slate-900 hover:text-purple-700 hover:underline bg-transparent border-0 p-0 text-left cursor-pointer"
+                        >
+                          {p.name}
+                        </button>
+                        <div className="font-mono text-[10.5px] text-amber-700 font-semibold">{p.referralCode}</div>
+                      </TableCell>
+                      <TableCell>
+                        {p.role === 'master_agency' ? (
+                          <Badge className="bg-purple-100 text-purple-700 text-[10.5px] border-purple-200">
+                            🏢 Tier-1 대리점
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-indigo-100 text-indigo-700 text-[10.5px] border-indigo-200">
+                            💼 Tier-2 영업자
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[11px]">
+                        <div className="font-medium text-slate-800">{p.phone}</div>
+                        <div className="text-slate-400 text-[10.5px]">{p.email}</div>
+                      </TableCell>
+                      <TableCell className="text-[11.5px] text-slate-700">
+                        {p.region || <span className="text-slate-400">전국 / 미지정</span>}
+                      </TableCell>
+                      <TableCell className="text-[11px]">
+                        {parentAgency ? (
+                          <button
+                            onClick={() => navigate(`/system/admin/partners/${parentAgency.id}`)}
+                            className="text-left bg-transparent border-0 p-0 cursor-pointer hover:underline"
+                          >
+                            <span className="font-semibold text-purple-700">{parentAgency.name}</span>
+                            <div className="font-mono text-[10px] text-slate-400">{parentAgency.referralCode}</div>
+                          </button>
+                        ) : (
+                          <span className="text-slate-400">직속 (없음)</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[11.5px] text-slate-600 max-w-xs">
+                        <div className="line-clamp-2" title={p.memo || ''}>
+                          {p.memo || <span className="text-slate-400">작성 내용 없음</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-[11px] text-slate-400 whitespace-nowrap">
+                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString('ko-KR', {
+                          year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        }) : '-'}
+                      </TableCell>
+                      <TableCell className="text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Button
+                            size="sm"
+                            className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 cursor-pointer shadow-xs"
+                            onClick={() => requestApprove(p)}
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" /> 승인
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[11px] px-2 text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
+                            onClick={() => navigate(`/system/admin/partners/${p.id}`)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" /> 상세
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[11px] px-2 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 cursor-pointer"
+                            onClick={() => requestDelete(p)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" /> 반려
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ══ 등록 모달 ══ */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -764,6 +946,32 @@ export default function PartnerManagement() {
               className={confirmDialog.targetStatus === 'active' ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 font-bold' : 'bg-red-600 hover:bg-red-700 text-white text-xs h-8 font-bold'}
             >
               {confirmDialog.targetStatus === 'active' ? '승인 완료' : '정지 처리'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ══ 파트너 신청 반려 / 삭제 확인 AlertDialog ══ */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={open => setDeleteDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              영업 파트너 신청 반려 / 삭제
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-slate-600 mt-2 leading-relaxed">
+              <span className="font-bold text-slate-900">{deleteDialog.partnerName}</span> 님의 제휴 신청(또는 파트너 정보)을 완전히 삭제하시겠습니까?
+              <br />
+              삭제 시 해당 신청 내역은 데이터베이스에서 영구적으로 제거됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel className="text-xs h-8 cursor-pointer">취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs h-8 font-bold cursor-pointer"
+            >
+              삭제 및 반려
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

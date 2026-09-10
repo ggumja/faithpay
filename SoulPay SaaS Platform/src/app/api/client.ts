@@ -1140,6 +1140,31 @@ export const partnerAPI = {
     };
   },
 
+  /** partnerAPI.apply: 공개 웹 파트너 제휴 신청서 제출 */
+  async apply(data: {
+    role: 'master_agency' | 'sales_agent';
+    name: string;
+    phone: string;
+    email: string;
+    region?: string;
+    memo?: string;
+    referrerCode?: string;
+  }): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>('/partners', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...data,
+        status: 'pending',
+      }),
+    });
+  },
+
+  /** partnerAPI.delete: 파트너 삭제 / 신청 반려 */
+  async delete(id: string): Promise<APIResponse<{ message: string }>> {
+    return fetchAPI<{ message: string }>(`/partners/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 

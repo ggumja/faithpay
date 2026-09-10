@@ -1585,11 +1585,31 @@ export async function getPartnerById(id: string): Promise<Partner | null> {
 
 export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> & Record<string, any>): Promise<Partner> {
   const sb = pgClient();
-  const parentId = (partner.parentId && typeof partner.parentId === 'string' && partner.parentId.trim())
+  let parentId = (partner.parentId && typeof partner.parentId === 'string' && partner.parentId.trim())
     ? partner.parentId.trim()
     : null;
 
-  const referralCode = partner.referralCode || `${partner.role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Math.floor(100 + Math.random() * 900)}`;
+  // 추천인 코드가 전달되었고 parentId가 없는 경우, 추천인 코드로 상위 파트너 조회
+  if (!parentId && partner.referrerCode && typeof partner.referrerCode === 'string') {
+    try {
+      const { data: refPartner } = await sb
+        .from('partners')
+        .select('id, role')
+        .eq('referral_code', partner.referrerCode.trim())
+        .maybeSingle();
+      if (refPartner) {
+        parentId = refPartner.id;
+      }
+    } catch (e) {
+      console.warn('Failed to lookup referrer partner by code:', e);
+    }
+  }
+
+  const referralCode = partner.referralCode || `${partner.role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
+
+  const role = partner.role || 'sales_agent';
+  const defaultRate = role === 'master_agency' ? 0.70 : 0.40;
+  const status = partner.status || 'pending';
 
   const { data, error } = await sb
     .from('partners')
@@ -1597,15 +1617,24 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
       name: partner.name,
       email: partner.email,
       phone: partner.phone,
-      role: partner.role,
+      role: role,
       parent_id: parentId,
-      commission_rate: Number(partner.commissionRate ?? 0),
-      agency_rate: Number(partner.agencyRate ?? 0),
+      commission_rate: Number(partner.commissionRate ?? defaultRate),
+      agency_rate: Number(partner.agencyRate ?? defaultRate),
       referral_code: referralCode,
       bank_name: partner.bankName ?? '',
       account_number: partner.accountNumber ?? '',
       account_holder: partner.accountHolder ?? '',
-      status: partner.status ?? 'active',
+      status: status,
+      business_type: partner.businessType || (role === 'master_agency' ? 'CORPORATE' : 'freelancer'),
+      corp_reg_no: partner.corpRegNo || null,
+      corp_name: partner.corpName || null,
+      ceo_name: partner.ceoName || null,
+      tax_email: partner.taxEmail || null,
+      real_name: partner.realName || null,
+      res_no: partner.resNo || null,
+      region: partner.region || null,
+      memo: partner.memo || null,
     })
     .select('*')
     .single();
@@ -1635,6 +1664,16 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
     taxEmail: data.tax_email ?? '', realName: data.real_name ?? '', resNo: data.res_no ?? '',
     region: data.region ?? '', memo: data.memo ?? '',
   };
+}
+
+export async function deletePartner(id: string): Promise<boolean> {
+  const sb = pgClient();
+  const { error } = await sb.from('partners').delete().eq('id', id);
+  if (error) {
+    console.error('deletePartner failed:', error);
+    throw new Error(`deletePartner failed: ${error.message}`);
+  }
+  return true;
 }
 
 export async function updatePartnerStatus(id: string, status: 'active' | 'suspended' | 'pending'): Promise<Partner | null> {
