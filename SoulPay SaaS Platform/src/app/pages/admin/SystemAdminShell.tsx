@@ -17,6 +17,7 @@ import { tenantAPI } from '../../api/client';
 function useActiveKey(pathname: string) {
   if (pathname.includes('/system-admin-accounts')) return 'sysAdmins';
   if (pathname.includes('/scheduler'))       return 'scheduler';
+  if (pathname.includes('/tenants/new'))     return 'tenantNew';
   if (pathname.match(/\/tenants\/pending\/.+/)) return 'pendingDetail';
   if (pathname.includes('/tenants/pending')) return 'pending';
   if (pathname.includes('/settlement-center')) return 'settlementCenter';
@@ -35,6 +36,7 @@ const META: Record<string, { title: string; section: string }> = {
   sysAdmins:        { title: '시스템 관리자 계정',     section: '시스템 설정' },
   scheduler:        { title: '정기결제 스케줄러',     section: '정산 & 배치 관리' },
   tenants:          { title: '단체 목록',           section: '단체 목록 관리' },
+  tenantNew:        { title: '신규 단체 등록',        section: '단체 목록 관리' },
   pending:          { title: '승인요청 목록',        section: '단체 목록 관리' },
   pendingDetail:    { title: '입점 신청 상세 심사',  section: '단체 목록 관리' },
   tenantDetail:     { title: '단체 상세 정보',       section: '단체 목록 관리' },
@@ -143,9 +145,9 @@ export default function SystemAdminShell() {
               <p className={S.navSection}>Overview</p>
               <button
                 onClick={() => setTenantsOpen(p => !p)}
-                className={S.navParent(['tenants','pending','tenantDetail'].includes(active))}
+                className={S.navParent(['tenants','pending','tenantDetail','tenantNew'].includes(active))}
               >
-                <Building2 size={13} className={['tenants','pending','tenantDetail'].includes(active) ? 'text-[var(--hm-accent)]' : 'text-[var(--hm-ink-3)]'} />
+                <Building2 size={13} className={['tenants','pending','tenantDetail','tenantNew'].includes(active) ? 'text-[var(--hm-accent)]' : 'text-[var(--hm-ink-3)]'} />
                 <span className="flex-1">단체 목록 관리</span>
                 {tenantsOpen
                   ? <ChevronDown size={11} className="opacity-50" />
@@ -160,6 +162,13 @@ export default function SystemAdminShell() {
                   >
                     <span className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
                     단체 목록
+                  </button>
+                  <button
+                    onClick={() => navigate('/system/admin/tenants/new')}
+                    className={S.subItem(active === 'tenantNew')}
+                  >
+                    <span className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
+                    신규 단체 등록
                   </button>
                   <button
                     onClick={() => navigate('/system/admin/tenants/pending')}

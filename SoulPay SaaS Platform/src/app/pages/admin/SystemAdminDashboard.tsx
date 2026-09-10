@@ -6,7 +6,7 @@ import {
 } from '../../components/ui/table';
 import {
   Building2, CheckCircle, AlertCircle, ExternalLink, Key, Clock, RefreshCw,
-  Zap, ShieldCheck, AlertTriangle, Server, Activity,
+  Zap, ShieldCheck, AlertTriangle, Server, Activity, Plus,
 } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
@@ -196,11 +196,20 @@ export default function SystemAdminDashboard() {
   return (
     <div className={S.inner}>
       {/* ── 공통 페이지 헤더 ── */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className={S.title}>{meta.title}</h1>
           <p className={S.sub}>{meta.desc}</p>
         </div>
+        {(active === 'tenants' || active === 'pending') && (
+          <button
+            onClick={() => navigate('/system/admin/tenants/new')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-xs border-none"
+          >
+            <Plus size={14} />
+            <span>신규 단체 등록</span>
+          </button>
+        )}
       </div>
 
       {/* ── ⚡ 플랫폼 트래픽 처리 캐파 & 사전 알림 헬스 모니터 ── */}
@@ -326,6 +335,13 @@ export default function SystemAdminDashboard() {
                 🏢 영업대리점별 묶어보기 ({agencyGroups.length}개 대리점)
               </button>
             </div>
+            <button
+              onClick={() => navigate('/system/admin/tenants/new')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-xs border-none"
+            >
+              <Plus size={13} />
+              <span>신규 단체 등록</span>
+            </button>
           </div>
 
           {/* 1. 전체 단체 목록 뷰 */}

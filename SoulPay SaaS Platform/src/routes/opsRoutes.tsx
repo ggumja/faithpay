@@ -6,6 +6,7 @@ import RootLayout from "../app/layouts/RootLayout";
 const SystemAdminLogin = lazy(() => import("../app/pages/admin/SystemAdminLogin"));
 const SystemAdminShell = lazy(() => import("../app/pages/admin/SystemAdminShell"));
 const SystemAdminDashboard = lazy(() => import("../app/pages/admin/SystemAdminDashboard"));
+const SystemAdminTenantCreate = lazy(() => import("../app/pages/admin/SystemAdminTenantCreate"));
 const PendingTenantDetailPage = lazy(() => import("../app/pages/admin/PendingTenantDetailPage"));
 const TenantDetailPage = lazy(() => import("../app/pages/admin/TenantDetailPage"));
 const SettlementCenterPage = lazy(() => import("../app/pages/admin/SettlementCenterPage"));
@@ -28,11 +29,13 @@ export const opsRouter = createBrowserRouter([
       { path: "/system/login", Component: SystemAdminLogin },
       { path: "/scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
       { path: "/recurring-scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
+      { path: "/tenants/new", element: <Navigate to="/system/admin/tenants/new" replace /> },
       {
         Component: SystemAdminShell,
         children: [
           { path: "/system/admin", Component: SystemAdminDashboard },
           { path: "/system/admin/tenants", Component: SystemAdminDashboard },
+          { path: "/system/admin/tenants/new", Component: SystemAdminTenantCreate },
           { path: "/system/admin/tenants/pending", Component: SystemAdminDashboard },
           { path: "/system/admin/tenants/pending/:id", Component: PendingTenantDetailPage },
           { path: "/system/admin/settlement-center", Component: SettlementCenterPage },
