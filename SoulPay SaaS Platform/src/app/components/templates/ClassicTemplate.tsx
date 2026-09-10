@@ -315,11 +315,6 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
                 }}
               />
             ))}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0.48) 100%)',
-            }} />
           </div>
         )}
 

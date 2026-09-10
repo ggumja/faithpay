@@ -435,11 +435,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newTenant: Tenant = {
       id: newId,
 
-      logoUrl: newTenantData.logoUrl || 'https://images.unsplash.com/photo-1620495137036-fccf4af581bf?w=200',
+      logoUrl: newTenantData.logoUrl || '',
       bannerImages: newTenantData.bannerImages && newTenantData.bannerImages.length > 0
         ? newTenantData.bannerImages
-        : ['https://images.unsplash.com/photo-1772878490426-e1c25eff4dba?w=1200'],
-      description: newTenantData.description || '새로운 단체입니다.',
+        : [],
+      description: newTenantData.description || '',
       schedule: newTenantData.schedule || [],
       terminology: {
         donation: newTenantData.terminology?.donation || (newTenantData.religionType === 'protestant' ? '헌금' : newTenantData.religionType === 'buddhist' ? '보시' : newTenantData.religionType === 'charity' ? '후원금' : newTenantData.religionType === 'general' ? '기부금' : '봉헌'),
