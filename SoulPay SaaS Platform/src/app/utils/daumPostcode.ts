@@ -7,7 +7,10 @@ export interface PostcodeResult {
 /**
  * 카카오/다음 우편번호 검색 API 동적 로더 및 팝업 오픈 헬퍼
  */
-export function openDaumPostcode(onComplete: (data: PostcodeResult) => void) {
+export function openDaumPostcode(
+  param: ((data: PostcodeResult) => void) | { onComplete?: (data: PostcodeResult) => void }
+) {
+  const onComplete = typeof param === 'function' ? param : param?.onComplete;
   const scriptId = 'daum_postcode_script';
   let script = document.getElementById(scriptId) as HTMLScriptElement;
 
@@ -22,11 +25,13 @@ export function openDaumPostcode(onComplete: (data: PostcodeResult) => void) {
           if (data.buildingName !== '') extraAddress += extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName;
           if (extraAddress !== '') fullAddress += ` (${extraAddress})`;
 
-          onComplete({
-            address: fullAddress,
-            zonecode: data.zonecode,
-            buildingName: data.buildingName,
-          });
+          if (typeof onComplete === 'function') {
+            onComplete({
+              address: fullAddress,
+              zonecode: data.zonecode,
+              buildingName: data.buildingName,
+            });
+          }
         },
       }).open();
     }

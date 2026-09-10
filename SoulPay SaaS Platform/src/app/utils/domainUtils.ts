@@ -32,8 +32,71 @@ export function isSoulPayProduction(): boolean {
     return false;
   }
 
-  // 상용 soulpay.kr 도메인 및 정규 서브도메인
-  return host === 'soulpay.kr' || host.endsWith('.soulpay.kr');
+  // 상용 soulpay.kr / soulpay.co.kr 도메인 및 정규 서브도메인
+  return (
+    host === 'soulpay.kr' ||
+    host.endsWith('.soulpay.kr') ||
+    host === 'soulpay.co.kr' ||
+    host.endsWith('.soulpay.co.kr')
+  );
+}
+
+/**
+ * 현재 환경이 메인 소개/랜딩 도메인(soulpay.kr, www.soulpay.kr, soulpay.co.kr 등)인지 확인
+ * - pay, admin, ops, partner, kiosk 등 서브도메인이 아닌 루트 도메인 접속 여부 판별
+ */
+export function isRootLandingDomain(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  return (
+    host === 'soulpay.kr' ||
+    host === 'www.soulpay.kr' ||
+    host === 'soulpay.co.kr' ||
+    host === 'www.soulpay.co.kr'
+  );
+}
+
+/**
+ * 상용 메인 랜딩 도메인(soulpay.kr 등)에서 테넌트 결제 포털(pay.soulpay.kr) 또는 관리자(admin.soulpay.kr)로
+ * 포워딩해야 하는지 확인하고 대상 URL을 반환
+ */
+export function getForwardUrlFromRootDomain(pathname: string, search: string = ''): string | null {
+  if (!isRootLandingDomain()) return null;
+
+  // 루트 및 메인 서비스 공통/플랫폼 전용 경로 제외
+  const excludedPrefixes = [
+    '/partner',
+    '/agency',
+    '/agent',
+    '/apply',
+    '/system',
+    '/onboarding',
+    '/kakaopay',
+    '/oauth',
+    '/login',
+    '/admin',
+  ];
+
+  if (pathname === '/' || pathname === '') return null;
+
+  for (const prefix of excludedPrefixes) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return null;
+    }
+  }
+
+  // 관리자 경로 (예: /gakwonsa/admin, /gakwonsa/admin/login)
+  if (pathname.includes('/admin')) {
+    return `https://admin.soulpay.kr${pathname}${search}`;
+  }
+
+  // 키오스크 전용 경로 (예: /gakwonsa/kiosk)
+  if (pathname.includes('/kiosk')) {
+    return `https://kiosk.soulpay.kr${pathname}${search}`;
+  }
+
+  // 그 외 모든 가맹 단체 접속(예: /gakwonsa, /gakwonsa/donate 등)은 pay.soulpay.kr로 포워딩
+  return `https://pay.soulpay.kr${pathname}${search}`;
 }
 
 /**

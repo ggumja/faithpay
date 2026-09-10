@@ -6,6 +6,7 @@ import RootLayout from "../app/layouts/RootLayout";
 const SystemAdminLogin = lazy(() => import("../app/pages/admin/SystemAdminLogin"));
 const SystemAdminShell = lazy(() => import("../app/pages/admin/SystemAdminShell"));
 const SystemAdminDashboard = lazy(() => import("../app/pages/admin/SystemAdminDashboard"));
+const SystemAdminTenantCreate = lazy(() => import("../app/pages/admin/SystemAdminTenantCreate"));
 const PendingTenantDetailPage = lazy(() => import("../app/pages/admin/PendingTenantDetailPage"));
 const TenantDetailPage = lazy(() => import("../app/pages/admin/TenantDetailPage"));
 const SettlementCenterPage = lazy(() => import("../app/pages/admin/SettlementCenterPage"));
@@ -16,6 +17,7 @@ const CommissionStatsPage = lazy(() => import("../app/pages/admin/CommissionStat
 const MultiPartySettlementLedger = lazy(() => import("../app/pages/admin/components/MultiPartySettlementLedger"));
 const SystemSettingsPage = lazy(() => import("../app/pages/admin/SystemSettingsPage"));
 const SystemAdminAccountPage = lazy(() => import("../app/pages/admin/SystemAdminAccountPage"));
+const RecurringSchedulerPage = lazy(() => import("../app/pages/admin/RecurringSchedulerPage"));
 const NotFound = lazy(() => import("../app/pages/NotFound"));
 
 export const opsRouter = createBrowserRouter([
@@ -25,14 +27,20 @@ export const opsRouter = createBrowserRouter([
       { path: "/", element: <Navigate to="/system/admin" replace /> },
       { path: "/login", Component: SystemAdminLogin },
       { path: "/system/login", Component: SystemAdminLogin },
+      { path: "/scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
+      { path: "/recurring-scheduler", element: <Navigate to="/system/admin/scheduler" replace /> },
+      { path: "/tenants/new", element: <Navigate to="/system/admin/tenants/new" replace /> },
       {
         Component: SystemAdminShell,
         children: [
           { path: "/system/admin", Component: SystemAdminDashboard },
           { path: "/system/admin/tenants", Component: SystemAdminDashboard },
+          { path: "/system/admin/tenants/new", Component: SystemAdminTenantCreate },
           { path: "/system/admin/tenants/pending", Component: SystemAdminDashboard },
           { path: "/system/admin/tenants/pending/:id", Component: PendingTenantDetailPage },
           { path: "/system/admin/settlement-center", Component: SettlementCenterPage },
+          { path: "/system/admin/scheduler", Component: RecurringSchedulerPage },
+          { path: "/system/admin/recurring-scheduler", Component: RecurringSchedulerPage },
           { path: "/system/admin/stats", Component: TenantStatsPage },
           { path: "/system/admin/partners", Component: PartnerManagement },
           { path: "/system/admin/partners/:id", Component: PartnerDetailPage },
