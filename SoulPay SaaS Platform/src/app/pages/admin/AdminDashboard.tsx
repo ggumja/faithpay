@@ -286,6 +286,17 @@ export default function AdminDashboard() {
     return <Navigate to={loginTarget} replace />;
   }
 
+  // 타 단체 관리자 권한으로 다른 단체 대시보드 접근 차단 (system_admin 제외)
+  if (
+    currentAdmin.role !== 'system_admin' &&
+    currentTenant &&
+    currentAdmin.tenantId !== currentTenant.id &&
+    currentAdmin.tenantId !== currentTenant.slug
+  ) {
+    const loginTarget = tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
+    return <Navigate to={loginTarget} replace />;
+  }
+
   const currentPath = `/${tenantSlug}/admin`;
 
   const todayKstStr = (() => {

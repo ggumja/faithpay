@@ -19,6 +19,7 @@ const RecurringPendingPage = lazy(() => import("../app/pages/admin/RecurringPend
 const AdminAccountManagement = lazy(() => import("../app/pages/admin/AdminAccountManagement"));
 const OnboardingFlow = lazy(() => import("../app/pages/OnboardingFlow"));
 const NotFound = lazy(() => import("../app/pages/NotFound"));
+const TenantAdminRouteGuard = lazy(() => import("../app/components/TenantAdminRouteGuard"));
 
 export const adminRouter = createBrowserRouter([
   {
@@ -29,33 +30,39 @@ export const adminRouter = createBrowserRouter([
       { path: "/admin", Component: AdminLogin },
       { path: "/admin/login", Component: AdminLogin },
       { path: "/onboarding", Component: OnboardingFlow },
-      // 단체 슬러그 기반 관리자 경로 (admin.soulpay.kr/:tenantSlug 또는 /:tenantSlug/admin 지원)
-      { path: "/:tenantSlug", Component: AdminDashboard },
+      // 단체 관리자 로그인 경로는 가드 제외 (공개 접근)
       { path: "/:tenantSlug/login", Component: AdminLogin },
       { path: "/:tenantSlug/admin/login", Component: AdminLogin },
-      { path: "/:tenantSlug/admin", Component: AdminDashboard },
-      { path: "/:tenantSlug/donations", Component: DonationHistory },
-      { path: "/:tenantSlug/admin/donations", Component: DonationHistory },
-      { path: "/:tenantSlug/prayers", Component: PrayerManagement },
-      { path: "/:tenantSlug/admin/prayers", Component: PrayerManagement },
-      { path: "/:tenantSlug/menu", Component: DonationMenuManagement },
-      { path: "/:tenantSlug/admin/menu", Component: DonationMenuManagement },
-      { path: "/:tenantSlug/members", Component: MemberManagement },
-      { path: "/:tenantSlug/admin/members", Component: MemberManagement },
-      { path: "/:tenantSlug/members/:memberId", Component: MemberDetailPage },
-      { path: "/:tenantSlug/admin/members/:memberId", Component: MemberDetailPage },
-      { path: "/:tenantSlug/settlement", Component: SettlementReports },
-      { path: "/:tenantSlug/admin/settlement", Component: SettlementReports },
-      { path: "/:tenantSlug/banners", Component: BannerManagement },
-      { path: "/:tenantSlug/admin/banners", Component: BannerManagement },
-      { path: "/:tenantSlug/accounts", Component: AdminAccountManagement },
-      { path: "/:tenantSlug/admin/accounts", Component: AdminAccountManagement },
-      { path: "/:tenantSlug/settings", Component: OrganizationSettings },
-      { path: "/:tenantSlug/admin/settings", Component: OrganizationSettings },
-      { path: "/:tenantSlug/recurring-pending", Component: RecurringPendingPage },
-      { path: "/:tenantSlug/admin/recurring-pending", Component: RecurringPendingPage },
-      { path: "/:tenantSlug/statistics", Component: TenantStatisticsPage },
-      { path: "/:tenantSlug/admin/statistics", Component: TenantStatisticsPage },
+      // 단체 슬러그 기반 보호된 관리자 경로 (TenantAdminRouteGuard 적용)
+      {
+        Component: TenantAdminRouteGuard,
+        children: [
+          { path: "/:tenantSlug", Component: AdminDashboard },
+          { path: "/:tenantSlug/admin", Component: AdminDashboard },
+          { path: "/:tenantSlug/donations", Component: DonationHistory },
+          { path: "/:tenantSlug/admin/donations", Component: DonationHistory },
+          { path: "/:tenantSlug/prayers", Component: PrayerManagement },
+          { path: "/:tenantSlug/admin/prayers", Component: PrayerManagement },
+          { path: "/:tenantSlug/menu", Component: DonationMenuManagement },
+          { path: "/:tenantSlug/admin/menu", Component: DonationMenuManagement },
+          { path: "/:tenantSlug/members", Component: MemberManagement },
+          { path: "/:tenantSlug/admin/members", Component: MemberManagement },
+          { path: "/:tenantSlug/members/:memberId", Component: MemberDetailPage },
+          { path: "/:tenantSlug/admin/members/:memberId", Component: MemberDetailPage },
+          { path: "/:tenantSlug/settlement", Component: SettlementReports },
+          { path: "/:tenantSlug/admin/settlement", Component: SettlementReports },
+          { path: "/:tenantSlug/banners", Component: BannerManagement },
+          { path: "/:tenantSlug/admin/banners", Component: BannerManagement },
+          { path: "/:tenantSlug/accounts", Component: AdminAccountManagement },
+          { path: "/:tenantSlug/admin/accounts", Component: AdminAccountManagement },
+          { path: "/:tenantSlug/settings", Component: OrganizationSettings },
+          { path: "/:tenantSlug/admin/settings", Component: OrganizationSettings },
+          { path: "/:tenantSlug/recurring-pending", Component: RecurringPendingPage },
+          { path: "/:tenantSlug/admin/recurring-pending", Component: RecurringPendingPage },
+          { path: "/:tenantSlug/statistics", Component: TenantStatisticsPage },
+          { path: "/:tenantSlug/admin/statistics", Component: TenantStatisticsPage },
+        ],
+      },
       { path: "*", Component: NotFound },
     ],
   },
