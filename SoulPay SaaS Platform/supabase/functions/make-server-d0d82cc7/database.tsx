@@ -1611,6 +1611,23 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
   const defaultRate = role === 'master_agency' ? 0.70 : 0.40;
   const status = partner.status || 'pending';
 
+  // business_type 정규화 (PostgreSQL CHECK 제약: 'INDIVIDUAL', 'freelancer', 'individual_business', 'CORPORATE')
+  let dbBusinessType = partner.businessType;
+  if (dbBusinessType === 'corporation' || (!dbBusinessType && role === 'master_agency')) {
+    dbBusinessType = 'CORPORATE';
+  } else if (dbBusinessType === 'individual') {
+    dbBusinessType = 'INDIVIDUAL';
+  } else if (!dbBusinessType) {
+    dbBusinessType = 'freelancer';
+  }
+
+  const corpRegNo = partner.corpRegNo || (dbBusinessType !== 'freelancer' ? partner.businessNumber : null) || null;
+  const resNo = partner.resNo || (dbBusinessType === 'freelancer' ? partner.businessNumber : null) || null;
+  const ceoName = partner.ceoName || partner.representativeName || null;
+  const corpName = partner.corpName || (dbBusinessType === 'CORPORATE' ? partner.name : null) || null;
+  const realName = partner.realName || (dbBusinessType === 'freelancer' ? partner.name : null) || null;
+  const taxEmail = partner.taxEmail || (dbBusinessType !== 'freelancer' ? partner.email : null) || null;
+
   const { data, error } = await sb
     .from('partners')
     .insert({
@@ -1626,15 +1643,16 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
       account_number: partner.accountNumber ?? '',
       account_holder: partner.accountHolder ?? '',
       status: status,
-      business_type: partner.businessType || (role === 'master_agency' ? 'CORPORATE' : 'freelancer'),
-      corp_reg_no: partner.corpRegNo || null,
-      corp_name: partner.corpName || null,
-      ceo_name: partner.ceoName || null,
-      tax_email: partner.taxEmail || null,
-      real_name: partner.realName || null,
-      res_no: partner.resNo || null,
+      business_type: dbBusinessType,
+      corp_reg_no: corpRegNo,
+      corp_name: corpName,
+      ceo_name: ceoName,
+      tax_email: taxEmail,
+      real_name: realName,
+      res_no: resNo,
       region: partner.region || null,
       memo: partner.memo || null,
+      password: partner.password || 'changeme123!',
     })
     .select('*')
     .single();

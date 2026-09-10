@@ -47,8 +47,10 @@ export default function PartnerManagement() {
     if (forRole === 'sales_agent') {
       const first = partners.find(p => p.role === 'master_agency');
       if (first) setParentId(first.id);
+      setCommissionRate(0.4);
     } else {
       setParentId('');
+      setCommissionRate(0.7);
     }
     setIsModalOpen(true);
   };
@@ -214,10 +216,15 @@ export default function PartnerManagement() {
       accountNumber: accountNumber || '',
       accountHolder: accountHolder || name,
       status: 'active' as const,
-      businessType,
+      businessType: businessType === 'corporation' ? 'CORPORATE' : businessType,
       businessNumber,
+      corpRegNo: businessType !== 'freelancer' ? businessNumber : undefined,
+      resNo: businessType === 'freelancer' ? businessNumber : undefined,
+      corpName: businessType === 'corporation' ? name : undefined,
+      realName: businessType === 'freelancer' ? name : undefined,
       taxEmail: businessType !== 'freelancer' ? taxEmail : undefined,
       representativeName: businessType === 'corporation' ? representativeName : undefined,
+      ceoName: businessType === 'corporation' ? representativeName : undefined,
     };
 
     try {
@@ -237,8 +244,8 @@ export default function PartnerManagement() {
       } else {
         toast.error(res.error || '파트너 등록에 실패했습니다.');
       }
-    } catch {
-      toast.error('파트너 등록 중 오류가 발생했습니다.');
+    } catch (err: any) {
+      toast.error(err?.message || '파트너 등록 중 오류가 발생했습니다.');
     }
   };
 
