@@ -373,6 +373,107 @@ export const paymentAPI = {
 };
 
 
+// ==================== KAKAO AUTH API ====================
+
+export const KAKAO_CONFIG = {
+  REST_API_KEY: '9a0d1863232123049b37547090372fc5',
+  JAVASCRIPT_KEY: '2049549dc6e126bbcf6dbee9279f61c8',
+};
+
+export const kakaoAuthAPI = {
+  getAuthUrl(tenantSlug: string, redirectUri: string) {
+    const params = new URLSearchParams({
+      client_id: KAKAO_CONFIG.REST_API_KEY,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      state: tenantSlug,
+      scope: 'profile_nickname,account_email,phone_number',
+    });
+    return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
+  },
+
+  async exchangeToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
+    // 1. 서버 사이드 토큰 교환 시도
+    try {
+      const backendRes = await fetchAPI<{ access_token: string }>('/auth/kakao/token', {
+        method: 'POST',
+        body: JSON.stringify({ code, redirectUri }),
+        silentFail: true,
+      } as any);
+      if (backendRes.success && backendRes.data?.access_token) {
+        return backendRes.data;
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. 브라우저 직접 교환 (kauth.kakao.com CORS 허용)
+    const bodyParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: KAKAO_CONFIG.REST_API_KEY,
+      redirect_uri: redirectUri,
+      code,
+    });
+    const res = await fetch('https://kauth.kakao.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+      },
+      body: bodyParams.toString(),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error_description || errData.msg || '카카오 인증 토큰 발급에 실패했습니다.');
+    }
+    return res.json();
+  },
+
+  async getUserInfo(accessToken: string): Promise<{
+    id: number;
+    nickname?: string;
+    email?: string;
+    phone?: string;
+    rawPhone?: string;
+  }> {
+    // 1. 서버 사이드 조회 시도
+    try {
+      const backendRes = await fetchAPI<any>('/auth/kakao/user', {
+        method: 'POST',
+        body: JSON.stringify({ accessToken }),
+        silentFail: true,
+      } as any);
+      if (backendRes.success && backendRes.data) {
+        return backendRes.data;
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. 브라우저 직접 조회
+    const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+      },
+    });
+    if (!res.ok) {
+      throw new Error('카카오 사용자 정보 조회에 실패했습니다.');
+    }
+    const data = await res.json();
+    const rawPhone = data.kakao_account?.phone_number || '';
+    const phone = rawPhone ? rawPhone.replace('+82 ', '0').replace(/[^0-9]/g, '') : '';
+    const email = data.kakao_account?.email || '';
+    const nickname = data.kakao_account?.profile?.nickname || data.properties?.nickname || '';
+    return {
+      id: data.id,
+      nickname,
+      email,
+      phone,
+      rawPhone,
+    };
+  },
+};
+
 // ==================== SMS OTP & SUBSCRIPTION API ====================
 
 export const otpAuthAPI = {

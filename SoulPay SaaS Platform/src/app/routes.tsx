@@ -8,6 +8,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OnboardingFlow = lazy(() => import("./pages/OnboardingFlow"));
 const KakaoPaySandbox = lazy(() => import("./pages/KakaoPaySandbox"));
 const KakaoPayApprovePage = lazy(() => import("./pages/KakaoPayApprovePage"));
+const KakaoAuthCallback = lazy(() => import("./pages/KakaoAuthCallback"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const SystemAdminLogin = lazy(() => import("./pages/admin/SystemAdminLogin"));
 const AdminRedirectGuard = lazy(() => import("./pages/admin/AdminRedirectGuard"));
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
       {
         path: "/kakaopay/approve",
         Component: KakaoPayApprovePage,
+      },
+      {
+        path: "/oauth/kakao/callback",
+        Component: KakaoAuthCallback,
       },
       {
         path: "/partner/login",

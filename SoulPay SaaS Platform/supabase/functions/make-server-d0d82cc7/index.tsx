@@ -2694,10 +2694,73 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
       subscriptions,
       donations
     });
-  } catch (error) {
-    return c.json({ success: false, error: "OTP Verification failed" }, 500);
+// 💬 카카오 로그인 토큰 교환
+const handleKakaoToken = async (c: any) => {
+  try {
+    const { code, redirectUri } = await c.req.json();
+    if (!code || !redirectUri) {
+      return c.json({ success: false, error: "code and redirectUri are required" }, 400);
+    }
+    const tokenRes = await fetch("https://kauth.kakao.com/oauth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: "9a0d1863232123049b37547090372fc5",
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok) {
+      return c.json({ success: false, error: tokenData.error_description || tokenData.msg || "Failed to exchange token" }, 400);
+    }
+    return c.json({ success: true, data: tokenData });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Kakao token exchange failed" }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/auth/kakao/token", handleKakaoToken);
+app.post("/auth/kakao/token", handleKakaoToken);
+
+// 💬 카카오 로그인 사용자 정보 조회
+const handleKakaoUser = async (c: any) => {
+  try {
+    const { accessToken } = await c.req.json();
+    if (!accessToken) {
+      return c.json({ success: false, error: "accessToken is required" }, 400);
+    }
+    const userRes = await fetch("https://kapi.kakao.com/v2/user/me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+      },
+    });
+    const userData = await userRes.json();
+    if (!userRes.ok) {
+      return c.json({ success: false, error: userData.msg || "Failed to get user info" }, 400);
+    }
+    const rawPhone = userData.kakao_account?.phone_number || "";
+    const phone = rawPhone ? rawPhone.replace("+82 ", "0").replace(/[^0-9]/g, "") : "";
+    const email = userData.kakao_account?.email || "";
+    const nickname = userData.kakao_account?.profile?.nickname || userData.properties?.nickname || "";
+    return c.json({
+      success: true,
+      data: {
+        id: userData.id,
+        nickname,
+        email,
+        phone,
+        rawPhone,
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to fetch Kakao user info" }, 500);
+  }
+};
+app.post("/make-server-d0d82cc7/auth/kakao/user", handleKakaoUser);
+app.post("/auth/kakao/user", handleKakaoUser);
+
 
 // 신도 휴대폰 번호 기반 정기결제 약정 목록 조회
 const handleGetSubscriptionsByPhone = async (c: any) => {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp, DonationFormData, DonationItem } from '../context/AppContext';
-import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI, donationItemsAPI } from '../api/client';
+import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI, donationItemsAPI, kakaoAuthAPI } from '../api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -85,6 +85,7 @@ export default function MyDonations() {
   const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [isKakaoLoggingIn, setIsKakaoLoggingIn] = useState(false);
 
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -240,6 +241,13 @@ export default function MyDonations() {
     } finally {
       setIsSavingProfile(false);
     }
+  };
+
+  const handleKakaoLogin = () => {
+    setIsKakaoLoggingIn(true);
+    const redirectUri = `${window.location.origin}/oauth/kakao/callback`;
+    const kakaoUrl = kakaoAuthAPI.getAuthUrl(tenantSlug || '', redirectUri);
+    window.location.href = kakaoUrl;
   };
 
   const handleEmailLogin = async () => {
@@ -608,39 +616,72 @@ export default function MyDonations() {
                 </Badge>
               </div>
               <CardDescription className="text-xs text-zinc-500">
-                휴대폰 1초 SMS 인증 또는 이메일 비밀번호 로그인을 선택하여 본인 마이페이지에 접속하실 수 있습니다.
+                카카오 1초 간편 로그인, 휴대폰 번호 또는 이메일을 통해 본인 마이페이지에 안전하게 접속하실 수 있습니다.
               </CardDescription>
+            </CardHeader>
 
-              {/* 🔑 이중 인증 수단 선택 스위처 */}
-              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl mt-4">
+            <CardContent className="pt-6 space-y-5">
+              {/* 💬 카카오 1초 간편 로그인 (성도 추천 인증) */}
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleKakaoLogin}
+                  disabled={isKakaoLoggingIn}
+                  className="w-full h-13 px-4 rounded-2xl bg-[#FEE500] hover:bg-[#FDD835] active:scale-[0.99] text-[#191919] font-black text-base flex items-center justify-center gap-2.5 transition-all shadow-sm hover:shadow cursor-pointer disabled:opacity-50"
+                >
+                  {isKakaoLoggingIn ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-[#191919]" />
+                  ) : (
+                    <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                      <path d="M12 3C6.477 3 2 6.477 2 10.769c0 2.769 1.872 5.187 4.693 6.556-.206.775-.747 2.809-.854 3.245-.135.544.198.536.417.391.171-.113 2.716-1.846 3.822-2.602.627.09 1.27.139 1.922.139 5.523 0 10-3.477 10-7.769S17.523 3 12 3z"/>
+                    </svg>
+                  )}
+                  <span>카카오로 1초 만에 간편 조회</span>
+                </button>
+                <p className="text-[11px] text-center text-slate-500 font-medium">
+                  카카오톡 인증으로 별도 번호 입력 없이 즉시 헌금 내역을 확인하세요.
+                </p>
+              </div>
+
+              {/* 구분선 */}
+              <div className="relative my-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-zinc-800" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white dark:bg-zinc-900 px-3 text-slate-400 font-medium">
+                    또는 다른 방법으로 조회
+                  </span>
+                </div>
+              </div>
+
+              {/* 🔑 이중 인증 수단 선택 스위처 (휴대폰 번호 vs 이메일) */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setAuthMethod('phone')}
-                  className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     authMethod === 'phone'
                       ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   <Smartphone className="h-3.5 w-3.5" />
-                  휴대폰 1초 SMS 인증
+                  휴대폰 번호로 조회
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMethod('email')}
-                  className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     authMethod === 'email'
                       ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   <Mail className="h-3.5 w-3.5" />
-                  이메일 / 비밀번호 로그인
+                  이메일 로그인
                 </button>
               </div>
-            </CardHeader>
-
-            <CardContent className="pt-6 space-y-4">
               {authMethod === 'phone' ? (
                 !isOtpSent ? (
                   <div className="space-y-3">
