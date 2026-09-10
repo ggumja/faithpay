@@ -182,7 +182,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
 
   const heroBgImage = (currentTenant.bannerImages && currentTenant.bannerImages.length > 0 && currentTenant.bannerImages[0])
     ? currentTenant.bannerImages[0]
-    : 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200';
+    : '';
 
   const filteredItems = allItems.filter(item => {
     const q = search.toLowerCase();
@@ -242,7 +242,9 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
           textAlign: 'center',
           overflow: 'hidden',
           color: '#FFFFFF',
-          backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(15, 23, 42, 0.90) 100%), url("${heroBgImage}")`,
+          backgroundImage: heroBgImage
+            ? `linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(15, 23, 42, 0.90) 100%), url("${heroBgImage}")`
+            : 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',

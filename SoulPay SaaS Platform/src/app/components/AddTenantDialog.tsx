@@ -269,7 +269,7 @@ export default function AddTenantDialog({ isOpen, onClose, onAddTenant }: AddTen
       name: name.trim(),
       religionType,
       primaryColor,
-      logoUrl: logoUrl.trim() || 'https://images.unsplash.com/photo-1620495137036-fccf4af581bf?w=200',
+      logoUrl: logoUrl.trim(),
       bannerImages: bannerImages.filter((img) => img.trim()),
       description: description.trim(),
       address: address.trim(),

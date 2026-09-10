@@ -500,11 +500,22 @@ export default function OrganizationSettings() {
                   <Label>로고 이미지 설정</Label>
                   <div className="flex flex-col md:flex-row gap-6 items-start">
                     {/* Preview */}
-                    <div className="flex-shrink-0 w-24 h-24 rounded-lg border bg-slate-50 flex items-center justify-center overflow-hidden">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt="단체 로고" className="w-full h-full object-cover" />
-                      ) : (
-                        <Building2 className="h-8 w-8 text-muted-foreground" />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex-shrink-0 w-24 h-24 rounded-lg border bg-slate-50 flex items-center justify-center overflow-hidden">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="단체 로고" className="w-full h-full object-cover" />
+                        ) : (
+                          <Building2 className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      {logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setLogoUrl('')}
+                          className="text-[11px] text-rose-500 hover:text-rose-700 font-medium hover:underline cursor-pointer"
+                        >
+                          로고 삭제
+                        </button>
                       )}
                     </div>
 
