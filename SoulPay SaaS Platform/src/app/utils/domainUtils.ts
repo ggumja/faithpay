@@ -42,6 +42,19 @@ export function isSoulPayProduction(): boolean {
 }
 
 /**
+ * 현재 환경이 단체 관리자 전용 포털(admin.soulpay.kr 또는 soulpay-admin 프리뷰 등)인지 확인
+ */
+export function isAdminPortalDomain(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  return (
+    host.startsWith('admin.') ||
+    host.includes('soulpay-admin') ||
+    import.meta.env.BUILD_TARGET === 'admin'
+  );
+}
+
+/**
  * 현재 환경이 메인 소개/랜딩 도메인(soulpay.kr, www.soulpay.kr, soulpay.co.kr 등)인지 확인
  * - pay, admin, ops, partner, kiosk 등 서브도메인이 아닌 루트 도메인 접속 여부 판별
  */

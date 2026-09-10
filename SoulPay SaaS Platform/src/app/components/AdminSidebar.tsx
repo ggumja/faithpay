@@ -21,6 +21,7 @@ import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
 
 import { useAdminPermissions } from '../hooks/useAdminPermissions';
+import { isAdminPortalDomain, getPayPortalUrl } from '../utils/domainUtils';
 
 interface AdminSidebarProps {
   tenantSlug?: string;
@@ -33,18 +34,22 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const terms = useTenantTerms(currentTenant);
   const { canAccessMenu, getMenuPermission } = useAdminPermissions();
 
+  // admin.soulpay.kr 또는 URL에 /admin 프리픽스가 없는 단독 관리자 경로 환경 판별
+  const isDedicatedAdmin = isAdminPortalDomain() || !currentPath.includes('/admin');
+  const prefix = isDedicatedAdmin ? '' : '/admin';
+
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: '대시보드', path: `/admin` },
-    { id: 'donations', icon: Heart, label: terms.donationHistory, path: `/admin/donations` },
-    { id: 'recurring_pending', icon: Calendar, label: terms.recurringPending, path: `/admin/recurring-pending` },
-    { id: 'statistics', icon: BarChart3, label: '마감 통계', path: `/admin/statistics` },
-    { id: 'prayers', icon: MessageSquare, label: terms.prayer, path: `/admin/prayers` },
-    { id: 'menu', icon: FileText, label: terms.donationItems, path: `/admin/menu` },
-    { id: 'members', icon: Users, label: terms.memberManagement || '회원 관리', path: `/admin/members` },
-    { id: 'settlement', icon: DollarSign, label: '정산(추정) 집계', path: `/admin/settlement` },
-    { id: 'banners', icon: Image, label: '배너 관리', path: `/admin/banners` },
-    { id: 'accounts', icon: UserCheck, label: '관리자 계정 관리', path: `/admin/accounts` },
-    { id: 'settings', icon: Settings, label: '설정', path: `/admin/settings` },
+    { id: 'dashboard', icon: LayoutDashboard, label: '대시보드', path: prefix || '/' },
+    { id: 'donations', icon: Heart, label: terms.donationHistory, path: `${prefix}/donations` },
+    { id: 'recurring_pending', icon: Calendar, label: terms.recurringPending, path: `${prefix}/recurring-pending` },
+    { id: 'statistics', icon: BarChart3, label: '마감 통계', path: `${prefix}/statistics` },
+    { id: 'prayers', icon: MessageSquare, label: terms.prayer, path: `${prefix}/prayers` },
+    { id: 'menu', icon: FileText, label: terms.donationItems, path: `${prefix}/menu` },
+    { id: 'members', icon: Users, label: terms.memberManagement || '회원 관리', path: `${prefix}/members` },
+    { id: 'settlement', icon: DollarSign, label: '정산(추정) 집계', path: `${prefix}/settlement` },
+    { id: 'banners', icon: Image, label: '배너 관리', path: `${prefix}/banners` },
+    { id: 'accounts', icon: UserCheck, label: '관리자 계정 관리', path: `${prefix}/accounts` },
+    { id: 'settings', icon: Settings, label: '설정', path: `${prefix}/settings` },
   ];
 
   const accessibleMenuItems = menuItems.filter((item) => canAccessMenu(item.id));
@@ -53,7 +58,10 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     setCurrentAdmin(null);
     setCurrentTenant(null);
     toast.success('로그아웃되었습니다');
-    navigate('/admin/login');
+    const loginTarget = tenantSlug
+      ? (isDedicatedAdmin ? `/${tenantSlug}/login` : `/${tenantSlug}/admin/login`)
+      : (isDedicatedAdmin ? '/login' : '/admin/login');
+    navigate(loginTarget);
   };
 
   const getRoleName = (role: string) => {
@@ -119,8 +127,14 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
 
       <nav className="space-y-0.5 flex-1">
         {accessibleMenuItems.map((item) => {
-          const fullPath = tenantSlug ? `/${tenantSlug}${item.path}` : item.path;
-          const isActive = currentPath === fullPath;
+          const fullPath = tenantSlug
+            ? (item.path === '/' ? `/${tenantSlug}` : `/${tenantSlug}${item.path}`)
+            : item.path;
+          
+          // /gakwonsa/settings 및 /gakwonsa/admin/settings 양방향 활성화 지원
+          const normalizedCurrent = currentPath.replace(/\/admin(?=\/|$)/, '') || '/';
+          const normalizedFull = fullPath.replace(/\/admin(?=\/|$)/, '') || '/';
+          const isActive = currentPath === fullPath || normalizedCurrent === normalizedFull;
           const permLevel = getMenuPermission(item.id);
 
           return (
@@ -152,7 +166,14 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
       <div className="space-y-1.5">
         <button
           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
+          onClick={() => {
+            const payUrl = getPayPortalUrl(tenantSlug);
+            if (payUrl.startsWith('http')) {
+              window.open(payUrl, '_blank');
+            } else {
+              navigate(payUrl);
+            }
+          }}
         >
           <span className="truncate">{terms.publicPageLabel || '온라인 수납 페이지 보기'}</span>
           <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0 ml-1" />

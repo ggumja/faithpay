@@ -293,7 +293,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
 
   const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(null);
-  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
+  const [currentAdmin, setCurrentAdminState] = useState<AdminUser | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('soulpay_current_admin') || localStorage.getItem('faithpay_current_admin');
       if (saved) {
@@ -303,14 +303,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } catch (e) {}
       }
     }
-    return {
-      id: 'system_admin',
-      tenantId: 'system',
-      email: 'admin@soulpay.kr',
-      name: '시스템 최고 관리자',
-      role: 'system_admin',
-    };
+    return null;
   });
+
+  const setCurrentAdmin = useCallback((admin: AdminUser | null) => {
+    setCurrentAdminState(admin);
+    if (typeof window !== 'undefined') {
+      if (admin) {
+        localStorage.setItem('soulpay_current_admin', JSON.stringify(admin));
+      } else {
+        localStorage.removeItem('soulpay_current_admin');
+        localStorage.removeItem('faithpay_current_admin');
+      }
+    }
+  }, []);
 
 
   const fetchTenants = useCallback(async () => {
