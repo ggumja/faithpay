@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tenant } from '../context/AppContext';
 import { Button } from './ui/button';
-import { Printer, Download, X } from 'lucide-react';
+import { Printer, X, ShieldAlert, Search } from 'lucide-react';
+import { openDaumPostcode } from '../utils/daumPostcode';
 
 interface ReceiptData {
   receiptId: string;
@@ -23,7 +24,41 @@ interface Props {
   onClose: () => void;
 }
 
+function formatTaxDate(val: string): string {
+  if (!val) return new Date().toISOString().slice(0, 10);
+  const m = val.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (m) {
+    return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  }
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().slice(0, 10);
+  }
+  return val.split(' ')[0] || val;
+}
+
+function formatTaxLongDate(val: string): string {
+  if (!val) {
+    const now = new Date();
+    return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+  }
+  const m = val.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (m) {
+    return `${m[1]}년 ${parseInt(m[2])}월 ${parseInt(m[3])}일`;
+  }
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  }
+  const now = new Date();
+  return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+}
+
 export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
+  const [donorName, setDonorName] = useState(data.donorName || '');
+  const [donorIdNumber, setDonorIdNumber] = useState(data.donorIdNumber || '');
+  const [donorAddress, setDonorAddress] = useState(data.donorAddress || '');
+
   const handlePrint = () => {
     window.print();
   };
@@ -39,12 +74,65 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
             <span>📄</span> 국세청 양식 기부금 영수증 {data.isCancelled ? '(결제 취소)' : ''}
           </h3>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="text-black bg-white hover:bg-slate-100 font-semibold" onClick={handlePrint}>
+            <Button size="sm" variant="outline" className="text-black bg-white hover:bg-slate-100 font-semibold cursor-pointer" onClick={handlePrint}>
               <Printer className="w-4 h-4 mr-1.5" /> 인쇄 / PDF 저장
             </Button>
-            <Button size="sm" variant="ghost" className="text-white hover:bg-slate-800" onClick={onClose}>
+            <Button size="sm" variant="ghost" className="text-white hover:bg-slate-800 cursor-pointer" onClick={onClose}>
               <X className="w-5 h-5" />
             </Button>
+          </div>
+        </div>
+
+        {/* 🛡️ 국세청 인쇄 전 임시 인적사항 입력 바 (인쇄 시 자동 숨김) */}
+        <div className="bg-amber-50 border-b border-amber-200 p-4 print:hidden space-y-2.5">
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+            <ShieldAlert className="h-4 w-4 text-amber-600 flex-shrink-0" />
+            <span>국세청 제출용 기부자 인적사항 입력 (임시 반영)</span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-tight">
+            * 「개인정보 보호법」 제24조의2에 따라 주민등록번호는 서버 및 데이터베이스에 절대 저장되지 않으며, 현재 인쇄/PDF 저장용으로만 브라우저 메모리에 일시 반영됩니다.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                기부자 주민등록번호 (또는 사업자등록번호)
+              </label>
+              <input
+                type="text"
+                placeholder="예: 880101-1234567"
+                value={donorIdNumber}
+                onChange={(e) => setDonorIdNumber(e.target.value)}
+                className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 placeholder:text-slate-400 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                기부자 주소
+              </label>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  placeholder="기부자 주소를 입력하세요"
+                  value={donorAddress}
+                  onChange={(e) => setDonorAddress(e.target.value)}
+                  className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 placeholder:text-slate-400"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    openDaumPostcode((res) => {
+                      setDonorAddress(res.address);
+                    });
+                  }}
+                  className="h-8 px-2 text-[11px] font-bold whitespace-nowrap bg-white hover:bg-slate-50 cursor-pointer"
+                >
+                  <Search className="h-3 w-3 mr-1" />
+                  검색
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -69,7 +157,7 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
           {/* 일련번호 */}
           <div className="flex justify-between text-xs mb-4">
             <div><strong>발급번호:</strong> {data.receiptId}</div>
-            <div><strong>발급일자:</strong> {data.date.split(' ')[0]}</div>
+            <div><strong>발급일자:</strong> {formatTaxDate(data.date)}</div>
           </div>
 
           {/* 1. 기부자 정보 */}
@@ -84,15 +172,19 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
             <tbody>
               <tr>
                 <td className="border border-black p-2 bg-gray-50 w-1/4 font-semibold">성 명</td>
-                <td className="border border-black p-2 w-1/4">{data.donorName}</td>
+                <td className="border border-black p-2 w-1/4 font-bold">{donorName || data.donorName}</td>
                 <td className="border border-black p-2 bg-gray-50 w-1/4 font-semibold">주민등록번호</td>
-                <td className="border border-black p-2 w-1/4">{data.donorIdNumber || '880101-1******'}</td>
+                <td className="border border-black p-2 w-1/4 font-mono font-medium">
+                  {donorIdNumber || <span className="text-slate-400">미입력 (상단 입력)</span>}
+                </td>
               </tr>
               <tr>
                 <td className="border border-black p-2 bg-gray-50 font-semibold">전화번호</td>
-                <td className="border border-black p-2">{data.donorPhone || '010-****-****'}</td>
+                <td className="border border-black p-2 font-mono">{data.donorPhone || '-'}</td>
                 <td className="border border-black p-2 bg-gray-50 font-semibold">주 소</td>
-                <td className="border border-black p-2">{data.donorAddress || '서울특별시 종로구 (상세주소 미기재)'}</td>
+                <td className="border border-black p-2">
+                  {donorAddress || <span className="text-slate-400">주소 미입력 (상단 입력)</span>}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -109,15 +201,15 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
             <tbody>
               <tr>
                 <td className="border border-black p-2 bg-gray-50 w-1/4 font-semibold">단 체 명</td>
-                <td className="border border-black p-2 w-1/4">{tenant.name}</td>
+                <td className="border border-black p-2 w-1/4 font-bold">{tenant.name}</td>
                 <td className="border border-black p-2 bg-gray-50 w-1/4 font-semibold">고유번호 (사업자)</td>
-                <td className="border border-black p-2 w-1/4">120-82-*****</td>
+                <td className="border border-black p-2 w-1/4 font-mono">{tenant.businessNumber || tenant.taxNumber || '고유번호 미등록'}</td>
               </tr>
               <tr>
                 <td className="border border-black p-2 bg-gray-50 font-semibold">대 표 자</td>
                 <td className="border border-black p-2">{tenant.contact?.name || tenant.representativeName || (tenant.terminology?.leaderTitle || (tenant.religionType === 'buddhist' ? '주지스님' : tenant.religionType === 'catholic' ? '주임신부' : tenant.religionType === 'protestant' ? '담임목사' : '대표자'))}</td>
                 <td className="border border-black p-2 bg-gray-50 font-semibold">소 재 지</td>
-                <td className="border border-black p-2">{tenant.address || '서울특별시 종로구 인사동길 45'}</td>
+                <td className="border border-black p-2">{tenant.address || '소재지 미등록'}</td>
               </tr>
             </tbody>
           </table>
@@ -143,8 +235,8 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
                 <td className="border border-black p-2">종교단체 기부금</td>
                 <td className="border border-black p-2">지정기부금 (41)</td>
                 <td className="border border-black p-2 font-medium">{data.itemName}</td>
-                <td className="border border-black p-2">{data.date.split(' ')[0]}</td>
-                <td className="border border-black p-2 font-bold text-right pr-4">
+                <td className="border border-black p-2 font-mono">{formatTaxDate(data.date)}</td>
+                <td className="border border-black p-2 font-bold text-right pr-4 font-mono">
                   {data.isCancelled ? (
                     <>
                       <span className="line-through text-gray-400 mr-1.5">{data.amount.toLocaleString('ko-KR')} 원</span>
@@ -157,7 +249,7 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
               </tr>
               <tr className="bg-gray-50 font-bold">
                 <td colSpan={4} className="border border-black p-2 text-right pr-4">합 계</td>
-                <td className="border border-black p-2 text-right pr-4 text-sm">
+                <td className="border border-black p-2 text-right pr-4 text-sm font-mono">
                   {data.isCancelled ? (
                     <span className="text-red-600 font-bold">0 원 (승인 취소)</span>
                   ) : (
@@ -183,8 +275,8 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
                 </>
               )}
             </p>
-            <div className="font-bold text-base mt-6">
-              {data.date.split(' ')[0].replace(/-/g, '년 ').replace(/년 (\d+)/, '년 $1월 ')}일
+            <div className="font-bold text-base mt-6 font-mono">
+              {formatTaxLongDate(data.date)}
             </div>
           </div>
 
@@ -207,7 +299,7 @@ export default function TaxReceiptModal({ tenant, data, onClose }: Props) {
 
         {/* 하단 닫기 버튼 */}
         <div className="bg-gray-50 px-6 py-3 border-t text-right print:hidden">
-          <Button variant="outline" size="sm" onClick={onClose}>닫기</Button>
+          <Button variant="outline" size="sm" onClick={onClose} className="cursor-pointer">닫기</Button>
         </div>
 
       </div>

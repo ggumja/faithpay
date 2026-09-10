@@ -80,6 +80,71 @@ function formatPhoneNumber(phone?: string): string {
   return phone;
 }
 
+function formatReceiptIssueDate(val?: string | number): string {
+  if (!val) return new Date().toLocaleDateString('ko-KR');
+  if (typeof val === 'string') {
+    const m = val.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    if (m) {
+      return `${m[1]}. ${m[2]}. ${m[3]}.`;
+    }
+  }
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('ko-KR');
+  }
+  return new Date().toLocaleDateString('ko-KR');
+}
+
+function formatPaymentDateTime(dateStr?: string, createdAt?: string): string {
+  if (dateStr && dateStr.trim()) return dateStr;
+  if (createdAt) {
+    const d = new Date(createdAt);
+    if (!isNaN(d.getTime())) return d.toLocaleString('ko-KR');
+  }
+  return new Date().toLocaleString('ko-KR');
+}
+
+function formatReceiptStampDate(val?: string | number): string {
+  if (!val) {
+    const now = new Date();
+    return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+  }
+  if (typeof val === 'string') {
+    const m = val.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    if (m) {
+      return `${m[1]}년 ${parseInt(m[2])}월 ${parseInt(m[3])}일`;
+    }
+  }
+  const d = new Date(val);
+  if (!isNaN(d.getTime())) {
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  }
+  const now = new Date();
+  return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+}
+
+function formatReceiptNumber(id: string, dateVal?: string): string {
+  let ymd = '';
+  if (dateVal) {
+    const m = typeof dateVal === 'string' ? dateVal.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/) : null;
+    if (m) {
+      ymd = `${m[1]}${m[2].padStart(2, '0')}${m[3].padStart(2, '0')}`;
+    } else {
+      const d = new Date(dateVal);
+      if (!isNaN(d.getTime())) {
+        ymd = d.toISOString().slice(0, 10).replace(/-/g, '');
+      }
+    }
+  }
+  if (!ymd) {
+    const now = new Date();
+    ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  }
+  const cleanId = (id || '').replace(/[^0-9a-zA-Z]/g, '');
+  const suffix = cleanId.length > 8 ? cleanId.slice(-8) : cleanId || '000001';
+  return `REC-${ymd}-${suffix}`;
+}
+
 export default function DonationReceiptModal({ tenant, donation, onClose, onOpenTaxReceipt }: Props) {
   const terms = useTenantTerms(tenant);
   const isCancelled = donation.paymentStatus === 'cancelled' || donation.status === 'cancelled';
@@ -173,11 +238,15 @@ export default function DonationReceiptModal({ tenant, donation, onClose, onOpen
           <div className="flex justify-between text-xs text-zinc-600 bg-zinc-50 p-3 rounded-lg border border-zinc-100">
             <div>
               <span className="font-semibold text-zinc-500">영수증 번호: </span>
-              <span className="font-mono font-bold text-zinc-900">{donation.id}</span>
+              <span className="font-mono font-bold text-zinc-900">
+                {formatReceiptNumber(donation.id, donation.createdAt || donation.date)}
+              </span>
             </div>
             <div>
               <span className="font-semibold text-zinc-500">발행일시: </span>
-              <span className="font-bold text-zinc-900">{new Date(donation.createdAt || donation.date || Date.now()).toLocaleDateString('ko-KR')}</span>
+              <span className="font-bold text-zinc-900">
+                {formatReceiptIssueDate(donation.createdAt || donation.date)}
+              </span>
             </div>
           </div>
 
@@ -204,6 +273,12 @@ export default function DonationReceiptModal({ tenant, donation, onClose, onOpen
               </span>
             </div>
             <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
+              <span className="text-zinc-500 font-medium">결 제 일 시</span>
+              <span className="col-span-2 font-semibold text-zinc-800 font-mono">
+                {formatPaymentDateTime(donation.date, donation.createdAt)}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
               <span className="text-zinc-500 font-medium">접 수 채 널</span>
               <span className="col-span-2 font-medium text-zinc-800">
                 {donation.deviceType === 'KIOSK' ? '현장 키오스크 (KIOSK)' : '온라인 모바일/웹 (Mobile)'}
@@ -212,7 +287,11 @@ export default function DonationReceiptModal({ tenant, donation, onClose, onOpen
             <div className="grid grid-cols-3 py-2 border-b border-zinc-100">
               <span className="text-zinc-500 font-medium">결제 승인번호</span>
               <span className="col-span-2 font-mono font-bold text-zinc-800">
-                {donation.approveNo || donation.transactionId || donation.id}
+                {donation.approveNo && donation.approveNo !== donation.id
+                  ? donation.approveNo
+                  : (donation.transactionId && donation.transactionId !== donation.id
+                      ? donation.transactionId
+                      : `승인완료 (주문: ${donation.id})`)}
               </span>
             </div>
             {isCancelled && (
@@ -277,7 +356,9 @@ export default function DonationReceiptModal({ tenant, donation, onClose, onOpen
             
             <div className="mt-6 flex items-center justify-center gap-6">
               <div className="text-right">
-                <p className="text-xs text-zinc-500">{new Date(donation.createdAt || donation.date || Date.now()).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="text-xs text-zinc-500">
+                  {formatReceiptStampDate(donation.createdAt || donation.date)}
+                </p>
                 <p className="text-sm font-bold text-zinc-900 mt-1">{tenant?.name || 'SoulPay (소울페이)'}</p>
               </div>
 

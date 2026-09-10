@@ -61,6 +61,12 @@ export interface HistoryItem {
   isRecurring: boolean;
   deviceType?: 'KIOSK' | 'WEB_MOBILE';
   paymentMethod?: string;
+  createdAt?: string;
+  approveNo?: string;
+  transactionId?: string;
+  cancelApproveNo?: string;
+  cancelTransactionId?: string;
+  prayerText?: string;
 }
 
 export default function MyDonations() {
@@ -331,7 +337,8 @@ export default function MyDonations() {
           name: d.donorName || d.donor_name || d.name,
           phone: d.donorPhone || d.donor_phone || cleanPhone,
           date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-          rawDate: d.createdAt,
+          rawDate: d.createdAt || d.created_at,
+          createdAt: d.createdAt || d.created_at,
           status: isCancelled ? '결제취소' : '결제완료',
           paymentStatus: rawStatus,
           cancelReason: d.cancelReason || d.cancel_reason,
@@ -339,6 +346,11 @@ export default function MyDonations() {
           isRecurring: d.isRecurring,
           deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
           paymentMethod: cleanPaymentMethod(d.paymentMethod),
+          approveNo: d.approveNo || d.approve_no,
+          transactionId: d.transactionId || d.transaction_id,
+          cancelApproveNo: d.cancelApproveNo || d.cancel_approve_no,
+          cancelTransactionId: d.cancelTransactionId || d.cancel_transaction_id,
+          prayerText: d.prayerText || d.prayer_text,
         };
       });
 
