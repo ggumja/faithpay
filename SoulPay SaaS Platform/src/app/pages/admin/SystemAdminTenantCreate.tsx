@@ -153,13 +153,11 @@ export default function SystemAdminTenantCreate() {
 
   // 다음 우편번호 검색
   const handleSearchAddress = () => {
-    openDaumPostcode({
-      onComplete: (data) => {
-        setAddress(data.address);
-        setTimeout(() => {
-          addressDetailRef.current?.focus();
-        }, 100);
-      },
+    openDaumPostcode((data) => {
+      setAddress(data.address);
+      setTimeout(() => {
+        addressDetailRef.current?.focus();
+      }, 100);
     });
   };
 
