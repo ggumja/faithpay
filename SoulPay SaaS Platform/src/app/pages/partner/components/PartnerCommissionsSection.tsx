@@ -362,15 +362,15 @@ export function PartnerCommissionsSection({
         </p>
       </div>
 
-      {/* ⚠️ 정산 추정액 안내 배너 (Financial Disclaimer) */}
+      {/* ⚠️ PG Split 분할 정산 및 추정액 안내 배너 */}
       <div className="p-4 rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-amber-50/30 text-amber-950 shadow-xs flex items-start gap-3">
         <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed space-y-1">
           <p className="font-bold text-amber-950 flex items-center gap-1.5">
-            <span>안내: 본 화면의 모든 수수료 및 정산 금액은 플랫폼 결제 성공 건을 기준으로 단순 집계한 <strong>정산 추정 데이터</strong>입니다.</span>
+            <span>안내: 정산은 SoulPay가 직접 수행하지 않으며, PG사(나노솔루션 · 토스페이먼츠)의 자동 Split(분할) 정산 시스템을 통해 각 등록 계좌로 직접 지급됩니다.</span>
           </p>
           <p className="text-amber-800/90 text-[11.5px]">
-            SoulPay는 금융망/PG사의 실제 입금 계좌를 직접 통제하지 않으므로, 카드사별 영세/중소 우대수수료 환급, 승인 취소·환불 처리 시점, 정산 주기(D+N), 제세공과금(원천세/부가세) 등에 따라 실제 최종 통장 입금액과 차이가 발생할 수 있습니다.
+            본 화면의 모든 수수료 및 정산 금액은 플랫폼 결제 승인 원장을 기반으로 사전 약정된 요율에 따라 자동 산출된 <strong>추정 집계 명세</strong>입니다. 가맹 단체(테넌트)별 PG 심사 계약 조건(D+1, D+2, 주정산 등) 및 결제 수단, 승인 취소·상계, 카드사 우대수수료 환급 등에 따라 실제 PG사에서 최종 분할 입금되는 시점 및 금액에 차이가 발생할 수 있습니다.
           </p>
         </div>
       </div>
