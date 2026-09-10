@@ -42,7 +42,7 @@ const fmtDT = (s: string | undefined | null) => {
 
 /* ─── 스타일 상수 ─── */
 const S = {
-  wrap: 'space-y-6 max-w-7xl mx-auto',
+  wrap: 'space-y-6 w-full',
   header: 'flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-[var(--hm-border)]',
   title: 'text-[20px] font-bold text-[var(--hm-ink)] tracking-tight',
   sub: 'text-[12.5px] text-[var(--hm-ink-3)] mt-0.5',
