@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Briefcase, Eye, EyeOff, ArrowRight, ArrowLeft, Lock, User, Search, CheckCircle2, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, Lock, User, Search, CheckCircle2, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { partnerAPI } from '../../api/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -139,8 +139,14 @@ export default function PartnerLogin() {
       <div className="w-full max-w-sm relative z-10 space-y-6">
         {/* 로고 및 헤더 */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-md shadow-blue-500/20 text-white mb-1">
-            <Briefcase className="h-7 w-7" />
+          <div className="flex justify-center mb-1">
+            <a href="/" className="inline-block">
+              <img
+                src="/images/logo_soulpay.png"
+                alt="SoulPay"
+                style={{ height: 38, width: 'auto', objectFit: 'contain' }}
+              />
+            </a>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">파트너 포털 로그인</h1>
           <p className="text-xs text-slate-500 font-medium">영업 총판 · 대리점 · 에이전트 전용 접속</p>

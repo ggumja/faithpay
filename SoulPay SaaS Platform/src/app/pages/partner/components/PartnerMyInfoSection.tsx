@@ -101,29 +101,29 @@ export function PartnerMyInfoSection({
   });
 
   return (
-    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
+    <div className="p-6 sm:p-8 space-y-6 bg-slate-50 min-h-full font-sans">
       <div>
-        <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
           {isAgency ? '대리점 정보 및 기본 수수료 설정' : '내 정보 수정'}
         </h1>
-        <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">정산 계좌 정보 및 기본 수수료 설정을 관리합니다.</p>
+        <p className="text-xs text-slate-500 mt-1 font-medium">정산 계좌 정보 및 기본 수수료 설정을 관리합니다.</p>
       </div>
 
       {/* 대리점 전용 기본 수수료율 설정 카드 */}
       {isAgency && (
-        <Card className="border-purple-200 bg-purple-50/40">
-          <CardHeader className="pb-3 border-b border-purple-100">
-            <CardTitle className="text-[14px] font-bold text-purple-950">
+        <Card className="border-slate-200 bg-white shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="p-5 pb-3 border-b border-slate-100 bg-slate-50/50">
+            <CardTitle className="text-sm font-bold text-slate-900">
               대리점 기본 수수료율 설정 (내 수수료 %)
             </CardTitle>
-            <CardDescription className="text-[11.5px] text-purple-800">
+            <CardDescription className="text-xs text-slate-500 mt-0.5">
               소속 영업자 등록 시 기본으로 부여되는 대리점 마진율입니다. (영업자 관리 탭에서 영업자별로 개별 변경 가능)
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <Label className="text-[13px] font-bold text-purple-900">기본 대리점 마진율</Label>
+                <Label className="text-xs font-bold text-slate-700">기본 대리점 마진율</Label>
                 <p className="text-[11px] text-slate-500 mt-0.5">신규 영업자 체결 시 기본 적용 수수료율</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -134,16 +134,16 @@ export function PartnerMyInfoSection({
                   max="3"
                   value={editAgencyRate}
                   onChange={e => setEditAgencyRate(parseFloat(e.target.value) || 0)}
-                  className="w-24 h-9 text-right font-bold text-[14px] text-purple-900 bg-white border-purple-300"
+                  className="w-24 text-center font-mono font-bold text-slate-900 rounded-xl"
                 />
-                <span className="text-[14px] font-bold text-purple-950">%</span>
+                <span className="text-xs font-bold text-slate-600">%</span>
               </div>
             </div>
 
             <div className="flex justify-end pt-1">
               <Button
                 size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl h-9 px-4"
                 onClick={async () => {
                   try {
                     // DB API 호출 (Single Source of Truth)

@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays, Search, Building2, CreditCard, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays, Search, Building2, CreditCard, RotateCcw, X, Info, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
@@ -346,36 +346,49 @@ export function PartnerCommissionsSection({
 
   /* ── 탭 정의 ── */
   const TABS: { key: MainTab; icon: any; label: string; badge?: number }[] = [
-    { key: 'commission',  icon: TrendingUp, label: '수수료 발생 내역',   badge: filteredComm.length },
-    { key: 'settlement',  icon: Receipt,    label: '정산 수령 내역',     badge: filteredSettlements.length },
-    ...(isAgency ? [{ key: 'agentPayout' as MainTab, icon: Users, label: '영업자별 지급 현황', badge: filteredAgentBreakdowns.length }] : []),
+    { key: 'commission',  icon: TrendingUp, label: '수수료 발생 내역 (추정)',   badge: filteredComm.length },
+    { key: 'settlement',  icon: Receipt,    label: '정산 수령 내역 (추정)',     badge: filteredSettlements.length },
+    ...(isAgency ? [{ key: 'agentPayout' as MainTab, icon: Users, label: '영업자별 지급 현황 (추정)', badge: filteredAgentBreakdowns.length }] : []),
   ];
 
   return (
-    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
+    <div className="p-6 sm:p-8 space-y-6 bg-slate-50 min-h-full font-sans">
 
       {/* 헤더 */}
       <div>
-        <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">정산 관리</h1>
-        <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">
-          수수료 발생 원장 · 메인 관리자 입금 확정 · {isAgency ? '영업자별 하위 지급 현황' : '내 정산 수령 내역'}
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">정산(추정) 관리</h1>
+        <p className="text-xs text-slate-500 mt-1 font-medium">
+          수수료 발생 원장 · 실측 결제 승인 기준 추정 집계 · {isAgency ? '영업자별 하위 지급 현황(추정)' : '내 정산 수령 내역(추정)'}
         </p>
       </div>
 
+      {/* ⚠️ PG Split 분할 정산 및 추정액 안내 배너 */}
+      <div className="p-4 rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-amber-50/30 text-amber-950 shadow-xs flex items-start gap-3">
+        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="text-xs leading-relaxed space-y-1">
+          <p className="font-bold text-amber-950 flex items-center gap-1.5">
+            <span>안내: 정산은 SoulPay가 직접 수행하지 않으며, PG사(나노솔루션 · 토스페이먼츠)의 자동 Split(분할) 정산 시스템을 통해 각 등록 계좌로 직접 지급됩니다.</span>
+          </p>
+          <p className="text-amber-800/90 text-[11.5px]">
+            본 화면의 모든 수수료 및 정산 금액은 플랫폼 결제 승인 원장을 기반으로 사전 약정된 요율에 따라 자동 산출된 <strong>추정 집계 명세</strong>입니다. 가맹 단체(테넌트)별 PG 심사 계약 조건(D+1, D+2, 주정산 등) 및 결제 수단, 승인 취소·상계, 카드사 우대수수료 환급 등에 따라 실제 PG사에서 최종 분할 입금되는 시점 및 금액에 차이가 발생할 수 있습니다.
+          </p>
+        </div>
+      </div>
+
       {/* 메인 탭 */}
-      <div className="flex items-center gap-1 bg-[var(--hm-paper)] border border-[var(--hm-border)] p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/80">
         {TABS.map(({ key, icon: Icon, label, badge }) => {
           const on = mainTab === key;
           return (
             <button key={key} onClick={() => setMainTab(key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12.5px] font-semibold transition-all cursor-pointer border-0 ${
-                on ? 'bg-emerald-600 text-white shadow' : 'bg-transparent text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)]'
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border-0 ${
+                on ? 'bg-blue-600 text-white shadow-xs' : 'bg-transparent text-slate-600 hover:text-slate-900'
               }`}>
-              <Icon size={13} className={on ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
+              <Icon size={14} className={on ? 'text-white' : 'text-slate-400'} />
               {label}
               {badge !== undefined && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
-                  on ? 'bg-white/20 text-white' : 'bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)]'
+                  on ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                 }`}>{badge}</span>
               )}
             </button>
@@ -507,20 +520,6 @@ export function PartnerCommissionsSection({
                 </CardContent>
               </Card>
             ))}
-          </div>
-
-          {/* 정산 주기 안내 배너 */}
-          <div className="p-4 bg-slate-900 text-white rounded-xl flex items-center justify-between gap-3 shadow">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-500 text-white font-bold text-[10px]">D+1 영업일 자동 정산</Badge>
-                <span className="text-xs font-bold text-slate-200">다음 입금 예정일: 익일 09:00</span>
-              </div>
-              <p className="text-[11px] text-slate-400">* 토스페이먼츠 정산 주기에 따라 카드 승인 후 D+1 영업일에 계좌 자동 송금됩니다.</p>
-            </div>
-            <span className="text-[11px] font-mono px-2.5 py-1 bg-slate-800 rounded-lg text-emerald-400 font-bold border border-slate-700 shrink-0">
-              ⚡ Payouts v2
-            </span>
           </div>
 
           {/* 사업자 유형별 세무 산식 */}

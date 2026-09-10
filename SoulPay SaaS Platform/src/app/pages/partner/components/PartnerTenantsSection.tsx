@@ -41,16 +41,16 @@ export function PartnerTenantsSection({ partner, myTenants, subAgents }: Partner
     });
 
   return (
-    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
+    <div className="p-6 sm:p-8 space-y-6 bg-slate-50 min-h-full font-sans">
       {/* 헤더 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">관리 단체 목록</h1>
-          <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">내가 유치하거나 관할 영업자가 유치한 사찰 · 교회 가맹점 현황</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">관리 단체 목록</h1>
+          <p className="text-xs text-slate-500 mt-1 font-medium">내가 유치하거나 관할 영업자가 유치한 사찰 · 교회 · 비영리 가맹점 현황</p>
         </div>
         <Button
           size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl h-10 px-4 shadow-xs cursor-pointer border-0 transition-all active:scale-[0.98] shrink-0"
           onClick={() => navigate('/partner/tenants/new')}
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" /> 신규 가맹점 개설

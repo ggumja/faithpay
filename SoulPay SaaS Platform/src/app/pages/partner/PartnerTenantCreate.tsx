@@ -1,30 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useApp, Tenant } from '../../context/AppContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import {
-  Building2, ArrowLeft, CheckCircle2, Key, AlertTriangle, TrendingUp,
-  Paperclip, Upload, FileText, X, Search, Landmark, ShieldCheck,
-  Palette, UserCheck, ChevronDown, ChevronUp, FileCheck, MapPin, Mail, Phone, Lock
+  ArrowLeft, Check, CheckCircle2, ShieldCheck,
+  Search, Lock, MapPin, Mail, Phone, Upload, X, FileText,
+  AlertTriangle, ChevronRight, Building, CreditCard, UserCheck, KeyRound
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { partnerAPI, Partner, settingsAPI } from '../../api/client';
 import { convertKoreanToQwerty } from '../../utils/koreanConverter';
 import { openDaumPostcode } from '../../utils/daumPostcode';
 
-// pg_rates·platform_margin은 settingsAPI(system_settings DB)에서 비동기 로드
-// 컴포넌트 내 useEffect에서 처리
-
 const RELIGION_PRESETS = [
-  { key: 'buddhist',   label: '⛩️ 불교 (사찰/암자)',  color: '#c2410c', desc: '보시 · 축원문 · 불자' },
-  { key: 'protestant', label: '⛪ 기독교 (교회)',      color: '#3D47B8', desc: '헌금 · 기도제목 · 성도' },
-  { key: 'catholic',   label: '✝️ 천주교 (성당)',      color: '#1e40af', desc: '봉헌 · 미사지향 · 교우' },
-  { key: 'charity',    label: '🤝 구호/사회복지',     color: '#059669', desc: '후원금 · 응원 메시지 · 후원자' },
-  { key: 'general',    label: '🏛️ 일반 비영리/기타',   color: '#4b5563', desc: '기부금 · 후원글 · 기부자' },
+  { key: 'buddhist',   label: '불교 (사찰 · 암자)',       badge: '사찰 전용', color: '#C2410C', desc: '보시 · 축원문 · 불자' },
+  { key: 'protestant', label: '기독교 (교회)',           badge: '교회 전용', color: '#2563EB', desc: '헌금 · 기도제목 · 성도' },
+  { key: 'catholic',   label: '천주교 (성당)',           badge: '성당 전용', color: '#1E40AF', desc: '봉헌 · 미사지향 · 교우' },
+  { key: 'charity',    label: '구호 · 사회복지재단',      badge: 'NPO 재단', color: '#059669', desc: '후원금 · 응원글 · 후원자' },
+  { key: 'general',    label: '비영리 공익법인 · 기타',   badge: '공익법인', color: '#4B5563', desc: '기부금 · 후원글 · 기부자' },
 ] as const;
 
 const POPULAR_BANKS = [
@@ -37,6 +33,7 @@ export default function PartnerTenantCreate() {
   const addressDetailRef = useRef<HTMLInputElement>(null);
   const { tenants, addTenant } = useApp();
 
+  const [activeTab, setActiveTab] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [myPartner, setMyPartner] = useState<Partner | null>(null);
 
@@ -68,7 +65,7 @@ export default function PartnerTenantCreate() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#c2410c');
+  const [primaryColor, setPrimaryColor] = useState('#2563EB');
 
   // 2. 관리자 계정 정보
   const [adminName, setAdminName] = useState('');
@@ -110,11 +107,7 @@ export default function PartnerTenantCreate() {
   const [delegateIdFile, setDelegateIdFile] = useState<string | null>(null);
   const [delegateIdFileName, setDelegateIdFileName] = useState('');
 
-  // 접이식 섹션 토글
-  const [showDocsSection, setShowDocsSection] = useState(true);
-  const [showDelegateSection, setShowDelegateSection] = useState(false);
-
-  // 파트너 세션 불러오기
+  // 파트너 세션 로드
   useEffect(() => {
     let sessionPartner: any = null;
     try {
@@ -150,14 +143,12 @@ export default function PartnerTenantCreate() {
     });
   }, []);
 
-  // 종교 유형 변경 시 기본 컬러 동기화
   const handleSelectReligion = (key: typeof religionType) => {
     setReligionType(key);
     const preset = RELIGION_PRESETS.find(p => p.key === key);
     if (preset) setPrimaryColor(preset.color);
   };
 
-  // 슬러그 한글 변환
   const handleSlugChange = (val: string) => {
     const { converted, hasKorean } = convertKoreanToQwerty(val);
     const clean = converted.toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -165,46 +156,41 @@ export default function PartnerTenantCreate() {
     setSlugStatus({ checked: false, isAvailable: false, message: '' });
 
     if (hasKorean) {
-      toast.info(`💡 한글 입력을 영문 단축 주소('${clean}')로 자동 변환하였습니다.`, {
-        id: 'slug-convert-toast',
-        duration: 2000,
-      });
+      toast.info(`영문 주소('${clean}')로 자동 변환되었습니다.`, { id: 'slug-convert-toast', duration: 1800 });
     }
   };
 
-  // 슬러그 중복 확인
   const handleCheckDuplicateSlug = () => {
     const cleanSlug = slug.trim().toLowerCase();
     if (!cleanSlug) {
       toast.error('단축 주소를 입력해 주세요.');
-      setSlugStatus({ checked: true, isAvailable: false, message: '🔴 단축 주소를 입력해 주세요.' });
+      setSlugStatus({ checked: true, isAvailable: false, message: '단축 주소를 입력해 주세요.' });
       return;
     }
     if (cleanSlug.length < 2) {
       toast.error('단축 주소는 최소 2자 이상이어야 합니다.');
-      setSlugStatus({ checked: true, isAvailable: false, message: '🔴 최소 2자 이상 입력해 주세요.' });
+      setSlugStatus({ checked: true, isAvailable: false, message: '최소 2자 이상 입력해 주세요.' });
       return;
     }
 
     const isDup = tenants.some(t => t.slug?.toLowerCase() === cleanSlug);
     if (isDup) {
-      toast.error(`'${cleanSlug}' 주소는 이미 사용 중입니다.`);
+      toast.error(`'${cleanSlug}' 주소는 이미 등록되어 있습니다.`);
       setSlugStatus({
         checked: true,
         isAvailable: false,
-        message: `🔴 '${cleanSlug}' 주소는 이미 다른 단체에서 사용 중입니다.`,
+        message: `'${cleanSlug}' 주소는 이미 다른 단체에서 사용 중입니다.`,
       });
     } else {
-      toast.success(`'${cleanSlug}' 주소는 즉시 사용 가능합니다!`);
+      toast.success(`'${cleanSlug}' 주소는 즉시 사용 가능합니다.`);
       setSlugStatus({
         checked: true,
         isAvailable: true,
-        message: `🟢 '${cleanSlug}' 주소는 즉시 사용 가능합니다! (soulpay.kr/${cleanSlug})`,
+        message: `'${cleanSlug}' 주소 사용 가능 (soulpay.kr/${cleanSlug})`,
       });
     }
   };
 
-  // 파일 업로드 공통 핸들러
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     setFile: (val: string | null) => void,
@@ -213,7 +199,7 @@ export default function PartnerTenantCreate() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('파일 크기는 10MB 이하만 첨부 가능합니다.');
+      toast.error('파일 크기는 10MB 이하만 가능합니다.');
       return;
     }
     setFileName(file.name);
@@ -225,34 +211,35 @@ export default function PartnerTenantCreate() {
     reader.readAsDataURL(file);
   };
 
-  // ── Guardrail 계산 ──────────────────────────────
+  // Guardrail 계산
   const partnerRate = (myPartner?.commissionRate || (myPartner as any)?.agencyRate || 0.5);
   const floorRate   = +(feeConfig.pgCost + feeConfig.platformMargin + partnerRate).toFixed(2);
   const spread      = +(Math.max(0, contractRate - floorRate)).toFixed(2);
   const isValid     = contractRate >= floorRate;
-  // ─────────────────────────────────────────────────
 
   const backUrl = myPartner?.role === 'sales_agent' ? '/agent/dashboard' : '/partner/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { toast.error('단체 명칭을 입력해 주세요.'); return; }
-    if (!slug.trim()) { toast.error('고유 단축 주소(URL)를 입력해 주세요.'); return; }
-    if (!adminName.trim()) { toast.error('대표 관리자 성함을 입력해 주세요.'); return; }
-    if (!adminEmail.trim()) { toast.error('로그인에 사용할 관리자 이메일을 입력해 주세요.'); return; }
-    if (!adminPhone.trim()) { toast.error('대표 관리자 휴대폰 번호를 입력해 주세요.'); return; }
+    if (!name.trim()) { toast.error('단체 명칭을 입력해 주세요.'); setActiveTab(1); return; }
+    if (!slug.trim()) { toast.error('고유 단축 주소(URL)를 입력해 주세요.'); setActiveTab(1); return; }
+    if (!address.trim()) { toast.error('소재지 주소를 입력해 주세요.'); setActiveTab(1); return; }
+    if (!phone.trim()) { toast.error('공식 대표 전화번호를 입력해 주세요.'); setActiveTab(1); return; }
+    if (!accountNumber.trim()) { toast.error('정산 계좌번호를 입력해 주세요.'); setActiveTab(2); return; }
+    if (!adminName.trim()) { toast.error('대표 관리자 성함을 입력해 주세요.'); setActiveTab(3); return; }
+    if (!adminEmail.trim()) { toast.error('관리자 이메일을 입력해 주세요.'); setActiveTab(3); return; }
+    if (!adminPhone.trim()) { toast.error('대표 관리자 휴대폰 번호를 입력해 주세요.'); setActiveTab(3); return; }
 
     const isDup = tenants.some(t => t.slug?.toLowerCase() === slug.trim().toLowerCase());
     if (isDup) {
       toast.error(`'${slug}' 주소는 이미 등록된 중복 주소입니다. 다른 주소를 설정해 주세요.`);
+      setActiveTab(1);
       return;
     }
 
     if (!isValid) {
-      toast.error(
-        `계약 수수료율(${contractRate}%)이 하한선(${floorRate}%)보다 낮습니다.\n` +
-        `역마진 방지를 위해 ${floorRate}% 이상으로 설정해 주세요.`
-      );
+      toast.error(`계약 수수료율(${contractRate}%)이 하한선(${floorRate}%)보다 낮습니다.`);
+      setActiveTab(3);
       return;
     }
 
@@ -348,7 +335,7 @@ export default function PartnerTenantCreate() {
       await addTenant(newTenant);
       setIsSubmitting(false);
       toast.success(
-        `🎉 [${name}] 단체 입점 신청이 완료되었습니다!\n계약 수수료율 ${contractRate}% · 영업 순마진 +${spread}%`
+        `[${name}] 단체 입점 신청이 완료되었습니다.\n계약 수수료율 ${contractRate}% (영업 마진 +${spread}%)`
       );
       navigate(backUrl);
     } catch {
@@ -358,124 +345,227 @@ export default function PartnerTenantCreate() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 flex justify-center items-center">
-      <div className="w-full max-w-3xl space-y-5">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#191F28] flex flex-col justify-between font-sans antialiased">
+      
+      {/* ── 1. Bank-grade Sticky Header ── */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#E5E8EB]">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(backUrl)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#4E5968] hover:text-[#191F28] transition-colors p-1.5 rounded-lg hover:bg-[#F2F4F6] cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>대시보드로</span>
+            </button>
+            <div className="h-4 w-px bg-[#E5E8EB]" />
+            <a href="/" className="flex items-center">
+              <img
+                src="/images/logo_soulpay.png"
+                alt="SoulPay"
+                style={{ height: 28, width: 'auto', objectFit: 'contain' }}
+              />
+            </a>
+            <span className="hidden sm:inline-flex items-center text-xs font-bold text-[#4E5968] bg-[#F2F4F6] px-2.5 py-1 rounded-md">
+              원스탑 가맹 개설 창구
+            </span>
+          </div>
 
-        {/* 상단 네비게이션 & 파트너 상태 배너 */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={() => navigate(backUrl)} className="text-slate-600 hover:text-slate-900">
-            <ArrowLeft className="h-4 w-4 mr-1.5" />
-            {myPartner?.role === 'sales_agent' ? '영업자 대시보드로 돌아가기' : '대리점 대시보드로 돌아가기'}
-          </Button>
-          {myPartner && (
-            <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 bg-purple-50 border border-purple-200 text-purple-900 rounded-full">
-              <span>🏢 귀속 파트너: <strong>{myPartner.name}</strong></span>
-              <span className="font-mono text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded text-[11px]">{myPartner.referralCode}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {myPartner && (
+              <div className="flex items-center gap-2 text-xs bg-[#EFF6FF] border border-[#DBEAFE] text-[#1D4ED8] px-3 py-1.5 rounded-lg font-medium">
+                <span className="hidden sm:inline text-[#6B7684]">담당 영업자:</span>
+                <strong className="font-semibold text-[#191F28]">{myPartner.name}</strong>
+                <span className="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-[#DBEAFE] font-bold">
+                  {myPartner.referralCode}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── 2. Bank Security Notice Bar ── */}
+      <div className="bg-[#FFFFFF] border-b border-[#E5E8EB] py-2.5 px-5">
+        <div className="max-w-5xl mx-auto flex items-center justify-between text-xs text-[#6B7684]">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[#2563EB]" />
+            <span className="font-medium text-[#333D4B]">
+              본 페이지는 토스페이먼츠 PG 정식 심사 기준에 맞춘 공식 가맹점 접수 창구입니다.
+            </span>
+          </div>
+          <div className="hidden md:flex items-center gap-4 text-[11px] font-mono text-[#8B95A1]">
+            <span>PCI-DSS 준수</span>
+            <span>·</span>
+            <span>256-bit SSL 금융 암호화</span>
+            <span>·</span>
+            <span>실시간 가맹 심사 연동</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Main Form Container ── */}
+      <main className="max-w-5xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 flex-1">
+        
+        {/* Page Title & Guide */}
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#191F28] tracking-tight">
+            가맹단체 신규 입점 신청 및 계정 개설
+          </h1>
+          <p className="text-[#4E5968] text-sm mt-1.5 leading-relaxed">
+            사찰, 교회, 복지재단 현장에서 기본 정보부터 정산 계좌, 인증 서류, 관리자 계정까지 원스탑으로 등록합니다.
+          </p>
         </div>
 
-        {/* 메인 폼 카드 */}
-        <Card className="shadow-xl border-slate-200 overflow-hidden bg-white">
-          <CardHeader className="bg-slate-900 text-white p-6">
-            <div className="flex items-center gap-3.5">
-              <div className="p-3 bg-emerald-500 text-slate-950 rounded-2xl shadow-md">
-                <Building2 className="h-6 w-6" />
-              </div>
-              <div>
-                <CardTitle className="text-xl font-bold">가맹단체 신규 입점 신청 및 계정 개설</CardTitle>
-                <CardDescription className="text-slate-300 text-xs mt-1">
-                  플랫폼 표준 가맹 신청의 모든 항목(기본정보, 정산계좌, 인증서류, 세무, 관리자 계정)을 입력하여 본인 하위 단체로 즉시 귀속 등록합니다.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <form onSubmit={handleSubmit}>
-            <CardContent className="p-6 space-y-7">
-
-              {/* ──────────────── 1. 단체 유형 ──────────────── */}
-              <div className="space-y-2.5">
-                <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="text-emerald-600 font-black">1.</span> 단체/종교 유형 선택 *
-                </Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {RELIGION_PRESETS.map(({ key, label, desc, color }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => handleSelectReligion(key as any)}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                        religionType === key
-                          ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/20 text-slate-900 shadow-xs'
-                          : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'
-                      }`}
-                    >
-                      <div className="font-bold text-xs">{label}</div>
-                      <div className="text-[10.5px] text-slate-400 mt-0.5">{desc}</div>
-                    </button>
-                  ))}
+        {/* 3-Step Navigation Tabs */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
+          {[
+            { step: 1, title: '단체 기본 정보', desc: '종교 유형 · 명칭 · 주소', icon: Building },
+            { step: 2, title: '정산 계좌 및 세무 서류', desc: '은행 계좌 · 고유번호증', icon: CreditCard },
+            { step: 3, title: '관리자 계정 및 계약', desc: '대표 계정 · 수수료 마진', icon: KeyRound },
+          ].map(({ step, title, desc, icon: Icon }) => {
+            const isActive = activeTab === step;
+            const isCompleted = activeTab > step;
+            return (
+              <button
+                key={step}
+                type="button"
+                onClick={() => setActiveTab(step as 1 | 2 | 3)}
+                className={`p-3.5 sm:p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-white border-[#2563EB] shadow-xs ring-1 ring-[#2563EB]'
+                    : isCompleted
+                    ? 'bg-[#F9FAFB] border-[#D1D6DB] text-[#333D4B]'
+                    : 'bg-white border-[#E5E8EB] text-[#8B95A1] hover:border-[#D1D6DB]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                    isActive ? 'bg-[#2563EB] text-white' : isCompleted ? 'bg-[#EFF6FF] text-[#2563EB]' : 'bg-[#F2F4F6] text-[#6B7684]'
+                  }`}>
+                    STEP 0{step}
+                  </span>
+                  {isCompleted ? (
+                    <Check className="h-4 w-4 text-[#2563EB]" strokeWidth={3} />
+                  ) : (
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-[#2563EB]' : 'text-[#8B95A1]'}`} />
+                  )}
                 </div>
-              </div>
+                <div className={`font-bold text-xs sm:text-sm ${isActive ? 'text-[#191F28]' : 'text-[#333D4B]'}`}>
+                  {title}
+                </div>
+                <div className="hidden sm:block text-[11px] text-[#8B95A1] mt-0.5 truncate">
+                  {desc}
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-              {/* ──────────────── 2. 단체 기본 정보 ──────────────── */}
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="text-emerald-600 font-black">2.</span> 단체 기본 정보 *
-                </Label>
+        {/* ── Form Card ── */}
+        <form onSubmit={handleSubmit} className="bg-white border border-[#E5E8EB] rounded-2xl overflow-hidden">
+          
+          <div className="p-6 sm:p-8 space-y-8">
+            
+            {/* ════════ STEP 1. 단체 기본 정보 ════════ */}
+            {activeTab === 1 && (
+              <div className="space-y-6">
+                
+                <div className="border-b border-[#F2F4F6] pb-4">
+                  <h2 className="text-lg font-bold text-[#191F28] flex items-center gap-2">
+                    <Building className="h-5 w-5 text-[#2563EB]" />
+                    <span>단체 유형 및 기본 정보</span>
+                  </h2>
+                  <p className="text-xs text-[#6B7684] mt-1">
+                    단체에 맞는 전용 용어와 온라인 모금 페이지의 기본 정보를 설정합니다.
+                  </p>
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 종교/단체 유형 선택 */}
+                <div className="space-y-2.5">
+                  <Label className="text-xs font-bold text-[#333D4B]">
+                    단체 / 종교 유형 선택 *
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {RELIGION_PRESETS.map(({ key, label, badge, desc }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => handleSelectReligion(key as any)}
+                        className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                          religionType === key
+                            ? 'border-[#2563EB] bg-[#EFF6FF]/60 ring-1 ring-[#2563EB] text-[#191F28]'
+                            : 'border-[#E5E8EB] hover:border-[#D1D6DB] bg-white text-[#4E5968]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs">{label}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white border border-[#E5E8EB] text-[#6B7684] font-medium">
+                            {badge}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#8B95A1] mt-1">{desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 단체 명칭 & 단축 URL */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600">사찰/교회/단체 명칭 *</Label>
+                    <Label className="text-xs font-bold text-[#333D4B]">사찰 / 교회 / 단체 명칭 *</Label>
                     <Input
-                      placeholder="예: 각원사 / 기쁨의교회 / 한마음복지재단"
+                      placeholder="예: 각원사 / 사랑의교회 / 한마음복지재단"
                       value={name}
                       onChange={e => setName(e.target.value)}
+                      className="h-11 bg-[#F9FAFB] border-[#E5E8EB] focus:bg-white focus:border-[#2563EB] text-sm"
                       required
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold text-slate-600">전용 단축 접속 URL *</Label>
+                      <Label className="text-xs font-bold text-[#333D4B]">전용 단축 접속 URL *</Label>
                       <button
                         type="button"
                         onClick={handleCheckDuplicateSlug}
-                        className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 underline cursor-pointer border-0 bg-transparent"
+                        className="text-xs font-semibold text-[#2563EB] hover:underline cursor-pointer border-none bg-transparent"
                       >
                         중복 확인
                       </button>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-slate-400 font-mono">soulpay.kr/</span>
+                      <span className="text-xs text-[#8B95A1] font-mono px-2 py-2.5 bg-[#F2F4F6] rounded-lg border border-[#E5E8EB]">
+                        soulpay.kr/
+                      </span>
                       <Input
                         placeholder="gakwonsa"
                         value={slug}
                         onChange={e => handleSlugChange(e.target.value)}
-                        className="font-mono text-xs font-bold"
+                        className="h-11 font-mono text-sm font-semibold bg-[#F9FAFB] border-[#E5E8EB] focus:bg-white focus:border-[#2563EB]"
                         required
                       />
                     </div>
                     {slugStatus.message && (
-                      <p className={`text-[11px] ${slugStatus.isAvailable ? 'text-emerald-600 font-bold' : 'text-red-500 font-medium'}`}>
+                      <p className={`text-[11px] mt-1 ${slugStatus.isAvailable ? 'text-[#2563EB] font-semibold' : 'text-red-600 font-medium'}`}>
                         {slugStatus.message}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* 소재지 주소 (다음 우편번호 검색 연동) */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                {/* 소재지 주소 (다음 우편번호 연동) */}
+                <div className="space-y-2 pt-2">
+                  <Label className="text-xs font-bold text-[#333D4B] flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-[#6B7684]" />
                     <span>소재지 주소 *</span>
                   </Label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="주소 검색을 클릭해 주세요"
+                      placeholder="주소 검색 버튼을 눌러 도로명 주소를 입력하세요"
                       value={address}
                       onChange={e => setAddress(e.target.value)}
-                      className="text-xs"
+                      className="h-11 bg-[#F9FAFB] border-[#E5E8EB] text-sm"
                       required
                     />
                     <Button
@@ -485,110 +575,118 @@ export default function PartnerTenantCreate() {
                         setAddress(data.address);
                         addressDetailRef.current?.focus();
                       })}
-                      className="shrink-0 text-xs"
+                      className="h-11 px-4 text-xs font-semibold border-[#D1D6DB] hover:bg-[#F2F4F6] shrink-0 cursor-pointer"
                     >
                       <Search className="h-3.5 w-3.5 mr-1" /> 주소 검색
                     </Button>
                   </div>
                   <Input
                     ref={addressDetailRef}
-                    placeholder="상세 주소 (예: 본당 2층, 대웅전 옆 교무실 등)"
+                    placeholder="상세 주소 입력 (예: 본당 2층, 대웅전 옆 종무소 등)"
                     value={addressDetail}
                     onChange={e => setAddressDetail(e.target.value)}
-                    className="text-xs mt-1.5"
+                    className="h-11 bg-[#F9FAFB] border-[#E5E8EB] text-sm"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 대표 연락처 & 이메일 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    <Label className="text-xs font-bold text-[#333D4B] flex items-center gap-1">
+                      <Phone className="h-3.5 w-3.5 text-[#6B7684]" />
                       <span>공식 대표 전화번호 *</span>
                     </Label>
                     <Input
                       placeholder="02-1234-5678"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
+                      className="h-11 bg-[#F9FAFB] border-[#E5E8EB] text-sm"
                       required
-                      className="text-xs"
                     />
                   </div>
+
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5 text-slate-400" />
-                      <span>대표/담당자 이메일</span>
+                    <Label className="text-xs font-bold text-[#333D4B] flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5 text-[#6B7684]" />
+                      <span>대표 공식 이메일 (선택)</span>
                     </Label>
                     <Input
                       type="email"
                       placeholder="contact@gakwonsa.kr"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="text-xs"
+                      className="h-11 bg-[#F9FAFB] border-[#E5E8EB] text-sm"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-600">단체 소개글 / 신도 환영 인사 (선택)</Label>
+                {/* 단체 소개글 */}
+                <div className="space-y-1.5 pt-2">
+                  <Label className="text-xs font-bold text-[#333D4B]">단체 소개 및 환영 인사 (선택)</Label>
                   <Textarea
-                    placeholder="홈페이지 메인에 노출될 단체 소개 및 환영 인사를 입력해 주세요."
+                    placeholder="신도와 후원자가 접속했을 때 모금 페이지 상단에 노출될 소개글입니다."
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     rows={2}
-                    className="text-xs resize-none"
+                    className="bg-[#F9FAFB] border-[#E5E8EB] text-xs leading-relaxed"
                   />
                 </div>
 
-                {/* 테마 컬러 커스텀 */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                    <Palette className="h-3.5 w-3.5 text-slate-400" />
-                    <span>단체 대표 브랜드 컬러</span>
-                  </Label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={e => setPrimaryColor(e.target.value)}
-                      className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
-                    />
-                    <Input
-                      value={primaryColor}
-                      onChange={e => setPrimaryColor(e.target.value)}
-                      className="w-28 text-xs font-mono font-bold"
-                    />
-                    <span className="text-[11px] text-slate-400">수납 웹페이지 및 모바일 결제창의 메인 테마 색상으로 적용됩니다.</span>
-                  </div>
+                <div className="flex justify-end pt-4">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (!name.trim() || !slug.trim() || !address.trim() || !phone.trim()) {
+                        toast.error('필수 항목(명칭, 단축 URL, 주소, 대표전화)을 모두 입력해 주세요.');
+                        return;
+                      }
+                      setActiveTab(2);
+                    }}
+                    className="h-11 px-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-lg cursor-pointer"
+                  >
+                    다음 단계 (정산 계좌 및 서류) <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
                 </div>
+
               </div>
+            )}
 
-              {/* ──────────────── 3. 정산 계좌 정보 ──────────────── */}
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Landmark className="h-4 w-4 text-emerald-600" />
-                  <span className="text-emerald-600 font-black">3.</span> 정산 입금 수령 계좌 정보 *
-                </Label>
+            {/* ════════ STEP 2. 정산 계좌 & 세무 증빙 서류 ════════ */}
+            {activeTab === 2 && (
+              <div className="space-y-6">
+                
+                <div className="border-b border-[#F2F4F6] pb-4">
+                  <h2 className="text-lg font-bold text-[#191F28] flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-[#2563EB]" />
+                    <span>정산 입금 계좌 및 세무 증빙 서류</span>
+                  </h2>
+                  <p className="text-xs text-[#6B7684] mt-1">
+                    신도들의 봉헌금 및 기부금이 안전하게 정산 입금될 공식 단체 명의 계좌와 증빙을 등록합니다.
+                  </p>
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 계좌 정보 */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600">거래 은행 *</Label>
+                    <Label className="text-xs font-bold text-[#333D4B]">거래 은행 *</Label>
                     <select
                       value={bankName}
                       onChange={e => setBankName(e.target.value)}
-                      className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full h-11 rounded-lg border border-[#E5E8EB] bg-[#F9FAFB] px-3 text-sm focus:outline-none focus:border-[#2563EB]"
                     >
                       {POPULAR_BANKS.map(b => (
                         <option key={b} value={b}>{b}</option>
                       ))}
                     </select>
                   </div>
+
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs font-semibold text-slate-600">정산 입금 계좌번호 *</Label>
+                    <Label className="text-xs font-bold text-[#333D4B]">정산 입금 계좌번호 *</Label>
                     <Input
-                      placeholder="숫자 및 하이픈(-)"
+                      placeholder="하이픈(-) 없이 숫자만 입력"
                       value={accountNumber}
                       onChange={e => setAccountNumber(e.target.value)}
-                      className="font-mono text-xs font-bold"
+                      className="h-11 font-mono text-sm bg-[#F9FAFB] border-[#E5E8EB] focus:bg-white focus:border-[#2563EB]"
                       required
                     />
                   </div>
@@ -596,42 +694,39 @@ export default function PartnerTenantCreate() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600">예금주명 (단체명 또는 대표자명) *</Label>
+                    <Label className="text-xs font-bold text-[#333D4B]">예금주명 (단체명 또는 대표자명) *</Label>
                     <Input
                       placeholder={name || '단체명과 일치'}
                       value={accountHolder}
                       onChange={e => setAccountHolder(e.target.value)}
-                      className="text-xs"
+                      className="h-11 bg-[#F9FAFB] border-[#E5E8EB] text-sm"
                       required
                     />
                   </div>
 
                   {/* 통장 사본 파일 첨부 */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                      <Paperclip className="h-3 w-3 text-slate-400" />
-                      <span>통장 사본 첨부 (선택)</span>
-                    </Label>
+                    <Label className="text-xs font-bold text-[#333D4B]">통장 사본 첨부 (선택)</Label>
                     {bankbookFile ? (
-                      <div className="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-                        <span className="font-semibold text-emerald-900 truncate max-w-[200px] flex items-center gap-1">
-                          <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                      <div className="flex items-center justify-between p-2.5 bg-[#EFF6FF] border border-[#DBEAFE] rounded-lg text-xs">
+                        <span className="font-semibold text-[#1D4ED8] truncate max-w-[200px] flex items-center gap-1.5">
+                          <FileText className="h-4 w-4" />
                           {bankbookFileName}
                         </span>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-slate-400 hover:text-red-600 cursor-pointer"
+                          className="h-6 w-6 p-0 text-[#6B7684] hover:text-red-600"
                           onClick={() => { setBankbookFile(null); setBankbookFileName(''); }}
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
                     ) : (
-                      <label className="flex items-center justify-center gap-1.5 p-2 border border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:border-emerald-400 hover:bg-emerald-50/40 cursor-pointer transition-all">
-                        <Upload className="h-3.5 w-3.5 text-slate-500" />
-                        <span>통장 사본 파일 첨부</span>
+                      <label className="flex items-center justify-center gap-1.5 h-11 border border-dashed border-[#D1D6DB] rounded-lg text-xs font-semibold text-[#4E5968] hover:border-[#2563EB] hover:bg-[#EFF6FF]/40 cursor-pointer transition-all bg-[#F9FAFB]">
+                        <Upload className="h-3.5 w-3.5 text-[#6B7684]" />
+                        <span>통장 사본 파일 선택 (10MB 이하)</span>
                         <input
                           type="file"
                           accept="image/*,.pdf"
@@ -642,404 +737,393 @@ export default function PartnerTenantCreate() {
                     )}
                   </div>
                 </div>
-              </div>
 
-              {/* ──────────────── 4. 세무 및 단체 증빙 서류 ──────────────── */}
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <ShieldCheck className="h-4 w-4 text-purple-600" />
-                    <span className="text-emerald-600 font-black">4.</span> 세무 및 단체 증빙 서류
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setShowDocsSection(v => !v)}
-                    className="text-xs font-bold text-purple-700 flex items-center gap-0.5 cursor-pointer border-0 bg-transparent"
-                  >
-                    {showDocsSection ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    {showDocsSection ? '접기' : '상세 열기'}
-                  </button>
-                </div>
+                {/* 세무 증빙 서류 (고유번호증 / 사업자등록증) */}
+                <div className="pt-3 border-t border-[#F2F4F6] space-y-4">
+                  <div className="text-xs font-bold text-[#333D4B]">
+                    세무 및 비영리 단체 증빙
+                  </div>
 
-                {showDocsSection && (
-                  <div className="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* 고유번호증 번호 & 사본 */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">고유번호증 번호 (비영리 10자리) *</Label>
-                        <Input
-                          placeholder="예: 240-82-12345"
-                          value={uniqueNumber}
-                          onChange={e => setUniqueNumber(e.target.value)}
-                          className="font-mono text-xs font-bold bg-white"
-                        />
-                        <div className="pt-1">
-                          {uniqueNumberFile ? (
-                            <div className="flex items-center justify-between p-2 bg-purple-50 border border-purple-200 rounded-lg text-xs">
-                              <span className="font-semibold text-purple-900 truncate max-w-[180px] flex items-center gap-1">
-                                <FileText className="h-3.5 w-3.5 text-purple-600" />
-                                {uniqueNumberFileName}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-slate-400 hover:text-red-600 cursor-pointer"
-                                onClick={() => { setUniqueNumberFile(null); setUniqueNumberFileName(''); }}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <label className="flex items-center justify-center gap-1.5 p-2 border border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-600 bg-white hover:border-purple-400 hover:bg-purple-50/40 cursor-pointer transition-all">
-                              <Upload className="h-3.5 w-3.5 text-slate-500" />
-                              <span>고유번호증 사본 첨부 (선택)</span>
-                              <input
-                                type="file"
-                                accept="image/*,.pdf"
-                                className="hidden"
-                                onChange={e => handleFileUpload(e, setUniqueNumberFile, setUniqueNumberFileName)}
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 수익사업용 사업자등록번호 & 사본 */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">수익사업 사업자등록번호 (선택)</Label>
-                        <Input
-                          placeholder="예: 240-81-67890 (바자회/판매 시)"
-                          value={businessRegistrationNumber}
-                          onChange={e => setBusinessRegistrationNumber(e.target.value)}
-                          className="font-mono text-xs bg-white"
-                        />
-                        <div className="pt-1">
-                          {businessRegistrationFile ? (
-                            <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs">
-                              <span className="font-semibold text-blue-900 truncate max-w-[180px] flex items-center gap-1">
-                                <FileText className="h-3.5 w-3.5 text-blue-600" />
-                                {businessRegistrationFileName}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-slate-400 hover:text-red-600 cursor-pointer"
-                                onClick={() => { setBusinessRegistrationFile(null); setBusinessRegistrationFileName(''); }}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <label className="flex items-center justify-center gap-1.5 p-2 border border-dashed border-slate-300 rounded-lg text-xs font-semibold text-slate-600 bg-white hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer transition-all">
-                              <Upload className="h-3.5 w-3.5 text-slate-500" />
-                              <span>사업자등록증 사본 첨부 (선택)</span>
-                              <input
-                                type="file"
-                                accept="image/*,.pdf"
-                                className="hidden"
-                                onChange={e => handleFileUpload(e, setBusinessRegistrationFile, setBusinessRegistrationFileName)}
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 대표자 및 정관/인증 서류 */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200/80">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">대표자 성명</Label>
-                        <Input
-                          placeholder="성불 주지스님 / 김목사"
-                          value={representativeName}
-                          onChange={e => setRepresentativeName(e.target.value)}
-                          className="text-xs bg-white"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">정관 / 회칙 사본</Label>
-                        {bylawsFile ? (
-                          <div className="flex items-center justify-between p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs">
-                            <span className="truncate max-w-[130px] font-semibold text-slate-800">{bylawsFileName}</span>
-                            <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setBylawsFile(null); setBylawsFileName(''); }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 고유번호증 */}
+                    <div className="space-y-1.5 p-4 rounded-xl border border-[#E5E8EB] bg-[#F9FAFB]">
+                      <Label className="text-xs font-semibold text-[#333D4B]">고유번호증 번호 (비영리 10자리)</Label>
+                      <Input
+                        placeholder="예: 240-82-12345"
+                        value={uniqueNumber}
+                        onChange={e => setUniqueNumber(e.target.value)}
+                        className="h-10 font-mono text-xs bg-white"
+                      />
+                      <div className="pt-1.5">
+                        {uniqueNumberFile ? (
+                          <div className="flex items-center justify-between p-2 bg-[#EFF6FF] border border-[#DBEAFE] rounded-lg text-xs">
+                            <span className="font-semibold text-[#1D4ED8] truncate max-w-[180px] flex items-center gap-1">
+                              <FileText className="h-3.5 w-3.5" />
+                              {uniqueNumberFileName}
+                            </span>
+                            <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setUniqueNumberFile(null); setUniqueNumberFileName(''); }}>
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-1 p-2 border border-dashed border-slate-300 bg-white rounded-lg text-xs text-slate-600 cursor-pointer hover:bg-slate-50">
-                            <Upload className="h-3 w-3" /> <span>정관 파일</span>
-                            <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setBylawsFile, setBylawsFileName)} />
+                          <label className="flex items-center justify-center gap-1.5 py-2 border border-dashed border-[#D1D6DB] rounded-lg text-xs font-semibold text-[#4E5968] bg-white hover:border-[#2563EB] cursor-pointer">
+                            <Upload className="h-3.5 w-3.5" /> <span>고유번호증 사본 파일</span>
+                            <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setUniqueNumberFile, setUniqueNumberFileName)} />
                           </label>
                         )}
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">대표자 임명/재직 증명서</Label>
-                        {representativeCertFile ? (
-                          <div className="flex items-center justify-between p-2 bg-slate-100 border border-slate-300 rounded-lg text-xs">
-                            <span className="truncate max-w-[130px] font-semibold text-slate-800">{representativeCertFileName}</span>
-                            <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setRepresentativeCertFile(null); setRepresentativeCertFileName(''); }}>
+                    </div>
+
+                    {/* 수익사업 사업자등록증 */}
+                    <div className="space-y-1.5 p-4 rounded-xl border border-[#E5E8EB] bg-[#F9FAFB]">
+                      <Label className="text-xs font-semibold text-[#333D4B]">수익사업 사업자등록번호 (선택)</Label>
+                      <Input
+                        placeholder="예: 240-81-67890 (바자회/물품 판매 시)"
+                        value={businessRegistrationNumber}
+                        onChange={e => setBusinessRegistrationNumber(e.target.value)}
+                        className="h-10 font-mono text-xs bg-white"
+                      />
+                      <div className="pt-1.5">
+                        {businessRegistrationFile ? (
+                          <div className="flex items-center justify-between p-2 bg-[#EFF6FF] border border-[#DBEAFE] rounded-lg text-xs">
+                            <span className="font-semibold text-[#1D4ED8] truncate max-w-[180px] flex items-center gap-1">
+                              <FileText className="h-3.5 w-3.5" />
+                              {businessRegistrationFileName}
+                            </span>
+                            <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setBusinessRegistrationFile(null); setBusinessRegistrationFileName(''); }}>
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-1 p-2 border border-dashed border-slate-300 bg-white rounded-lg text-xs text-slate-600 cursor-pointer hover:bg-slate-50">
-                            <Upload className="h-3 w-3" /> <span>임명 증명서</span>
-                            <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setRepresentativeCertFile, setRepresentativeCertFileName)} />
+                          <label className="flex items-center justify-center gap-1.5 py-2 border border-dashed border-[#D1D6DB] rounded-lg text-xs font-semibold text-[#4E5968] bg-white hover:border-[#2563EB] cursor-pointer">
+                            <Upload className="h-3.5 w-3.5" /> <span>사업자등록증 사본 파일</span>
+                            <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setBusinessRegistrationFile, setBusinessRegistrationFileName)} />
                           </label>
                         )}
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* ──────────────── 5. 대리인 신청 정보 (선택 토글) ──────────────── */}
-              <div className="space-y-3 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
+                  {/* 대표자 성명 & 정관 사본 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-[#333D4B]">대표자 성명 (스님 / 담임목사 / 이사장)</Label>
+                      <Input
+                        placeholder="대표자 실명 입력"
+                        value={representativeName}
+                        onChange={e => setRepresentativeName(e.target.value)}
+                        className="h-10 text-sm bg-[#F9FAFB]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-[#333D4B]">정관 / 회칙 사본 첨부 (선택)</Label>
+                      {bylawsFile ? (
+                        <div className="flex items-center justify-between p-2 bg-[#F2F4F6] border border-[#E5E8EB] rounded-lg text-xs">
+                          <span className="truncate max-w-[180px] font-semibold text-[#191F28]">{bylawsFileName}</span>
+                          <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setBylawsFile(null); setBylawsFileName(''); }}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center justify-center gap-1.5 h-10 border border-dashed border-[#D1D6DB] bg-[#F9FAFB] rounded-lg text-xs font-semibold text-[#4E5968] cursor-pointer hover:border-[#2563EB]">
+                          <Upload className="h-3.5 w-3.5" /> <span>정관 / 회칙 파일 선택</span>
+                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setBylawsFile, setBylawsFileName)} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 대리인 신청 체크박스 토글 */}
+                <div className="pt-3 border-t border-[#F2F4F6] space-y-3">
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       id="delegate-check"
                       checked={isDelegated}
                       onChange={e => setIsDelegated(e.target.checked)}
-                      className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                      className="w-4 h-4 text-[#2563EB] rounded cursor-pointer"
                     />
-                    <label htmlFor="delegate-check" className="text-xs font-bold text-slate-800 cursor-pointer flex items-center gap-1">
-                      <UserCheck className="h-4 w-4 text-indigo-600" />
-                      <span>대표자 외 대리인(총무/회계/사무국장) 위임 신청인 경우 체크</span>
+                    <label htmlFor="delegate-check" className="text-xs font-bold text-[#191F28] cursor-pointer flex items-center gap-1.5">
+                      <UserCheck className="h-4 w-4 text-[#2563EB]" />
+                      <span>대표자 외 대리인(총무스님 / 부목사 / 사무국장) 위임 신청인 경우 체크</span>
                     </label>
                   </div>
-                </div>
 
-                {isDelegated && (
-                  <div className="space-y-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-200">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">대리인 성명 *</Label>
-                        <Input
-                          placeholder="홍길동 총무 / 김간사"
-                          value={delegateName}
-                          onChange={e => setDelegateName(e.target.value)}
-                          className="text-xs bg-white"
-                        />
+                  {isDelegated && (
+                    <div className="p-4 bg-[#F9FAFB] border border-[#E5E8EB] rounded-xl space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-semibold text-[#333D4B]">대리인 성명 *</Label>
+                          <Input
+                            placeholder="홍길동 총무 / 김간사"
+                            value={delegateName}
+                            onChange={e => setDelegateName(e.target.value)}
+                            className="h-10 text-sm bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-semibold text-[#333D4B]">대리인 연락처 *</Label>
+                          <Input
+                            placeholder="010-9876-5432"
+                            value={delegatePhone}
+                            onChange={e => setDelegatePhone(e.target.value)}
+                            className="h-10 text-sm bg-white"
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">대리인 연락처 *</Label>
-                        <Input
-                          placeholder="010-9876-5432"
-                          value={delegatePhone}
-                          onChange={e => setDelegatePhone(e.target.value)}
-                          className="text-xs bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">위임장 사본 파일 첨부</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-[#333D4B]">위임장 사본 파일 첨부</Label>
                         {delegationLetterFile ? (
-                          <div className="flex items-center justify-between p-2 bg-indigo-100/70 border border-indigo-300 rounded-lg text-xs">
-                            <span className="truncate max-w-[180px] font-semibold text-indigo-950">{delegationLetterFileName}</span>
+                          <div className="flex items-center justify-between p-2 bg-white border border-[#E5E8EB] rounded-lg text-xs">
+                            <span className="truncate max-w-[200px] font-semibold text-[#191F28]">{delegationLetterFileName}</span>
                             <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setDelegationLetterFile(null); setDelegationLetterFileName(''); }}>
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
                         ) : (
-                          <label className="flex items-center justify-center gap-1.5 p-2 border border-dashed border-indigo-300 bg-white rounded-lg text-xs text-indigo-700 font-semibold cursor-pointer hover:bg-indigo-50">
-                            <Upload className="h-3.5 w-3.5" /> <span>위임장 사본 첨부</span>
+                          <label className="flex items-center justify-center gap-1.5 h-10 border border-dashed border-[#D1D6DB] bg-white rounded-lg text-xs font-semibold text-[#4E5968] cursor-pointer hover:border-[#2563EB]">
+                            <Upload className="h-3.5 w-3.5" /> <span>위임장 서류 첨부</span>
                             <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setDelegationLetterFile, setDelegationLetterFileName)} />
                           </label>
                         )}
                       </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">대리인 신분증 사본 첨부</Label>
-                        {delegateIdFile ? (
-                          <div className="flex items-center justify-between p-2 bg-indigo-100/70 border border-indigo-300 rounded-lg text-xs">
-                            <span className="truncate max-w-[180px] font-semibold text-indigo-950">{delegateIdFileName}</span>
-                            <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setDelegateIdFile(null); setDelegateIdFileName(''); }}>
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <label className="flex items-center justify-center gap-1.5 p-2 border border-dashed border-indigo-300 bg-white rounded-lg text-xs text-indigo-700 font-semibold cursor-pointer hover:bg-indigo-50">
-                            <Upload className="h-3.5 w-3.5" /> <span>대리인 신분증 사본 첨부</span>
-                            <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => handleFileUpload(e, setDelegateIdFile, setDelegateIdFileName)} />
-                          </label>
-                        )}
-                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ──────────────── 6. 대표 관리자 계정 생성 ──────────────── */}
-              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-4">
-                <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                  <Key className="w-4 h-4 text-amber-600" />
-                  <span className="text-emerald-600 font-black">5.</span> 사찰 주지스님 / 교회 담임목사님 관리자 계정 생성 *
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">대표 관리자 성함 *</Label>
-                    <Input
-                      placeholder="성불 주지스님 / 김목사"
-                      value={adminName}
-                      onChange={e => setAdminName(e.target.value)}
-                      required
-                      className="bg-white text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Mail className="h-3 w-3 text-amber-600" />
-                      <span>로그인 이메일 (아이디) *</span>
-                    </Label>
-                    <Input
-                      type="email"
-                      placeholder="admin@gakwonsa.kr"
-                      value={adminEmail}
-                      onChange={e => setAdminEmail(e.target.value)}
-                      required
-                      className="bg-white text-xs font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Phone className="h-3 w-3 text-amber-600" />
-                      <span>대표 휴대폰 번호 *</span>
-                    </Label>
-                    <Input
-                      placeholder="010-1234-5678"
-                      value={adminPhone}
-                      onChange={e => setAdminPhone(e.target.value)}
-                      required
-                      className="bg-white text-xs"
-                    />
-                  </div>
+                  )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <Lock className="h-3 w-3 text-amber-600" />
-                    <span>초기 로그인 임시 비밀번호 *</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={initialTempPassword}
-                      onChange={e => setInitialTempPassword(e.target.value)}
-                      className="font-mono bg-white font-bold text-amber-900 text-xs"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setInitialTempPassword(`fp${Math.floor(100000 + Math.random() * 900000)}`)}
-                      className="shrink-0 text-xs bg-white"
-                    >
-                      새 난수 생성
-                    </Button>
-                  </div>
-                  <p className="text-[11px] text-amber-800 mt-1">
-                    * 입점 승인 완료 즉시 주지스님/목사님 로그인 이메일(<strong>{adminEmail || '입력하신 이메일'}</strong>)과 휴대폰으로 로그인 접속 안내가 발송됩니다.
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab(1)}
+                    className="h-11 px-5 border-[#D1D6DB] text-[#4E5968] cursor-pointer"
+                  >
+                    이전 단계
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (!accountNumber.trim() || !accountHolder.trim()) {
+                        toast.error('정산 계좌번호와 예금주명을 입력해 주세요.');
+                        return;
+                      }
+                      setActiveTab(3);
+                    }}
+                    className="h-11 px-6 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-lg cursor-pointer"
+                  >
+                    다음 단계 (관리자 계정 및 계약) <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+
+              </div>
+            )}
+
+            {/* ════════ STEP 3. 관리자 계정 & 계약 수수료율 ════════ */}
+            {activeTab === 3 && (
+              <div className="space-y-6">
+                
+                <div className="border-b border-[#F2F4F6] pb-4">
+                  <h2 className="text-lg font-bold text-[#191F28] flex items-center gap-2">
+                    <KeyRound className="h-5 w-5 text-[#2563EB]" />
+                    <span>단체 관리자 계정 생성 및 가맹 계약 수수료율</span>
+                  </h2>
+                  <p className="text-xs text-[#6B7684] mt-1">
+                    단체 대표 관리자의 로그인 계정을 발급하고, 역마진 없는 적정 계약 수수료율을 지정합니다.
                   </p>
                 </div>
-              </div>
 
-              {/* ──────────────── 7. 가맹점 계약 수수료율 및 파트너 수익 Guardrail ──────────────── */}
-              <div className={`p-4 rounded-xl border space-y-3 ${
-                isValid ? 'bg-emerald-50/60 border-emerald-200' : 'bg-red-50/60 border-red-300'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4 text-emerald-600" />
-                    <span className="text-emerald-600 font-black">6.</span> 가맹단체 계약 수수료율 (%) *
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      type="number"
-                      step="0.1"
-                      min={floorRate}
-                      max={10}
-                      value={contractRate}
-                      onChange={e => setContractRate(parseFloat(e.target.value) || 0)}
-                      className={`w-20 h-8 text-right font-bold text-sm bg-white ${!isValid ? 'border-red-400 text-red-600' : ''}`}
-                    />
-                    <span className="text-sm font-bold text-slate-600">%</span>
+                {/* 관리자 계정 생성 */}
+                <div className="p-5 bg-[#F9FAFB] border border-[#E5E8EB] rounded-xl space-y-4">
+                  <div className="text-xs font-bold text-[#191F28] flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-[#2563EB]" />
+                    <span>사찰 주지스님 / 교회 담임목사님 로그인 계정 *</span>
                   </div>
-                </div>
 
-                {/* 수수료 구조 분해 바 */}
-                <div className="space-y-1.5">
-                  <div className="flex h-5 rounded-lg overflow-hidden text-[9.5px] font-bold shadow-2xs">
-                    <div
-                      className="bg-purple-200 text-purple-800 flex items-center justify-center px-2"
-                      style={{ width: `${(floorRate / Math.max(contractRate, floorRate)) * 100}%` }}
-                    >
-                      {myPartner?.role === 'master_agency' ? `영업자 베이스 ${floorRate}%` : `내 정산 베이스 ${floorRate}%`}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-[#333D4B]">대표 관리자 성함 *</Label>
+                      <Input
+                        placeholder="성불 주지스님 / 김목사"
+                        value={adminName}
+                        onChange={e => setAdminName(e.target.value)}
+                        className="h-11 bg-white text-sm"
+                        required
+                      />
                     </div>
-                    {isValid && spread > 0 && (
-                      <div className="bg-emerald-400 text-emerald-900 flex items-center justify-center flex-1 px-1">
-                        {myPartner?.role === 'master_agency' ? `영업 마진 +${spread}%` : `내 영업 순마진 +${spread}%`}
-                      </div>
-                    )}
-                    {!isValid && (
-                      <div className="bg-red-400 text-white flex items-center justify-center flex-1 px-1">
-                        하한선 미달 ❌
-                      </div>
-                    )}
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-[#333D4B]">로그인 이메일 (아이디) *</Label>
+                      <Input
+                        type="email"
+                        placeholder="admin@gakwonsa.kr"
+                        value={adminEmail}
+                        onChange={e => setAdminEmail(e.target.value)}
+                        className="h-11 bg-white text-sm font-medium"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-[#333D4B]">대표 휴대폰 번호 *</Label>
+                      <Input
+                        placeholder="010-1234-5678"
+                        value={adminPhone}
+                        onChange={e => setAdminPhone(e.target.value)}
+                        className="h-11 bg-white text-sm"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className={`font-semibold ${isValid ? 'text-slate-500' : 'text-red-600'}`}>
-                      {myPartner?.role === 'master_agency'
-                        ? `대리점 수수료율: ${partnerRate}% · 영업자 부여 베이스 하한선: ${floorRate}%`
-                        : `내 베이스 PG 수수료(하한선): ${floorRate}% (토스 1.5% + 플랫폼 0.5% + 대리점 0.5%)`}
-                    </span>
-                    {isValid ? (
-                      <span className="font-bold text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        {myPartner?.role === 'master_agency' ? `영업 마진 +${spread}%` : `내 영업 순마진 +${spread}%`}
-                      </span>
-                    ) : (
-                      <span className="font-bold text-red-600 flex items-center gap-1">
-                        <AlertTriangle className="h-3.5 w-3.5" /> {(floorRate - contractRate).toFixed(2)}% 부족
-                      </span>
-                    )}
+
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs font-semibold text-[#333D4B] flex items-center gap-1">
+                      <Lock className="h-3.5 w-3.5 text-[#6B7684]" />
+                      <span>초기 로그인 임시 비밀번호 *</span>
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={initialTempPassword}
+                        onChange={e => setInitialTempPassword(e.target.value)}
+                        className="h-11 font-mono bg-white font-bold text-sm text-[#191F28]"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setInitialTempPassword(`fp${Math.floor(100000 + Math.random() * 900000)}`)}
+                        className="h-11 px-4 text-xs font-semibold border-[#D1D6DB] bg-white hover:bg-[#F2F4F6] shrink-0"
+                      >
+                        난수 재발급
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-[#8B95A1] mt-1">
+                      입점 완료 즉시 관리자 이메일({adminEmail || '입력하신 이메일'})과 휴대폰으로 로그인 접속 정보가 전송됩니다.
+                    </p>
                   </div>
                 </div>
-              </div>
 
-            </CardContent>
-
-            <CardFooter className="bg-slate-50 p-6 border-t flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate(backUrl)}>
-                취소
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !isValid}
-                className={`font-bold px-7 h-10 ${
-                  isValid ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>신청서 DB 등록 중...</span>
+                {/* 가맹점 계약 수수료율 및 금융 가드레일 바 */}
+                <div className="p-5 bg-white border border-[#E5E8EB] rounded-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-[#191F28]">
+                        가맹단체 계약 수수료율 (%) *
+                      </div>
+                      <div className="text-[11px] text-[#6B7684] mt-0.5">
+                        토스 PG 원가({feeConfig.pgCost}%) + 본사 플랫폼 마진({feeConfig.platformMargin}%) + 파트너 베이스({partnerRate}%)
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min={floorRate}
+                        max={10}
+                        value={contractRate}
+                        onChange={e => setContractRate(parseFloat(e.target.value) || 0)}
+                        className={`w-24 h-11 text-right font-bold text-base bg-[#F9FAFB] border-[#E5E8EB] focus:bg-white focus:border-[#2563EB] ${
+                          !isValid ? 'border-red-400 text-red-600' : 'text-[#191F28]'
+                        }`}
+                      />
+                      <span className="text-base font-bold text-[#333D4B]">%</span>
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    <span>가맹단체 입점 신청 완료</span>
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
+
+                  {/* 금융 가드레일 분해 바 */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex h-6 rounded-lg overflow-hidden text-[10px] font-bold">
+                      <div
+                        className="bg-[#E5E8EB] text-[#4E5968] flex items-center justify-center px-2"
+                        style={{ width: `${(floorRate / Math.max(contractRate, floorRate)) * 100}%` }}
+                      >
+                        원가 베이스 하한선 {floorRate}%
+                      </div>
+                      {isValid && spread > 0 && (
+                        <div className="bg-[#2563EB] text-white flex items-center justify-center flex-1 px-1">
+                          영업 마진 +{spread}%
+                        </div>
+                      )}
+                      {!isValid && (
+                        <div className="bg-red-500 text-white flex items-center justify-center flex-1 px-1">
+                          하한선 미달 (역마진 경고)
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#6B7684]">
+                        기준 하한선: <strong className="text-[#191F28]">{floorRate}%</strong>
+                      </span>
+                      {isValid ? (
+                        <span className="font-bold text-[#2563EB] flex items-center gap-1">
+                          <CheckCircle2 className="h-4 w-4" />
+                          영업 순마진 +{spread}% 확보 완료
+                        </span>
+                      ) : (
+                        <span className="font-bold text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="h-4 w-4" />
+                          {(floorRate - contractRate).toFixed(2)}% 부족 (상향 필요)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab(2)}
+                    className="h-11 px-5 border-[#D1D6DB] text-[#4E5968] cursor-pointer"
+                  >
+                    이전 단계
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !isValid}
+                    className={`h-11 px-8 font-semibold rounded-lg text-white cursor-pointer transition-colors ${
+                      isValid ? 'bg-[#2563EB] hover:bg-[#1D4ED8]' : 'bg-[#D1D6DB] text-[#8B95A1] cursor-not-allowed'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>가맹점 심사 등록 중...</span>
+                      </div>
+                    ) : (
+                      '가맹단체 입점 및 계정 발급 완료'
+                    )}
+                  </Button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+        </form>
+
+      </main>
+
+      {/* ── 4. Bank Footer ── */}
+      <footer className="border-t border-[#E5E8EB] py-8 text-xs text-[#8B95A1] bg-white">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <img
+              src="/images/logo_soulpay.png"
+              alt="SoulPay"
+              style={{ height: 20, width: 'auto', objectFit: 'contain' }}
+            />
+            <span>| 가맹점 지원센터 1588-0000 (평일 09:00 ~ 18:00)</span>
+          </div>
+          <div>
+            © 2026 SoulPay Platform. All rights reserved.
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }
+

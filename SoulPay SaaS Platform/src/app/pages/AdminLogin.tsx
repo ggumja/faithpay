@@ -318,17 +318,20 @@ export default function AdminLogin() {
           )}
         </div>
 
-        {/* 중앙 로고 심볼 & 타이틀 헤더 */}
-        <div className="text-center space-y-2.5">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/15">
-            <Building2 className="h-7 w-7" />
+        {/* 중앙 로고 & 타이틀 헤더 */}
+        <div className="text-center space-y-2">
+          <div className="flex justify-center mb-1">
+            <a href="/" className="inline-block">
+              <img
+                src="/images/logo_soulpay.png"
+                alt="SoulPay"
+                style={{ height: 38, width: 'auto', objectFit: 'contain' }}
+              />
+            </a>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">SoulPay</h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              교회 · 사찰 · 성당 · 비영리단체 수납 &amp; 관리 시스템
-            </p>
-          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            교회 · 사찰 · 성당 · 비영리단체 수납 &amp; 관리 시스템
+          </p>
         </div>
 
         {/* 깨끗한 순백색 메인 로그인 카드 */}

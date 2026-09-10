@@ -159,31 +159,34 @@ export function PartnerAgentsSection({
         savingAgentId={savingAgentId}
         setSavingAgentId={setSavingAgentId}
         tenants={tenants}
+        agencyName={partner.businessName || partner.name}
+        pgCost={pgCost2}
+        platformMargin={platformMargin2}
       />
     );
   }
 
   return (
     <>
-    <div className="p-6 space-y-5 bg-[var(--hm-paper-2)] dark:bg-zinc-950 min-h-full">
+    <div className="p-6 sm:p-8 space-y-6 bg-slate-50 min-h-full font-sans">
       {/* 상단 헤더 & 초대 버튼 */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-bold text-[var(--hm-ink)]">영업자 관리</h1>
-          <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">소속 영업자 및 대리점 직접유치 현황 관리</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">영업자 관리</h1>
+          <p className="text-xs text-slate-500 mt-1 font-medium">소속 영업자 및 대리점 직접유치 현황 관리</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             variant="outline"
-            className="text-xs border-purple-200 text-purple-700 hover:bg-purple-50 shrink-0"
+            className="text-xs border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl h-10 px-4 shrink-0"
             onClick={() => setShowRegDialog(true)}
           >
-            <UserPlus className="h-3.5 w-3.5 mr-1.5" /> 영업자 직접 등록
+            <UserPlus className="h-3.5 w-3.5 mr-1.5 text-blue-600" /> 영업자 직접 등록
           </Button>
           <Button
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-xs shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl h-10 px-4 shrink-0 shadow-xs"
             onClick={() => {
               const link = `${window.location.origin}/partner/apply?ref=${partner.referralCode}`;
               navigator.clipboard.writeText(link);
@@ -196,26 +199,26 @@ export function PartnerAgentsSection({
       </div>
 
       {/* 서브 탭 메뉴 (소속 영업자 목록 / 영업자별 오버라이딩 마진 집계) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-px">
+      <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/80">
         <button
           onClick={() => setAgentSubTab('list')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold border-b-2 transition-colors cursor-pointer bg-transparent border-0 ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer border-0 ${
             agentSubTab === 'list'
-              ? 'border-purple-600 text-purple-700'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
           <Users className="h-4 w-4" /> 영업자 목록 ({displayAgents.length}명)
         </button>
         <button
           onClick={() => setAgentSubTab('overriding')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-bold border-b-2 transition-colors cursor-pointer bg-transparent border-0 ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer border-0 ${
             agentSubTab === 'overriding'
-              ? 'border-purple-600 text-purple-700'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Trophy className="h-4 w-4 text-purple-600" /> 영업자별 오버라이딩 마진 집계
+          <Trophy className="h-4 w-4" /> 영업자별 오버라이딩 마진 집계
         </button>
       </div>
 
