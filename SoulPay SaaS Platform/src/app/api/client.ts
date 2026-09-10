@@ -194,6 +194,13 @@ export const tenantAPI = {
     });
   },
 
+  async updateTenantSidebarBanners(id: string, sidebarBanners: any[]): Promise<APIResponse<Tenant>> {
+    return fetchAPI<Tenant>(`/tenants/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ sidebarBanners }),
+    });
+  },
+
   async approveTenant(id: string, tempPassword?: string): Promise<APIResponse<{ tenant: Tenant; tempPassword: string }>> {
     return fetchAPI<{ tenant: Tenant; tempPassword: string }>(`/tenants/${id}/approve`, {
       method: 'POST',
@@ -1133,6 +1140,31 @@ export const partnerAPI = {
     };
   },
 
+  /** partnerAPI.apply: 공개 웹 파트너 제휴 신청서 제출 */
+  async apply(data: {
+    role: 'master_agency' | 'sales_agent';
+    name: string;
+    phone: string;
+    email: string;
+    region?: string;
+    memo?: string;
+    referrerCode?: string;
+  }): Promise<APIResponse<Partner>> {
+    return fetchAPI<Partner>('/partners', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...data,
+        status: 'pending',
+      }),
+    });
+  },
+
+  /** partnerAPI.delete: 파트너 삭제 / 신청 반려 */
+  async delete(id: string): Promise<APIResponse<{ message: string }>> {
+    return fetchAPI<{ message: string }>(`/partners/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 

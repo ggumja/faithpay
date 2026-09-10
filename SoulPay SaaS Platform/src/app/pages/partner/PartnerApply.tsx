@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -9,39 +9,26 @@ import { Badge } from '../../components/ui/badge';
 import {
   Briefcase,
   TrendingUp,
-  Building2,
-  ShieldCheck,
   CheckCircle2,
   ArrowLeft,
   Sparkles,
   Award,
   Zap,
-  PhoneCall,
   Users,
   ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { partnerAPI } from '../../api/client';
 
 export default function PartnerApply() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedInfo, setSubmittedInfo] = useState<{ name: string; roleLabel: string } | null>(null);
 
-  // URL ?type=agency|agent, ?ref=코드 지원
-  const typeParam = searchParams.get('type');
+  // 추천인 코드 ?ref= 지원
   const refParam = searchParams.get('ref') ?? '';
-
-  const [role, setRole] = useState<'master_agency' | 'sales_agent'>(
-    typeParam === 'agency' ? 'master_agency' : 'sales_agent'
-  );
-
-  // type 파라미터가 바뀌면 역할 동기화
-  useEffect(() => {
-    if (typeParam === 'agency') setRole('master_agency');
-    else if (typeParam === 'agent') setRole('sales_agent');
-  }, [typeParam]);
-
-  const isAgencyMode = role === 'master_agency';
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -50,21 +37,39 @@ export default function PartnerApply() {
   const [memo, setMemo] = useState('');
   const [referrerCode] = useState(refParam);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !email) {
-      toast.error('필수 정보를 모두 입력해 주세요.');
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      toast.error('성함, 연락처, 이메일은 필수 입력 항목입니다.');
       return;
     }
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      const res = await partnerAPI.apply({
+        role: 'sales_agent',
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        region: region.trim() || undefined,
+        memo: memo.trim() || undefined,
+        referrerCode: referrerCode.trim() || undefined,
+      });
+
+      if (res.success) {
+        const roleLabel = '영업 파트너 (영업자/프리랜서)';
+        setSubmittedInfo({ name: name.trim(), roleLabel });
+        setIsSubmitted(true);
+        toast.success('영업 파트너 제휴 신청이 정상적으로 접수되었습니다!\n담당자가 심사 후 24시간 이내에 연락 드립니다.');
+      } else {
+        toast.error(res.error || '제휴 신청 처리 중 오류가 발생했습니다.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
       setIsSubmitting(false);
-      const roleLabel = isAgencyMode ? '영업 대리점' : '영업자';
-      toast.success(`${roleLabel} 제휴 신청이 정상적으로 접수되었습니다!\n담당자가 24시간 이내에 연락 드립니다.`);
-      navigate('/');
-    }, 800);
+    }
   };
 
   return (
@@ -82,15 +87,9 @@ export default function PartnerApply() {
           </button>
           
           <div className="flex items-center gap-2">
-            {isAgencyMode ? (
-              <Badge className="bg-[#F3E8FF] text-[#7E22CE] border border-[#E9D5FF] font-bold px-3 py-1 text-xs rounded-full shadow-2xs">
-                대리점 전용 신청
-              </Badge>
-            ) : (
-              <Badge className="bg-[#E8F3FF] text-[#1B64DA] border border-[#BFDBFE] font-bold px-3 py-1 text-xs rounded-full shadow-2xs">
-                영업자 전용 신청
-              </Badge>
-            )}
+            <Badge className="bg-[#E8F3FF] text-[#1B64DA] border border-[#BFDBFE] font-bold px-3 py-1 text-xs rounded-full shadow-2xs">
+              영업 파트너 제휴 신청
+            </Badge>
           </div>
         </div>
       </header>
@@ -103,37 +102,21 @@ export default function PartnerApply() {
           
           {/* Header Title Section */}
           <div className="space-y-4">
-            <span className={`inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide px-3.5 py-1.5 rounded-full border shadow-2xs ${
-              isAgencyMode
-                ? 'text-[#7E22CE] bg-[#F3E8FF] border-[#E9D5FF]'
-                : 'text-[#3182F6] bg-[#E8F3FF] border-[#BFDBFE]'
-            }`}>
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide px-3.5 py-1.5 rounded-full border shadow-2xs text-[#3182F6] bg-[#E8F3FF] border-[#BFDBFE]">
               <Sparkles className="h-3.5 w-3.5" />
-              {isAgencyMode ? '영업 대리점 (Tier-1) 모집' : '영업자 & 프리랜서 모집'}
+              영업 파트너 (영업자 & 프리랜서) 모집
             </span>
 
             <h1 className="text-3xl sm:text-4xl font-extrabold text-[#191F28] leading-[1.25] tracking-tight">
-              {isAgencyMode ? (
-                <>
-                  소속 영업자 네트워크 구성과 함께 <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7E22CE] via-[#9333EA] to-[#3182F6]">
-                    오버라이딩 다계층 수수료 수익
-                  </span>을 창출하세요.
-                </>  
-              ) : (
-                <>
-                  전국 사찰 · 교회 · 재단 디지털 전환과 <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#3182F6] via-[#2563EB] to-[#6366F1]">
-                    지속 가능한 매월 정기 수수료 수익
-                  </span>을 창출하세요.
-                </>
-              )}
+              전국 사찰 · 교회 · 재단 디지털 전환과 <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#3182F6] via-[#2563EB] to-[#6366F1]">
+                지속 가능한 매월 정기 수수료 수익
+              </span>을 창출하세요.
             </h1>
 
             <p className="text-[#4E5968] text-sm sm:text-base leading-relaxed font-medium">
-              {isAgencyMode
-                ? 'SoulPay 영업 대리점(Tier-1)은 하위 영업자(Tier-2)를 직접 모집·관리하며 오버라이딩 수수료 수익 구조를 갖습니다. 법인 및 전문 팀 단위 신청을 지원합니다.'
-                : 'SoulPay는 전국 종교 및 구호 단체를 위한 SaaS 기반 디지털 보시/헌금/후원 수납 플랫폼입니다. 사찰, 교회, 구호재단을 가입 신청 완료하고 매월 수납되는 결제액에 대한 파트너 정산 수수료를 지속 받으실 수 있습니다.'}
+              SoulPay는 전국 종교 및 구호 단체를 위한 SaaS 기반 디지털 보시/헌금/후원 수납 플랫폼입니다.
+              사찰, 교회, 구호재단을 가입 신청 완료하고 매월 수납되는 결제액에 대한 파트너 정산 수수료를 지속 받으실 수 있습니다.
             </p>
           </div>
 
@@ -174,9 +157,9 @@ export default function PartnerApply() {
               <div className="p-2.5 w-fit bg-[#F3E8FF] text-[#7E22CE] rounded-xl font-bold">
                 <Users className="h-5 w-5" />
               </div>
-              <h3 className="font-bold text-[#191F28] text-sm">대리점 ➔ 영업자 2단계 구조</h3>
+              <h3 className="font-bold text-[#191F28] text-sm">체계적인 본사 영업 지원</h3>
               <p className="text-xs text-[#6B7684] leading-relaxed font-medium">
-                대리점(Tier-1)은 하위 영업자(Tier-2)를 모집하여 오버라이딩 수수료 수익을 창출합니다.
+                가맹점 유치를 위한 표준 계약서, 현장 브로슈어 및 실시간 정산 포털을 전폭 지원합니다.
               </p>
             </div>
           </div>
@@ -207,23 +190,17 @@ export default function PartnerApply() {
           <Card className="bg-white border border-[#E5E8EB] rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.06)] overflow-hidden transition-all">
             
             {/* Form Header */}
-            <CardHeader className={`border-b border-[#F2F4F6] p-6 sm:p-7 ${
-              isAgencyMode ? 'bg-[#FAF5FF]' : 'bg-[#FAFAFB]'
-            }`}>
+            <CardHeader className="border-b border-[#F2F4F6] p-6 sm:p-7 bg-[#FAFAFB]">
               <div className="flex items-center gap-3.5">
-                <div className={`p-3 text-white rounded-2xl shadow-xs ${
-                  isAgencyMode ? 'bg-[#9333EA]' : 'bg-[#3182F6]'
-                }`}>
+                <div className="p-3 text-white rounded-2xl shadow-xs bg-[#3182F6]">
                   <Briefcase className="h-6 w-6" />
                 </div>
                 <div>
                   <CardTitle className="text-lg sm:text-xl font-bold text-[#191F28]">
-                    {isAgencyMode ? '영업 대리점 (Tier-1) 신청서' : '영업자 (Tier-2) 신청서'}
+                    영업 파트너 제휴 신청서
                   </CardTitle>
                   <CardDescription className="text-[#6B7684] text-xs font-medium mt-1">
-                    {isAgencyMode
-                      ? '신청서 제출 ➔ 본사 심사 ➔ 대리점 계정 발급 (24시간 이내 연락)'
-                      : '신청서 제출 ➔ 본사 승인 검토 ➔ 파트너 전용 계정 발급'}
+                    신청서 제출 ➔ 본사 승인 검토 ➔ 파트너 전용 계정 발급 (24시간 이내 연락)
                   </CardDescription>
                 </div>
               </div>
@@ -237,120 +214,129 @@ export default function PartnerApply() {
               )}
             </CardHeader>
 
-            <form onSubmit={handleSubmit}>
-              <CardContent className="p-6 sm:p-7 space-y-6">
-                
-                {/* 파트너 역할 선택 Toggle */}
+            {isSubmitted && submittedInfo ? (
+              <CardContent className="p-8 sm:p-10 text-center space-y-6">
+                <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold text-[#333D4B]">희망 제휴 구분 *</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setRole('master_agency')}
-                      className={`p-3.5 rounded-2xl border text-xs font-bold text-center cursor-pointer transition-all duration-200 ${
-                        role === 'master_agency'
-                          ? 'bg-[#F3E8FF] border-[#9333EA] text-[#6B21A8] shadow-xs ring-2 ring-[#9333EA]/20'
-                          : 'bg-[#F9FAFB] border-[#E5E8EB] text-[#6B7684] hover:bg-[#F2F4F6]'
-                      }`}
-                    >
-                      Tier-1 대리점 <br />
-                      <span className="text-[11px] font-medium text-[#7E22CE] mt-0.5 block">
-                        (영업자 모집 + 오버라이딩)
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('sales_agent')}
-                      className={`p-3.5 rounded-2xl border text-xs font-bold text-center cursor-pointer transition-all duration-200 ${
-                        role === 'sales_agent'
-                          ? 'bg-[#E8F3FF] border-[#3182F6] text-[#1B64DA] shadow-xs ring-2 ring-[#3182F6]/20'
-                          : 'bg-[#F9FAFB] border-[#E5E8EB] text-[#6B7684] hover:bg-[#F2F4F6]'
-                      }`}
-                    >
-                      Tier-2 영업자 / 프리랜서 <br />
-                      <span className="text-[11px] font-medium text-[#3182F6] mt-0.5 block">
-                        (사찰·교회·재단 현장 개설)
-                      </span>
-                    </button>
-                  </div>
+                  <h3 className="text-xl font-extrabold text-[#191F28]">
+                    {submittedInfo.name}님의 제휴 신청이 접수되었습니다!
+                  </h3>
+                  <p className="text-sm text-[#4E5968] leading-relaxed">
+                    선택 구분: <strong className="text-[#191F28]">{submittedInfo.roleLabel}</strong><br />
+                    본사 관리자가 접수된 신청 내용을 검토한 후<br className="hidden sm:inline" />
+                    24시간 이내에 등록하신 연락처 또는 이메일로 안내 드립니다.
+                  </p>
                 </div>
-
-                {/* 파트너 정보 입력 (Toss Style Inputs) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">성함 / 법인명 *</Label>
-                    <Input 
-                      placeholder="홍길동 / (주)파트너스" 
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">연락처 *</Label>
-                    <Input 
-                      placeholder="010-1234-5678" 
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
+                <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={() => navigate('/')}
+                    className="h-12 px-6 rounded-xl font-bold bg-[#3182F6] hover:bg-[#2563EB] text-white cursor-pointer"
+                  >
+                    SoulPay 메인으로 이동
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setName('');
+                      setPhone('');
+                      setEmail('');
+                      setRegion('');
+                      setMemo('');
+                    }}
+                    className="h-12 px-6 rounded-xl font-bold border-[#E5E8EB] text-[#4E5968] hover:bg-[#F2F4F6] cursor-pointer"
+                  >
+                    추가 신청서 작성
+                  </Button>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">담당자 이메일 *</Label>
-                    <Input 
-                      type="email"
-                      placeholder="partner@example.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#333D4B]">주요 영업 지역</Label>
-                    <Input 
-                      placeholder="예: 서울 강남구 / 경기 성남시" 
-                      value={region}
-                      onChange={(e) => setRegion(e.target.value)}
-                      className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#333D4B]">보유 네트워크 및 관련 경험 (선택)</Label>
-                  <Textarea
-                    placeholder="예: 경기 지역 사찰 10여 곳 네트워크 보유, 교구 연동 경험 보유 등"
-                    value={memo}
-                    onChange={(e) => setMemo(e.target.value)}
-                    rows={3}
-                    className="bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl text-xs leading-relaxed"
-                  />
-                </div>
-
               </CardContent>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                <CardContent className="p-6 sm:p-7 space-y-6">
+                  {/* 파트너 정보 입력 (Toss Style Inputs) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">성함 / 상호명 *</Label>
+                      <Input 
+                        placeholder="홍길동 / (주)파트너스" 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">연락처 *</Label>
+                      <Input 
+                        placeholder="010-1234-5678" 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                  </div>
 
-              {/* Submit Footer */}
-              <CardFooter className="bg-[#FAFAFB] p-6 sm:p-7 border-t border-[#F2F4F6]">
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className={`w-full font-bold h-13 text-base rounded-2xl shadow-md cursor-pointer transition-all duration-200 text-white ${
-                    isAgencyMode
-                      ? 'bg-gradient-to-r from-[#9333EA] to-[#6366F1] hover:opacity-95'
-                      : 'bg-gradient-to-r from-[#3182F6] to-[#2563EB] hover:opacity-95'
-                  }`}
-                >
-                  <CheckCircle2 className="h-5 w-5 mr-2" />
-                  {isAgencyMode ? '영업 대리점 제휴 신청서 제출' : '영업자 제휴 신청서 제출'}
-                </Button>
-              </CardFooter>
-            </form>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">담당자 이메일 *</Label>
+                      <Input 
+                        type="email"
+                        placeholder="partner@example.com" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#333D4B]">주요 영업 지역</Label>
+                      <Input 
+                        placeholder="예: 서울 강남구 / 경기 성남시" 
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        className="h-12 bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl font-medium text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-[#333D4B]">보유 네트워크 및 관련 경험 (선택)</Label>
+                    <Textarea
+                      placeholder="예: 경기 지역 사찰 10여 곳 네트워크 보유, 교구 연동 경험 보유 등"
+                      value={memo}
+                      onChange={(e) => setMemo(e.target.value)}
+                      rows={3}
+                      className="bg-[#F9FAFB] border-[#E5E8EB] text-[#191F28] placeholder:text-[#8B95A1] focus:bg-white focus:border-[#3182F6] rounded-xl text-xs leading-relaxed"
+                    />
+                  </div>
+
+                </CardContent>
+
+                {/* Submit Footer */}
+                <CardFooter className="bg-[#FAFAFB] p-6 sm:p-7 border-t border-[#F2F4F6]">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="w-full font-bold h-13 text-base rounded-2xl shadow-md cursor-pointer transition-all duration-200 text-white bg-gradient-to-r from-[#3182F6] to-[#2563EB] hover:opacity-95"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>신청서 접수 처리 중...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-5 w-5 mr-2" />
+                        영업 파트너 제휴 신청서 제출
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
           </Card>
         </div>
 

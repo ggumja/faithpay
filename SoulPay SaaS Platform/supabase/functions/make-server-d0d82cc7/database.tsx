@@ -12,6 +12,15 @@
 export type ReligionType = 'protestant' | 'buddhist' | 'catholic';
 export type UserRole = 'system_admin' | 'tenant_admin' | 'finance_manager' | 'member';
 
+export interface SidebarBanner {
+  id: string;
+  imageUrl: string;
+  linkUrl?: string;
+  title?: string;
+  order: number;
+  enabled: boolean;
+}
+
 export interface Tenant {
   id: string;
   slug: string;
@@ -20,6 +29,7 @@ export interface Tenant {
   primaryColor: string;
   logoUrl: string;
   bannerImages: string[];
+  sidebarBanners?: SidebarBanner[];
   description: string;
   address: string;
   templateId?: string;
@@ -241,6 +251,7 @@ function rowToTenant(r: any, paymentCfg?: any): Tenant {
     primaryColor: r.primary_color ?? '#4F46E5',
     logoUrl: r.logo_url ?? '',
     bannerImages: r.banner_images ?? [],
+    sidebarBanners: r.sidebar_banners ?? r.business_info?.sidebar_banners ?? r.business_info?.sidebarBanners ?? [],
     description: r.description ?? '',
     address: r.address ?? '',
     uniqueNumber: r.unique_number,
@@ -277,7 +288,12 @@ function tenantToRow(t: Partial<Tenant>): Record<string, any> {
   if (t.description   !== undefined) row.description    = t.description;
   if (t.address       !== undefined) row.address        = t.address;
   if (t.uniqueNumber  !== undefined) row.unique_number  = t.uniqueNumber;
-  if (t.businessInfo  !== undefined) row.business_info  = t.businessInfo;
+  if (t.businessInfo  !== undefined || t.sidebarBanners !== undefined) {
+    row.business_info = {
+      ...(t.businessInfo || {}),
+      ...(t.sidebarBanners !== undefined ? { sidebar_banners: t.sidebarBanners } : {}),
+    };
+  }
   if (t.contact       !== undefined) row.contact        = t.contact;
   if (t.schedule      !== undefined) row.schedule       = t.schedule;
   if (t.terminology   !== undefined) row.terminology    = t.terminology;
@@ -1569,11 +1585,48 @@ export async function getPartnerById(id: string): Promise<Partner | null> {
 
 export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> & Record<string, any>): Promise<Partner> {
   const sb = pgClient();
-  const parentId = (partner.parentId && typeof partner.parentId === 'string' && partner.parentId.trim())
+  let parentId = (partner.parentId && typeof partner.parentId === 'string' && partner.parentId.trim())
     ? partner.parentId.trim()
     : null;
 
-  const referralCode = partner.referralCode || `${partner.role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Math.floor(100 + Math.random() * 900)}`;
+  // 추천인 코드가 전달되었고 parentId가 없는 경우, 추천인 코드로 상위 파트너 조회
+  if (!parentId && partner.referrerCode && typeof partner.referrerCode === 'string') {
+    try {
+      const { data: refPartner } = await sb
+        .from('partners')
+        .select('id, role')
+        .eq('referral_code', partner.referrerCode.trim())
+        .maybeSingle();
+      if (refPartner) {
+        parentId = refPartner.id;
+      }
+    } catch (e) {
+      console.warn('Failed to lookup referrer partner by code:', e);
+    }
+  }
+
+  const referralCode = partner.referralCode || `${partner.role === 'master_agency' ? 'AGENCY' : 'AGENT'}_${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
+
+  const role = partner.role || 'sales_agent';
+  const defaultRate = role === 'master_agency' ? 0.70 : 0.40;
+  const status = partner.status || 'pending';
+
+  // business_type 정규화 (PostgreSQL CHECK 제약: 'INDIVIDUAL', 'freelancer', 'individual_business', 'CORPORATE')
+  let dbBusinessType = partner.businessType;
+  if (dbBusinessType === 'corporation' || (!dbBusinessType && role === 'master_agency')) {
+    dbBusinessType = 'CORPORATE';
+  } else if (dbBusinessType === 'individual') {
+    dbBusinessType = 'INDIVIDUAL';
+  } else if (!dbBusinessType) {
+    dbBusinessType = 'freelancer';
+  }
+
+  const corpRegNo = partner.corpRegNo || (dbBusinessType !== 'freelancer' ? partner.businessNumber : null) || null;
+  const resNo = partner.resNo || (dbBusinessType === 'freelancer' ? partner.businessNumber : null) || null;
+  const ceoName = partner.ceoName || partner.representativeName || null;
+  const corpName = partner.corpName || (dbBusinessType === 'CORPORATE' ? partner.name : null) || null;
+  const realName = partner.realName || (dbBusinessType === 'freelancer' ? partner.name : null) || null;
+  const taxEmail = partner.taxEmail || (dbBusinessType !== 'freelancer' ? partner.email : null) || null;
 
   const { data, error } = await sb
     .from('partners')
@@ -1581,15 +1634,25 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
       name: partner.name,
       email: partner.email,
       phone: partner.phone,
-      role: partner.role,
+      role: role,
       parent_id: parentId,
-      commission_rate: Number(partner.commissionRate ?? 0),
-      agency_rate: Number(partner.agencyRate ?? 0),
+      commission_rate: Number(partner.commissionRate ?? defaultRate),
+      agency_rate: Number(partner.agencyRate ?? defaultRate),
       referral_code: referralCode,
       bank_name: partner.bankName ?? '',
       account_number: partner.accountNumber ?? '',
       account_holder: partner.accountHolder ?? '',
-      status: partner.status ?? 'active',
+      status: status,
+      business_type: dbBusinessType,
+      corp_reg_no: corpRegNo,
+      corp_name: corpName,
+      ceo_name: ceoName,
+      tax_email: taxEmail,
+      real_name: realName,
+      res_no: resNo,
+      region: partner.region || null,
+      memo: partner.memo || null,
+      password: partner.password || 'changeme123!',
     })
     .select('*')
     .single();
@@ -1619,6 +1682,16 @@ export async function createPartner(partner: Omit<Partner, 'id' | 'createdAt'> &
     taxEmail: data.tax_email ?? '', realName: data.real_name ?? '', resNo: data.res_no ?? '',
     region: data.region ?? '', memo: data.memo ?? '',
   };
+}
+
+export async function deletePartner(id: string): Promise<boolean> {
+  const sb = pgClient();
+  const { error } = await sb.from('partners').delete().eq('id', id);
+  if (error) {
+    console.error('deletePartner failed:', error);
+    throw new Error(`deletePartner failed: ${error.message}`);
+  }
+  return true;
 }
 
 export async function updatePartnerStatus(id: string, status: 'active' | 'suspended' | 'pending'): Promise<Partner | null> {

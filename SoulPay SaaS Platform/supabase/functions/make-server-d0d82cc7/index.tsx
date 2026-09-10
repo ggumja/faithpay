@@ -3660,15 +3660,56 @@ app.get("/make-server-d0d82cc7/partners/:id", async (c) => {
   }
 });
 
-// 신규 영업 파트너 생성 / 제휴 신청
+// 신규 영업 파트너 제휴 신청 (공개 웹 신청용)
+app.post("/make-server-d0d82cc7/partners/apply", async (c) => {
+  try {
+    const body = await c.req.json();
+    if (!body.name || !body.phone || !body.email) {
+      return c.json({ success: false, error: '성함, 연락처, 이메일은 필수 입력 항목입니다.' }, 400);
+    }
+    const partner = await db.createPartner({
+      ...body,
+      status: 'pending', // 신규 신청은 심사 전 '대기' 상태로 등록
+    });
+    return c.json({ success: true, data: partner }, 201);
+  } catch (error: any) {
+    console.error('Error applying partner:', error);
+    const msg = error?.message || '';
+    if (msg.includes('duplicate key') || msg.includes('partners_email_key')) {
+      return c.json({ success: false, error: '이미 등록되었거나 신청 진행 중인 이메일 주소입니다.' }, 400);
+    }
+    return c.json({ success: false, error: msg || '제휴 신청 처리 중 오류가 발생했습니다.' }, 500);
+  }
+});
+
+// 신규 영업 파트너 생성 (관리자 등록용)
 app.post("/make-server-d0d82cc7/partners", async (c) => {
   try {
     const body = await c.req.json();
+    if (!body.name || !body.phone || !body.email) {
+      return c.json({ success: false, error: '성함, 연락처, 이메일은 필수 입력 항목입니다.' }, 400);
+    }
     const partner = await db.createPartner(body);
     return c.json({ success: true, data: partner }, 201);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating partner:', error);
-    return c.json({ success: false, error: 'Failed to create partner' }, 500);
+    const msg = error?.message || '';
+    if (msg.includes('duplicate key') || msg.includes('partners_email_key')) {
+      return c.json({ success: false, error: '이미 등록되었거나 신청 진행 중인 이메일 주소입니다.' }, 400);
+    }
+    return c.json({ success: false, error: msg || '파트너 생성 중 오류가 발생했습니다.' }, 500);
+  }
+});
+
+// 영업 파트너 삭제 (반려 또는 관리자 삭제)
+app.delete("/make-server-d0d82cc7/partners/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    await db.deletePartner(id);
+    return c.json({ success: true, message: '파트너가 성공적으로 삭제되었습니다.' });
+  } catch (error: any) {
+    console.error('Error deleting partner:', error);
+    return c.json({ success: false, error: error?.message || '파트너 삭제 중 오류가 발생했습니다.' }, 500);
   }
 });
 
