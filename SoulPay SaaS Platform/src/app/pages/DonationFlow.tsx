@@ -198,6 +198,15 @@ export default function DonationFlow() {
     }
   }, [selectedItem]);
 
+  const hasPrayerStep = Boolean(selectedItem?.enablePrayerField ?? true);
+  const totalSteps = hasPrayerStep ? 4 : 3;
+
+  useEffect(() => {
+    if (step > totalSteps) {
+      setStep(totalSteps);
+    }
+  }, [totalSteps, step]);
+
   // 테넌트 로딩 중
   if (!currentTenant) {
     return (
@@ -245,14 +254,6 @@ export default function DonationFlow() {
   }
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
-  const hasPrayerStep = Boolean(selectedItem.enablePrayerField ?? true);
-  const totalSteps = hasPrayerStep ? 4 : 3;
-
-  useEffect(() => {
-    if (step > totalSteps) {
-      setStep(totalSteps);
-    }
-  }, [totalSteps, step]);
 
   const chips = [1000, 5000, 10000, 50000, 100000, 500000];
 
