@@ -424,12 +424,14 @@ export default function SettlementReports() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">정산(추정) & 수납 대사 리포트</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  정산(추정) & 수납 대사 리포트
+                </h1>
                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold">
                   플랫폼 수납 집계 기준
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 SoulPay 플랫폼 결제 완료 건을 바탕으로 수납 집계 및 추정 정산액을 확인하고, 국세청 전산제출 파일을 관리합니다.
               </p>
             </div>
@@ -533,7 +535,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('today')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'daily' && periodSelection.startDate
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -544,7 +546,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('this_week')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'weekly'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -555,7 +557,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('this_month')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'monthly'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -566,7 +568,7 @@ export default function SettlementReports() {
                       onClick={() => setQuickPeriod('all')}
                       className={`px-3 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-colors ${
                         periodUnit === 'all'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                       }`}
                     >
@@ -589,41 +591,35 @@ export default function SettlementReports() {
           </Card>
 
           {/* Current Month Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">기간 총 봉헌 수납액 ({summaryStats.currentMonthName})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summaryStats.monthlyTotal.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <TrendingUp className="h-3 w-3 inline text-indigo-600 mr-1" />
-                  <span>플랫폼 결제 성공 건 단순 합산</span>
-                </p>
-              </CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                기간 총 봉헌 수납액 ({summaryStats.currentMonthName})
+              </div>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-zinc-100">
+                {summaryStats.monthlyTotal.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">플랫폼 결제 성공 건 단순 합산</p>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">수수료 공제 추정액 ({contractRate}%)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{summaryStats.pgFee.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">기준 수수료율 {contractRate}% (VAT/우대율 별도)</p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                수수료 공제 추정액 ({contractRate}%)
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {summaryStats.pgFee.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">기준 수수료율 {contractRate}% (VAT/우대율 별도)</p>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">단체 계좌 입금 추정액</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{summaryStats.finalDeposit.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <Calendar className="h-3 w-3 inline mr-1" />
-                  정산 예정: {summaryStats.settlementDateStr}
-                </p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                단체 계좌 입금 추정액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {summaryStats.finalDeposit.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">정산 예정: {summaryStats.settlementDateStr}</p>
             </Card>
           </div>
 
@@ -637,9 +633,11 @@ export default function SettlementReports() {
             {/* Monthly Settlement */}
             <TabsContent value="monthly" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>월별 정산(추정) 내역</CardTitle>
-                  <CardDescription>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    월별 정산(추정) 내역
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     {periodSelection.label ? `${periodSelection.label} 기준 정산 집계` : '플랫폼 결제 성공 내역 기반 월별 수납·정산 집계'}
                   </CardDescription>
                 </CardHeader>
@@ -720,7 +718,9 @@ export default function SettlementReports() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>월별 추이</CardTitle>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    월별 추이
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
@@ -747,9 +747,11 @@ export default function SettlementReports() {
             {/* Daily Settlement Breakdown */}
             <TabsContent value="daily" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세</CardTitle>
-                  <CardDescription>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    일별/건별 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 수납·정산 대사 명세
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     승인완료된 각 결제건별 기준 수수료({paymentConfig?.contractRate ?? contractRate}%) 차감 후 {paymentConfig?.payoutCycle || paymentConfig?.settlementCycle || 'D+1'} 영업일 기준 입금 대사 추정 명세입니다.
                   </CardDescription>
                 </CardHeader>
@@ -786,7 +788,7 @@ export default function SettlementReports() {
                             <TableCell className="text-right font-semibold">{item.amount.toLocaleString()}원</TableCell>
                             <TableCell className="text-right text-orange-600">-{item.pgFee.toLocaleString()}원</TableCell>
                             <TableCell className="text-right font-bold text-green-600">{item.netAmount.toLocaleString()}원</TableCell>
-                            <TableCell className="font-medium text-indigo-600">{item.payoutDate}</TableCell>
+                            <TableCell className="font-medium text-blue-600">{item.payoutDate}</TableCell>
                             <TableCell>
                               <Badge className={item.status.includes('완료') ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'}>
                                 {item.status}
@@ -804,9 +806,11 @@ export default function SettlementReports() {
             {/* Negative Settlement / Refund Adjustments */}
             <TabsContent value="negative" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>승인 취소 & 차기 정산 이월 차감 (Negative Settlement)</CardTitle>
-                  <CardDescription>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    승인 취소 & 차기 정산 이월 차감 (Negative Settlement)
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                     이미 단체 계좌로 입금 집계된 거래의 취소 발생 시 차기 정산액에서 자동 이월 차감되는 명세입니다.
                   </CardDescription>
                 </CardHeader>
@@ -882,8 +886,7 @@ export default function SettlementReports() {
           {/* Info */}
           <Card className="mt-8 bg-slate-50 border-slate-200 dark:bg-zinc-900 dark:border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-zinc-100">
-                <Info className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                 정산 및 대사 업무 안내
               </CardTitle>
             </CardHeader>

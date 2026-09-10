@@ -373,6 +373,115 @@ export const paymentAPI = {
 };
 
 
+// ==================== KAKAO AUTH API ====================
+
+export const KAKAO_CONFIG = {
+  REST_API_KEY: '9a0d1863232123049b37547090372fc5',
+  JAVASCRIPT_KEY: '2049549dc6e126bbcf6dbee9279f61c8',
+};
+
+export const kakaoAuthAPI = {
+  getAuthUrl(tenantSlug: string, redirectUri: string) {
+    const params = new URLSearchParams({
+      client_id: KAKAO_CONFIG.REST_API_KEY,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      state: tenantSlug,
+    });
+    return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
+  },
+
+  async exchangeToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
+    // 1. 브라우저 직접 교환 (kauth.kakao.com 공식 CORS 엔드포인트 - 즉시 응답 및 불필요한 404 방지)
+    try {
+      const fetchToken = async (includeSecret: boolean) => {
+        const params: Record<string, string> = {
+          grant_type: 'authorization_code',
+          client_id: KAKAO_CONFIG.REST_API_KEY,
+          redirect_uri: redirectUri,
+          code,
+        };
+        if (includeSecret) {
+          params.client_secret = '3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol';
+        }
+        return fetch('https://kauth.kakao.com/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+          },
+          body: new URLSearchParams(params).toString(),
+        });
+      };
+
+      let res = await fetchToken(false);
+      let data = await res.json().catch(() => ({}));
+      if (!res.ok && (data.error_code === 'KOE010' || data.error === 'invalid_client')) {
+        res = await fetchToken(true);
+        data = await res.json().catch(() => ({}));
+      }
+      if (res.ok && data?.access_token) {
+        return data;
+      }
+    } catch {
+      // direct fetch failed, try backend proxy fallback
+    }
+
+    // 2. 백엔드 프록시 폴백
+    const backendRes = await fetchAPI<{ access_token: string }>('/auth/kakao/token', {
+      method: 'POST',
+      body: JSON.stringify({ code, redirectUri }),
+    } as any);
+    if (backendRes.success && backendRes.data?.access_token) {
+      return backendRes.data;
+    }
+    throw new Error('카카오 인증 토큰 발급에 실패했습니다.');
+  },
+
+  async getUserInfo(accessToken: string): Promise<{
+    id: number;
+    nickname?: string;
+    email?: string;
+    phone?: string;
+    rawPhone?: string;
+  }> {
+    // 1. 브라우저 직접 조회 (kapi.kakao.com 공식 CORS 엔드포인트)
+    try {
+      const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const rawPhone = data.kakao_account?.phone_number || '';
+        const phone = rawPhone ? rawPhone.replace('+82 ', '0').replace(/[^0-9]/g, '') : '';
+        const email = data.kakao_account?.email || '';
+        const nickname = data.kakao_account?.profile?.nickname || data.properties?.nickname || '';
+        return {
+          id: data.id,
+          nickname,
+          email,
+          phone,
+          rawPhone,
+        };
+      }
+    } catch {
+      // direct fetch failed, try backend fallback
+    }
+
+    // 2. 백엔드 프록시 폴백
+    const backendRes = await fetchAPI<any>('/auth/kakao/user', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken }),
+    } as any);
+    if (backendRes.success && backendRes.data) {
+      return backendRes.data;
+    }
+    throw new Error('카카오 사용자 정보 조회에 실패했습니다.');
+  },
+};
+
 // ==================== SMS OTP & SUBSCRIPTION API ====================
 
 export const otpAuthAPI = {
@@ -417,6 +526,29 @@ export const subscriptionAPI = {
     return fetchAPI<{ subscription: any }>(`/subscriptions/${id}/status`, {
       method: 'POST',
       body: JSON.stringify({ status }),
+    });
+  },
+
+  async getAll(): Promise<APIResponse<any[]>> {
+    try {
+      const res = await fetchAPI<any[]>(`/subscriptions`, { silentFail: true } as any);
+      if (res.success) return res;
+      return { success: true, data: [] };
+    } catch {
+      return { success: true, data: [] };
+    }
+  },
+
+  async runBatch(): Promise<APIResponse<{
+    executedAtKst: string;
+    processedCount: number;
+    successCount: number;
+    failedCount: number;
+    results: any[];
+  }>> {
+    return fetchAPI('/payment/recurring/batch-run', {
+      method: 'POST',
+      body: JSON.stringify({}),
     });
   },
 
@@ -553,35 +685,39 @@ export const donationAPI = {
 // ==================== MEMBER / DONOR API ====================
 
 export const memberAPI = {
-  /** 신도/회원 프로필 조회 (DB 실측 + settingsAPI + localStorage) */
+  /** 신도/회원 프로필 조회 (DB 100% 실측 조회 - localStorage 미사용) */
   async getProfile(phone: string): Promise<APIResponse<{ name?: string; baptismName?: string; email?: string; address?: string; fullAddress?: string; zonecode?: string; addressDetail?: string }>> {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     if (!cleanPhone) return { success: false, error: '유효한 전화번호가 필요합니다.' };
 
-    // 1. system_settings DB 실측 조회 (기존 배포된 /settings/:key 엔드포인트 활용)
+    try {
+      const res = await fetchAPI<any>(`/members/profile/${cleanPhone}`);
+      if (res.success && res.data) {
+        const raw = res.data;
+        const profile = (raw.value && typeof raw.value === 'object') ? { ...raw.value, ...raw } : { ...raw };
+        if (profile.value === null) delete profile.value;
+        return { success: true, data: profile };
+      }
+    } catch (err) {
+      console.warn('Primary fetch member profile failed, trying settings fallback:', err);
+    }
+
     try {
       const setRes = await settingsAPI.get(`member_profile_${cleanPhone}`);
-      const val = setRes.data?.value !== undefined ? setRes.data.value : setRes.data;
-      if (setRes.success && val && typeof val === 'object' && (val.email || val.address || val.fullAddress || val.name)) {
-        return { success: true, data: val };
+      if (setRes.success && setRes.data) {
+        const raw = setRes.data;
+        const profile = (raw.value && typeof raw.value === 'object') ? { ...raw.value, ...raw } : { ...raw };
+        if (profile.value === null) delete profile.value;
+        return { success: true, data: profile };
       }
-    } catch {}
+    } catch (setErr) {
+      console.warn('Settings get fallback failed:', setErr);
+    }
 
-    // 2. localStorage 캐시 확인 (사용자가 마이페이지 브라우저에서 직접 입력/저장한 정보)
-    try {
-      const local = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
-      if (local) {
-        const parsed = JSON.parse(local);
-        if (parsed && typeof parsed === 'object' && (parsed.email || parsed.address || parsed.fullAddress || parsed.name)) {
-          return { success: true, data: parsed };
-        }
-      }
-    } catch {}
-
-    return { success: false };
+    return { success: false, data: undefined };
   },
 
-  /** 신도/회원 프로필 정보 업데이트 */
+  /** 신도/회원 프로필 정보 업데이트 (DB 100% 영구 실측 저장 - localStorage 미사용) */
   async updateProfile(
     phone: string,
     profile: { name?: string; baptismName?: string; email?: string; address?: string; fullAddress?: string; zonecode?: string; addressDetail?: string; password?: string }
@@ -595,68 +731,127 @@ export const memberAPI = {
       updatedAt: new Date().toISOString(),
     };
 
-    // 1. Supabase system_settings DB에 영구 실측 저장
+    // 1. 백엔드 /members/update-profile 호출 (system_settings, donations, subscriptions DB 실측 동기화)
     try {
-      await settingsAPI.set(`member_profile_${cleanPhone}`, payload);
-    } catch (e) {
-      console.warn('Failed to save member profile to settings DB:', e);
-    }
-
-    // 2. 백엔드 /members/update-profile 호출 (donations 및 subscriptions 동기화)
-    try {
-      await fetchAPI<any>('/members/update-profile', {
+      const res = await fetchAPI<any>('/members/update-profile', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
+      if (res.success) {
+        return res;
+      }
     } catch (err) {
-      console.warn('Remote updateProfile offline:', err);
+      console.warn('Remote updateProfile endpoint failed, attempting fallback to settingsAPI.set:', err);
     }
 
-    // 3. localStorage 동기화 (동일 브라우저 즉각 반영)
+    // 2. 보조: settingsAPI.set 으로 Supabase system_settings 테이블에 직접 실측 저장
     try {
-      const existingStr = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || '{}';
-      const existing = JSON.parse(existingStr);
-      const merged = { ...existing, ...payload };
-      localStorage.setItem(`soulpay_profile_${cleanPhone}`, JSON.stringify(merged));
-      localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(merged));
-      if (profile.password) {
-        localStorage.setItem(`soulpay_password_${cleanPhone}`, profile.password);
-        localStorage.setItem(`faithpay_password_${cleanPhone}`, profile.password);
+      const setRes = await settingsAPI.set(`member_profile_${cleanPhone}`, payload);
+      if (setRes.success) {
+        return { success: true, data: { updatedCount: 1 } };
       }
-    } catch {}
+    } catch (setErr) {
+      console.error('Direct settings save also failed:', setErr);
+      return { success: false, error: '프로필 저장에 실패했습니다.' };
+    }
 
     return { success: true, data: { updatedCount: 1 } };
   },
 
+  /** 신도/회원 이메일 로그인 (DB 100% 실측 조회) */
   async loginWithEmail(
     tenantId: string,
     email: string,
     pass?: string
-  ): Promise<APIResponse<{ found: boolean; phone?: string; donorName?: string; donations?: any[] }>> {
+  ): Promise<APIResponse<{ found: boolean; phone?: string; donorName?: string; profile?: any }>> {
     const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return { success: false, error: '이메일 주소를 입력해 주세요.' };
+
+    // 1. 백엔드 전용 로그인 엔드포인트 호출 시도
     try {
-      const listRes = await donationAPI.getByTenant(tenantId);
-      if (listRes.success && Array.isArray(listRes.data)) {
-        const matched = listRes.data.filter(
-          (d: any) => (d.donorEmail || d.email || '').trim().toLowerCase() === cleanEmail
-        );
-        if (matched.length > 0) {
-          const last = matched[0];
-          return {
-            success: true,
-            data: {
-              found: true,
-              phone: last.donorPhone,
-              donorName: last.donorName,
-              donations: matched,
-            },
-          };
+      const res = await fetchAPI<any>('/members/login', {
+        method: 'POST',
+        body: JSON.stringify({ tenantId, email: cleanEmail, password: pass }),
+        silentFail: true,
+      } as any);
+      if (res.success && res.data && res.data.found && res.data.phone) {
+        return {
+          success: true,
+          data: {
+            found: true,
+            phone: res.data.phone,
+            donorName: res.data.donorName,
+            profile: res.data.profile,
+          },
+        };
+      }
+    } catch {
+      // 엔드포인트 미배포 시 DB 실측 직접 조회로 자연스럽게 전환
+    }
+
+    // 2. Supabase system_settings DB 실측 조회 (배포된 GET /settings 활용)
+    try {
+      const setRes = await settingsAPI.getAll();
+      const rawData = setRes.data || {};
+      const settingsMap: Record<string, any> = (rawData.data && typeof rawData.data === 'object') ? rawData.data : rawData;
+
+      for (const [key, rawVal] of Object.entries(settingsMap)) {
+        if (!key.startsWith('member_profile_')) continue;
+        const val: any = (rawVal && typeof rawVal === 'object') ? rawVal : {};
+        const profileEmail = (val.email || '').trim().toLowerCase();
+
+        if (profileEmail === cleanEmail) {
+          if (val.password) {
+            if (!pass || val.password !== pass) {
+              return { success: false, error: '비밀번호가 일치하지 않습니다. 다시 확인해 주세요.' };
+            }
+          }
+          const rawPhone = val.phone || key.replace('member_profile_', '');
+          const phone = rawPhone.replace(/[^0-9]/g, '');
+          if (phone) {
+            return {
+              success: true,
+              data: {
+                found: true,
+                phone,
+                donorName: val.name || '성도',
+                profile: val,
+              },
+            };
+          }
         }
       }
-    } catch (err) {
-      console.error('Error during donor email login lookup:', err);
+    } catch (setErr) {
+      console.warn('Settings DB lookup failed for member email login:', setErr);
     }
-    return { success: true, data: { found: false } };
+
+    // 3. Supabase subscriptions DB 실측 조회 (배포된 GET /subscriptions/tenant/:tenantId 활용)
+    try {
+      const subRes = await subscriptionAPI.getByTenant(tenantId);
+      if (subRes.success && Array.isArray(subRes.data)) {
+        const matched = subRes.data.find(
+          (s: any) => (s.donorEmail || s.email || '').trim().toLowerCase() === cleanEmail
+        );
+        if (matched) {
+          const phone = (matched.donorPhone || matched.phone || '').replace(/[^0-9]/g, '');
+          if (phone) {
+            return {
+              success: true,
+              data: {
+                found: true,
+                phone,
+                donorName: matched.donorName || '성도',
+                profile: { phone, name: matched.donorName, email: matched.donorEmail },
+              },
+            };
+          }
+        }
+      }
+    } catch (subErr) {
+      console.warn('Subscription DB lookup failed for member email login:', subErr);
+    }
+
+    return { success: false, error: '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다.' };
   },
 };
 

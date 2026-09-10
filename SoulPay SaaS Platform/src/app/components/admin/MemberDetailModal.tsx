@@ -363,52 +363,46 @@ export function MemberDetailModal({
         {/* Header Profile Summary (Clean Light Mode) */}
         <div className="bg-white border-b border-slate-200 p-6 sm:p-8 rounded-t-2xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl font-black text-indigo-700 shadow-inner">
-                {member.name.slice(0, 1)}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900">{member.name}</h2>
+                {member.baptismName && (
+                  <Badge className="bg-blue-50 text-blue-800 border-blue-200 text-xs font-bold">
+                    {getTitleLabel()}: {member.baptismName}
+                  </Badge>
+                )}
+                {member.recurringCount > 0 ? (
+                  <Badge className="bg-emerald-50 text-emerald-800 border-emerald-300 text-xs font-bold flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 animate-spin-slow text-emerald-700" />
+                    정기 약정 {member.recurringCount}건
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-slate-600 border-slate-300 text-xs">
+                    일반 회원
+                  </Badge>
+                )}
               </div>
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-black text-slate-900">{member.name}</h2>
-                  {member.baptismName && (
-                    <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs font-bold">
-                      {getTitleLabel()}: {member.baptismName}
-                    </Badge>
-                  )}
-                  {member.recurringCount > 0 ? (
-                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs font-bold flex items-center gap-1">
-                      <RefreshCw className="h-3 w-3 animate-spin-slow text-emerald-700" />
-                      정기 약정 {member.recurringCount}건
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-slate-600 border-slate-300 text-xs">
-                      일반 회원
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 font-medium mt-1.5">
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3.5 w-3.5 text-indigo-600" />
-                    {formatPhoneNumber(member.phone)}
-                    <button
-                      onClick={handleCopyPhone}
-                      title="연락처 복사"
-                      className="hover:text-indigo-600 transition-colors"
-                    >
-                      <Copy className="h-3 w-3 ml-0.5" />
-                    </button>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3.5 w-3.5 text-indigo-600" />
-                    {member.email || '이메일 미등록'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-indigo-600" />
-                    등록일: {member.registeredDate}
-                  </span>
-                </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 font-medium">
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5 text-blue-600" />
+                  {formatPhoneNumber(member.phone)}
+                  <button
+                    onClick={handleCopyPhone}
+                    title="연락처 복사"
+                    className="hover:text-blue-600 transition-colors"
+                  >
+                    <Copy className="h-3 w-3 ml-0.5" />
+                  </button>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3.5 w-3.5 text-blue-600" />
+                  {member.email || '이메일 미등록'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-blue-600" />
+                  등록일: {member.registeredDate}
+                </span>
               </div>
             </div>
 

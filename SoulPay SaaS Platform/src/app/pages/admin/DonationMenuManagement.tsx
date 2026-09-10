@@ -388,20 +388,20 @@ export default function DonationMenuManagement() {
 
       {/* Main Content Workbench */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5">
+        <div className="w-full p-6 lg:p-8 space-y-6">
           
           {/* Header Banner: Compact & Typographic Focus */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-zinc-800">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                   {terms.donationItems}
                 </h1>
                 <Badge variant="outline" className="text-[11px] font-semibold bg-white dark:bg-zinc-900 border-slate-200 text-slate-600 dark:text-zinc-300">
                   총 {donationItems.length}개 항목 (노출 {enabledCount}개)
                 </Badge>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 {terms.donor}들이 온라인 {terms.donation} 화면에서 직접 선택할 수 있는 목적별 항목 카드를 구성합니다.
               </p>
             </div>

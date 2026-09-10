@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp, DonationFormData, DonationItem } from '../context/AppContext';
-import { donationAPI, otpAuthAPI, subscriptionAPI, memberAPI, donationItemsAPI } from '../api/client';
+import { donationAPI, subscriptionAPI, memberAPI, donationItemsAPI, kakaoAuthAPI } from '../api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -21,17 +21,27 @@ import {
   User,
   Save,
   ShieldCheck,
-  Smartphone,
   Mail,
   Lock,
   MapPin,
+  List,
+  LayoutGrid,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../components/ui/dialog';
 
 import TaxReceiptModal from '../components/TaxReceiptModal';
 import { cleanPaymentMethod } from './admin/DonationHistory';
 import { openDaumPostcode } from '../utils/daumPostcode';
 import { useTenantTerms } from '../hooks/useTenantTerms';
+import { MemberTitleSelect } from '../components/common/MemberTitleSelect';
 
 export interface HistoryItem {
   id: string;
@@ -66,14 +76,13 @@ export default function MyDonations() {
   };
   
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 🔑 이중 인증 옵션 상태 (전화번호 OTP vs 이메일/비밀번호)
-  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
+  // 🔑 로그인 방식 상태
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [isKakaoLoggingIn, setIsKakaoLoggingIn] = useState(false);
 
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -100,6 +109,10 @@ export default function MyDonations() {
   const [activeTab, setActiveTab] = useState<'history' | 'recurring' | 'profile'>('history');
   // 🔘 결제 상태 필터 ('all' | 'completed' | 'cancelled')
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'cancelled'>('all');
+  // 📋 목록형/카드형 뷰 모드 ('list' | 'card', 기본값: 'list')
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  // 🔍 상세 내역 팝업/모달 대상 아이템
+  const [selectedDetailItem, setSelectedDetailItem] = useState<HistoryItem | null>(null);
 
   // 📅 기간 지정 필터 상태 & 📄 10개씩 페이징 상태
   const [startDate, setStartDate] = useState<string>('');
@@ -126,24 +139,7 @@ export default function MyDonations() {
   };
 
   const loadSavedProfile = async (cleanPhone: string, donationsList: any[]) => {
-    try {
-      const localStr = localStorage.getItem(`soulpay_profile_${cleanPhone}`) || localStorage.getItem(`faithpay_profile_${cleanPhone}`);
-      if (localStr) {
-        const parsed = JSON.parse(localStr);
-        if (parsed.name) setProfileName(parsed.name);
-        if (parsed.baptismName) setProfileBaptismName(parsed.baptismName);
-        if (parsed.email) setProfileEmail(parsed.email);
-        if (parsed.zonecode) setProfileZonecode(parsed.zonecode);
-        if (parsed.address || parsed.addressBase) setProfileAddress(parsed.address || parsed.addressBase);
-        if (parsed.addressDetail) setProfileAddressDetail(parsed.addressDetail);
-        if (parsed.password) {
-          setProfilePassword(parsed.password);
-          setProfilePasswordConfirm(parsed.password);
-        }
-      }
-    } catch {}
-
-    // DB 실측 프로필 조회 연동 (다른 브라우저나 디바이스에서도 완벽 동기화)
+    // DB 실측 프로필 조회 연동 (100% 실제 DB 실측 조회)
     try {
       const profRes = await memberAPI.getProfile(cleanPhone);
       if (profRes.success && profRes.data) {
@@ -223,12 +219,6 @@ export default function MyDonations() {
         password: profilePassword,
         updatedAt: new Date().toISOString(),
       };
-      localStorage.setItem(`soulpay_profile_${cleanPhone}`, JSON.stringify(profileData));
-      localStorage.setItem(`faithpay_profile_${cleanPhone}`, JSON.stringify(profileData));
-      if (profilePassword) {
-        localStorage.setItem(`soulpay_password_${cleanPhone}`, profilePassword);
-        localStorage.setItem(`faithpay_password_${cleanPhone}`, profilePassword);
-      }
 
       await memberAPI.updateProfile(cleanPhone, {
         name: profileName,
@@ -250,6 +240,13 @@ export default function MyDonations() {
     }
   };
 
+  const handleKakaoLogin = () => {
+    setIsKakaoLoggingIn(true);
+    const redirectUri = `${window.location.origin}/oauth/kakao/callback`;
+    const kakaoUrl = kakaoAuthAPI.getAuthUrl(tenantSlug || '', redirectUri);
+    window.location.href = kakaoUrl;
+  };
+
   const handleEmailLogin = async () => {
     if (!loginEmail.trim()) {
       toast.error('이메일 주소를 입력해 주세요.');
@@ -263,42 +260,18 @@ export default function MyDonations() {
     setIsLoading(true);
     try {
       const res = await memberAPI.loginWithEmail(currentTenant.id, loginEmail, loginPassword);
-      if (res.success && res.data && res.data.found) {
+      if (res.success && res.data && res.data.found && res.data.phone) {
         setIsAuthenticated(true);
-        const userPhone = res.data.phone || '';
+        const userPhone = res.data.phone.replace(/[^0-9]/g, '');
         setPhoneNumber(userPhone);
-
-        const completedDonations = (res.data.donations || []).filter(
-          (d: any) => !d.paymentStatus || d.paymentStatus === 'completed'
-        );
-        const matched: HistoryItem[] = completedDonations.map((d: any) => ({
-          id: d.id,
-          itemId: d.itemId,
-          itemName: d.itemName,
-          amount: d.amount,
-          name: d.donorName,
-          phone: d.donorPhone,
-          date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-          rawDate: d.createdAt,
-          status: '결제완료',
-          isRecurring: d.isRecurring,
-          deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-          paymentMethod: cleanPaymentMethod(d.paymentMethod),
-        }));
-        setHistory(matched);
-        loadSavedProfile(userPhone.replace(/[^0-9]/g, ''), completedDonations);
+        sessionStorage.setItem('soulpay_donor_session', userPhone);
+        await fetchDonorData(userPhone);
         toast.success(`이메일 로그인 성공! ${res.data.donorName || terms.donor}님의 마이페이지입니다.`);
       } else {
-        setIsAuthenticated(true);
-        const targetPh = (phoneNumber || sessionStorage.getItem('soulpay_donor_session') || '').replace(/[^0-9]/g, '');
-        if (targetPh) {
-          setPhoneNumber(targetPh);
-          fetchDonorData(targetPh);
-        }
-        toast.success('로그인에 성공하였습니다.');
+        toast.error(res.error || '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다. 휴대폰 1초 인증으로 로그인하신 후 프로필에서 이메일과 비밀번호를 등록해 주세요.');
       }
-    } catch (err) {
-      toast.error('이메일 로그인 중 오류가 발생했습니다.');
+    } catch (err: any) {
+      toast.error(err?.message || '이메일 로그인 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -443,128 +416,7 @@ export default function MyDonations() {
     ? effectiveItems.some(item => item.enabled !== false && item.allowRecurring !== false)
     : true;
 
-  const handleSendOtp = async () => {
-    if (phoneNumber.length < 10) {
-      toast.error('올바른 휴대폰 번호를 입력해주세요');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const res = await otpAuthAPI.sendOtp(phoneNumber);
-      if (res.success) {
-        toast.success(res.data?.message || '1초 SMS 인증번호가 발송되었습니다.');
-      } else {
-        toast.success('1초 SMS 인증번호가 발송되었습니다. (테스트 핀: 1234)');
-      }
-    } catch (e) {
-      toast.success('1초 SMS 인증번호가 발송되었습니다. (테스트 핀: 1234)');
-    } finally {
-      setIsOtpSent(true);
-      setIsLoading(false);
-    }
-  };
 
-  const handleVerifyOtp = async () => {
-    if (!otpCode) {
-      toast.error('4자리 인증번호를 입력해 주세요.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const cleanedInputPhone = phoneNumber.replace(/[^0-9]/g, '');
-      sessionStorage.setItem('soulpay_donor_session', cleanedInputPhone);
-      sessionStorage.setItem('faithpay_donor_session', cleanedInputPhone);
-      localStorage.setItem('soulpay_last_donor_phone', cleanedInputPhone);
-      localStorage.setItem('faithpay_last_donor_phone', cleanedInputPhone);
-
-      // 1. OTP 검증 및 DB 조회 API 호출
-      const res = await otpAuthAPI.verifyOtp(phoneNumber, otpCode);
-      if (res.success && res.data) {
-        setIsAuthenticated(true);
-        setSubscriptions(res.data.subscriptions || []);
-
-        if (res.data.donations && res.data.donations.length > 0) {
-          const validDonations = res.data.donations.filter(
-            (d: any) => {
-              const s = d.paymentStatus || d.status || 'completed';
-              return s === 'completed' || s === 'cancelled';
-            }
-          );
-          const matched: HistoryItem[] = validDonations.map((d: any) => {
-            const rawStatus = d.paymentStatus || d.status || 'completed';
-            const isCancelled = rawStatus === 'cancelled';
-            return {
-              id: d.id,
-              itemId: d.itemId,
-              itemName: d.itemName,
-              amount: d.amount,
-              name: d.donorName,
-              phone: d.donorPhone,
-              date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-              rawDate: d.createdAt,
-              status: isCancelled ? '결제취소' : '결제완료',
-              paymentStatus: rawStatus,
-              cancelReason: d.cancelReason || d.cancel_reason,
-              cancelledAt: d.cancelledAt || d.cancelled_at,
-              isRecurring: d.isRecurring,
-              deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-              paymentMethod: cleanPaymentMethod(d.paymentMethod),
-            };
-          });
-          setHistory(matched);
-          loadSavedProfile(cleanedInputPhone, validDonations);
-        } else {
-          setHistory([]);
-          loadSavedProfile(cleanedInputPhone, []);
-        }
-        toast.success('본인 인증이 완료되었습니다.');
-      } else {
-        // 2. Supabase DB 전용 조율
-        setIsAuthenticated(true);
-        const dbRes = await donationAPI.getByTenant(currentTenant.id);
-        if (dbRes.success && dbRes.data) {
-          const matchedRaw = dbRes.data.filter(d => {
-            const phoneMatch = (d.donorPhone || d.donor_phone || '').replace(/[^0-9]/g, '') === cleanedInputPhone;
-            const status = d.paymentStatus || d.payment_status || d.status || 'completed';
-            return phoneMatch && (status === 'completed' || status === 'cancelled');
-          });
-          const matched: HistoryItem[] = matchedRaw.map(d => {
-            const rawStatus = d.paymentStatus || d.payment_status || d.status || 'completed';
-            const isCancelled = rawStatus === 'cancelled';
-            return {
-              id: d.id,
-              itemId: d.itemId,
-              itemName: d.itemName,
-              amount: d.amount,
-              name: d.donorName || d.donor_name || d.name,
-              phone: d.donorPhone || d.donor_phone || cleanedInputPhone,
-              date: d.createdAt ? new Date(d.createdAt).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR'),
-              rawDate: d.createdAt,
-              status: isCancelled ? '결제취소' : '결제완료',
-              paymentStatus: rawStatus,
-              cancelReason: d.cancelReason || d.cancel_reason,
-              cancelledAt: d.cancelledAt || d.cancelled_at,
-              isRecurring: d.isRecurring,
-              deviceType: d.deviceType || ((d.paymentMethod || '').includes('OffPG') || (d.paymentMethod || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
-              paymentMethod: cleanPaymentMethod(d.paymentMethod),
-            };
-          });
-          setHistory(matched);
-          loadSavedProfile(cleanedInputPhone, matchedRaw);
-        }
-        toast.success('본인 인증이 완료되었습니다.');
-      }
-    } catch (err) {
-      setIsAuthenticated(true);
-      setSubscriptions([]);
-      setHistory([]);
-      loadSavedProfile(phoneNumber.replace(/[^0-9]/g, ''), []);
-      toast.success('본인 인증이 완료되었습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
 
   const handleUpdateSubStatus = async (subId: string, newStatus: 'paused' | 'cancelled' | 'active') => {
@@ -628,154 +480,125 @@ export default function MyDonations() {
 
       <div className="max-w-2xl mx-auto px-4">
         {!isAuthenticated ? (
-          <Card className="shadow-md border-none rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
-            <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🔒</span>
-                  <CardTitle className="text-xl font-bold">{terms.donor} 마이페이지 로그인</CardTitle>
-                </div>
-                <Badge variant="outline" className="text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
-                  {currentTenant.name} 전용
-                </Badge>
+          <Card className="shadow-lg border-none rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
+            <CardHeader className="pb-4 border-b border-zinc-100 dark:border-zinc-800 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <CardTitle className="text-xl font-bold text-slate-900 dark:text-zinc-100">
+                  {terms.donor} 마이페이지
+                </CardTitle>
               </div>
-              <CardDescription className="text-xs text-zinc-500">
-                휴대폰 1초 SMS 인증 또는 이메일 비밀번호 로그인을 선택하여 본인 마이페이지에 접속하실 수 있습니다.
+              <Badge variant="outline" className="mx-auto text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
+                {currentTenant.name} 전용
+              </Badge>
+              <CardDescription className="text-xs text-zinc-500 pt-2">
+                카카오 1초 간편 로그인으로 본인 확인 후 헌금 내역과 기부금 영수증을 즉시 확인하실 수 있습니다.
               </CardDescription>
-
-              {/* 🔑 이중 인증 수단 선택 스위처 */}
-              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl mt-4">
-                <button
-                  type="button"
-                  onClick={() => setAuthMethod('phone')}
-                  className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    authMethod === 'phone'
-                      ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  <Smartphone className="h-3.5 w-3.5" />
-                  휴대폰 1초 SMS 인증
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthMethod('email')}
-                  className={`py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    authMethod === 'email'
-                      ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  이메일 / 비밀번호 로그인
-                </button>
-              </div>
             </CardHeader>
 
-            <CardContent className="pt-6 space-y-4">
-              {authMethod === 'phone' ? (
-                !isOtpSent ? (
-                  <div className="space-y-3">
-                    <Label htmlFor="phone" className="text-xs font-bold text-zinc-500">휴대폰 번호</Label>
-                    <div className="relative">
-                      <Input 
-                        id="phone"
-                        type="tel"
-                        placeholder="010-0000-0000"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(formatPhoneNumber(e.target.value))}
-                        className="pl-10 h-12 rounded-xl bg-zinc-50 font-semibold font-mono tracking-wider text-base"
-                      />
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <CardContent className="pt-6 space-y-5">
+              {/* 💬 카카오 1초 간편 로그인 (원클릭 대표 인증) */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleKakaoLogin}
+                  disabled={isKakaoLoggingIn}
+                  className="w-full h-14 px-4 rounded-2xl bg-[#FEE500] hover:bg-[#FDD835] active:scale-[0.99] text-[#191919] font-black text-base flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-50"
+                >
+                  {isKakaoLoggingIn ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-[#191919]" />
+                  ) : (
+                    <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                      <path d="M12 3C6.477 3 2 6.477 2 10.769c0 2.769 1.872 5.187 4.693 6.556-.206.775-.747 2.809-.854 3.245-.135.544.198.536.417.391.171-.113 2.716-1.846 3.822-2.602.627.09 1.27.139 1.922.139 5.523 0 10-3.477 10-7.769S17.523 3 12 3z"/>
+                    </svg>
+                  )}
+                  <span>카카오로 1초 만에 간편 조회</span>
+                </button>
+
+                <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-3.5 space-y-2 text-xs text-slate-600 dark:text-zinc-400">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-500 font-bold">✓</span>
+                    <span>문자 인증번호 입력 없이 카카오톡으로 1초 만에 안전 조회</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-500 font-bold">✓</span>
+                    <span>내가 봉헌한 헌금 내역 및 기부금 영수증 즉시 열람 및 출력</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-500 font-bold">✓</span>
+                    <span>신청한 정기 헌금(약정) 내역 확인 및 간편 일시정지/해지 관리</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ✉️ 이메일 계정 로그인 전환 옵션 */}
+              <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 text-center">
+                {!showEmailLogin ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailLogin(true)}
+                    className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-zinc-300 font-medium inline-flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    등록된 이메일 계정으로 로그인하기
+                  </button>
+                ) : (
+                  <div className="space-y-3 text-left pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-indigo-500" />
+                        이메일 로그인
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailLogin(false)}
+                        className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        접기
+                      </button>
                     </div>
-                    <Button 
-                      className="w-full h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs"
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700">이메일 주소</Label>
+                      <Input
+                        type="email"
+                        placeholder="example@email.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="h-11 rounded-xl bg-zinc-50 text-sm font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700">비밀번호</Label>
+                      <Input
+                        type="password"
+                        placeholder="비밀번호 입력"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="h-11 rounded-xl bg-zinc-50 text-sm"
+                      />
+                    </div>
+                    <Button
+                      className="w-full h-11 text-sm font-bold rounded-xl text-white cursor-pointer shadow-xs mt-1"
                       style={{ backgroundColor: currentTenant.primaryColor }}
-                      onClick={handleSendOtp}
+                      onClick={handleEmailLogin}
                       disabled={isLoading}
                     >
-                      {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                      1초 인증번호 받기
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      이메일로 마이페이지 로그인
                     </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3 animate-fade-in">
-                    <Label htmlFor="otp" className="text-xs font-bold text-zinc-500">카카오톡/문자 4자리 인증번호</Label>
-                    <Input 
-                      id="otp"
-                      type="text"
-                      placeholder="4자리 숫자 입력 (테스트: 1234)"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      maxLength={4}
-                      className="h-12 rounded-xl bg-zinc-50 font-bold text-center tracking-widest text-xl"
-                    />
-                    <p className="text-[11px] text-indigo-600 font-medium text-center">· 테스트용 코드 '1234'를 입력하시면 즉시 내역이 조회됩니다.</p>
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1 h-12 rounded-xl cursor-pointer"
-                        onClick={() => setIsOtpSent(false)}
+                    <p className="text-[11px] text-slate-500 text-center pt-1">
+                      비밀번호를 잊으셨나요?{' '}
+                      <button
+                        type="button"
+                        onClick={handleKakaoLogin}
+                        className="text-amber-600 font-bold underline cursor-pointer"
                       >
-                        재발송
-                      </Button>
-                      <Button 
-                        className="flex-1 h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs"
-                        style={{ backgroundColor: currentTenant.primaryColor }}
-                        onClick={handleVerifyOtp}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                        인증 및 마이페이지 로그인
-                      </Button>
-                    </div>
+                        카카오로 1초 간편 조회
+                      </button>
+                      를 이용해 보세요.
+                    </p>
                   </div>
-                )
-              ) : (
-                /* ✉️ 이메일 / 비밀번호 로그인 폼 */
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">이메일 주소</Label>
-                    <Input
-                      type="email"
-                      placeholder="example@email.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      className="h-12 rounded-xl bg-zinc-50 text-sm font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">비밀번호</Label>
-                    <Input
-                      type="password"
-                      placeholder="비밀번호 입력"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="h-12 rounded-xl bg-zinc-50 text-sm"
-                    />
-                  </div>
-                  <Button
-                    className="w-full h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs mt-2"
-                    style={{ backgroundColor: currentTenant.primaryColor }}
-                    onClick={handleEmailLogin}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                    이메일로 마이페이지 로그인
-                  </Button>
-                  <p className="text-[11px] text-slate-500 text-center pt-2">
-                    비밀번호를 잊으셨거나 첫 방문이신가요?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setAuthMethod('phone')}
-                      className="text-indigo-600 font-bold underline cursor-pointer"
-                    >
-                      휴대폰 1초 인증
-                    </button>
-                    으로 즉시 로그인하실 수 있습니다.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -860,18 +683,13 @@ export default function MyDonations() {
                       />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                        {currentTenant.religionType === 'catholic' ? '세례명' : currentTenant.religionType === 'buddhist' ? '법명' : currentTenant.religionType === 'protestant' ? '직분' : '호칭'}
-                      </Label>
-                      <Input
-                        type="text"
-                        value={profileBaptismName}
-                        onChange={(e) => setProfileBaptismName(e.target.value)}
-                        placeholder={currentTenant.religionType === 'catholic' ? '예: 요한' : currentTenant.religionType === 'buddhist' ? '예: 보현행' : currentTenant.religionType === 'protestant' ? '예: 안수집사' : '호칭 입력'}
-                        className="text-xs h-10 font-semibold bg-slate-50 dark:bg-zinc-800 border-slate-200"
-                      />
-                    </div>
+                    <MemberTitleSelect
+                      value={profileBaptismName}
+                      onChange={setProfileBaptismName}
+                      religionType={currentTenant.religionType}
+                      showLabel={true}
+                      id="profile-baptism-name"
+                    />
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
@@ -1230,45 +1048,77 @@ export default function MyDonations() {
                         </div>
                       </div>
 
-                      {/* History List Header with Status Filter */}
+                      {/* History List Header with Status Filter & View Mode Toggle */}
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-zinc-200">
                             {terms.donation} 상세 내역 ({filteredHistory.length}건)
                           </h3>
 
-                          {/* 🔘 결제 상태 필터 (전체 / 결제완료 / 결제취소) */}
-                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
-                            <button
-                              onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'all'
-                                  ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs'
-                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
-                              }`}
-                            >
-                              전체 ({dateFilteredHistory.length})
-                            </button>
-                            <button
-                              onClick={() => { setStatusFilter('completed'); setCurrentPage(1); }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'completed'
-                                  ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
-                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
-                              }`}
-                            >
-                              결제완료 ({completedList.length})
-                            </button>
-                            <button
-                              onClick={() => { setStatusFilter('cancelled'); setCurrentPage(1); }}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'cancelled'
-                                  ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs'
-                                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
-                              }`}
-                            >
-                              결제취소 ({cancelledList.length})
-                            </button>
+                          <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+                            {/* 🔘 결제 상태 필터 (전체 / 결제완료 / 결제취소) */}
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                              <button
+                                onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  statusFilter === 'all'
+                                    ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                전체 ({dateFilteredHistory.length})
+                              </button>
+                              <button
+                                onClick={() => { setStatusFilter('completed'); setCurrentPage(1); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  statusFilter === 'completed'
+                                    ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                결제완료 ({completedList.length})
+                              </button>
+                              <button
+                                onClick={() => { setStatusFilter('cancelled'); setCurrentPage(1); }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  statusFilter === 'cancelled'
+                                    ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                결제취소 ({cancelledList.length})
+                              </button>
+                            </div>
+
+                            {/* 📋 / ⊞ 뷰 모드 토글 (목록형 / 카드형) */}
+                            <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                              <button
+                                type="button"
+                                onClick={() => setViewMode('list')}
+                                title="목록형으로 보기"
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  viewMode === 'list'
+                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                <List className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">목록</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setViewMode('card')}
+                                title="카드형으로 보기"
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  viewMode === 'card'
+                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                }`}
+                              >
+                                <LayoutGrid className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">카드</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -1284,125 +1134,220 @@ export default function MyDonations() {
                           </Card>
                         ) : (
                           <>
-                            <div className="space-y-3">
-                              {paginatedHistory.map((item) => {
-                                const isCancelled = item.paymentStatus === 'cancelled';
-                                const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
+                            {viewMode === 'list' ? (
+                              /* ── 📋 컴팩트 목록형 뷰 (스크롤 최적화 & 행 클릭 시 상세 모달 오픈) ── */
+                              <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs divide-y divide-slate-100 dark:divide-zinc-800/80">
+                                {paginatedHistory.map((item) => {
+                                  const isCancelled = item.paymentStatus === 'cancelled';
+                                  const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
+                                  const cleanedMethod = cleanPaymentMethod(item.paymentMethod);
 
-                                return (
-                                  <div
-                                    key={item.id}
-                                    className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 sm:p-5 transition-all shadow-xs hover:shadow-sm ${
-                                      isCancelled
-                                        ? 'border-red-200/80 dark:border-red-950/60 bg-red-50/10'
-                                        : 'border-slate-200/80 dark:border-zinc-800'
-                                    }`}
-                                  >
-                                    {/* Header Row: Title, Badges & Status */}
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="flex-1 min-w-0">
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() => setSelectedDetailItem(item)}
+                                      className={`group px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                                        isCancelled
+                                          ? 'hover:bg-red-50/30 dark:hover:bg-red-950/20 bg-red-50/5'
+                                          : 'hover:bg-slate-50/90 dark:hover:bg-zinc-800/60'
+                                      }`}
+                                    >
+                                      {/* Left Column: Item Name & Badges & Meta */}
+                                      <div className="flex-1 min-w-0 pr-2">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-bold text-base text-slate-900 dark:text-zinc-100">
+                                          <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-zinc-100 group-hover:text-[#3182F6] dark:group-hover:text-blue-400 transition-colors truncate">
                                             {item.itemName}
                                           </span>
                                           {item.isRecurring && (
-                                            <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
+                                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
                                               정기
                                             </span>
                                           )}
                                           {isKiosk && (
-                                            <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
+                                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
                                               키오스크
+                                            </span>
+                                          )}
+                                          {isCancelled && (
+                                            <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
+                                              취소됨
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                                          <span className="font-mono text-slate-600 dark:text-zinc-300">{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-700">·</span>
+                                          <span className="truncate max-w-[130px] sm:max-w-[220px] text-slate-600 dark:text-zinc-400">
+                                            {cleanedMethod}
+                                          </span>
+                                          {isCancelled && item.cancelReason && (
+                                            <>
+                                              <span className="text-slate-300 dark:text-zinc-700 hidden sm:inline">·</span>
+                                              <span className="text-red-600 dark:text-red-400 font-medium truncate max-w-[180px] hidden sm:inline">
+                                                사유: {item.cancelReason}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Right Column: Amount & Status & Chevron */}
+                                      <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+                                        <div className="text-right">
+                                          <div
+                                            className={`text-sm sm:text-base font-extrabold font-mono tracking-tight ${
+                                              isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : 'text-slate-900 dark:text-zinc-100'
+                                            }`}
+                                            style={!isCancelled && currentTenant?.primaryColor ? { color: currentTenant.primaryColor } : undefined}
+                                          >
+                                            {item.amount.toLocaleString()}원
+                                          </div>
+                                          <div className="mt-0.5 flex items-center justify-end">
+                                            {isCancelled ? (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-300">
+                                                결제취소
+                                              </span>
+                                            ) : (
+                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
+                                                {item.status || '결제완료'}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-zinc-200 group-hover:translate-x-0.5 transition-all" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              /* ── ⊞ 카드형 뷰 (단건/소수 건수 확인 시 유용) ── */
+                              <div className="space-y-3">
+                                {paginatedHistory.map((item) => {
+                                  const isCancelled = item.paymentStatus === 'cancelled';
+                                  const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
+
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() => setSelectedDetailItem(item)}
+                                      className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 sm:p-5 transition-all shadow-xs hover:shadow-md cursor-pointer ${
+                                        isCancelled
+                                          ? 'border-red-200/80 dark:border-red-950/60 bg-red-50/10'
+                                          : 'border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700'
+                                      }`}
+                                    >
+                                      {/* Header Row: Title, Badges & Status */}
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-bold text-base text-slate-900 dark:text-zinc-100">
+                                              {item.itemName}
+                                            </span>
+                                            {item.isRecurring && (
+                                              <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
+                                                정기
+                                              </span>
+                                            )}
+                                            {isKiosk && (
+                                              <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
+                                                키오스크
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Status Badge */}
+                                        <div className="flex-shrink-0">
+                                          {isCancelled ? (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
+                                              결제취소
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
+                                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                              {item.status || '결제완료'}
                                             </span>
                                           )}
                                         </div>
                                       </div>
 
-                                      {/* Status Badge */}
-                                      <div className="flex-shrink-0">
-                                        {isCancelled ? (
-                                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
-                                            결제취소
-                                          </span>
-                                        ) : (
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
-                                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                                            {item.status || '결제완료'}
+                                      {/* Amount Row */}
+                                      <div className="flex items-baseline gap-2 mt-2">
+                                        <span
+                                          className={`text-2xl font-extrabold tracking-tight font-mono ${
+                                            isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : ''
+                                          }`}
+                                          style={!isCancelled && currentTenant?.primaryColor ? { color: currentTenant.primaryColor } : undefined}
+                                        >
+                                          {item.amount.toLocaleString()}원
+                                        </span>
+                                        {isCancelled && (
+                                          <span className="text-xs font-bold text-red-600 dark:text-red-400">
+                                            (승인 취소됨)
                                           </span>
                                         )}
                                       </div>
-                                    </div>
 
-                                    {/* Amount Row */}
-                                    <div className="flex items-baseline gap-2 mt-2">
-                                      <span
-                                        className={`text-2xl font-extrabold tracking-tight font-mono ${
-                                          isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : ''
-                                        }`}
-                                        style={!isCancelled ? { color: currentTenant.primaryColor } : undefined}
-                                      >
-                                        {item.amount.toLocaleString()}원
-                                      </span>
-                                      {isCancelled && (
-                                        <span className="text-xs font-bold text-red-600 dark:text-red-400">
-                                          (승인 취소됨)
-                                        </span>
+                                      {/* 취소 사유 표출 */}
+                                      {isCancelled && item.cancelReason && (
+                                        <div className="mt-2.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-3 py-2 rounded-xl border border-red-200/60 dark:border-red-900/50">
+                                          <span className="font-bold">취소 사유:</span> {item.cancelReason}
+                                          {item.cancelledAt && (
+                                            <span className="text-slate-400 dark:text-zinc-500 ml-2">
+                                              ({new Date(item.cancelledAt).toLocaleString('ko-KR')})
+                                            </span>
+                                          )}
+                                        </div>
                                       )}
-                                    </div>
 
-                                    {/* 취소 사유 표출 */}
-                                    {isCancelled && item.cancelReason && (
-                                      <div className="mt-2.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-3 py-2 rounded-xl border border-red-200/60 dark:border-red-900/50">
-                                        <span className="font-bold">취소 사유:</span> {item.cancelReason}
-                                        {item.cancelledAt && (
-                                          <span className="text-slate-400 dark:text-zinc-500 ml-2">
-                                            ({new Date(item.cancelledAt).toLocaleString('ko-KR')})
+                                      {/* Footer Meta & Action */}
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+                                        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
+                                          <span className="font-mono text-slate-600 dark:text-zinc-300">{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-700">·</span>
+                                          <span className="truncate max-w-[220px] sm:max-w-none text-slate-600 dark:text-zinc-300">
+                                            {cleanPaymentMethod(item.paymentMethod)}
                                           </span>
-                                        )}
-                                      </div>
-                                    )}
+                                        </div>
 
-                                    {/* Footer Meta & Action */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                                        <span className="font-mono text-slate-600 dark:text-zinc-300">{item.date}</span>
-                                        <span className="text-slate-300 dark:text-zinc-700">·</span>
-                                        <span className="truncate max-w-[220px] sm:max-w-none text-slate-600 dark:text-zinc-300">
-                                          {item.paymentMethod}
-                                        </span>
+                                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className={`h-8 px-3 text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-xs ${
+                                              isCancelled
+                                                ? 'text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-900'
+                                                : 'text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
+                                            }`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedReceiptData({
+                                                receiptId: item.id,
+                                                donorName: item.name,
+                                                donorPhone: item.phone,
+                                                amount: item.amount,
+                                                itemName: item.itemName,
+                                                date: item.date,
+                                                isCancelled,
+                                                cancelReason: item.cancelReason,
+                                                cancelledAt: item.cancelledAt,
+                                              });
+                                            }}
+                                          >
+                                            <Download className="h-3.5 w-3.5 mr-1 text-slate-400" />
+                                            {isCancelled ? '취소 영수증 PDF' : '영수증 PDF'}
+                                          </Button>
+                                        </div>
                                       </div>
-
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className={`h-8 px-3 text-xs font-bold rounded-xl cursor-pointer transition-colors self-end sm:self-auto shadow-xs ${
-                                          isCancelled
-                                            ? 'text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-900'
-                                            : 'text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
-                                        }`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedReceiptData({
-                                            receiptId: item.id,
-                                            donorName: item.name,
-                                            donorPhone: item.phone,
-                                            amount: item.amount,
-                                            itemName: item.itemName,
-                                            date: item.date,
-                                            isCancelled,
-                                            cancelReason: item.cancelReason,
-                                            cancelledAt: item.cancelledAt,
-                                          });
-                                        }}
-                                      >
-                                        <Download className="h-3.5 w-3.5 mr-1 text-slate-400" />
-                                        {isCancelled ? '취소 영수증 PDF' : '영수증 PDF'}
-                                      </Button>
                                     </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             {/* 📄 10개씩 페이징 컨트롤 바 */}
                             {totalPages > 1 && (
@@ -1489,6 +1434,189 @@ export default function MyDonations() {
           </div>
         )}
       </div>
+
+      {/* 🔍 헌금/봉헌 상세 내역 모달 */}
+      {selectedDetailItem && (
+        <Dialog open={!!selectedDetailItem} onOpenChange={(open) => !open && setSelectedDetailItem(null)}>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
+            {/* 모달 헤더 */}
+            <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-zinc-800 text-left">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#3182F6] flex items-center justify-center flex-shrink-0">
+                  <History className="h-4 w-4" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100">
+                    {terms.donation} 상세 내역
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    거래 승인 및 결제 상세 정보를 확인하실 수 있습니다.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              {/* 금액 & 상태 카드 */}
+              <div
+                className={`p-4 rounded-2xl border text-center ${
+                  selectedDetailItem.paymentStatus === 'cancelled'
+                    ? 'bg-red-50/40 dark:bg-red-950/30 border-red-200/80 dark:border-red-900/50'
+                    : 'bg-slate-50/80 dark:bg-zinc-800/40 border-slate-200/80 dark:border-zinc-700/60'
+                }`}
+              >
+                <div className="text-xs font-bold text-slate-500 dark:text-zinc-400 mb-1">
+                  {selectedDetailItem.paymentStatus === 'cancelled' ? '취소된 결제 금액' : '결제 금액'}
+                </div>
+                <div
+                  className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                    selectedDetailItem.paymentStatus === 'cancelled'
+                      ? 'line-through text-slate-400 dark:text-zinc-500'
+                      : 'text-slate-900 dark:text-zinc-100'
+                  }`}
+                  style={
+                    selectedDetailItem.paymentStatus !== 'cancelled' && currentTenant?.primaryColor
+                      ? { color: currentTenant.primaryColor }
+                      : undefined
+                  }
+                >
+                  {selectedDetailItem.amount.toLocaleString()}원
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-center gap-1.5 flex-wrap">
+                  {selectedDetailItem.paymentStatus === 'cancelled' ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">
+                      결제취소
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      {selectedDetailItem.status || '결제완료'}
+                    </span>
+                  )}
+                  {selectedDetailItem.isRecurring && (
+                    <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                      정기
+                    </span>
+                  )}
+                  {(selectedDetailItem.deviceType === 'KIOSK' || (selectedDetailItem.paymentMethod || '').includes('OffPG')) && (
+                    <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      키오스크
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 취소 사유 알림 박스 */}
+              {selectedDetailItem.paymentStatus === 'cancelled' && selectedDetailItem.cancelReason && (
+                <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    취소 정보
+                  </div>
+                  <p><span className="font-semibold">취소 사유:</span> {selectedDetailItem.cancelReason}</p>
+                  {selectedDetailItem.cancelledAt && (
+                    <p className="text-slate-500 dark:text-zinc-400">
+                      취소 일시: {new Date(selectedDetailItem.cancelledAt).toLocaleString('ko-KR')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 상세 정보 리스트 */}
+              <div className="bg-slate-50/60 dark:bg-zinc-800/30 rounded-2xl border border-slate-200/70 dark:border-zinc-800 p-4 space-y-2.5">
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">헌금 항목</span>
+                  <span className="font-bold text-slate-900 dark:text-zinc-100">{selectedDetailItem.itemName}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">납부 구분</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">
+                    {selectedDetailItem.isRecurring ? '정기 후원/헌금 (매월)' : '일시납 (단건)'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">결제 일시</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+                    {selectedDetailItem.date}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">결제 수단</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200">
+                    {cleanPaymentMethod(selectedDetailItem.paymentMethod)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">접수 경로</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200">
+                    {selectedDetailItem.deviceType === 'KIOSK' || (selectedDetailItem.paymentMethod || '').includes('OffPG')
+                      ? '현장 키오스크'
+                      : '온라인 (모바일/PC)'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">봉헌자명</span>
+                  <span className="font-bold text-slate-900 dark:text-zinc-100">{selectedDetailItem.name}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">연락처</span>
+                  <span className="font-mono text-slate-800 dark:text-zinc-200">
+                    {formatPhoneNumber(selectedDetailItem.phone) || selectedDetailItem.phone}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium">승인/주문 번호</span>
+                  <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400 select-all truncate max-w-[200px]" title={selectedDetailItem.id}>
+                    {selectedDetailItem.id}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <DialogFooter className="p-4 sm:p-5 pt-2 border-t border-slate-100 dark:border-zinc-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedDetailItem(null)}
+                className="w-full sm:w-auto text-xs font-bold"
+              >
+                닫기
+              </Button>
+              <Button
+                className="w-full sm:w-auto text-xs font-bold gap-1.5 shadow-xs"
+                variant={selectedDetailItem.paymentStatus === 'cancelled' ? 'destructive' : 'default'}
+                onClick={() => {
+                  const isCancelled = selectedDetailItem.paymentStatus === 'cancelled';
+                  setSelectedReceiptData({
+                    receiptId: selectedDetailItem.id,
+                    donorName: selectedDetailItem.name,
+                    donorPhone: selectedDetailItem.phone,
+                    donorAddress: profileAddress ? (profileAddressDetail ? `${profileAddress} ${profileAddressDetail}` : profileAddress) : undefined,
+                    amount: selectedDetailItem.amount,
+                    itemName: selectedDetailItem.itemName,
+                    date: selectedDetailItem.date,
+                    isCancelled,
+                    cancelReason: selectedDetailItem.cancelReason,
+                    cancelledAt: selectedDetailItem.cancelledAt,
+                  });
+                  setSelectedDetailItem(null);
+                }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                {selectedDetailItem.paymentStatus === 'cancelled' ? '취소 영수증 PDF' : '기부금 영수증 PDF'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* 국세청 표준 기부금 영수증 모달 */}
       {selectedReceiptData && currentTenant && (

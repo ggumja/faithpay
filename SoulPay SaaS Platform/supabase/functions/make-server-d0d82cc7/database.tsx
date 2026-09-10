@@ -843,9 +843,19 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
   const finalTransactionId = donation.transactionId || '';
   const finalApproveNo = (donation as any).approveNo || finalTransactionId;
 
+  // tenant_id가 slug로 전달되었을 경우 UUID로 실측 변환하여 DB 외래키/UUID 타입 에러 원천 차단
+  let realTenantId = donation.tenantId;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(realTenantId || '');
+  if (!isUuid && realTenantId) {
+    const tenant = await getTenantBySlug(realTenantId) || await getTenantById(realTenantId);
+    if (tenant) realTenantId = tenant.id;
+  }
+
+  const finalId = donation.id || `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+
   const row = {
-    id: donation.id,
-    tenant_id: donation.tenantId,
+    id: finalId,
+    tenant_id: realTenantId,
     item_id: donation.itemId || '',
     item_name: donation.itemName || '',
     amount: donation.amount,
@@ -889,16 +899,18 @@ export async function createDonation(donation: Omit<Donation, 'createdAt' | 'upd
   return newDonation;
 }
 
-export async function getDonationById(tenantId: string, id: string): Promise<Donation | null> {
+export async function getDonationById(tenantIdOrId: string, id?: string): Promise<Donation | null> {
   const sb = pgClient();
-  const { data } = await sb.from('donations').select('*').eq('id', id).maybeSingle();
+  const actualId = id !== undefined ? id : tenantIdOrId;
+  const tenantId = id !== undefined ? tenantIdOrId : undefined;
+  const { data } = await sb.from('donations').select('*').eq('id', actualId).maybeSingle();
   if (!data) return null;
 
   if (tenantId) {
     const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
     const tid = tenant?.id ?? tenantId;
     if (data.tenant_id !== tid && data.tenant_id !== tenantId) {
-      console.warn(`Tenant boundary mismatch: donation ${id} belongs to ${data.tenant_id}, requested by ${tenantId}`);
+      console.warn(`Tenant boundary mismatch: donation ${actualId} belongs to ${data.tenant_id}, requested by ${tenantId}`);
       return null;
     }
   }
@@ -911,11 +923,16 @@ export async function getDonationsByTenant(tenantId: string): Promise<Donation[]
   // tenant_id 또는 slug 두 방향 모두 검색
   const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
   const tid = tenant?.id ?? tenantId;
-  const { data } = await sb
-    .from('donations')
-    .select('*')
-    .eq('tenant_id', tid)
-    .order('created_at', { ascending: false });
+  const slug = tenant?.slug;
+
+  let query = sb.from('donations').select('*');
+  if (slug && slug !== tid) {
+    query = query.or(`tenant_id.eq.${tid},tenant_id.eq.${slug}`);
+  } else {
+    query = query.eq('tenant_id', tid);
+  }
+
+  const { data } = await query.order('created_at', { ascending: false });
   return (data ?? []).map(rowToDonation);
 }
 
@@ -1138,29 +1155,7 @@ export async function getMonthlyStats(tenantId: string, year: number, month: num
 }
 
 export async function calculateAndSaveMonthlyStats(tenantId: string, year: number, month: number): Promise<MonthlyStats> {
-  const donations = await getDonationsByTenant(tenantId);
-  const monthStr = `${year}-${String(month).padStart(2, '0')}`;
-  const monthDonations = donations.filter((d) => d.createdAt?.startsWith(monthStr));
-
-  const stats: MonthlyStats = {
-    tenantId, year, month,
-    totalAmount: 0, totalCount: monthDonations.length,
-    byType: {}, byPaymentMethod: {},
-    recurringAmount: 0, recurringCount: 0,
-    oneTimeAmount: 0, oneTimeCount: 0,
-  };
-  for (const d of monthDonations) {
-    stats.totalAmount += d.amount;
-    const t = d.itemName || 'unknown';
-    if (!stats.byType[t]) stats.byType[t] = { amount: 0, count: 0 };
-    stats.byType[t].amount += d.amount; stats.byType[t].count++;
-    const m = d.paymentMethod || 'unknown';
-    if (!stats.byPaymentMethod[m]) stats.byPaymentMethod[m] = { amount: 0, count: 0 };
-    stats.byPaymentMethod[m].amount += d.amount; stats.byPaymentMethod[m].count++;
-    if (d.isRecurring) { stats.recurringAmount += d.amount; stats.recurringCount++; }
-    else { stats.oneTimeAmount += d.amount; stats.oneTimeCount++; }
-  }
-  return stats;
+  return getHybridMonthlyStats(tenantId, year, month);
 }
 
 // ==================== PARTNER DB FUNCTIONS ====================
@@ -1327,11 +1322,18 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
     }
   }
 
+  let realTenantId = sub.tenantId;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(realTenantId || '');
+  if (!isUuid && realTenantId) {
+    const tenant = await getTenantBySlug(realTenantId) || await getTenantById(realTenantId);
+    if (tenant) realTenantId = tenant.id;
+  }
+
   const { data, error } = await sb
     .from('subscriptions')
     .insert({
       id,
-      tenant_id: sub.tenantId,
+      tenant_id: realTenantId,
       donor_name: sub.donorName,
       donor_phone: sub.donorPhone.replace(/[^0-9]/g, ''),
       donor_email: sub.donorEmail ?? null,
@@ -1390,10 +1392,12 @@ export async function getSubscriptionsByPhone(phone: string): Promise<Subscripti
 
 export async function getSubscriptionsByTenant(tenantId: string): Promise<Subscription[]> {
   const sb = pgClient();
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
   const { data } = await sb
     .from('subscriptions')
     .select('*')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', tid)
     .order('created_at', { ascending: false });
   return (data ?? []).map((r: any) => ({
     id: r.id, tenantId: r.tenant_id, donorName: r.donor_name,
@@ -1473,6 +1477,23 @@ export async function deleteSubscription(id: string): Promise<boolean> {
 export async function getAllActiveSubscriptions(): Promise<Subscription[]> {
   const sb = pgClient();
   const { data } = await sb.from('subscriptions').select('*').eq('status', 'active').order('created_at', { ascending: false });
+  return (data ?? []).map((r: any) => ({
+    id: r.id, tenantId: r.tenant_id, donorName: r.donor_name,
+    donorPhone: r.donor_phone, donorEmail: r.donor_email,
+    itemId: r.item_id, itemName: r.item_name, amount: r.amount,
+    userId: r.user_id, billKey: r.bill_key, cardNo: r.card_no, cardName: r.card_name,
+    recurringDay: r.recurring_day,
+    recurringInterval: r.recurring_interval || 'monthly',
+    recurringDayOfWeek: r.recurring_day_of_week,
+    status: r.status,
+    nextPaymentDate: r.next_payment_date, pausedUntil: r.paused_until,
+    createdAt: r.created_at, updatedAt: r.updated_at,
+  }));
+}
+
+export async function getAllSubscriptions(): Promise<Subscription[]> {
+  const sb = pgClient();
+  const { data } = await sb.from('subscriptions').select('*').order('created_at', { ascending: false });
   return (data ?? []).map((r: any) => ({
     id: r.id, tenantId: r.tenant_id, donorName: r.donor_name,
     donorPhone: r.donor_phone, donorEmail: r.donor_email,
@@ -2634,52 +2655,94 @@ export async function seed800kLedger(): Promise<boolean> {
 
 /**
  * 하이브리드 통계 집계 엔진 (Hybrid Stats Calculator)
- * - 과거 마감 월: 마감 스토어 캐시에서 0.001초 직통 응답 (DB 부하 제로)
- * - 당월 (진행중 월): 실시간 헌금/수수료 결제 트랜잭션에서 온디맨드 재계산 & 당월 캐시 갱신
+ * - 실제 DB donations 원장에서 100% 실측 조회
+ * - 정상 결제완료(completed) 건만 수납 총액 및 건수 집계에 포함 (Zero-distortion rule)
+ * - 정기/일시 봉헌 구분 및 결제수단/항목별 통계 실측 산출
+ * - 취소/환불(cancelled), 실패(failed), 대기(pending) 건수도 별도 실측 산출
  */
 export async function getHybridMonthlyStats(tenantId: string, year: number, month: number): Promise<any> {
-  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-  const supabase = pgClient();
+  const donations = await getDonationsByTenant(tenantId);
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
 
-  const { data: commRows } = await supabase
-    .from('partner_commissions')
-    .select('*')
-    .eq('tenant_id', tenantId);
-
-  const { data: donRows } = await supabase
-    .from('donations')
-    .select('*')
-    .eq('tenant_id', tenantId);
-
-  const rawRows = (commRows && commRows.length > 0) ? commRows : (donRows ?? []);
-  const rows = rawRows.filter((r: any) => {
-    const dateStr = r.created_at || r.createdAt || '';
-    if (!dateStr) return true;
-    return dateStr.startsWith(monthKey);
+  // 한국 표준시(KST, UTC+9) 기준 해당 연월에 속하는 헌금만 필터링
+  const monthDonations = donations.filter((d) => {
+    if (!d.createdAt) return false;
+    const dDate = new Date(d.createdAt);
+    if (isNaN(dDate.getTime())) return false;
+    const kstDate = new Date(dDate.getTime() + 9 * 60 * 60 * 1000);
+    const dYear = kstDate.getUTCFullYear();
+    const dMonth = kstDate.getUTCMonth() + 1;
+    return dYear === year && dMonth === month;
   });
 
   let totalAmount = 0;
   let totalCount = 0;
+  let recurringAmount = 0;
+  let recurringCount = 0;
+  let oneTimeAmount = 0;
+  let oneTimeCount = 0;
+  let cancelledAmount = 0;
+  let cancelledCount = 0;
+  let failedCount = 0;
+  let pendingCount = 0;
+
   const byType: Record<string, { amount: number; count: number }> = {};
   const byPaymentMethod: Record<string, { amount: number; count: number }> = {};
 
-  for (const r of rows) {
-    const gross = Number(r.donation_amount || r.amount || 0);
-    totalAmount += gross;
-    totalCount += 1;
-    const typeName = r.item_name || r.donation_type || '일반 헌금';
-    if (!byType[typeName]) byType[typeName] = { amount: 0, count: 0 };
-    byType[typeName].amount += gross; byType[typeName].count += 1;
-    const payMethod = r.payment_method || '신용카드';
-    if (!byPaymentMethod[payMethod]) byPaymentMethod[payMethod] = { amount: 0, count: 0 };
-    byPaymentMethod[payMethod].amount += gross; byPaymentMethod[payMethod].count += 1;
+  for (const d of monthDonations) {
+    const amt = Number(d.amount) || 0;
+    const status = d.paymentStatus || 'completed';
+
+    if (status === 'completed') {
+      totalAmount += amt;
+      totalCount += 1;
+
+      if (d.isRecurring) {
+        recurringAmount += amt;
+        recurringCount += 1;
+      } else {
+        oneTimeAmount += amt;
+        oneTimeCount += 1;
+      }
+
+      const typeName = d.itemName || '일반 헌금';
+      if (!byType[typeName]) byType[typeName] = { amount: 0, count: 0 };
+      byType[typeName].amount += amt;
+      byType[typeName].count += 1;
+
+      let payMethod = d.paymentMethod || (d.isRecurring ? '정기결제' : '신용카드');
+      if (payMethod.includes('카드')) payMethod = '신용카드';
+      if (!byPaymentMethod[payMethod]) byPaymentMethod[payMethod] = { amount: 0, count: 0 };
+      byPaymentMethod[payMethod].amount += amt;
+      byPaymentMethod[payMethod].count += 1;
+    } else if (status === 'cancelled') {
+      cancelledAmount += amt;
+      cancelledCount += 1;
+    } else if (status === 'failed') {
+      failedCount += 1;
+    } else if (status === 'pending') {
+      pendingCount += 1;
+    }
   }
 
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
   return {
-    tenantId, year, month, totalAmount, totalCount,
-    recurringAmount: 0, recurringCount: 0,
-    oneTimeAmount: totalAmount, oneTimeCount: totalCount,
-    byType, byPaymentMethod,
+    tenantId: tid,
+    year,
+    month,
+    totalAmount,
+    totalCount,
+    recurringAmount,
+    recurringCount,
+    oneTimeAmount,
+    oneTimeCount,
+    cancelledAmount,
+    cancelledCount,
+    failedCount,
+    pendingCount,
+    byType,
+    byPaymentMethod,
     isClosed: monthKey < new Date().toISOString().slice(0, 7),
     lastCalculatedAt: new Date().toISOString(),
   };
@@ -2702,7 +2765,9 @@ export async function updateDonorProfile(
       .eq('key', `member_profile_${cleanPhone}`)
       .maybeSingle();
 
-    const currentVal = existingSetting?.value || {};
+    const currentVal = (existingSetting?.value && typeof existingSetting.value === 'object') ? { ...existingSetting.value } : {};
+    delete currentVal.value;
+
     const mergedVal = {
       phone: cleanPhone,
       ...currentVal,
@@ -2761,6 +2826,8 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   if (!cleanPhone) return null;
 
+  let profileData: any = null;
+
   try {
     const { data: setting } = await sb
       .from('system_settings')
@@ -2768,13 +2835,16 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
       .eq('key', `member_profile_${cleanPhone}`)
       .maybeSingle();
 
-    if (setting?.value) {
-      return setting.value;
+    if (setting?.value && typeof setting.value === 'object') {
+      const val = { ...setting.value };
+      delete val.value;
+      profileData = val;
     }
   } catch (err) {
     console.error('Error fetching member profile from system_settings:', err);
   }
 
+  // subscriptions 테이블에서 donor_email, donor_name 실측 보완
   try {
     const { data: sub } = await sb
       .from('subscriptions')
@@ -2785,14 +2855,117 @@ export async function getDonorProfile(phone: string): Promise<any | null> {
       .maybeSingle();
 
     if (sub) {
-      return {
-        phone: cleanPhone,
-        name: sub.donor_name || '',
-        email: sub.donor_email || '',
-      };
+      if (!profileData) {
+        profileData = {
+          phone: cleanPhone,
+          name: sub.donor_name || '',
+          email: sub.donor_email || '',
+        };
+      } else {
+        if (!profileData.email && sub.donor_email) {
+          profileData.email = sub.donor_email;
+        }
+        if (!profileData.name && sub.donor_name) {
+          profileData.name = sub.donor_name;
+        }
+      }
     }
   } catch (err) {
     console.error('Error fetching member profile fallback from subscriptions:', err);
+  }
+
+  // donations 테이블에서 최신 baptism_name 및 donor_name 보완
+  try {
+    const { data: don } = await sb
+      .from('donations')
+      .select('donor_name, baptism_name')
+      .eq('donor_phone', cleanPhone)
+      .not('baptism_name', 'is', null)
+      .neq('baptism_name', '')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (don) {
+      if (!profileData) {
+        profileData = {
+          phone: cleanPhone,
+          name: don.donor_name || '',
+          baptismName: don.baptism_name || '',
+        };
+      } else {
+        if (!profileData.baptismName && don.baptism_name) {
+          profileData.baptismName = don.baptism_name;
+        }
+        if (!profileData.name && don.donor_name) {
+          profileData.name = don.donor_name;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching baptism_name from donations:', err);
+  }
+
+  return profileData;
+}
+
+// 📱 신도/회원 이메일 로그인 조회 (DB 100% 실측 조회)
+export async function loginDonorWithEmail(tenantId: string, email: string, password?: string): Promise<{ phone: string; donorName: string; profile: any } | null> {
+  const sb = pgClient();
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail) return null;
+
+  // 1. system_settings 테이블에서 member_profile_% 검색
+  try {
+    const { data: settings } = await sb
+      .from('system_settings')
+      .select('key, value')
+      .like('key', 'member_profile_%');
+
+    if (settings && settings.length > 0) {
+      for (const s of settings) {
+        const val = (s.value && typeof s.value === 'object') ? s.value : {};
+        const profileEmail = (val.email || '').trim().toLowerCase();
+        if (profileEmail === cleanEmail) {
+          // 비밀번호가 설정되어 있는 경우 일치 여부 확인
+          if (val.password && password && val.password !== password) {
+            return null; // 비밀번호 불일치
+          }
+          const phone = (val.phone || s.key.replace('member_profile_', '')).replace(/[^0-9]/g, '');
+          return {
+            phone,
+            donorName: val.name || '성도',
+            profile: val,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error finding member by email in system_settings:', err);
+  }
+
+  // 2. subscriptions 테이블에서 donor_email 검색
+  try {
+    const { data: subs } = await sb
+      .from('subscriptions')
+      .select('donor_phone, donor_name, donor_email')
+      .ilike('donor_email', cleanEmail)
+      .limit(1);
+
+    if (subs && subs.length > 0) {
+      const sub = subs[0];
+      const phone = (sub.donor_phone || '').replace(/[^0-9]/g, '');
+      if (phone) {
+        const profile = await getDonorProfile(phone);
+        return {
+          phone,
+          donorName: sub.donor_name || profile?.name || '성도',
+          profile: profile || { phone, name: sub.donor_name, email: sub.donor_email },
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Error finding member by email in subscriptions:', err);
   }
 
   return null;

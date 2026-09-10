@@ -1,15 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
 
 
 /* =========================================================================
-   SoulPay — Wanted Design System tokens
+   SoulPay — Pretendard Typography & Unified Design System tokens
    ========================================================================= */
 :root {
-  --font-ui: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  --font-display: "Pretendard", "Pretendard Variable", "Wanted Sans Variable", "Wanted Sans", sans-serif;
+  --font-sans: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --font-ui: var(--font-sans);
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
 
   /* Neutral */
   --fp-neutral-99: #fcfcfc;
@@ -45,15 +48,20 @@
   --fp-dur-slow: 280ms;
 }
 
-html, body {
-  font-family: var(--font-ui);
+html, body, #root {
+  font-family: var(--font-sans) !important;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   word-break: keep-all;
 }
 
-input, button, select, textarea {
+*, ::before, ::after {
   font-family: inherit;
+}
+
+input, button, select, textarea, optgroup {
+  font-family: inherit !important;
 }
 
 @keyframes fp-fade-in {

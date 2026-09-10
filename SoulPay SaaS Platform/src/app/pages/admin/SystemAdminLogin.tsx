@@ -52,20 +52,22 @@ export default function SystemAdminLogin() {
   };
 
 
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-purple-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-blue-600 selection:text-white relative overflow-hidden font-sans text-slate-900">
       
-      {/* Background Glow */}
+      {/* Background Subtle Ambient Glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] left-[30%] w-[600px] h-[600px] rounded-full bg-purple-600/10 blur-[140px]" />
-        <div className="absolute bottom-[-10%] right-[20%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[140px]" />
+        <div className="absolute top-[-15%] left-[30%] w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-3xl" />
+        <div className="absolute bottom-[-15%] right-[25%] w-[500px] h-[500px] rounded-full bg-blue-600/5 blur-3xl" />
       </div>
 
       {/* Top Bar */}
       <header className="p-6 relative z-10">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" /> SoulPay 메인으로
         </button>
@@ -73,70 +75,79 @@ export default function SystemAdminLogin() {
 
       {/* Main Login Card */}
       <main className="flex-1 flex items-center justify-center p-4 relative z-10">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md space-y-6">
           
-          <div className="text-center mb-8 space-y-2">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-xl shadow-purple-600/20 mb-2">
-              <ShieldCheck className="h-7 w-7 text-white" />
+          <div className="text-center space-y-2.5">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/15">
+              <ShieldCheck className="h-7 w-7" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              SoulPay 시스템 최고 관리자
-            </h1>
-            <p className="text-xs text-slate-400 font-medium">
-              플랫폼 통합 대시보드 및 가맹 단체/정산 수수료 관리를 위한 전용 포털
-            </p>
+            <div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                SoulPay 시스템 최고 관리자
+              </h1>
+              <p className="text-xs text-slate-500 mt-1 font-medium">
+                플랫폼 통합 대시보드 및 가맹 단체/정산 수수료 관리를 위한 전용 포털
+              </p>
+            </div>
           </div>
 
-          <Card className="bg-slate-900/90 border-slate-800 text-slate-100 shadow-2xl backdrop-blur-md rounded-3xl overflow-hidden">
-            <CardHeader className="border-b border-slate-800 p-6 bg-slate-900">
-              <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
-                <KeyRound className="h-4 w-4" />
+          <Card className="border-slate-200/90 shadow-sm rounded-2xl overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-100 p-6 bg-slate-50/50">
+              <div className="flex items-center gap-1.5 text-blue-600 text-xs font-bold uppercase tracking-wider">
+                <KeyRound className="h-3.5 w-3.5" />
                 <span>Super Admin Authorization</span>
               </div>
-              <CardTitle className="text-lg font-bold text-white mt-1">
+              <CardTitle className="text-lg font-bold text-slate-900 mt-1">
                 최고 관리자 로그인
               </CardTitle>
-              <CardDescription className="text-slate-400 text-xs">
+              <CardDescription className="text-slate-500 text-xs">
                 발급받으신 최고 관리자 계정 정보로 로그인해 주세요.
               </CardDescription>
             </CardHeader>
 
             <form onSubmit={handleLogin}>
-              <CardContent className="p-6 space-y-5">
+              <CardContent className="p-6 space-y-4">
                 
                 <div className="space-y-1.5">
-                  <Label htmlFor="sys-email" className="text-xs font-bold text-slate-300">
+                  <Label htmlFor="sys-email" className="text-xs font-bold text-slate-700">
                     관리자 이메일
                   </Label>
                   <div className="relative flex items-center">
-                    <Mail className="absolute left-3.5 h-4 w-4 text-slate-500 pointer-events-none" />
+                    <Mail className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                     <Input
                       id="sys-email"
                       type="email"
-                      placeholder="admin@soulpay.com"
+                      placeholder="admin@soulpay.kr"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="pl-10 h-12 bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500 rounded-xl font-medium"
+                      className="pl-10 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl text-sm font-medium focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="sys-pw" className="text-xs font-bold text-slate-300">
+                  <Label htmlFor="sys-pw" className="text-xs font-bold text-slate-700">
                     비밀번호
                   </Label>
                   <div className="relative flex items-center">
-                    <Lock className="absolute left-3.5 h-4 w-4 text-slate-500 pointer-events-none" />
+                    <Lock className="absolute left-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                     <Input
                       id="sys-pw"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="pl-10 h-12 bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500 rounded-xl font-medium"
+                      className="pl-10 pr-10 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl text-sm font-medium focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -146,21 +157,21 @@ export default function SystemAdminLogin() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-12 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-lg shadow-purple-600/30 cursor-pointer"
+                  className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xs cursor-pointer active:scale-[0.99] transition-all"
                 >
-                  최고 관리자 로그인
+                  {isLoading ? '인증 중...' : '최고 관리자 로그인'}
                 </Button>
               </div>
             </form>
           </Card>
 
           {/* Cross navigation */}
-          <div className="mt-6 text-center space-y-2 text-xs text-slate-400">
+          <div className="text-center space-y-2 text-xs text-slate-500">
             <p>
               가맹 단체 관리자이신가요?{' '}
               <button
                 onClick={() => navigate('/admin/login')}
-                className="text-purple-400 hover:underline font-bold cursor-pointer bg-transparent border-0"
+                className="text-blue-600 hover:underline font-semibold cursor-pointer bg-transparent border-0"
               >
                 단체 관리자 로그인 →
               </button>
@@ -169,7 +180,7 @@ export default function SystemAdminLogin() {
               영업 파트너이신가요?{' '}
               <button
                 onClick={() => navigate('/partner/login')}
-                className="text-emerald-400 hover:underline font-bold cursor-pointer bg-transparent border-0"
+                className="text-blue-600 hover:underline font-semibold cursor-pointer bg-transparent border-0"
               >
                 파트너 포털 로그인 →
               </button>
@@ -180,7 +191,7 @@ export default function SystemAdminLogin() {
       </main>
 
       {/* Footer */}
-      <footer className="p-6 text-center text-xs text-slate-500 relative z-10">
+      <footer className="p-6 text-center text-xs text-slate-400 relative z-10">
         © 2026 SoulPay Platform Inc. System Security Center
       </footer>
     </div>

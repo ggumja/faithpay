@@ -25,7 +25,6 @@ import {
   PauseCircle,
   PlayCircle,
   XCircle,
-  FileCheck,
   CreditCard,
   AlertCircle,
 } from 'lucide-react';
@@ -69,10 +68,13 @@ export default function RecurringPendingPage() {
   const pageSize = 10;
 
   useEffect(() => {
+    if (!tenants || tenants.length === 0) return;
     const tenant = tenants.find((t) => t.slug === tenantSlug);
     if (tenant) {
       setCurrentTenant(tenant);
       fetchSubscriptions(tenant.id);
+    } else {
+      setIsLoading(false);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
@@ -204,20 +206,19 @@ export default function RecurringPendingPage() {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 lg:p-8 space-y-6 w-full max-w-7xl mx-auto">
+        <div className="p-6 lg:p-8 space-y-6 w-full">
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                   {terms.recurringPending} 관리 센터
                 </h1>
-                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-xs">
+                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold text-xs">
                   실시간 DB 실측 연동
                 </Badge>
               </div>
-              <p className="text-slate-500 dark:text-zinc-400 text-sm">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 {terms.donor}별 정기 결제 약정 마스터 계약 현황 및 차회 결제 예정일을 통합 관리합니다
               </p>
             </div>
@@ -234,65 +235,52 @@ export default function RecurringPendingPage() {
           </div>
 
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-emerald-500 shadow-xs">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  활성 정기 약정 수 (Active)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  {activeCount}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  전체 {subscriptions.length}건 중 결제 진행 중 (해지 {cancelledCount}건)
-                </p>
-              </CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                활성 정기 약정 수 (Active)
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {activeCount}건
+              </div>
+              <p className="text-xs text-slate-400">
+                전체 {subscriptions.length}건 중 결제 진행 중 (해지 {cancelledCount}건)
+              </p>
             </Card>
 
-            <Card className="border-l-4 border-l-indigo-500 shadow-xs">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  월 약정 예상 수납 총액
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
-                  {totalMonthlyCommitment.toLocaleString()}원
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  월 환산 예상액 (회차별 합계: {totalPerRunAmount.toLocaleString()}원)
-                </p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                월 약정 예상 수납 총액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                {totalMonthlyCommitment.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">
+                월 환산 예상액 (회차별 합계: {totalPerRunAmount.toLocaleString()}원)
+              </p>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500 shadow-xs">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  일시중지 / 해지 약정 현황
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
-                  {pausedCount + cancelledCount}건
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  일시중지 {pausedCount}건 · 해지 완료 {cancelledCount}건
-                </p>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                일시중지 / 해지 약정 현황
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {pausedCount + cancelledCount}건
+              </div>
+              <p className="text-xs text-slate-400">
+                일시중지 {pausedCount}건 · 해지 완료 {cancelledCount}건
+              </p>
             </Card>
           </div>
 
           {/* 정기결제 약정 마스터 목록 */}
           <Card className="shadow-xs">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
               <div>
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <FileCheck className="h-5 w-5 text-indigo-600" />
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                   정기 약정 마스터 계약 명세 ({filteredSubs.length}건)
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   {terms.donor}별 정기 결제 계약 정보입니다. 결제 주기, 다음 결제 예정일, 일시중지 및 해지 상태를 실시간 관리합니다.
                 </CardDescription>
               </div>
@@ -311,10 +299,10 @@ export default function RecurringPendingPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="p-0">
+            <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/70 dark:bg-zinc-900/50">
+                  <TableRow>
                     <TableHead className="w-[140px]">약정 번호</TableHead>
                     <TableHead>약정자 성명</TableHead>
                     <TableHead>연락처</TableHead>
@@ -332,7 +320,7 @@ export default function RecurringPendingPage() {
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-16 text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
-                          <RefreshCw className="h-6 w-6 animate-spin text-indigo-600" />
+                          <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
                           <p className="text-sm font-medium">정기 약정 데이터를 실시간 조회 중입니다...</p>
                         </div>
                       </TableCell>
@@ -341,7 +329,11 @@ export default function RecurringPendingPage() {
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-16 text-slate-400 space-y-2">
                         <Calendar className="h-8 w-8 mx-auto text-slate-300 dark:text-zinc-600 mb-2" />
-                        <p className="font-semibold text-sm">등록된 정기 약정 계약 정보가 없습니다.</p>
+                        <p className="font-semibold text-sm">
+                          {!currentTenant
+                            ? `'${tenantSlug}' 단체 정보를 찾을 수 없습니다. 올바른 단체 주소(예: /dream/admin/recurring-pending)로 접속해 주세요.`
+                            : '등록된 정기 약정 계약 정보가 없습니다.'}
+                        </p>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -359,13 +351,13 @@ export default function RecurringPendingPage() {
                         <TableCell className="font-medium text-slate-700 dark:text-zinc-300">
                           {sub.itemName || '정기 헌금'}
                         </TableCell>
-                        <TableCell className="text-right font-black text-indigo-600 dark:text-indigo-400">
+                        <TableCell className="text-right font-black text-blue-600 dark:text-blue-400">
                           {Number(sub.amount || 0).toLocaleString()}원
                         </TableCell>
                         <TableCell className="text-xs font-bold text-amber-700 dark:text-amber-400">
                           {formatInterval(sub)}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                        <TableCell className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                           {sub.nextPaymentDate || '-'}
                         </TableCell>
                         <TableCell className="text-xs text-slate-600 dark:text-zinc-400">
@@ -447,7 +439,7 @@ export default function RecurringPendingPage() {
 
               {/* 페이지네이션 (건수가 10건 초과일 때 노출) */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 text-xs text-slate-500">
+                <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 text-xs text-slate-500">
                   <div>
                     전체 {filteredSubs.length}건 중 {(currentPage - 1) * pageSize + 1} -{' '}
                     {Math.min(currentPage * pageSize, filteredSubs.length)}건 표시

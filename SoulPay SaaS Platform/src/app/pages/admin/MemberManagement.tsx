@@ -43,6 +43,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
+import { MemberTitleSelect } from '../../components/common/MemberTitleSelect';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
@@ -118,7 +119,9 @@ export default function MemberManagement() {
                 }
               }
               if (existing.name === '무기명' && d.donorName) existing.name = d.donorName;
-              if (!existing.email && d.donorEmail) existing.email = d.donorEmail;
+              if (!existing.email && (d.donorEmail || d.email)) existing.email = d.donorEmail || d.email;
+              if (!existing.baptismName && d.baptismName) existing.baptismName = d.baptismName;
+              if (!existing.address && d.address) existing.address = d.address;
             }
           });
 
@@ -149,7 +152,7 @@ export default function MemberManagement() {
                   if (p.email) memberEntry.email = p.email;
                   if (p.fullAddress || p.address) memberEntry.address = p.fullAddress || p.address;
                   if (p.name && (memberEntry.name === '무기명' || !memberEntry.name)) memberEntry.name = p.name;
-                  if (p.baptismName && !memberEntry.baptismName) memberEntry.baptismName = p.baptismName;
+                  if (p.baptismName) memberEntry.baptismName = p.baptismName;
                 }
               } catch (e) {
                 console.warn('Failed to load extra data for member', phone, e);
@@ -213,8 +216,9 @@ export default function MemberManagement() {
   const totalMembersCount = members.length;
   const recurringMembersCount = members.filter((m) => m.recurringCount > 0).length;
   const newThisMonthCount = members.filter((m) => m.registeredDate && m.registeredDate.startsWith(currentMonthStr)).length;
+  const totalDonationsAmount = members.reduce((sum, m) => sum + (m.totalDonation || 0), 0);
   const avgDonationAmount = members.length > 0
-    ? Math.round(members.reduce((sum, m) => sum + (m.totalDonation || 0), 0) / members.length)
+    ? Math.round(totalDonationsAmount / members.length)
     : 0;
 
   // Search & Filter Logic
@@ -253,9 +257,15 @@ export default function MemberManagement() {
     setIsAddMemberModalOpen(true);
   };
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (!memberName.trim()) {
       toast.error(`${memberTerm} 성명을 입력해 주세요.`);
+      return;
+    }
+
+    const cleanPhone = stripPhoneDigits(memberPhone);
+    if (!cleanPhone) {
+      toast.error('전화번호를 올바르게 입력해 주세요.');
       return;
     }
 
@@ -263,7 +273,7 @@ export default function MemberManagement() {
       id: `mem_${Date.now()}`,
       name: memberName.trim(),
       baptismName: memberTitle.trim(),
-      phone: stripPhoneDigits(memberPhone) || '',
+      phone: cleanPhone,
       email: memberEmail.trim(),
       address: memberAddress.trim(),
       rrn: memberRrn.trim() || '',
@@ -273,6 +283,19 @@ export default function MemberManagement() {
       recurringCount: 0,
       note: `신규 등록 ${memberTerm}`,
     };
+
+    // DB 영구 실측 저장
+    try {
+      await memberAPI.updateProfile(cleanPhone, {
+        name: memberName.trim(),
+        baptismName: memberTitle.trim(),
+        email: memberEmail.trim(),
+        address: memberAddress.trim(),
+        fullAddress: memberAddress.trim(),
+      });
+    } catch (err) {
+      console.warn('Failed to save new member to DB:', err);
+    }
 
     setMembers((prev) => [newMem, ...prev]);
     setIsAddMemberModalOpen(false);
@@ -400,11 +423,10 @@ export default function MemberManagement() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                <Users className="h-7 w-7 text-indigo-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                 {currentTenant.name} {memberTerm} 통합 관리 센터
               </h1>
-              <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 등록된 {memberTerm}의 상세 정보, {donationTerm} 내역 및 납부확인서/영수증을 통합 관리합니다.
               </p>
             </div>
@@ -414,7 +436,7 @@ export default function MemberManagement() {
                 <Download className="h-4 w-4 text-emerald-600" />
                 엑셀 다운로드
               </Button>
-              <Button onClick={handleOpenAddModal} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer">
+              <Button onClick={handleOpenAddModal} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer">
                 <UserPlus className="h-4 w-4" />
                 신규 {memberTerm} 추가
               </Button>
@@ -422,57 +444,45 @@ export default function MemberManagement() {
           </div>
 
           {/* Stats Summary Cards (No Mock Data) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border-l-4 border-l-purple-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  전체 등록 {memberTerm}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
-                  {totalMembersCount}명
-                </div>
-              </CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                전체 등록 {memberTerm}
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                {totalMembersCount}명
+              </div>
+              <p className="text-xs text-slate-400">등록된 전체 회원 명부</p>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  정기 약정 {memberTerm}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
-                  {recurringMembersCount}명
-                </div>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                정기 약정 {memberTerm}
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                {recurringMembersCount}명
+              </div>
+              <p className="text-xs text-slate-400">정기 후원 납부 회원</p>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  이번 달 신규 가입
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  {newThisMonthCount}명
-                </div>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                총 누적 {donationTerm}액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                ₩ {totalDonationsAmount.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">정상 승인 완료 총액</p>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  평균 누적 {donationTerm}액
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-slate-900 dark:text-zinc-100">
-                  ₩ {avgDonationAmount.toLocaleString()}원
-                </div>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                평균 누적 {donationTerm}액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                ₩ {avgDonationAmount.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">회원 1인당 평균 후원</p>
             </Card>
           </div>
 
@@ -502,12 +512,11 @@ export default function MemberManagement() {
 
           {/* Members Main Table */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-indigo-600" />
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                 {currentTenant.name} {memberTerm} 명단 ({filteredMembers.length}명)
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 {memberTerm} 행을 클릭하거나 [🔍 상세] 버튼을 눌러 개별 납부 확인서 및 메시지 이력을 확인하세요.
               </CardDescription>
             </CardHeader>
@@ -540,13 +549,13 @@ export default function MemberManagement() {
                     {filteredMembers.map((m) => (
                       <TableRow
                         key={m.id}
-                        className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 cursor-pointer transition-colors"
+                        className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 cursor-pointer transition-colors"
                         onClick={() => handleOpenDetail(m)}
                       >
                         <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
                           {m.name}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                        <TableCell className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                           {m.baptismName || '-'}
                         </TableCell>
                         <TableCell className="font-mono text-xs text-slate-700 dark:text-zinc-300">
@@ -586,7 +595,7 @@ export default function MemberManagement() {
                               size="sm"
                               title={`${memberTerm} 상세 정보 및 결제내역`}
                               onClick={() => handleOpenDetail(m)}
-                              className="h-7 px-2 text-xs gap-1 cursor-pointer bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold border-indigo-200"
+                              className="h-7 px-2 text-xs gap-1 cursor-pointer bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold border-blue-200"
                             >
                               <Eye className="h-3.5 w-3.5" />
                               상세보기
@@ -627,7 +636,7 @@ export default function MemberManagement() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-indigo-600" />
+              <UserPlus className="h-5 w-5 text-blue-600" />
               신규 {memberTerm} 등록
             </DialogTitle>
             <DialogDescription>
@@ -646,14 +655,13 @@ export default function MemberManagement() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
-              <Input
-                placeholder={`예: ${getTitleLabel()} 입력`}
-                value={memberTitle}
-                onChange={(e) => setMemberTitle(e.target.value)}
-              />
-            </div>
+            <MemberTitleSelect
+              value={memberTitle}
+              onChange={setMemberTitle}
+              religionType={currentTenant.religionType}
+              showLabel={true}
+              label={getTitleLabel()}
+            />
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold">휴대폰 번호</Label>
@@ -697,7 +705,7 @@ export default function MemberManagement() {
               <Button variant="outline" type="button" onClick={() => setIsAddMemberModalOpen(false)}>
                 취소
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
                 등록 완료
               </Button>
             </DialogFooter>
@@ -710,7 +718,7 @@ export default function MemberManagement() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit2 className="h-5 w-5 text-indigo-600" />
+              <Edit2 className="h-5 w-5 text-blue-600" />
               {memberTerm} 정보 수정
             </DialogTitle>
             <DialogDescription>
@@ -728,13 +736,13 @@ export default function MemberManagement() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
-              <Input
-                value={memberTitle}
-                onChange={(e) => setMemberTitle(e.target.value)}
-              />
-            </div>
+            <MemberTitleSelect
+              value={memberTitle}
+              onChange={setMemberTitle}
+              religionType={currentTenant.religionType}
+              showLabel={true}
+              label={getTitleLabel()}
+            />
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold">휴대폰 번호</Label>
@@ -775,7 +783,7 @@ export default function MemberManagement() {
               <Button variant="outline" type="button" onClick={() => setIsEditMemberModalOpen(false)}>
                 취소
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
                 수정 사항 저장
               </Button>
             </DialogFooter>

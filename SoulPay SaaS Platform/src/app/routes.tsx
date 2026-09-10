@@ -8,6 +8,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OnboardingFlow = lazy(() => import("./pages/OnboardingFlow"));
 const KakaoPaySandbox = lazy(() => import("./pages/KakaoPaySandbox"));
 const KakaoPayApprovePage = lazy(() => import("./pages/KakaoPayApprovePage"));
+const KakaoAuthCallback = lazy(() => import("./pages/KakaoAuthCallback"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const SystemAdminLogin = lazy(() => import("./pages/admin/SystemAdminLogin"));
 const AdminRedirectGuard = lazy(() => import("./pages/admin/AdminRedirectGuard"));
@@ -55,6 +56,7 @@ const CommissionStatsPage = lazy(() => import("./pages/admin/CommissionStatsPage
 const MultiPartySettlementLedger = lazy(() => import("./pages/admin/components/MultiPartySettlementLedger"));
 const SystemSettingsPage = lazy(() => import("./pages/admin/SystemSettingsPage"));
 const SystemAdminAccountPage = lazy(() => import("./pages/admin/SystemAdminAccountPage"));
+const RecurringSchedulerPage = lazy(() => import("./pages/admin/RecurringSchedulerPage"));
 
 export const router = createBrowserRouter([
   {
@@ -73,12 +75,24 @@ export const router = createBrowserRouter([
         Component: KakaoPayApprovePage,
       },
       {
+        path: "/oauth/kakao/callback",
+        Component: KakaoAuthCallback,
+      },
+      {
         path: "/partner/login",
         Component: PartnerLogin,
       },
       {
+        path: "/partner/admin",
+        Component: PartnerDashboard,
+      },
+      {
         path: "/agency/login",
         Component: PartnerLogin,
+      },
+      {
+        path: "/agency/admin",
+        Component: PartnerDashboard,
       },
       {
         path: "/partner/apply",
@@ -135,7 +149,7 @@ export const router = createBrowserRouter([
           { path: "/system/admin/tenant/:id",       Component: TenantDetailPage     },
           { path: "/system/admin/settings",          Component: SystemSettingsPage   },
           { path: "/system/admin/system-admin-accounts", Component: SystemAdminAccountPage },
-
+          { path: "/system/admin/scheduler",        Component: RecurringSchedulerPage },
         ],
       },
       {

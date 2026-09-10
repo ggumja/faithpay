@@ -573,11 +573,10 @@ export default function TenantStatisticsPage() {
           {/* Header & Title */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <BarChart3 className="h-8 w-8 text-indigo-600" />
-                <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">수납 마감 통계 센터</h1>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-zinc-400">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                수납 마감 통계 센터
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 전일 23:59:59 마감 스냅샷 데이터를 기반으로 정확하고 정제된 경영/출납 통계를 제공합니다.
               </p>
             </div>
@@ -591,7 +590,7 @@ export default function TenantStatisticsPage() {
                 <RefreshCw className="h-3.5 w-3.5" />
                 마감 재집계
               </Button>
-              <Button onClick={handleExportCSV} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-xs font-semibold">
+              <Button onClick={handleExportCSV} className="bg-blue-600 hover:bg-blue-700 text-white gap-2 text-xs font-semibold">
                 <Download className="h-3.5 w-3.5" />
                 마감 통계 엑셀 다운로드
               </Button>
@@ -632,7 +631,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('overview')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -643,7 +642,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('method')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'method'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -654,7 +653,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('device')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'device'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -665,7 +664,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('item')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'item'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -676,7 +675,7 @@ export default function TenantStatisticsPage() {
               onClick={() => setActiveTab('subscription')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 activeTab === 'subscription'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800'
               }`}
             >
@@ -688,47 +687,35 @@ export default function TenantStatisticsPage() {
           {/* TAB 1: 종합 수납 통계 */}
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      전일 마감 총 봉헌액
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-indigo-600">
-                      {overviewStats.totalAmount.toLocaleString()}원
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">선택 기간 마감 완료 합계</p>
-                  </CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    전일 마감 총 봉헌액
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                    {overviewStats.totalAmount.toLocaleString()}원
+                  </div>
+                  <p className="text-xs text-slate-400">선택 기간 마감 완료 합계</p>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      총 마감 수납 건수
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-blue-600">
-                      {overviewStats.totalCount.toLocaleString()}건
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">선택 기간 정상 승인 완료 건수</p>
-                  </CardContent>
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    총 마감 수납 건수
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                    {overviewStats.totalCount.toLocaleString()}건
+                  </div>
+                  <p className="text-xs text-slate-400">선택 기간 정상 승인 완료 건수</p>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      평균 결제금액
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-emerald-600">
-                      {overviewStats.avgAmount.toLocaleString()}원
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">1회 결제 시 평균 봉헌 금액</p>
-                  </CardContent>
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    평균 결제금액
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {overviewStats.avgAmount.toLocaleString()}원
+                  </div>
+                  <p className="text-xs text-slate-400">1회 결제 시 평균 봉헌 금액</p>
                 </Card>
               </div>
 
@@ -753,9 +740,9 @@ export default function TenantStatisticsPage() {
 
               {/* TAB 1 전용: 기간별 총 수납 집계표 */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold">기간별 총 수납 집계표</CardTitle>
-                  <CardDescription>선택한 기간 단위별 수납 건수 및 금액 내역입니다</CardDescription>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">기간별 총 수납 집계표</CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">선택한 기간 단위별 수납 건수 및 금액 내역입니다</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -775,7 +762,7 @@ export default function TenantStatisticsPage() {
                           <TableCell className="text-right text-slate-600">
                             {(row.totalCount > 0 ? Math.round(row.totalAmount / row.totalCount) : 0).toLocaleString()}원
                           </TableCell>
-                          <TableCell className="text-right font-bold text-indigo-600 dark:text-indigo-400">
+                          <TableCell className="text-right font-bold text-blue-600 dark:text-blue-400">
                             {row.totalAmount.toLocaleString()}원
                           </TableCell>
                         </TableRow>
@@ -787,12 +774,12 @@ export default function TenantStatisticsPage() {
 
               {/* TAB 1 전용: 선택 기간 수납 상세 거래 명세 내역 테이블 */}
               <Card>
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
                   <div>
-                    <CardTitle className="text-lg font-bold">
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                       선택 기간 수납 상세 거래 명세 ({totalTransactionCount.toLocaleString()}건)
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       선택한 기간 및 마감 시점 스냅샷에 포함된 정제 완료 수납 내역 목록입니다
                     </CardDescription>
                   </div>
@@ -1086,39 +1073,29 @@ export default function TenantStatisticsPage() {
           {/* TAB 3: 기기/채널별 분석 */}
           {activeTab === 'device' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-l-4 border-l-purple-500">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-purple-950">
-                      <Monitor className="h-5 w-5 text-purple-600" />
-                      키오스크 (KIOSK) 점유율
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-purple-700">
-                      {deviceStats.kioskAmount.toLocaleString()}원
-                    </div>
-                    <p className="text-sm font-semibold text-slate-600 mt-2">
-                      점유율: <span className="text-purple-600 font-extrabold">{deviceStats.kioskRatio}%</span> ({deviceStats.kioskCount}건)
-                    </p>
-                  </CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    키오스크 (KIOSK) 점유율
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                    {deviceStats.kioskAmount.toLocaleString()}원
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    점유율: <span className="text-blue-600 font-bold">{deviceStats.kioskRatio}%</span> ({deviceStats.kioskCount}건)
+                  </p>
                 </Card>
 
-                <Card className="border-l-4 border-l-blue-500">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-blue-950">
-                      <Smartphone className="h-5 w-5 text-blue-600" />
-                      모바일 / 웹 (WEB_MOBILE) 점유율
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-blue-700">
-                      {deviceStats.webAmount.toLocaleString()}원
-                    </div>
-                    <p className="text-sm font-semibold text-slate-600 mt-2">
-                      점유율: <span className="text-blue-600 font-extrabold">{deviceStats.webRatio}%</span> ({deviceStats.webCount}건)
-                    </p>
-                  </CardContent>
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    모바일 / 웹 (WEB_MOBILE) 점유율
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                    {deviceStats.webAmount.toLocaleString()}원
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    점유율: <span className="text-blue-600 font-bold">{deviceStats.webRatio}%</span> ({deviceStats.webCount}건)
+                  </p>
                 </Card>
               </div>
 
@@ -1272,29 +1249,25 @@ export default function TenantStatisticsPage() {
           {/* TAB 5: 정기 vs 1회성 분석 */}
           {activeTab === 'subscription' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">정기 결제 수납</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-indigo-600">
-                      {subscriptionStats.recurringAmount.toLocaleString()}원
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">총 {subscriptionStats.recurringCount}건 완료</p>
-                  </CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    정기 결제 수납
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                    {subscriptionStats.recurringAmount.toLocaleString()}원
+                  </div>
+                  <p className="text-xs text-slate-400">총 {subscriptionStats.recurringCount}건 완료</p>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">1회성 결제 수납</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-black text-emerald-600">
-                      {subscriptionStats.oneTimeAmount.toLocaleString()}원
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">총 {subscriptionStats.oneTimeCount}건 완료</p>
-                  </CardContent>
+                <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                  <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                    1회성 결제 수납
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {subscriptionStats.oneTimeAmount.toLocaleString()}원
+                  </div>
+                  <p className="text-xs text-slate-400">총 {subscriptionStats.oneTimeCount}건 완료</p>
                 </Card>
               </div>
 

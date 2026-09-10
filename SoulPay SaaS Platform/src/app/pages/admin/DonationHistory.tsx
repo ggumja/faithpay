@@ -49,7 +49,7 @@ import {
   CalendarX,
   AlertCircle,
 } from 'lucide-react';
-import { donationAPI, paymentAPI, otpAuthAPI, subscriptionAPI } from '../../api/client';
+import { donationAPI, paymentAPI, subscriptionAPI } from '../../api/client';
 import { toast } from 'sonner';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
 
@@ -818,22 +818,23 @@ export default function DonationHistory() {
             {/* Header */}
             <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Heart className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
-                  <h1 className="text-3xl font-bold">{terms.donationHistory} 관리</h1>
-                </div>
-                <p className="text-muted-foreground">{terms.donationHistory}을 조회하고 정기결제를 직접 관리하세요</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  {terms.donationHistory} 관리
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+                  {terms.donationHistory} 내역을 실시간 조회하고 정기결제 약정을 직접 관리합니다.
+                </p>
               </div>
             </div>
 
             {/* Subscriptions Self-Management Section */}
             {subscriptions.length > 0 && (
-              <div className="mb-8 border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 p-6 rounded-2xl">
-                <h3 className="text-lg font-bold text-indigo-950 dark:text-indigo-200 mb-1 flex items-center gap-2">
+              <div className="mb-8 border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-6 rounded-2xl">
+                <h3 className="text-lg font-bold text-blue-950 dark:text-blue-200 mb-1 flex items-center gap-2">
                   <span>⚡ 내 정기{terms.donation} 셀프 관리</span>
-                  <Badge className="bg-indigo-600 text-white text-[10px]">본인인증 완료</Badge>
+                  <Badge className="bg-blue-600 text-white text-[10px]">본인인증 완료</Badge>
                 </h3>
-                <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-4">매월 자동 청구되는 정기 {terms.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mb-4">매월 자동 청구되는 정기 {terms.donation}을(를) 직접 일시정지하거나 즉시 해지하실 수 있습니다.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {subscriptions.map(sub => (
@@ -893,61 +894,50 @@ export default function DonationHistory() {
 
 
                 {/* Statistics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        조회 기간 {terms.donation}액
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold" style={{ color: currentTenant.primaryColor }}>
-                        {totalAmount.toLocaleString()}원
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        조회 {completedCount}건 승인
-                      </p>
-                    </CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                    <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                      조회 기간 {terms.donation}액
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: currentTenant.primaryColor }}>
+                      {totalAmount.toLocaleString()}원
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      조회 {completedCount}건 승인
+                    </p>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        결제완료 건수
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-green-600">{completedCount}건</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        정상 승인된 {terms.donation}
-                      </p>
-                    </CardContent>
+                  <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                    <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                      결제완료 건수
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                      {completedCount}건
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      정상 승인된 {terms.donation}
+                    </p>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        누적 결제 금액
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-indigo-600">
-                        {cumulativeAmount.toLocaleString()}원
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        전체 누적 {cumulativeCount}건 승인
-                      </p>
-                    </CardContent>
+                  <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+                    <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                      누적 결제 금액
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                      {cumulativeAmount.toLocaleString()}원
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      전체 누적 {cumulativeCount}건 승인
+                    </p>
                   </Card>
                 </div>
 
                 {/* Filters */}
                 <Card className="mb-6">
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-5 w-5" />
-                      <CardTitle>검색 및 필터</CardTitle>
-                    </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                      검색 및 필터
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -1007,8 +997,8 @@ export default function DonationHistory() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">전체 기기</SelectItem>
-                          <SelectItem value="WEB_MOBILE">📱 모바일/웹</SelectItem>
-                          <SelectItem value="KIOSK">🖥️ 키오스크</SelectItem>
+                          <SelectItem value="WEB_MOBILE">모바일/웹</SelectItem>
+                          <SelectItem value="KIOSK">키오스크</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -1031,11 +1021,11 @@ export default function DonationHistory() {
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                             </span>
-                            <span>🔥 당일 실시간 핫 서빙 모드 (DB 과부하 0%, 15초 자동 갱신 중)</span>
+                            <span>당일 실시간 서빙 모드 (15초 자동 갱신 중)</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 px-3 py-1.5 rounded-xl">
-                            <span>📦 과거 내역 온디맨드(On-Demand) 정적 조회 모드 (실시간 동기화 오프, DB 서버 보호)</span>
+                            <span>과거 내역 온디맨드(On-Demand) 조회 모드</span>
                           </div>
                         )}
 
@@ -1050,28 +1040,28 @@ export default function DonationHistory() {
                                 : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                             }`}
                           >
-                            🔥 오늘 (실시간)
+                            오늘 (실시간)
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod('this_week')}
                             className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
                           >
-                            📅 이번 주
+                            이번 주
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod('this_month')}
                             className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
                           >
-                            🗓️ 이번 달
+                            이번 달
                           </button>
                           <button
                             type="button"
                             onClick={() => setQuickPeriod('all')}
                             className="px-3 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 rounded-lg cursor-pointer"
                           >
-                            📊 전체 보기
+                            전체 보기
                           </button>
                         </div>
                       </div>
@@ -1095,10 +1085,10 @@ export default function DonationHistory() {
                           type="checkbox"
                           checked={showFailed}
                           onChange={(e) => setShowFailed(e.target.checked)}
-                          className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                         <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                          ⚠️ 결제실패(중도이탈) 내역도 포함하여 함께 보기
+                          결제 실패/중도이탈 내역 포함
                         </span>
                       </label>
                       <span className="text-xs text-muted-foreground">
@@ -1110,9 +1100,11 @@ export default function DonationHistory() {
 
                 {/* Table */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>{terms.donation} 목록</CardTitle>
-                    <CardDescription>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                      {terms.donation} 목록
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       {filteredDonations.length}건의 {terms.donation} 내역이 조회되었습니다
                     </CardDescription>
                   </CardHeader>

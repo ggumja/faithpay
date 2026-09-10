@@ -295,7 +295,7 @@ export default function AdminLogin() {
       {/* 은은한 배경 미세 앰비언트 글로우 */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-15%] left-[30%] w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-3xl" />
-        <div className="absolute bottom-[-15%] right-[30%] w-[500px] h-[500px] rounded-full bg-indigo-500/5 blur-3xl" />
+        <div className="absolute bottom-[-15%] right-[30%] w-[500px] h-[500px] rounded-full bg-blue-600/5 blur-3xl" />
       </div>
 
       <div className="w-full max-w-lg relative z-10 space-y-6">
@@ -320,7 +320,7 @@ export default function AdminLogin() {
 
         {/* 중앙 로고 심볼 & 타이틀 헤더 */}
         <div className="text-center space-y-2.5">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/15">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/15">
             <Building2 className="h-7 w-7" />
           </div>
           <div>
@@ -415,11 +415,11 @@ export default function AdminLogin() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
-              <Building2 className="h-5 w-5 text-indigo-600" />
+              <Building2 className="h-5 w-5 text-blue-600" />
               접속할 가맹 단체 선택
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              입력하신 이메일(<span className="font-bold text-indigo-600">{email}</span>)로 
+              입력하신 이메일(<span className="font-bold text-blue-600">{email}</span>)로 
               등록된 <span className="font-bold text-slate-900">{matchedTenants.length}개 가맹 단체</span>가 조회되었습니다.
               접속하실 단체를 선택해 주세요.
             </DialogDescription>
@@ -430,16 +430,16 @@ export default function AdminLogin() {
               <div
                 key={t.id}
                 onClick={() => handleSelectTenantAndLogin(t)}
-                className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/40 hover:border-indigo-300 transition-all cursor-pointer flex items-center justify-between group"
+                className="p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-blue-50/60 hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border flex items-center justify-center text-lg font-bold text-indigo-600 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-white border flex items-center justify-center text-lg font-bold text-blue-600 shadow-xs">
                     {t.name.slice(0, 1)}
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 dark:text-zinc-100 text-sm flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                       {t.name}
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">
                         {t.religionType === 'buddhist' ? '사찰' : t.religionType === 'protestant' ? '교회' : t.religionType === 'catholic' ? '성당' : '기부단체'}
                       </span>
                     </h4>
@@ -451,7 +451,7 @@ export default function AdminLogin() {
 
                 <Button
                   size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1 rounded-xl group-hover:translate-x-0.5 transition-transform"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold gap-1 rounded-xl group-hover:translate-x-0.5 transition-transform"
                 >
                   진입
                   <ChevronRight className="h-3.5 w-3.5" />

@@ -16,6 +16,7 @@ import { tenantAPI } from '../../api/client';
 /* ─── active key ─────────────────────────────── */
 function useActiveKey(pathname: string) {
   if (pathname.includes('/system-admin-accounts')) return 'sysAdmins';
+  if (pathname.includes('/scheduler'))       return 'scheduler';
   if (pathname.match(/\/tenants\/pending\/.+/)) return 'pendingDetail';
   if (pathname.includes('/tenants/pending')) return 'pending';
   if (pathname.includes('/settlement-center')) return 'settlementCenter';
@@ -32,6 +33,7 @@ function useActiveKey(pathname: string) {
 
 const META: Record<string, { title: string; section: string }> = {
   sysAdmins:        { title: '시스템 관리자 계정',     section: '시스템 설정' },
+  scheduler:        { title: '정기결제 스케줄러',     section: '정산 & 배치 관리' },
   tenants:          { title: '단체 목록',           section: '단체 목록 관리' },
   pending:          { title: '승인요청 목록',        section: '단체 목록 관리' },
   pendingDetail:    { title: '입점 신청 상세 심사',  section: '단체 목록 관리' },
@@ -175,9 +177,9 @@ export default function SystemAdminShell() {
               )}
             </div>
 
-            {/* 정산 관리 Center (독립 상위 메뉴 블록) */}
-            <div>
-              <p className={S.navSection}>정산 관리 Center</p>
+            {/* 정산 & 배치 관리 */}
+            <div className="space-y-1">
+              <p className={S.navSection}>정산 & 배치 관리</p>
               <button
                 onClick={() => navigate('/system/admin/settlement-center')}
                 className={S.navItem(active === 'settlementCenter')}
@@ -187,6 +189,13 @@ export default function SystemAdminShell() {
                 <span className="ml-auto text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded-full">
                   v2 API
                 </span>
+              </button>
+              <button
+                onClick={() => navigate('/system/admin/scheduler')}
+                className={S.navItem(active === 'scheduler')}
+              >
+                <Clock size={13} className={active === 'scheduler' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">정기결제 스케줄러</span>
               </button>
             </div>
 

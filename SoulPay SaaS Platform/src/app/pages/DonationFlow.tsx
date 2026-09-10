@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { donationItemsAPI } from '../api/client';
+import { MemberTitleSelect } from '../components/common/MemberTitleSelect';
 
 interface FamilyMember {
   name: string;
@@ -490,23 +491,15 @@ export default function DonationFlow() {
                       <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                         🏛️ 교회 직분 정보
                       </span>
-                      <div>
-                        <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
-                          교회 직분 선택
-                        </label>
-                        <select 
-                          className="w-full h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150 cursor-pointer"
-                          value={baptismName || '성도'}
-                          onChange={(e) => setBaptismName(e.target.value)}
-                        >
-                          <option value="성도">성도</option>
-                          <option value="집사">집사</option>
-                          <option value="권사">권사</option>
-                          <option value="장로">장로</option>
-                          <option value="청년/학생">청년/학생</option>
-                          <option value="목회자/교역자">목회자/교역자</option>
-                        </select>
-                      </div>
+                      <MemberTitleSelect
+                        value={baptismName || '성도'}
+                        onChange={setBaptismName}
+                        religionType="protestant"
+                        showLabel={true}
+                        label="교회 직분 선택"
+                        selectClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                        inputClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                      />
                     </div>
                   )}
 
@@ -572,10 +565,14 @@ export default function DonationFlow() {
                   {/* ✝️ 천주교 성당 특화 서식 */}
                   {currentTenant.religionType === 'catholic' && (
                     <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-2xl space-y-3 mt-1">
-                      <span className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                        ✝️ 천주교 본당 전용 입력 서식
-                      </span>
-                      <FPInput label="세례명" value={baptismName} onChange={setBaptismName} placeholder="예: 프란치스코 / 마리아" />
+                      <MemberTitleSelect
+                        value={baptismName}
+                        onChange={setBaptismName}
+                        religionType="catholic"
+                        showLabel={true}
+                        selectClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                        inputClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                      />
                       <div>
                         <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
                           미사 지향 선택 (선택)
@@ -598,6 +595,16 @@ export default function DonationFlow() {
                       <label className="block text-xs font-extrabold text-orange-950 dark:text-orange-200 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
                         ⛩️ 사찰 전용 가족 축원 명단 카드 <span className="font-semibold text-orange-700 dark:text-orange-400">(선택)</span>
                       </label>
+                      <div className="mb-3">
+                        <MemberTitleSelect
+                          value={baptismName}
+                          onChange={setBaptismName}
+                          religionType="buddhist"
+                          showLabel={true}
+                          selectClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                          inputClassName="bg-white dark:bg-zinc-900 h-11 rounded-xl"
+                        />
+                      </div>
                       <p className="text-[11px] text-orange-800 dark:text-orange-300 mb-3">
                         대웅전 연등/인등 점등 및 축원카드에 기재될 가족 구성원의 생년월일을 적어주세요.
                       </p>

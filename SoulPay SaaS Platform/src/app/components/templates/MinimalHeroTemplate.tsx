@@ -36,6 +36,77 @@ const MINIMAL_CSS = `
   transform: scale(0.96) !important;
 }
 
+.mh-nav-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mh-nav-tenant-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+.mh-mypage-full { display: inline; }
+.mh-mypage-short { display: none; }
+.mh-btn-mypage {
+  background-color: #FFFFFF;
+  color: #334155;
+  border: 1px solid #E2E8F0;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mh-btn-admin {
+  background-color: #FFFFFF;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .mh-nav-inner {
+    padding: 10px 14px;
+    gap: 6px;
+  }
+  .mh-nav-tenant-name {
+    max-width: 120px;
+    font-size: 13px;
+  }
+  .mh-mypage-full { display: none; }
+  .mh-mypage-short { display: inline; }
+  .mh-btn-mypage {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .mh-btn-admin {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mh-nav-tenant-name {
+    max-width: 90px;
+  }
+}
+
 /* Hallmark · component: donation-card · genre: modern-minimal
  * states: default · hover · focus · active · disabled
  * contrast: pass (46–50)
@@ -127,7 +198,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
       <style>{MINIMAL_CSS}</style>
       {canInstall && <InstallBanner tenant={currentTenant} onInstall={install} primaryColor={ft.primary} />}
 
-      {/* ── Top Header Bar ── */}
+      {/* ── Sticky Nav ── */}
       <nav style={{
         position: 'sticky',
         top: 0,
@@ -135,46 +206,26 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
         backgroundColor: 'rgba(255, 255, 255, 0.92)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid #E2E8F0',
-        padding: '12px 24px',
       }}>
-        <div style={{ maxWidth: 920, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${ft.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="mh-nav-inner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexShrink: 1 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${ft.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Motif kind={ft.motif} size={16} color={ft.primary} />
             </div>
-            <span style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>{currentTenant.name}</span>
+            <span className="mh-nav-tenant-name">{currentTenant.name}</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <button
-              className="mh-btn-spring"
+              className="mh-btn-spring mh-btn-mypage"
               onClick={() => navigate(`/${currentTenant.slug}/my-donations`)}
-              style={{
-                backgroundColor: '#FFFFFF',
-                color: '#334155',
-                border: '1px solid #E2E8F0',
-                padding: '6px 14px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
             >
-              {terms.donor} 마이페이지
+              <span className="mh-mypage-full">{terms.donor} 마이페이지</span>
+              <span className="mh-mypage-short">마이페이지</span>
             </button>
             <button
-              className="mh-btn-spring"
+              className="mh-btn-spring mh-btn-admin"
               onClick={() => navigate(`/${currentTenant.slug}/admin/login`)}
-              style={{
-                backgroundColor: '#FFFFFF',
-                color: '#64748B',
-                border: '1px solid #E2E8F0',
-                padding: '6px 12px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
             >
               관리자
             </button>

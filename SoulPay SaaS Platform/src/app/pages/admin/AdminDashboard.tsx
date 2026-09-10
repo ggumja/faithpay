@@ -17,10 +17,7 @@ import {
 import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import {
-  TrendingUp,
   ArrowUpRight,
-  DollarSign,
-  UserPlus,
   AlertCircle,
   Menu,
 } from 'lucide-react';
@@ -97,8 +94,11 @@ export default function AdminDashboard() {
   const terms = useTenantTerms(currentTenant);
 
   const [dbDonations, setDbDonations] = useState<any[]>([]);
+  const [donationViewMode, setDonationViewMode] = useState<'today' | 'recent'>('today');
   const [totalMonthlyAmount, setTotalMonthlyAmount] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalAllTimeAmount, setTotalAllTimeAmount] = useState<number>(0);
+  const [totalAllTimeCount, setTotalAllTimeCount] = useState<number>(0);
   const [memberCount, setMemberCount] = useState<number>(0);
   const [pendingPrayerCount, setPendingPrayerCount] = useState<number>(0);
 
@@ -130,13 +130,23 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
-    const tenant = tenants.find(
-      (t) =>
-        (t.slug && t.slug.toLowerCase() === decodedSlug) ||
-        (t.id && t.id.toLowerCase() === decodedSlug) ||
-        (t.name && t.name.toLowerCase() === decodedSlug) ||
-        (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
-    ) || currentTenant;
+    
+    // 예약어 경로(partner, system, agency 등) 예외 방어
+    const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
+    if (reservedSlugs.includes(decodedSlug)) {
+      setIsLoading(false);
+      return;
+    }
+
+    const tenant = decodedSlug
+      ? tenants.find(
+          (t) =>
+            (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+            (t.id && t.id.toLowerCase() === decodedSlug) ||
+            (t.name && t.name.toLowerCase() === decodedSlug) ||
+            (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+        )
+      : currentTenant;
 
     if (tenant) {
       setCurrentTenant(tenant);
@@ -149,9 +159,9 @@ export default function AdminDashboard() {
 
           // 1. 정상 결제완료(completed) 건만 수납 총액 및 건수 집계에 포함
           const completedDonations = list.filter((d) => d.paymentStatus === 'completed');
-          const totalSum = completedDonations.reduce((acc, d) => acc + (d.amount || 0), 0);
-          setTotalMonthlyAmount(totalSum);
-          setTotalCount(completedDonations.length);
+          const allTimeSum = completedDonations.reduce((acc, d) => acc + (d.amount || 0), 0);
+          setTotalAllTimeAmount(allTimeSum);
+          setTotalAllTimeCount(completedDonations.length);
 
           // 2. 신도 수 & 기도문 미인쇄 건수 실제 DB 계산
           const prayers = list.filter(d => d.prayerText && d.prayerText.trim().length > 0);
@@ -168,14 +178,21 @@ export default function AdminDashboard() {
             [ymKey2]: 0,
             [ymKey3]: 0,
           };
+          const monthlyCounts: Record<string, number> = {
+            [ymKey1]: 0,
+            [ymKey2]: 0,
+            [ymKey3]: 0,
+          };
 
           completedDonations.forEach(item => {
             if (item.createdAt) {
               const itemDate = new Date(item.createdAt);
               if (!isNaN(itemDate.getTime())) {
-                const itemYm = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+                const kst = new Date(itemDate.getTime() + 9 * 60 * 60 * 1000);
+                const itemYm = `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
                 if (monthlySums[itemYm] !== undefined) {
                   monthlySums[itemYm] += item.amount || 0;
+                  monthlyCounts[itemYm] = (monthlyCounts[itemYm] || 0) + 1;
                 }
               }
             }
@@ -184,6 +201,10 @@ export default function AdminDashboard() {
           const amt1 = monthlySums[ymKey1];
           const amt2 = monthlySums[ymKey2];
           const amt3 = monthlySums[ymKey3];
+
+          // 당월(이번 달) 수납액 및 건수 설정
+          setTotalMonthlyAmount(amt3);
+          setTotalCount(monthlyCounts[ymKey3] || 0);
 
           setChartData([
             { month: mLabel1, amount: amt1 },
@@ -207,8 +228,47 @@ export default function AdminDashboard() {
       }).finally(() => {
         setIsLoading(false);
       });
+    } else {
+      setIsLoading(false);
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+  const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
+  const isInvalidTenantSlug = Boolean(
+    tenantSlug &&
+    (reservedSlugs.includes(decodedSlug) ||
+      !tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug)
+      ))
+  );
+
+  if (isInvalidTenantSlug) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <Card className="max-w-md w-full border-slate-200 shadow-sm rounded-2xl bg-white p-6 text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-50 text-amber-600 mx-auto">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold text-slate-900">가맹 단체를 찾을 수 없습니다</h2>
+            <p className="text-xs text-slate-500">
+              요청하신 경로('{tenantSlug}')에 해당하는 가맹 단체 정보가 존재하지 않습니다.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate('/admin/login')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold h-10 cursor-pointer"
+          >
+            단체 관리자 로그인으로 이동
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   if (!currentTenant) {
     return (
@@ -241,6 +301,22 @@ export default function AdminDashboard() {
 
   const currentPath = `/${tenantSlug}/admin`;
 
+  const todayKstStr = (() => {
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+  })();
+
+  const todayDonations = dbDonations.filter((d) => {
+    if (!d.createdAt) return false;
+    const dDate = new Date(d.createdAt);
+    if (isNaN(dDate.getTime())) return false;
+    const kst = new Date(dDate.getTime() + 9 * 60 * 60 * 1000);
+    const dStr = `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+    return dStr === todayKstStr;
+  });
+
+  const displayedDonations = donationViewMode === 'today' ? todayDonations : dbDonations.slice(0, 10);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Desktop Sidebar */}
@@ -264,84 +340,90 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-8">
+        <div className="p-6 sm:p-8 space-y-6">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">대시보드</h1>
-                <p className="text-muted-foreground">{currentTenant.name}</p>
-              </div>
-              <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
-                {terms.donor} 페이지 보기
-              </Button>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                대시보드
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+                {currentTenant.name}
+              </p>
             </div>
+            <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
+              {terms.donor} 페이지 보기
+            </Button>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 총 {terms.donation}액</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalMonthlyAmount.toLocaleString()}원</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  총 <span className="text-green-600 font-semibold">{totalCount}건</span> 결제 접수
-                </p>
-                <div className="mt-2">
-                  <TrendingUp className="h-4 w-4 inline text-green-600 mr-1" />
-                  <span className="text-sm text-green-600 font-medium">DB 실시간 동기화 완료</span>
-                </div>
-              </CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                이번 달 총 {terms.donation}액
+              </div>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: currentTenant.primaryColor }}>
+                {totalMonthlyAmount.toLocaleString()}원
+              </div>
+              <p className="text-xs text-slate-400">
+                당월 <span className="text-blue-600 dark:text-blue-400 font-semibold">{totalCount}건</span> 결제 완료
+                {totalAllTimeAmount > totalMonthlyAmount && (
+                  <span className="text-slate-400 block sm:inline sm:ml-1.5 font-normal">
+                    (전체 누적 {totalAllTimeAmount.toLocaleString()}원 / {totalAllTimeCount}건)
+                  </span>
+                )}
+              </p>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">신규 {terms.donor}</CardTitle>
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{memberCount}명</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-green-600 font-semibold">DB 데이터 동기화</span>
-                </p>
-                <Button variant="link" className="mt-2 p-0 h-auto" asChild>
-                  <Link to={`/${tenantSlug}/admin/members`}>
-                    회원 목록 보기
-                    <ArrowUpRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                  신규 {terms.donor}
+                </span>
+                <Link
+                  to={`/${tenantSlug}/admin/members`}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                >
+                  회원 관리
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                {memberCount}명
+              </div>
+              <p className="text-xs text-slate-400">등록된 전체 회원 실시간 동기화</p>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">대기중인 {terms.prayer}</CardTitle>
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{pendingPrayerCount}건</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  미인쇄 항목
-                </p>
-                <Button variant="link" className="mt-2 p-0 h-auto" asChild>
-                  <Link to={`/${tenantSlug}/admin/prayers`}>
-                    바로가기
-                    <ArrowUpRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                  대기중인 {terms.prayer}
+                </span>
+                <Link
+                  to={`/${tenantSlug}/admin/prayers`}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                >
+                  기도문 관리
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {pendingPrayerCount}건
+              </div>
+              <p className="text-xs text-slate-400">라벨 미인쇄 대기 건수</p>
             </Card>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>월별 {terms.donation}액 추이</CardTitle>
-                <CardDescription>DB 수납 데이터 실시간 반영</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  월별 {terms.donation}액 추이
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  DB 수납 데이터 실시간 반영
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -358,8 +440,12 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>월별 {terms.donation}액 추이 (꺾은선)</CardTitle>
-                <CardDescription>월별 수납 금액 변동 추이 (결제완료 기준)</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  월별 {terms.donation}액 추이 (꺾은선)
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  월별 수납 금액 변동 추이 (결제완료 기준)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -383,9 +469,41 @@ export default function AdminDashboard() {
 
           {/* Recent Donations */}
           <Card>
-            <CardHeader>
-              <CardTitle>실시간 {terms.donation} 내역</CardTitle>
-              <CardDescription>오늘 접수된 최근 {terms.donation}</CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
+              <div>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  실시간 {terms.donation} 내역
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  {donationViewMode === 'today'
+                    ? `오늘(${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}) 접수된 ${terms.donation} 내역 (${todayDonations.length}건)`
+                    : `최근 접수된 실시간 ${terms.donation} 내역 (최신 ${Math.min(dbDonations.length, 10)}건)`}
+                </CardDescription>
+              </div>
+              <div className="inline-flex rounded-lg bg-slate-100 dark:bg-zinc-800 p-1 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setDonationViewMode('today')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    donationViewMode === 'today'
+                      ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                  }`}
+                >
+                  오늘 접수 ({todayDonations.length}건)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDonationViewMode('recent')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    donationViewMode === 'recent'
+                      ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
+                  }`}
+                >
+                  전체 최근 10건
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -400,19 +518,39 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dbDonations.length === 0 ? (
+                  {displayedDonations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        접수된 {terms.donation} 내역이 없습니다. ({terms.donor} 페이지에서 테스트 결제를 진행해보세요)
+                        {donationViewMode === 'today' ? (
+                          <div className="space-y-2">
+                            <p>오늘 접수된 {terms.donation} 내역이 없습니다.</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDonationViewMode('recent')}
+                              className="text-xs h-8"
+                            >
+                              전체 최근 내역 보기
+                            </Button>
+                          </div>
+                        ) : (
+                          `접수된 ${terms.donation} 내역이 없습니다.`
+                        )}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    dbDonations.slice(0, 10).map((donation) => (
+                    displayedDonations.map((donation) => (
                       <TableRow key={donation.id}>
                         <TableCell className="font-mono text-xs">{donation.id}</TableCell>
                         <TableCell className="font-medium">{donation.donorName}</TableCell>
                         <TableCell>{donation.itemName}</TableCell>
-                        <TableCell className="text-right font-semibold text-emerald-600">
+                        <TableCell className={`text-right font-semibold ${
+                          donation.paymentStatus === 'cancelled'
+                            ? 'text-slate-400 line-through'
+                            : donation.paymentStatus === 'failed'
+                            ? 'text-rose-500 line-through'
+                            : 'text-emerald-600'
+                        }`}>
                           {donation.amount.toLocaleString()}원
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">

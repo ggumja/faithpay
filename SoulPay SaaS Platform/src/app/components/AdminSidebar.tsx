@@ -1,7 +1,5 @@
 import { useNavigate, Link } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import {
   LayoutDashboard,
@@ -17,7 +15,6 @@ import {
   ExternalLink,
   BarChart3,
   UserCheck,
-  ShieldCheck,
   Building2,
 } from 'lucide-react';
 import { useTenantTerms } from '../hooks/useTenantTerms';
@@ -73,12 +70,12 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   };
 
   return (
-    <div className="w-64 bg-white border-r h-screen sticky top-0 p-6 flex flex-col overflow-y-auto shrink-0 z-20">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+    <div className="w-64 bg-white border-r border-slate-200/80 h-screen sticky top-0 p-6 flex flex-col overflow-y-auto shrink-0 z-20 font-sans">
+      <div className="mb-6">
+        <h2 className="text-2xl font-black text-blue-600 tracking-tight">
           SoulPay
         </h2>
-        <p className="text-sm text-muted-foreground">관리자 대시보드</p>
+        <p className="text-xs text-slate-400 font-medium mt-0.5">관리자 대시보드</p>
       </div>
 
       {(() => {
@@ -91,68 +88,60 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
           '대표 관리자';
 
         const adminRole = currentAdmin?.role === 'system_admin' ? 'tenant_admin' : (currentAdmin?.role || 'tenant_admin');
-        const initialChar = adminDisplayName ? adminDisplayName[0] : '관';
 
         return (
-          <div className="mb-6 p-3.5 bg-gradient-to-b from-slate-50 to-indigo-50/40 dark:from-zinc-900 dark:to-zinc-900/60 border border-slate-200/90 dark:border-zinc-800 rounded-2xl shadow-xs relative overflow-hidden">
-            {/* Top gradient accent line */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+          <div className="mb-6 p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-2xs relative overflow-hidden">
+            {/* Top accent line */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600" />
             
-            <div className="flex items-start gap-3 pt-1">
-              {/* Avatar Circle */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-md shadow-indigo-200/60 dark:shadow-none ring-2 ring-white dark:ring-zinc-800 mt-0.5">
-                {initialChar}
-              </div>
-
-              {/* Text Container */}
-              <div className="min-w-0 flex-1 space-y-1">
-                {/* Organization Name */}
+            <div className="space-y-1.5 pt-0.5">
+              {/* Organization Name & Role */}
+              <div className="flex items-center justify-between gap-2">
                 {currentTenant?.name && (
-                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
-                    <Building2 className="h-3 w-3 text-indigo-500 shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 min-w-0">
+                    <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                     <span className="truncate">{currentTenant.name}</span>
                   </div>
                 )}
-
-                {/* Admin Display Name */}
-                <p className="font-extrabold text-sm text-slate-900 dark:text-zinc-100 truncate leading-snug">
-                  {adminDisplayName}
-                </p>
-
-                {/* Role Badge (온라인 배지 삭제) */}
-                <div className="pt-0.5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold rounded-full border border-indigo-200/80 shadow-2xs whitespace-nowrap">
-                    {getRoleName(adminRole)}
-                  </span>
-                </div>
+                <span className="inline-flex items-center px-2 py-0.5 bg-white text-blue-700 text-[11px] font-bold rounded-full border border-blue-200 shadow-2xs whitespace-nowrap shrink-0">
+                  {getRoleName(adminRole)}
+                </span>
               </div>
+
+              {/* Admin Display Name */}
+              <p className="font-extrabold text-sm text-slate-900 truncate leading-snug">
+                {adminDisplayName}
+              </p>
             </div>
           </div>
         );
       })()}
 
-      <nav className="space-y-2 flex-1">
+      <nav className="space-y-0.5 flex-1">
         {accessibleMenuItems.map((item) => {
-          const fullPath = `/${tenantSlug}${item.path}`;
+          const fullPath = tenantSlug ? `/${tenantSlug}${item.path}` : item.path;
           const isActive = currentPath === fullPath;
           const permLevel = getMenuPermission(item.id);
 
           return (
             <Link key={item.id} to={fullPath}>
-              <Button
-                variant={isActive ? 'default' : 'ghost'}
-                className="w-full justify-between group"
+              <div
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                }`}
               >
                 <div className="flex items-center min-w-0">
-                  <item.icon className="h-4 w-4 mr-3 shrink-0" />
+                  <item.icon className={`h-4 w-4 mr-2.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span className="truncate">{item.label}</span>
                 </div>
                 {permLevel === 'read' && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-semibold opacity-80 shrink-0">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium shrink-0">
                     조회
                   </span>
                 )}
-              </Button>
+              </div>
             </Link>
           );
         })}
@@ -160,24 +149,22 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
 
       <Separator className="my-4" />
 
-      <div className="space-y-1">
-        <Button
-          variant="outline"
-          className="w-full justify-between font-semibold border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800"
+      <div className="space-y-1.5">
+        <button
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
           onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
         >
           <span className="truncate">{terms.publicPageLabel || '온라인 수납 페이지 보기'}</span>
-          <ExternalLink className="h-3.5 w-3.5 text-slate-500 shrink-0 ml-1" />
-        </Button>
+          <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0 ml-1" />
+        </button>
 
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+        <button
+          className="w-full flex items-center justify-start px-3 py-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4 mr-3" />
+          <LogOut className="h-4 w-4 mr-2.5 text-rose-500" />
           로그아웃
-        </Button>
+        </button>
       </div>
     </div>
   );

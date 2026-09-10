@@ -2293,14 +2293,17 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
       }
     }
 
-    // 3) 그래도 못 찾은 경우 userId(휴대폰 번호) 기반으로 최신 pending 정기결제 내역 조회
+    // 3) 그래도 못 찾은 경우 userId(휴대폰 번호) 기반으로 최신 pending 정기결제 내역 조회 (하이픈 여부 무관)
     if (!pendingDonation && cleanPhone) {
       try {
         const sb = db.pgClient();
+        const hyphenPhone = cleanPhone.length === 11 
+          ? `${cleanPhone.slice(0, 3)}-${cleanPhone.slice(3, 7)}-${cleanPhone.slice(7)}` 
+          : cleanPhone;
         const { data } = await sb
           .from('donations')
           .select('*')
-          .eq('donor_phone', cleanPhone)
+          .or(`donor_phone.eq.${cleanPhone},donor_phone.eq.${hyphenPhone}`)
           .eq('is_recurring', true)
           .eq('payment_status', 'pending')
           .order('created_at', { ascending: false })
@@ -2691,10 +2694,88 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
       subscriptions,
       donations
     });
-  } catch (error) {
-    return c.json({ success: false, error: "OTP Verification failed" }, 500);
+// 💬 카카오 로그인 토큰 교환
+const handleKakaoToken = async (c: any) => {
+  try {
+    const { code, redirectUri } = await c.req.json();
+    if (!code || !redirectUri) {
+      return c.json({ success: false, error: "code and redirectUri are required" }, 400);
+    }
+    const sendTokenRequest = async (includeSecret: boolean) => {
+      const params: Record<string, string> = {
+        grant_type: "authorization_code",
+        client_id: "9a0d1863232123049b37547090372fc5",
+        redirect_uri: redirectUri,
+        code,
+      };
+      if (includeSecret) {
+        params.client_secret = "3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol";
+      }
+      return fetch("https://kauth.kakao.com/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
+        body: new URLSearchParams(params),
+      });
+    };
+
+    let tokenRes = await sendTokenRequest(false);
+    let tokenData = await tokenRes.json();
+
+    // If client secret is required by Kakao console (KOE010 or invalid_client), auto-retry with secret
+    if (!tokenRes.ok && (tokenData.error_code === "KOE010" || tokenData.error === "invalid_client")) {
+      tokenRes = await sendTokenRequest(true);
+      tokenData = await tokenRes.json();
+    }
+
+    if (!tokenRes.ok) {
+      return c.json({ success: false, error: tokenData.error_description || tokenData.msg || "Failed to exchange token" }, 400);
+    }
+    return c.json({ success: true, data: tokenData });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Kakao token exchange failed" }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/auth/kakao/token", handleKakaoToken);
+app.post("/auth/kakao/token", handleKakaoToken);
+
+// 💬 카카오 로그인 사용자 정보 조회
+const handleKakaoUser = async (c: any) => {
+  try {
+    const { accessToken } = await c.req.json();
+    if (!accessToken) {
+      return c.json({ success: false, error: "accessToken is required" }, 400);
+    }
+    const userRes = await fetch("https://kapi.kakao.com/v2/user/me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+      },
+    });
+    const userData = await userRes.json();
+    if (!userRes.ok) {
+      return c.json({ success: false, error: userData.msg || "Failed to get user info" }, 400);
+    }
+    const rawPhone = userData.kakao_account?.phone_number || "";
+    const phone = rawPhone ? rawPhone.replace("+82 ", "0").replace(/[^0-9]/g, "") : "";
+    const email = userData.kakao_account?.email || "";
+    const nickname = userData.kakao_account?.profile?.nickname || userData.properties?.nickname || "";
+    return c.json({
+      success: true,
+      data: {
+        id: userData.id,
+        nickname,
+        email,
+        phone,
+        rawPhone,
+      },
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to fetch Kakao user info" }, 500);
+  }
+};
+app.post("/make-server-d0d82cc7/auth/kakao/user", handleKakaoUser);
+app.post("/auth/kakao/user", handleKakaoUser);
+
 
 // 신도 휴대폰 번호 기반 정기결제 약정 목록 조회
 const handleGetSubscriptionsByPhone = async (c: any) => {
@@ -2725,6 +2806,18 @@ const handleGetSubscriptionsByTenant = async (c: any) => {
 };
 app.get("/make-server-d0d82cc7/subscriptions/tenant/:tenantId", handleGetSubscriptionsByTenant);
 app.get("/subscriptions/tenant/:tenantId", handleGetSubscriptionsByTenant);
+
+// 전체 단체 정기결제 약정 목록 조회 (시스템 관리자용)
+const handleGetAllSubscriptions = async (c: any) => {
+  try {
+    const subscriptions = await db.getAllSubscriptions();
+    return c.json({ success: true, data: subscriptions });
+  } catch (error: any) {
+    return c.json({ success: false, error: error?.message || "Failed to fetch all subscriptions" }, 500);
+  }
+};
+app.get("/make-server-d0d82cc7/subscriptions", handleGetAllSubscriptions);
+app.get("/subscriptions", handleGetAllSubscriptions);
 
 // 비회원 정기결제 중단/일시정지/재개 상태 변경
 const handleUpdateSubscriptionStatus = async (c: any) => {
@@ -3388,7 +3481,7 @@ app.post("/make-server-d0d82cc7/admin/seed-800k", async (c) => {
 
 
 // 전체 단체별 통계 조회 (특정 년월) - 우선순위 상단 배치
-app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
+const handleGetAllTenantStats = async (c: any) => {
   try {
     const year = parseInt(c.req.param('year'));
     const month = parseInt(c.req.param('month'));
@@ -3419,11 +3512,12 @@ app.get("/make-server-d0d82cc7/stats/all/:year/:month", async (c) => {
     console.error('Error fetching all tenant stats:', error);
     return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
   }
-});
+};
+app.get("/make-server-d0d82cc7/stats/all/:year/:month", handleGetAllTenantStats);
+app.get("/stats/all/:year/:month", handleGetAllTenantStats);
 
 // 월별 통계 조회
-
-app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", async (c) => {
+const handleGetTenantMonthlyStats = async (c: any) => {
   try {
     const tenantId = c.req.param('tenantId');
     const year = parseInt(c.req.param('year'));
@@ -3455,10 +3549,12 @@ app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", async (c) => {
     console.error('Error fetching stats:', error);
     return c.json({ success: false, error: 'Failed to fetch statistics' }, 500);
   }
-});
+};
+app.get("/make-server-d0d82cc7/stats/:tenantId/:year/:month", handleGetTenantMonthlyStats);
+app.get("/stats/:tenantId/:year/:month", handleGetTenantMonthlyStats);
 
 // 통계 재계산
-app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", async (c) => {
+const handleRecalculateStats = async (c: any) => {
   try {
     const tenantId = c.req.param('tenantId');
     const year = parseInt(c.req.param('year'));
@@ -3471,7 +3567,9 @@ app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", async
     console.error('Error recalculating stats:', error);
     return c.json({ success: false, error: 'Failed to recalculate statistics' }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/stats/:tenantId/:year/:month/recalculate", handleRecalculateStats);
+app.post("/stats/:tenantId/:year/:month/recalculate", handleRecalculateStats);
 
 
 
@@ -3943,6 +4041,7 @@ const handleRecurringBatchRun = async (c: any) => {
         }
 
         const donationRecord = await db.createDonation({
+          id: `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
           tenantId: sub.tenantId,
           itemId: sub.itemId,
           itemName: sub.itemName,
@@ -3988,6 +4087,7 @@ const handleRecurringBatchRun = async (c: any) => {
         console.error(`[Recurring Batch Scheduler] Failed for sub ${sub.id}:`, err);
         try {
           await db.createDonation({
+            id: `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
             tenantId: sub.tenantId,
             itemId: sub.itemId,
             itemName: sub.itemName,
@@ -4113,6 +4213,27 @@ app.get("/make-server-d0d82cc7/members/profile/:phone", handleGetProfile);
 app.get("/members/profile/:phone", handleGetProfile);
 app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
 app.post("/members/update-profile", handleUpdateProfile);
+
+// 📱 신도/회원 이메일 로그인 API (DB 100% 실측 조회)
+const handleMemberLogin = async (c: any) => {
+  try {
+    const body = await c.req.json();
+    const { tenantId, email, password } = body;
+    if (!email) {
+      return c.json({ success: false, error: '이메일 주소를 입력해 주세요.' }, 400);
+    }
+    const result = await db.loginDonorWithEmail(tenantId, email, password);
+    if (!result) {
+      return c.json({ success: false, error: '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다.' }, 401);
+    }
+    return c.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error during member email login:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+app.post("/make-server-d0d82cc7/members/login", handleMemberLogin);
+app.post("/members/login", handleMemberLogin);
 
 // ======================================================================
 // SYSTEM ADMINS API

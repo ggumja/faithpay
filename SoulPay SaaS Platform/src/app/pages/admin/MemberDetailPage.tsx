@@ -51,6 +51,7 @@ import {
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { MemberTitleSelect } from '../../components/common/MemberTitleSelect';
 import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
@@ -80,6 +81,7 @@ export interface MemberSubscriptionItem {
   cardName?: string;
   cardNo?: string;
   recurringInterval?: string;
+  recurringDayOfWeek?: number | string;
   createdAt?: string;
 }
 
@@ -266,6 +268,7 @@ export default function MemberDetailPage() {
                     cardName: sub.cardName || '',
                     cardNo: sub.cardNo || '',
                     recurringInterval: sub.recurringInterval || 'monthly',
+                    recurringDayOfWeek: sub.recurringDayOfWeek ?? sub.recurring_day_of_week,
                     createdAt: sub.createdAt ? sub.createdAt.slice(0, 10) : '',
                   }));
                 }
@@ -317,11 +320,15 @@ export default function MemberDetailPage() {
                 beneficiaryName: d.donorName || rawMatch.donorName || terms.donor,
               }));
 
-            // 4. 회원 프로필 정보 동기화 (이메일, 주소, 직분 등 DB 및 settingsAPI 100% 실측 조회)
-            let resolvedEmail = rawMatch.donorEmail || '';
-            let resolvedAddress = rawMatch.address || '';
+            // 4. 회원 프로필 정보 동기화 (이메일, 주소, 직분 등 DB 실측 조회)
+            const nonNullBaptism = donorDonations.find((d: any) => d.baptismName)?.baptismName;
+            const nonNullEmail = donorDonations.find((d: any) => d.donorEmail || d.email)?.donorEmail || donorDonations.find((d: any) => d.donorEmail || d.email)?.email;
+            const nonNullAddress = donorDonations.find((d: any) => d.address)?.address;
+
+            let resolvedEmail = nonNullEmail || rawMatch.donorEmail || '';
+            let resolvedAddress = nonNullAddress || rawMatch.address || '';
             let resolvedName = rawMatch.donorName || '무기명';
-            let resolvedTitle = rawMatch.baptismName || '';
+            let resolvedTitle = nonNullBaptism || rawMatch.baptismName || '';
 
             if (digitsKey && digitsKey !== '미등록') {
               try {
@@ -810,330 +817,373 @@ export default function MemberDetailPage() {
 
       {/* Main Content Page */}
       <div className="flex-1 min-w-0 overflow-auto">
-        <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-          {/* Navigation Bar Back Button */}
-          <div className="flex items-center justify-between">
+        <div className="p-6 lg:p-8 space-y-6 w-full">
+          {/* Navigation Bar & Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => navigate(`/${tenantSlug}/admin/members`)}
-              className="gap-2 cursor-pointer font-bold bg-white dark:bg-zinc-900 border-slate-300 hover:bg-slate-100"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--hm-ink-2)] hover:text-[var(--hm-ink)] hover:bg-[var(--hm-paper-2)] -ml-2 self-start cursor-pointer transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
-              {memberTerm} 목록으로 돌아가기
+              <ArrowLeft className="h-4 w-4 text-[var(--hm-ink-3)]" />
+              <span>{memberTerm} 목록으로 돌아가기</span>
             </Button>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                type="button"
                 onClick={handleOpenEditModal}
-                className="gap-1.5 cursor-pointer font-bold text-xs bg-white"
+                className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-xs text-[var(--hm-ink-2)] bg-[var(--hm-paper)] hover:bg-[var(--hm-paper-2)] border border-[var(--hm-border)] h-8 px-3 rounded-lg shadow-2xs transition-colors"
               >
-                <Edit2 className="h-3.5 w-3.5 text-indigo-600" />
-                정보 수정
-              </Button>
-              <Button
-                variant="outline"
+                <Edit2 className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                <span>정보 수정</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleDelete}
-                className="gap-1.5 cursor-pointer font-bold text-xs text-rose-600 hover:bg-rose-50 border-rose-200"
+                className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-xs text-[var(--hm-danger)] hover:bg-[oklch(0.52_0.20_27_/_0.08)] border border-[oklch(0.52_0.20_27_/_0.25)] h-8 px-3 rounded-lg shadow-2xs transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                회원 삭제
-              </Button>
+                <span>회원 삭제</span>
+              </button>
             </div>
           </div>
 
-          {/* Full Page Header Profile Summary (Clean Light Mode) */}
-          <Card className="overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-md bg-white dark:bg-zinc-900 border-t-4 border-t-indigo-600">
-            <CardContent className="p-6 sm:p-8 space-y-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl font-black text-indigo-700 shadow-inner shrink-0">
-                    {member.name.slice(0, 1)}
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-3xl font-black text-slate-900 dark:text-zinc-100">{member.name}</h1>
-                      {member.baptismName && (
-                        <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold text-xs px-2.5 py-1">
-                          {getTitleLabel()}: {member.baptismName}
-                        </Badge>
-                      )}
-                      {member.recurringCount > 0 ? (
-                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-xs px-2.5 py-1 flex items-center gap-1">
-                          <RefreshCw className="h-3 w-3 animate-spin-slow text-emerald-700" />
-                          정기 약정 {member.recurringCount}건
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-slate-600 border-slate-300 text-xs px-2.5 py-1">
-                          일반 회원
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-600 dark:text-zinc-400 pt-1 font-medium">
-                      <span className="flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-indigo-600" />
-                        {formatPhoneNumber(member.phone)}
-                        <button onClick={handleCopyPhone} title="연락처 복사" className="hover:text-indigo-600 transition-colors">
-                          <Copy className="h-3 w-3 ml-0.5" />
-                        </button>
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5 text-indigo-600" />
-                        {member.email || '이메일 미등록'}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-indigo-600" />
-                        가입일: {member.registeredDate}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
-                  <Button
-                    onClick={handleOpenTaxModal}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2 text-xs cursor-pointer py-5 px-4 shadow-sm shadow-amber-200"
-                  >
-                    <FileText className="h-4 w-4" />
-                    🧾 소득공제용 기부금영수증 발급
-                  </Button>
-                  <Button
-                    onClick={() => handlePrintReceipt()}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 text-xs cursor-pointer py-5 px-4 shadow-sm shadow-indigo-200"
-                  >
-                    <Printer className="h-4 w-4" />
-                    전체 {donationTerm} 확인서 인쇄
-                  </Button>
-                </div>
-              </div>
-
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
-                  <span className="text-xs font-bold text-slate-500 block">총 누적 {donationTerm} 금액</span>
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
-                    ₩ {member.totalDonation.toLocaleString()}원
-                  </span>
-                </div>
-
-                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
-                  <span className="text-xs font-bold text-slate-500 block">최근 {donationTerm}일</span>
-                  <span className="text-base font-bold text-slate-800 dark:text-zinc-200 mt-1.5 block">
-                    {member.lastDonation || '기록 없음'}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4">
-                  <span className="text-xs font-bold text-slate-500 block">정기 결제 약정 현황</span>
-                  <span className="text-base font-bold text-indigo-600 dark:text-indigo-400 mt-1.5 block">
-                    {member.recurringCount > 0 ? `${member.recurringCount}개 약정 유지 중` : '1회성 전용'}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 rounded-2xl p-4 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                        주소
-                      </span>
-                      {member.address && (
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(member.address || '');
-                            toast.success('주소가 클립보드에 복사되었습니다.');
-                          }}
-                          title="주소 복사"
-                          className="text-slate-400 hover:text-indigo-600 transition-colors p-0.5"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                    <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 mt-2 block break-keep break-words leading-relaxed select-text" title={member.address}>
-                      {member.address || '주소 미입력'}
+          {/* Member Profile Card & Unified Metrics Strip (Hallmark Cobalt-01 Light) */}
+          <div className="rounded-2xl border border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-2xs p-6 sm:p-7 space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                    {member.name}
+                  </h1>
+                  {member.baptismName && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                      {getTitleLabel()}: {member.baptismName}
                     </span>
-                  </div>
+                  )}
+                  {member.recurringCount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                      정기 약정 {member.recurringCount}건
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                      일반 회원
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="tabular-nums text-slate-700 font-semibold">
+                      {formatPhoneNumber(member.phone)}
+                    </span>
+                    <button
+                      onClick={handleCopyPhone}
+                      title="연락처 복사"
+                      className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-slate-600">{member.email || '이메일 미등록'}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="tabular-nums text-slate-600">가입일: {member.registeredDate}</span>
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Full Page Main Tabs */}
-          <Card className="bg-white dark:bg-zinc-900 border-slate-200">
-            <CardContent className="p-6">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                <TabsList className="grid grid-cols-4 w-full bg-slate-100 dark:bg-zinc-800 p-1 mb-6">
-                  <TabsTrigger value="history" className="gap-2 font-bold text-sm">
-                    <CreditCard className="h-4 w-4 text-indigo-600" />
-                    1. {donationTerm}/결제 내역 ({donations.length}건)
-                  </TabsTrigger>
-                  <TabsTrigger value="recurring" className="gap-2 font-bold text-sm">
-                    <RefreshCw className="h-4 w-4 text-indigo-600" />
-                    2. 정기 약정 현황 ({subscriptions.length}건)
-                  </TabsTrigger>
-                  <TabsTrigger value="prayers" className="gap-2 font-bold text-sm">
-                    <Sparkles className="h-4 w-4 text-indigo-600" />
-                    3. {prayerTerm} 이력 ({prayers.length}건)
-                  </TabsTrigger>
-                  <TabsTrigger value="note" className="gap-2 font-bold text-sm">
-                    <FileText className="h-4 w-4 text-indigo-600" />
-                    4. 관리자 전용 메모
-                  </TabsTrigger>
-                </TabsList>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center">
+                <button
+                  type="button"
+                  onClick={handleOpenTaxModal}
+                  className="inline-flex items-center gap-1.5 bg-[var(--hm-paper)] hover:bg-[var(--hm-paper-2)] text-[var(--hm-ink)] border border-[var(--hm-border)] font-semibold text-xs h-9 px-3.5 rounded-lg shadow-2xs cursor-pointer transition-colors"
+                >
+                  <FileText className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                  <span>소득공제 영수증 발급</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt()}
+                  className="inline-flex items-center gap-1.5 bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>전체 {donationTerm} 확인서</span>
+                </button>
+              </div>
+            </div>
 
-                {/* TAB 1: 결제 / 납부 내역 */}
-                <TabsContent value="history" className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base flex items-center gap-2">
-                        {member.name} {memberTerm}의 {donationTerm} 내역
-                        <Badge variant="outline" className="text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
-                          {filteredDonationsHistory.length}건 / 전체 {donations.length}건
-                        </Badge>
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        기간 검색 필터 조회를 제공하며 건별 영수증 1:1 출력이 가능합니다.
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => handlePrintReceipt()} className="gap-1.5 text-xs font-bold bg-white cursor-pointer shadow-2xs">
-                      <Printer className="h-3.5 w-3.5" />
-                      납부확인서 인쇄
-                    </Button>
+            {/* Quiet 4-Column Metric Strip */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-6 border-t border-[var(--hm-border)]">
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[var(--hm-ink-3)] block">총 누적 {donationTerm}액</span>
+                <span className="text-2xl font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums tracking-tight block">
+                  ₩ {member.totalDonation.toLocaleString()}
+                </span>
+                <span className="text-[11px] text-[var(--hm-ink-3)] block">실측 결제 완료 기준</span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[var(--hm-ink-3)] block">최근 {donationTerm}일</span>
+                <span className="text-base font-bold text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums block pt-0.5">
+                  {member.lastDonation || '기록 없음'}
+                </span>
+                <span className="text-[11px] text-[var(--hm-ink-3)] block">최근 납부 일자</span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[var(--hm-ink-3)] block">정기 약정 현황</span>
+                <span className="text-base font-bold text-[var(--hm-ink)] font-[family-name:var(--font-display)] block pt-0.5">
+                  {member.recurringCount > 0 ? `${member.recurringCount}건 활성 유지` : '1회성 전용'}
+                </span>
+                <span className="text-[11px] text-[var(--hm-ink-3)] block">자동 이체 등록 여부</span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-[var(--hm-ink-3)] flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-[var(--hm-ink-3)] shrink-0" />
+                    주소
+                  </span>
+                  {member.address && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(member.address || '');
+                        toast.success('주소가 클립보드에 복사되었습니다.');
+                      }}
+                      title="주소 복사"
+                      className="text-[var(--hm-ink-3)] hover:text-[var(--hm-ink)] transition-colors p-0.5 cursor-pointer"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <span
+                  className="text-xs text-[var(--hm-ink-2)] block leading-relaxed break-keep break-words select-text pt-0.5"
+                  title={member.address}
+                >
+                  {member.address || '주소 미입력'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Tabs */}
+          <div className="rounded-2xl border border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-2xs p-6 sm:p-7">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+              {/* Hallmark Modern Tab Bar */}
+              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full bg-[var(--hm-paper-2)] p-1 rounded-xl border border-[var(--hm-border)] mb-6 h-auto">
+                <TabsTrigger
+                  value="history"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
+                >
+                  <CreditCard className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                  <span>{donationTerm} 내역</span>
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-[var(--hm-paper-3)] text-[var(--hm-ink-2)] font-[family-name:var(--font-mono)] tabular-nums font-semibold">
+                    {donations.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="recurring"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                  <span>정기 약정</span>
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-[var(--hm-paper-3)] text-[var(--hm-ink-2)] font-[family-name:var(--font-mono)] tabular-nums font-semibold">
+                    {subscriptions.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="prayers"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                  <span>{prayerTerm} 이력</span>
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] bg-[var(--hm-paper-3)] text-[var(--hm-ink-2)] font-[family-name:var(--font-mono)] tabular-nums font-semibold">
+                    {prayers.length}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="note"
+                  className="gap-2 font-medium text-xs sm:text-sm py-2 rounded-lg text-[var(--hm-ink-3)] data-[state=active]:bg-[var(--hm-paper)] data-[state=active]:text-[var(--hm-ink)] data-[state=active]:shadow-xs transition-all cursor-pointer font-[family-name:var(--font-body)]"
+                >
+                  <FileText className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                  <span>관리자 메모</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* TAB 1: 결제 / 납부 내역 */}
+              <TabsContent value="history" className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-[var(--hm-ink)] text-base flex items-center gap-2 font-[family-name:var(--font-display)]">
+                      <span>{member.name} {memberTerm}의 {donationTerm} 내역</span>
+                      <span className="text-xs font-semibold text-[var(--hm-ink-3)] bg-[var(--hm-paper-2)] px-2.5 py-0.5 rounded-full border border-[var(--hm-border)] font-[family-name:var(--font-mono)] tabular-nums">
+                        {filteredDonationsHistory.length}건 / 전체 {donations.length}건
+                      </span>
+                    </h3>
+                    <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
+                      기간 검색 필터 조회를 제공하며 건별 확인서 인쇄가 가능합니다.
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handlePrintReceipt()}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[var(--hm-paper)] hover:bg-[var(--hm-paper-2)] text-[var(--hm-ink)] border border-[var(--hm-border)] h-8 px-3 rounded-lg shadow-2xs self-start sm:self-auto cursor-pointer transition-colors"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                    <span>납부확인서 인쇄</span>
+                  </button>
+                </div>
 
-                  {/* 🔍 기간 지정 모듈 (PeriodRangePicker) */}
-                  <div className="bg-slate-50 dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 p-4 rounded-2xl space-y-3 shadow-2xs">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 whitespace-nowrap">
-                          <Calendar className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                          기간 선택:
-                        </span>
-                        <PeriodRangePicker
-                          unit={periodUnit}
-                          onUnitChange={(u) => setPeriodUnit(u)}
-                          selection={periodSelection}
-                          onSelectionChange={(newSel) => setPeriodSelection(newSel)}
-                        />
-                      </div>
+                {/* 기간 지정 필터 모듈 */}
+                <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] p-3.5 sm:p-4 rounded-xl space-y-3">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-[var(--hm-ink-2)] flex items-center gap-1.5 whitespace-nowrap">
+                        <Calendar className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                        기간:
+                      </span>
+                      <PeriodRangePicker
+                        unit={periodUnit}
+                        onUnitChange={(u) => setPeriodUnit(u)}
+                        selection={periodSelection}
+                        onSelectionChange={(newSel) => setPeriodSelection(newSel)}
+                      />
+                    </div>
 
-                      <div className="flex items-center gap-3 self-end sm:self-auto text-xs font-medium text-slate-600 dark:text-zinc-400">
-                        <span>
-                          조회 건수: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm">{filteredDonationsHistory.length}건</strong>
-                          {nonCompletedDonationCount > 0 && (
-                            <span className="text-[11px] text-slate-500 ml-1">
-                              (완료 {completedDonationCount}건 / 취소·실패 {nonCompletedDonationCount}건)
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-slate-300">|</span>
-                        <span>
-                          기간 실납부 합계: <strong className="text-emerald-600 dark:text-emerald-400 font-black text-sm">₩ {filteredCompletedSum.toLocaleString()}원</strong>
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-3 self-end lg:self-auto text-xs font-normal text-[var(--hm-ink-3)]">
+                      <span>
+                        조회 건수: <strong className="text-[var(--hm-ink)] font-bold font-[family-name:var(--font-mono)] tabular-nums">{filteredDonationsHistory.length}건</strong>
+                        {nonCompletedDonationCount > 0 && (
+                          <span className="text-[11px] text-[var(--hm-ink-3)] ml-1 font-[family-name:var(--font-mono)] tabular-nums">
+                            (완료 {completedDonationCount}건 / 취소·실패 {nonCompletedDonationCount}건)
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[var(--hm-border)]">|</span>
+                      <span>
+                        기간 실납부 합계: <strong className="text-[var(--hm-ink)] font-black font-[family-name:var(--font-mono)] tabular-nums">₩ {filteredCompletedSum.toLocaleString()}원</strong>
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <Table className="border rounded-xl">
-                    <TableHeader className="bg-slate-100 dark:bg-zinc-900">
-                      <TableRow>
-                        <TableHead className="font-bold">결제일시</TableHead>
-                        <TableHead className="font-bold">{donationTerm} 항목</TableHead>
-                        <TableHead className="font-bold">구분</TableHead>
-                        <TableHead className="font-bold">결제 수단</TableHead>
-                        <TableHead className="text-right font-bold">결제 금액</TableHead>
-                        <TableHead className="text-center font-bold">결제 상태</TableHead>
-                        <TableHead className="text-center font-bold">영수증</TableHead>
+                {/* Table */}
+                <div className="rounded-xl border border-[var(--hm-border)] overflow-hidden bg-[var(--hm-paper)] shadow-2xs">
+                  <Table>
+                    <TableHeader className="bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)]">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제일시</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">{donationTerm} 항목</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">구분</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제 수단</TableHead>
+                        <TableHead className="text-right font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제 금액</TableHead>
+                        <TableHead className="text-center font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">결제 상태</TableHead>
+                        <TableHead className="text-center font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">영수증</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredDonationsHistory.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                          <TableCell colSpan={7} className="text-center py-12 text-[var(--hm-ink-3)]">
                             <div className="space-y-1">
-                              <p className="font-bold text-slate-700">선택하신 기간에 해당하는 결제 내역이 없습니다.</p>
-                              <p className="text-xs text-slate-400">기간 설정을 변경하거나 '초기화' 버튼을 눌러 전체 목록을 확인해보세요.</p>
+                              <p className="font-semibold text-[var(--hm-ink)]">선택하신 기간에 해당하는 내역이 없습니다.</p>
+                              <p className="text-xs text-[var(--hm-ink-3)]">기간 설정을 변경하거나 '전체 기간'을 눌러 확인해보세요.</p>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : (
                         filteredDonationsHistory.map((don) => (
-                          <TableRow key={don.id}>
-                            <TableCell className="font-mono text-xs whitespace-nowrap">
-                              <div className="font-semibold text-slate-800 dark:text-zinc-200">{don.date}</div>
+                          <TableRow key={don.id} className="hover:bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)] transition-colors">
+                            <TableCell className="font-[family-name:var(--font-mono)] tabular-nums text-xs whitespace-nowrap py-3">
+                              <div className="font-semibold text-[var(--hm-ink)]">{don.date}</div>
                               {don.time && (
-                                <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{don.time}</div>
+                                <div className="text-[11px] text-[var(--hm-ink-3)] mt-0.5">{don.time}</div>
                               )}
                             </TableCell>
-                            <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{don.itemName}</TableCell>
-                            <TableCell>
-                              <Badge variant={don.type === 'recurring' ? 'default' : 'secondary'} className="text-[11px]">
-                                {don.type === 'recurring' ? '🔄 정기' : '⚡ 1회성'}
-                              </Badge>
+                            <TableCell className="font-semibold text-[var(--hm-ink)] py-3 text-sm">
+                              {don.itemName}
                             </TableCell>
-                            <TableCell className="text-xs text-slate-600 font-medium">{don.paymentMethod}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="py-3">
+                              {don.type === 'recurring' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[var(--hm-accent-bg)] text-[var(--hm-accent)] border border-[var(--hm-accent-border)] font-[family-name:var(--font-mono)]">
+                                  정기
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)] font-[family-name:var(--font-mono)]">
+                                  1회성
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-[var(--hm-ink-2)] py-3 font-normal">
+                              {don.paymentMethod}
+                            </TableCell>
+                            <TableCell className="text-right py-3 font-[family-name:var(--font-mono)] tabular-nums">
                               {don.status === 'completed' ? (
-                                <span className="font-black text-slate-900 dark:text-zinc-100 font-mono">
+                                <span className="font-black text-[var(--hm-ink)] text-sm">
                                   ₩ {don.amount.toLocaleString()}원
                                 </span>
                               ) : (
-                                <span className="font-semibold text-slate-400 line-through font-mono">
+                                <span className="font-normal text-[var(--hm-ink-3)] line-through text-sm">
                                   ₩ {don.amount.toLocaleString()}원
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="text-center py-3">
                               {don.status === 'completed' ? (
-                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-bold">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[oklch(0.55_0.17_148_/_0.12)] text-[var(--hm-success)] border border-[oklch(0.55_0.17_148_/_0.25)]">
                                   정상 완료
-                                </Badge>
+                                </span>
                               ) : don.status === 'cancelled' ? (
                                 <div className="space-y-0.5 inline-block">
-                                  <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-xs font-bold">
-                                    결제 취소(환불)
-                                  </Badge>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[oklch(0.52_0.20_27_/_0.12)] text-[var(--hm-danger)] border border-[oklch(0.52_0.20_27_/_0.25)]">
+                                    결제 취소
+                                  </span>
                                   {don.cancelReason && (
-                                    <span className="block text-[10.5px] text-rose-600 font-normal max-w-[140px] truncate" title={don.cancelReason}>
+                                    <span className="block text-[10px] text-[var(--hm-danger)] font-normal max-w-[130px] truncate" title={don.cancelReason}>
                                       사유: {don.cancelReason}
                                     </span>
                                   )}
                                 </div>
                               ) : don.status === 'failed' ? (
                                 <div className="space-y-0.5 inline-block">
-                                  <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-bold">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[oklch(0.65_0.16_65_/_0.12)] text-[oklch(0.65_0.16_65)] border border-[oklch(0.65_0.16_65_/_0.25)]">
                                     결제 실패
-                                  </Badge>
+                                  </span>
                                   {don.failureReason && (
-                                    <span className="block text-[10.5px] text-amber-700 font-normal max-w-[140px] truncate" title={don.failureReason}>
+                                    <span className="block text-[10px] text-[oklch(0.65_0.16_65)] font-normal max-w-[130px] truncate" title={don.failureReason}>
                                       {don.failureReason}
                                     </span>
                                   )}
                                 </div>
                               ) : (
-                                <Badge variant="outline" className="text-slate-600 text-xs">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)]">
                                   대기
-                                </Badge>
+                                </span>
                               )}
                             </TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="text-center py-3">
                               {don.status === 'completed' ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                                <button
+                                  type="button"
                                   onClick={() => handlePrintReceipt(don)}
-                                  className="h-7 px-2 text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                                  className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-semibold text-[var(--hm-accent)] hover:bg-[var(--hm-accent-bg)] cursor-pointer rounded-md transition-colors"
                                 >
-                                  <Printer className="h-3.5 w-3.5" />
-                                  인쇄
-                                </Button>
+                                  <Printer className="h-3 w-3" />
+                                  <span>인쇄</span>
+                                </button>
                               ) : don.status === 'cancelled' ? (
-                                <span className="text-xs text-rose-500 font-medium">취소/환불</span>
+                                <span className="text-xs text-[var(--hm-danger)] font-medium">취소</span>
                               ) : (
-                                <span className="text-xs text-slate-400 font-medium">-</span>
+                                <span className="text-xs text-[var(--hm-ink-3)] font-normal">-</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -1141,274 +1191,302 @@ export default function MemberDetailPage() {
                       )}
                     </TableBody>
                   </Table>
-                </TabsContent>
+                </div>
+              </TabsContent>
 
-                {/* TAB 2: 정기 약정 현황 */}
-                <TabsContent value="recurring" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
-                        자동 이체 / 정기결제 약정 현황
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        매월 또는 매주 자동 수납되는 정기 약정을 확인하고 일시정지 또는 해지 관리합니다.
-                      </p>
-                    </div>
-                  </div>
+              {/* TAB 2: 정기 약정 현황 */}
+              <TabsContent value="recurring" className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-[var(--hm-ink)] text-base font-[family-name:var(--font-display)]">
+                    자동 이체 / 정기결제 약정 목록
+                  </h3>
+                  <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
+                    매월 또는 매주 자동 수납되는 정기 약정을 확인하고 일시정지 또는 해지 관리합니다.
+                  </p>
+                </div>
 
-                  {subscriptions.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {subscriptions.map((sub) => {
-                        const intervalLabel = sub.recurringInterval === 'weekly' ? '주간 (매주)' : '월간 (매월)';
-                        const cycleDesc =
-                          sub.recurringInterval === 'weekly'
-                            ? '매주 일요일'
-                            : `매월 ${sub.billingDay || 15}일`;
+                {subscriptions.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {subscriptions.map((sub) => {
+                      const intervalLabel =
+                        sub.recurringInterval === 'daily'
+                          ? '매일'
+                          : sub.recurringInterval === 'weekly'
+                          ? '매주'
+                          : '매월';
 
-                        return (
-                          <Card key={sub.id} className="border-l-4 border-l-indigo-600">
-                            <CardHeader className="pb-2">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <CardTitle className="text-base font-bold text-slate-900">{sub.itemName}</CardTitle>
-                                  <span className="text-xs text-slate-500 font-medium">{intervalLabel} 자동 결제</span>
-                                </div>
-                                <Badge
-                                  className={
-                                    sub.status === 'active'
-                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold'
-                                      : sub.status === 'paused'
-                                      ? 'bg-amber-100 text-amber-800 border-amber-300 font-bold'
-                                      : 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
-                                  }
+                      const getDayLabel = (val: any) => {
+                        if (val === undefined || val === null) return '일';
+                        if (typeof val === 'string') {
+                          const trimmed = val.replace(/[^일월화수목금토0-6]/g, '');
+                          if (['일', '월', '화', '수', '목', '금', '토'].includes(trimmed)) return trimmed;
+                          const num = parseInt(trimmed, 10);
+                          if (!isNaN(num) && num >= 0 && num <= 6) return ['일', '월', '화', '수', '목', '금', '토'][num];
+                          return '일';
+                        }
+                        const days = ['일', '월', '화', '수', '목', '금', '토'];
+                        return days[Number(val) % 7] ?? '일';
+                      };
+
+                      const cycleDesc =
+                        sub.recurringInterval === 'daily'
+                          ? '매일'
+                          : sub.recurringInterval === 'weekly'
+                          ? `매주 ${getDayLabel(sub.recurringDayOfWeek)}요일`
+                          : `매월 ${sub.billingDay || 15}일`;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          className="rounded-xl border border-[var(--hm-border)] bg-[var(--hm-paper)] p-5 shadow-2xs space-y-4 hover:border-[var(--hm-accent-border)] transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h4 className="text-base font-bold text-[var(--hm-ink)] font-[family-name:var(--font-display)]">{sub.itemName}</h4>
+                              <span className="text-xs text-[var(--hm-ink-3)] font-normal">{intervalLabel} 자동 납부</span>
+                            </div>
+                            {sub.status === 'active' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[oklch(0.55_0.17_148_/_0.12)] text-[var(--hm-success)] border border-[oklch(0.55_0.17_148_/_0.25)]">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--hm-success)]"></span>
+                                약정 유지 중
+                              </span>
+                            ) : sub.status === 'paused' ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[oklch(0.65_0.16_65_/_0.12)] text-[oklch(0.65_0.16_65)] border border-[oklch(0.65_0.16_65_/_0.25)]">
+                                일시 정지
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink-3)] border border-[var(--hm-border)]">
+                                약정 해지됨
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-baseline justify-between pt-1">
+                            <span className="text-xs font-medium text-[var(--hm-ink-3)]">약정 금액</span>
+                            <span className="text-lg font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums">
+                              ₩ {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-[var(--hm-ink-2)] space-y-1.5 pt-3 border-t border-[var(--hm-border)]">
+                            {sub.cardName && (
+                              <div className="flex justify-between">
+                                <span className="text-[var(--hm-ink-3)]">결제 수단</span>
+                                <span className="font-semibold text-[var(--hm-ink)]">{sub.cardName}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-[var(--hm-ink-3)]">결제 주기</span>
+                              <span className="font-semibold text-[var(--hm-ink)]">{cycleDesc}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-[var(--hm-ink-3)]">다음 결제 예정일</span>
+                              <span className="font-bold text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums">{sub.nextPaymentDate || '-'}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            {sub.status === 'active' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 border border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] hover:bg-[var(--hm-paper-2)] cursor-pointer transition-colors"
                                 >
-                                  {sub.status === 'active'
-                                    ? '🟢 약정 유지 중'
-                                    : sub.status === 'paused'
-                                    ? '⏸️ 일시 정지'
-                                    : '🔴 약정 해지됨'}
-                                </Badge>
+                                  <PauseCircle className="h-3.5 w-3.5 text-[var(--hm-ink-3)]" />
+                                  <span>일시정지</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 text-[var(--hm-danger)] hover:bg-[oklch(0.52_0.20_27_/_0.08)] border border-[oklch(0.52_0.20_27_/_0.25)] cursor-pointer transition-colors"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  <span>약정 해지</span>
+                                </button>
+                              </>
+                            )}
+                            {sub.status === 'paused' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 text-[var(--hm-success)] hover:bg-[oklch(0.55_0.17_148_/_0.10)] border border-[oklch(0.55_0.17_148_/_0.25)] cursor-pointer transition-colors"
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  <span>약정 재개</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
+                                  className="flex-1 inline-flex items-center justify-center text-xs font-semibold h-8 rounded-lg gap-1 text-[var(--hm-danger)] hover:bg-[oklch(0.52_0.20_27_/_0.08)] border border-[oklch(0.52_0.20_27_/_0.25)] cursor-pointer transition-colors"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  <span>약정 해지</span>
+                                </button>
+                              </>
+                            )}
+                            {sub.status === 'cancelled' && (
+                              <div className="w-full text-center py-2 text-xs font-normal text-[var(--hm-ink-3)] bg-[var(--hm-paper-2)] rounded-lg border border-[var(--hm-border)]">
+                                해지된 정기결제 약정입니다.
                               </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3 pt-1">
-                              <div className="flex items-baseline justify-between">
-                                <span className="text-xs text-slate-500">약정 금액</span>
-                                <span className="text-lg font-black text-indigo-600">
-                                  ₩ {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
-                                </span>
-                              </div>
-
-                              <div className="text-xs text-slate-600 space-y-1.5 pt-2 border-t">
-                                {sub.cardName && (
-                                  <div className="flex justify-between">
-                                    <span className="text-slate-500">결제 수단:</span>
-                                    <span className="font-bold text-slate-800">{sub.cardName}</span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between">
-                                  <span className="text-slate-500">결제 주기:</span>
-                                  <span className="font-bold text-slate-800">{cycleDesc}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-500">다음 결제 예정일:</span>
-                                  <span className="font-bold text-slate-900 font-mono">{sub.nextPaymentDate || '-'}</span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 pt-2">
-                                {sub.status === 'active' && (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'paused')}
-                                      className="flex-1 text-xs gap-1 cursor-pointer"
-                                    >
-                                      <PauseCircle className="h-3.5 w-3.5 text-amber-600" />
-                                      일시정지
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
-                                      className="flex-1 text-xs gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer"
-                                    >
-                                      <XCircle className="h-3.5 w-3.5" />
-                                      약정 해지
-                                    </Button>
-                                  </>
-                                )}
-                                {sub.status === 'paused' && (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'active')}
-                                      className="flex-1 text-xs gap-1 text-emerald-700 hover:bg-emerald-50 border-emerald-200 cursor-pointer font-bold"
-                                    >
-                                      <RefreshCw className="h-3.5 w-3.5" />
-                                      약정 재개
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleUpdateSubscriptionStatus(sub.id, 'cancelled')}
-                                      className="flex-1 text-xs gap-1 text-rose-600 hover:bg-rose-50 border-rose-200 cursor-pointer"
-                                    >
-                                      <XCircle className="h-3.5 w-3.5" />
-                                      약정 해지
-                                    </Button>
-                                  </>
-                                )}
-                                {sub.status === 'cancelled' && (
-                                  <div className="w-full text-center py-1 text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg">
-                                    해지된 정기결제 약정입니다.
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 bg-slate-50 rounded-2xl border text-slate-500 text-sm">
-                      등록된 정기 결제 약정이 없습니다.
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* TAB 3: 메시지 신청 이력 */}
-                <TabsContent value="prayers" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
-                        {prayerTerm} 및 기부 메시지 내역
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        회원이 후원/신청 시 함께 남긴 메시지 및 전달사항 목록입니다.
-                      </p>
-                    </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                ) : (
+                  <div className="text-center py-12 bg-[var(--hm-paper-2)] rounded-xl border border-[var(--hm-border)] text-[var(--hm-ink-3)] text-xs">
+                    등록된 정기 결제 약정이 없습니다.
+                  </div>
+                )}
+              </TabsContent>
 
-                  <Table className="border rounded-xl">
-                    <TableHeader className="bg-slate-100 dark:bg-zinc-900">
-                      <TableRow>
-                        <TableHead className="font-bold">신청일자</TableHead>
-                        <TableHead className="font-bold">구분</TableHead>
-                        <TableHead className="font-bold">메시지 내용</TableHead>
-                        <TableHead className="font-bold">대상자 성명</TableHead>
+              {/* TAB 3: 메시지 신청 이력 */}
+              <TabsContent value="prayers" className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-[var(--hm-ink)] text-base font-[family-name:var(--font-display)]">
+                    {prayerTerm} 및 기부 메시지 내역
+                  </h3>
+                  <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
+                    회원이 신청 시 함께 남긴 전달 메시지 목록입니다.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[var(--hm-border)] overflow-hidden bg-[var(--hm-paper)] shadow-2xs">
+                  <Table>
+                    <TableHeader className="bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)]">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">신청일자</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">구분</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">메시지 내용</TableHead>
+                        <TableHead className="font-semibold text-xs text-[var(--hm-ink-3)] py-3 uppercase tracking-wide">대상자 성명</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {prayers.map((pr) => (
-                        <TableRow key={pr.id}>
-                          <TableCell className="font-mono text-xs text-slate-600">{pr.date}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs font-semibold">{pr.category}</Badge>
+                      {prayers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-12 text-[var(--hm-ink-3)] text-xs">
+                            등록된 {prayerTerm} 및 메시지 내역이 없습니다.
                           </TableCell>
-                          <TableCell className="font-bold text-slate-900 dark:text-zinc-100">{pr.title}</TableCell>
-                          <TableCell className="text-xs font-semibold">{pr.beneficiaryName}</TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        prayers.map((pr) => (
+                          <TableRow key={pr.id} className="hover:bg-[var(--hm-paper-2)] border-b border-[var(--hm-border)]">
+                            <TableCell className="font-[family-name:var(--font-mono)] tabular-nums text-xs text-[var(--hm-ink-3)] py-3">{pr.date}</TableCell>
+                            <TableCell className="py-3">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[var(--hm-paper-2)] text-[var(--hm-ink)] border border-[var(--hm-border)]">
+                                {pr.category}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-semibold text-[var(--hm-ink)] py-3 text-sm">{pr.title}</TableCell>
+                            <TableCell className="text-xs font-normal text-[var(--hm-ink-2)] py-3">{pr.beneficiaryName}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
-                </TabsContent>
+                </div>
+              </TabsContent>
 
-                {/* TAB 4: 관리자 메모 */}
-                <TabsContent value="note" className="space-y-4">
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base">
-                      {member.name} {memberTerm} 관리자 전용 특이사항 메모
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      해당 회원과의 상담 내역, 영수증 합산 발급 요청, 특이사항을 기록합니다 (외부 미노출).
-                    </p>
+              {/* TAB 4: 관리자 메모 */}
+              <TabsContent value="note" className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-[var(--hm-ink)] text-base font-[family-name:var(--font-display)]">
+                    {member.name} {memberTerm} 특이사항 메모
+                  </h3>
+                  <p className="text-xs text-[var(--hm-ink-3)] mt-0.5">
+                    회원과의 상담 내역, 영수증 합산 요청 등 관리자 전용 기록입니다 (외부 미노출).
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder={terms.adminNotePlaceholder}
+                    className="min-h-[160px] rounded-xl p-4 text-sm bg-[var(--hm-paper-2)] border-[var(--hm-border)] text-[var(--hm-ink)] placeholder:text-[var(--hm-ink-3)] focus:bg-[var(--hm-paper)] transition-colors"
+                  />
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveNote}
+                      className="inline-flex items-center gap-1.5 bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>메모 저장</span>
+                    </button>
                   </div>
-
-                  <div className="space-y-3">
-                    <Textarea
-                      value={noteText}
-                      onChange={(e) => setNoteText(e.target.value)}
-                      placeholder={terms.adminNotePlaceholder}
-                      className="min-h-[160px] rounded-xl p-4 text-sm bg-slate-50 dark:bg-zinc-900 border-slate-200"
-                    />
-
-                    <div className="flex justify-end">
-                      <Button onClick={handleSaveNote} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs">
-                        <Check className="h-4 w-4" />
-                        메모 저장
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
 
       {/* 🧾 소득공제용 기부금영수증 발급 전용 온디맨드 일시 입력 모달 */}
       <Dialog open={isTaxModalOpen} onOpenChange={setIsTaxModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl p-6">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-amber-600" />
-              소득공제용 기부금영수증 발급
+            <DialogTitle className="text-lg font-bold text-[var(--hm-ink)] flex items-center gap-2 font-[family-name:var(--font-display)]">
+              <FileText className="h-4 w-4 text-[var(--hm-accent)]" />
+              <span>소득공제용 기부금영수증 발급</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 mt-1">
+            <DialogDescription className="text-xs text-[var(--hm-ink-3)] mt-1">
               국세청 별지 제45호 서식 기부금영수증 출력을 위한 발급 정보를 입력합니다.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 space-y-1 text-xs text-amber-900">
-              <div className="flex items-center gap-1.5 font-bold">
-                <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0" />
-                개인정보보호법에 따른 안전 안내
+            <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] rounded-xl p-3.5 space-y-1 text-xs text-[var(--hm-ink-2)]">
+              <div className="flex items-center gap-1.5 font-semibold text-[var(--hm-ink)]">
+                <ShieldCheck className="h-4 w-4 text-[var(--hm-accent)] shrink-0" />
+                <span>개인정보보호법에 따른 안전 안내</span>
               </div>
-              <p className="text-[11.5px] text-amber-800 leading-relaxed">
-                {terms.donor}(기부자)의 <strong>주민등록번호</strong>는 영수증 출력 시에만 일시 사용되며, <strong>DB에 영구 저장되지 않으므로</strong> 개인정보 유출 우려 없이 안전하게 발급하실 수 있습니다.
+              <p className="text-[11.5px] leading-relaxed text-[var(--hm-ink-2)]">
+                {terms.donor}(기부자)의 <strong>주민등록번호</strong>는 영수증 출력 시에만 일시 사용되며, <strong>DB에 영구 저장되지 않으므로</strong> 안심하고 발급하실 수 있습니다.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-700">귀속 연도</Label>
+                <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">귀속 연도</Label>
                 <Input
                   type="text"
                   value={taxYear}
                   onChange={(e) => setTaxYear(e.target.value)}
-                  className="text-xs bg-slate-50 border-slate-300 font-mono font-bold"
+                  className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums font-semibold rounded-lg"
                   placeholder="2026"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-700">연간 기부 총액</Label>
+                <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">연간 기부 총액</Label>
                 <Input
                   type="text"
                   readOnly
                   value={`₩ ${member.totalDonation.toLocaleString()}원`}
-                  className="text-xs bg-slate-100 border-slate-200 font-black text-emerald-600 cursor-not-allowed"
+                  className="text-xs bg-[var(--hm-paper-2)] border-[var(--hm-border)] font-bold font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink)] cursor-not-allowed rounded-lg"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">{terms.donor} 성명 (기부자)</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">{terms.donor} 성명 (기부자)</Label>
               <Input
                 type="text"
                 value={taxDonorName}
                 onChange={(e) => setTaxDonorName(e.target.value)}
                 placeholder="성명 입력 (부양가족 신청 시 변경 가능)"
-                className="text-xs border-slate-300 font-semibold"
+                className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] text-[var(--hm-ink)] rounded-lg"
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-900 flex items-center justify-between">
-                <span>주민등록번호 <span className="text-red-500">* (필수 13자리)</span></span>
-                <span className="text-[11px] font-semibold text-slate-400">일시 사용 / DB 미저장</span>
+              <Label className="text-xs font-semibold text-[var(--hm-ink)] flex items-center justify-between">
+                <span>주민등록번호 <span className="text-[var(--hm-danger)] font-normal">* (필수 13자리)</span></span>
+                <span className="text-[11px] font-normal text-[var(--hm-ink-3)] font-[family-name:var(--font-mono)]">일시 사용 / DB 미저장</span>
               </Label>
               <Input
                 type="text"
@@ -1416,19 +1494,19 @@ export default function MemberDetailPage() {
                 onChange={(e) => setTaxRrn(formatRrnInput(e.target.value))}
                 placeholder="주민등록번호 13자리 (예: 850101-1234567)"
                 maxLength={14}
-                className="text-xs border-amber-300 focus:border-amber-500 font-mono font-bold tracking-wider"
+                className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] focus:border-[var(--hm-accent)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums font-semibold tracking-wider rounded-lg"
                 autoFocus
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">{terms.donor} 주소 (기부자)</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">{terms.donor} 주소 (기부자)</Label>
               <Input
                 type="text"
                 value={taxAddress}
                 onChange={(e) => setTaxAddress(e.target.value)}
                 placeholder="서울특별시 강남구..."
-                className="text-xs border-slate-300"
+                className="text-xs bg-[var(--hm-paper)] border-[var(--hm-border)] text-[var(--hm-ink)] rounded-lg"
               />
             </div>
           </div>
@@ -1438,17 +1516,17 @@ export default function MemberDetailPage() {
               type="button"
               variant="outline"
               onClick={() => setIsTaxModalOpen(false)}
-              className="text-xs cursor-pointer"
+              className="text-xs border-[var(--hm-border)] text-[var(--hm-ink-2)] rounded-lg cursor-pointer"
             >
               취소
             </Button>
             <Button
               type="button"
               onClick={handleGenerateTaxReceipt}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 cursor-pointer shadow-sm shadow-amber-200"
+              className="bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs gap-1.5 cursor-pointer rounded-lg shadow-sm"
             >
-              <Printer className="h-4 w-4" />
-              영수증 출력 / PDF 저장
+              <Printer className="h-3.5 w-3.5" />
+              <span>영수증 출력 / PDF 저장</span>
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1456,76 +1534,90 @@ export default function MemberDetailPage() {
 
       {/* ✏️ 회원 정보 수정 모달 */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit2 className="h-5 w-5 text-indigo-600" />
-              {memberTerm} 정보 수정
+            <DialogTitle className="text-lg font-bold text-[var(--hm-ink)] flex items-center gap-2 font-[family-name:var(--font-display)]">
+              <Edit2 className="h-4 w-4 text-[var(--hm-accent)]" />
+              <span>{memberTerm} 정보 수정</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs text-[var(--hm-ink-3)] mt-1">
               선택한 {memberTerm}의 기본 정보를 수정합니다.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} autoComplete="off" className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">성명 (이름) *</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">성명 (이름) *</Label>
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 required
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">{getTitleLabel()}</Label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-              />
-            </div>
+            <MemberTitleSelect
+              value={editTitle}
+              onChange={setEditTitle}
+              religionType={currentTenant.religionType}
+              showLabel={true}
+              label={getTitleLabel()}
+              selectClassName="rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
+              inputClassName="rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
+            />
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">휴대폰 번호</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">휴대폰 번호</Label>
               <Input
                 type="tel"
                 value={formatPhoneNumber(editPhone)}
                 onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">이메일 주소</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">이메일 주소</Label>
               <Input
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">주소</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">주소</Label>
               <Input
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
+                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 space-y-1">
-              <p className="font-bold text-slate-700 flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
-                주민등록번호 보안 방침 안내
+            <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] rounded-xl p-3 text-xs text-[var(--hm-ink-3)] space-y-1">
+              <p className="font-semibold text-[var(--hm-ink)] flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-[var(--hm-accent)]" />
+                <span>주민등록번호 보안 방침 안내</span>
               </p>
-              <p className="text-[11px] leading-relaxed">
+              <p className="text-[11px] leading-relaxed text-[var(--hm-ink-3)]">
                 개인정보보호법에 따라 주민등록번호는 회원 DB에 저장을 허용하지 않으며, 영수증 발급 시 1회성으로 안전하게 입력받습니다.
               </p>
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button variant="outline" type="button" onClick={() => setIsEditModalOpen(false)}>
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-xs border-[var(--hm-border)] text-[var(--hm-ink-2)] rounded-lg cursor-pointer"
+              >
                 취소
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <Button
+                type="submit"
+                className="bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs rounded-lg shadow-sm cursor-pointer"
+              >
                 수정 사항 저장
               </Button>
             </DialogFooter>

@@ -348,23 +348,22 @@ export default function OrganizationSettings() {
           <div className="w-full">
             {/* Header */}
             <div className="mb-8">
-              <div className="flex items-center gap-3 mb-2">
-                <Settings className="h-8 w-8" style={{ color: currentTenant.primaryColor }} />
-                <h1 className="text-3xl font-bold">단체 기본정보</h1>
-              </div>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                단체 기본정보
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 단체의 기본 정보 및 주소, 연락처, 안내 일정을 관리하세요
               </p>
             </div>
 
             {/* Religion Type Info */}
-            <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+            <Card className="mb-6 bg-blue-50/60 border-blue-200/80 dark:bg-blue-950/20 dark:border-blue-900/50">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <Info className="h-5 w-5 text-blue-600" />
+                  <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <div>
-                    <p className="font-semibold text-blue-900">단체 유형</p>
-                    <p className="text-sm text-blue-700">{getReligionLabel(currentTenant.religionType)}</p>
+                    <p className="font-semibold text-blue-900 dark:text-blue-300">단체 유형</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-400">{getReligionLabel(currentTenant.religionType)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -374,10 +373,9 @@ export default function OrganizationSettings() {
             <Card className="mb-6 border-slate-200 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Palette className="h-5 w-5 text-blue-600" />
-                    <CardTitle>봉헌 메인 랜딩 템플릿 선택</CardTitle>
-                  </div>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    봉헌 메인 랜딩 템플릿 선택
+                  </CardTitle>
                   <Button
                     variant="outline"
                     size="sm"
@@ -388,7 +386,7 @@ export default function OrganizationSettings() {
                     현재 메인 랜딩 새창으로 미리보기
                   </Button>
                 </div>
-                <CardDescription>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   단체의 성격과 브랜딩에 맞는 봉헌 메인 페이지 디자인을 선택하세요. 선택 후 하단의 [저장하기] 버튼을 누르면 즉시 반영됩니다.
                 </CardDescription>
               </CardHeader>
@@ -463,11 +461,12 @@ export default function OrganizationSettings() {
             {/* Basic Information */}
             <Card className="mb-6">
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  <CardTitle>기본 정보</CardTitle>
-                </div>
-                <CardDescription>단체의 기본 정보를 입력하세요</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  기본 정보
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  단체의 기본 정보를 입력하세요
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -540,11 +539,12 @@ export default function OrganizationSettings() {
             {/* Contact Information */}
             <Card className="mb-6">
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-5 w-5" />
-                  <CardTitle>연락처 정보</CardTitle>
-                </div>
-                <CardDescription>단체의 연락처를 입력하세요</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                  연락처 정보
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  단체의 연락처를 입력하세요
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -635,15 +635,12 @@ export default function OrganizationSettings() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      <CardTitle>
-                        {currentTenant.religionType === 'protestant' && '예배 시간'}
-                        {currentTenant.religionType === 'buddhist' && '법회 시간'}
-                        {currentTenant.religionType === 'catholic' && '미사 시간'}
-                      </CardTitle>
-                    </div>
-                    <CardDescription>
+                    <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                      {currentTenant.religionType === 'protestant' && '예배 시간'}
+                      {currentTenant.religionType === 'buddhist' && '법회 시간'}
+                      {currentTenant.religionType === 'catholic' && '미사 시간'}
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       {currentTenant.religionType === 'protestant' && '예배'}
                       {currentTenant.religionType === 'buddhist' && '법회'}
                       {currentTenant.religionType === 'catholic' && '미사'} 등의 일정을 관리하세요
@@ -710,18 +707,17 @@ export default function OrganizationSettings() {
             </Card>
 
             {/* ── 단체 인증 및 정산 서류 관리 카드 ── */}
-            <Card className="mb-6 border-indigo-100 dark:border-zinc-800 shadow-sm">
-              <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-transparent dark:from-indigo-950/20">
+            <Card className="mb-6 border-slate-200 dark:border-zinc-800 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    <CardTitle className="text-base font-bold">단체 인증 및 정산 서류 관리</CardTitle>
-                  </div>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    단체 인증 및 정산 서류 관리
+                  </CardTitle>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
                     인증 서류
                   </span>
                 </div>
-                <CardDescription>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   가입 시 미제출된 서류를 등록하거나, 변경된 단체 고유번호증/통장사본/정관 등을 갱신할 수 있습니다.
                 </CardDescription>
               </CardHeader>
@@ -1158,13 +1154,13 @@ export default function OrganizationSettings() {
                 />
               ) : (
                 <div className="text-center p-8">
-                  <FileCheck size={48} className="mx-auto text-indigo-500 mb-3" />
+                  <FileCheck size={48} className="mx-auto text-blue-500 mb-3" />
                   <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">서류 파일이 등록되어 있습니다</p>
                   <p className="text-[11px] text-slate-400 mt-1 font-mono">{previewDoc.fileName || '서류 파일'}</p>
                   <a
                     href={previewDoc.fileUrl}
                     download={previewDoc.fileName || 'document'}
-                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-sm hover:bg-indigo-700"
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700"
                   >
                     <Download size={14} /> 다운로드하여 열기
                   </a>

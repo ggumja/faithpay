@@ -893,7 +893,7 @@ export default function PartnerDetailPage() {
               <Users className="h-3.5 w-3.5 mr-1" /> 영업자 배속 등록
             </Button>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 text-[11px]">
@@ -942,13 +942,13 @@ export default function PartnerDetailPage() {
       {/* ── 탭 3: 유치 가맹 단체 목록 ── */}
       {tab === 'tenants' && (
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-3 border-b border-slate-100">
+          <CardHeader className="pb-3">
             <CardTitle className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
               <Building2 className="h-4 w-4 text-purple-600" /> 유치 및 관리 가맹 단체 ({tenants.length}개)
             </CardTitle>
             <CardDescription className="text-[11.5px]">이 파트너의 추천코드 또는 직접 영업으로 입점한 사찰, 교회, 단체 목록입니다.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 text-[11px]">
@@ -1054,7 +1054,7 @@ export default function PartnerDetailPage() {
             </div>
           </div>
 
-          <CardContent className="p-0">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 text-[11px]">
@@ -1119,7 +1119,7 @@ export default function PartnerDetailPage() {
       {/* ── 탭 5: 활동 및 변경 이력 ── */}
       {tab === 'history' && (
         <Card className="border-slate-200 shadow-2xs">
-          <CardHeader className="pb-3 bg-slate-50 border-b border-slate-200">
+          <CardHeader className="pb-3">
             <CardTitle className="text-[14px] font-bold text-slate-800 flex items-center gap-2">
               <History className="h-4 w-4 text-purple-600" /> 프로필 및 정산 계좌 정보 수정 이력
             </CardTitle>
@@ -1127,7 +1127,7 @@ export default function PartnerDetailPage() {
               내 정보 수정 및 정산 계좌 변경 시 실시간으로 기록되는 보안 원장입니다.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">

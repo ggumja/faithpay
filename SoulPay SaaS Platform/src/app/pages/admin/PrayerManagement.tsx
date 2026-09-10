@@ -474,10 +474,10 @@ export default function PrayerManagement() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-zinc-100">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
                 {terms.prayer} 관리 센터
               </h1>
-              <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
                 {terms.donor}분들이 작성하신 {terms.prayer} 내역을 대한민국 표준 라벨지 서식으로 즉시 출력합니다.
               </p>
             </div>
@@ -488,87 +488,79 @@ export default function PrayerManagement() {
           </div>
 
           {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-indigo-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  전체 {terms.prayer} 건수
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-slate-900 dark:text-zinc-100">
-                  {prayers.length}건
-                </div>
-              </CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                전체 {terms.prayer} 건수
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
+                {prayers.length}건
+              </div>
+              <p className="text-xs text-slate-400">접수 완료된 전체 {terms.prayer} 내역</p>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  미인쇄 대기
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
-                  {unprintedCount}건
-                </div>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                미인쇄 대기
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {unprintedCount}건
+              </div>
+              <p className="text-xs text-slate-400">라벨지 미출력 대기 건수</p>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  인쇄 출력 완료
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  {prayers.length - unprintedCount}건
-                </div>
-              </CardContent>
+            <Card className="p-4 sm:p-5 gap-1.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+              <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                인쇄 출력 완료
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {prayers.length - unprintedCount}건
+              </div>
+              <p className="text-xs text-slate-400">라벨지 출력 완료 건수</p>
             </Card>
           </div>
 
           {/* Filters and Label Format Selector Card */}
-          <Card className="border-indigo-100 dark:border-indigo-900/40">
-            <CardContent className="pt-6">
+          <Card className="border-slate-200/80 dark:border-zinc-800">
+            <CardContent className="p-4 sm:p-5">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
                   <div className="flex items-center gap-2">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">조회 필터:</label>
-                    <Select value={filter} onValueChange={setFilter}>
-                      <SelectTrigger className="w-[140px] bg-white text-xs">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      조회 필터:
+                    </label>
+                    <Select value={filter} onValueChange={(val) => setFilter(val as any)}>
+                      <SelectTrigger className="w-[140px] bg-white text-xs font-semibold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">전체보기</SelectItem>
-                        <SelectItem value="unprinted">⏳ 미인쇄 대기만</SelectItem>
-                        <SelectItem value="printed">✅ 인쇄 완료만</SelectItem>
+                        <SelectItem value="unprinted">미인쇄 대기만</SelectItem>
+                        <SelectItem value="printed">인쇄 완료만</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <label className="text-xs font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
-                      <Tag className="h-3.5 w-3.5" />
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
                       라벨지 폼 규격:
                     </label>
                     <Select value={labelFormat} onValueChange={(val) => setLabelFormat(val as LabelFormatType)}>
-                      <SelectTrigger className="w-[250px] bg-white text-xs font-bold border-indigo-200">
+                      <SelectTrigger className="w-[250px] bg-white text-xs font-bold border-slate-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="formtec_3108">
-                          🏆 폼텍 3108 / 애니라벨 (A4 16칸 / 99.1x33.9mm) [인기 1위]
+                          폼텍 3108 / 애니라벨 (A4 16칸 / 99.1x33.9mm) [추천]
                         </SelectItem>
                         <SelectItem value="formtec_3107">
-                          🥈 폼텍 3107 / 애니라벨 (A4 21칸 / 63.5x38.1mm)
+                          폼텍 3107 / 애니라벨 (A4 21칸 / 63.5x38.1mm)
                         </SelectItem>
                         <SelectItem value="roll_5030">
-                          🥉 감열식 롤 라벨 (1열 / 50x30mm 롤프린터)
+                          감열식 롤 라벨 (1열 / 50x30mm 롤프린터)
                         </SelectItem>
                         <SelectItem value="a4_report">
-                          📄 A4 서식 대장 (보고서 보관용)
+                          A4 서식 대장 (보고서 보관용)
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -579,10 +571,18 @@ export default function PrayerManagement() {
                   <Button
                     onClick={() => handlePrint(selectedPrayers)}
                     disabled={selectedPrayers.length === 0}
-                    className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer"
                   >
                     <Printer className="h-4 w-4" />
                     선택 항목 라벨 인쇄 ({selectedPrayers.length}건)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePrint(filteredPrayers.filter((p) => !p.printed).map((p) => p.id))}
+                    disabled={unprintedCount === 0}
+                    className="cursor-pointer"
+                  >
+                    미인쇄 전체 일괄 인쇄
                   </Button>
                 </div>
               </div>
@@ -591,12 +591,14 @@ export default function PrayerManagement() {
 
           {/* Prayer List Table */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
               <div>
-                <CardTitle className="text-lg font-bold">
+                <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
                   {terms.prayer} 명세 목록 ({filteredPrayers.length}건)
                 </CardTitle>
-                <CardDescription>인쇄할 항목을 선택 후 [선택 항목 라벨 인쇄]를 누르시면 상단에 설정된 규격대로 정밀 출력됩니다</CardDescription>
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  인쇄할 항목을 선택 후 [선택 항목 라벨 인쇄]를 누르시면 상단에 설정된 규격대로 정밀 출력됩니다
+                </CardDescription>
               </div>
             </CardHeader>
 
