@@ -3067,12 +3067,19 @@ const handleCertCallback = async (c: any) => {
         }
 
         if (isSuccess) {
-          await db.updateDonation(donation.tenant_id, donation.id, {
+          const updated = await db.updateDonation(donation.tenant_id, donation.id, {
             paymentStatus: 'completed',
             transactionId: tranNo,
             approveNo: apprNo,
             paymentMethod,
           });
+          if (updated) {
+            try {
+              await db.recordDonationToLedger(updated);
+            } catch (lErr) {
+              console.warn('Failed to record ledger from cert callback:', lErr);
+            }
+          }
           console.log(`✅ Certified payment successful for donation: ${donation.id} (method: ${paymentMethod}, cardSrc: ${cardSrc || 'N/A'})`);
         } else {
           await db.updateDonation(donation.tenant_id, donation.id, {
