@@ -118,11 +118,19 @@ export const router = createBrowserRouter([
         Component: PartnerTenantCreate,
       },
       {
+        path: "/login",
+        Component: AdminLogin,
+      },
+      {
         path: "/admin",
         Component: AdminRedirectGuard,
       },
       {
         path: "/admin/login",
+        Component: AdminLogin,
+      },
+      {
+        path: "/:tenantSlug/login",
         Component: AdminLogin,
       },
       {
