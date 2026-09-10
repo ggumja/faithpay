@@ -1,4 +1,4 @@
-import { Building2, Plus, Copy, ChevronRight, Briefcase } from 'lucide-react';
+import { Building2, Plus, Copy, ChevronRight, Briefcase, Info } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
@@ -172,10 +172,10 @@ export function PartnerHomeSection({
             .filter(c => c.settlementStatus !== 'paid')
             .reduce((sum, c) => sum + (c.commissionAmount ?? 0), 0);
           return [
-            { label: '관리 가맹 단체',      value: `${myTenants.length}개소`,                 color: 'text-slate-900',   sub: '가맹점 총계' },
-            { label: '누적 신도 결제액',    value: `${totalDonation.toLocaleString()}원`,      color: 'text-blue-600',  sub: '전체 결제 누적' },
-            { label: '수수료 누적 적립',    value: `${totalCommission.toLocaleString()}원`,    color: 'text-indigo-600', sub: '전체 적립 누적' },
-            { label: '이번 달 정산 예정액', value: `${pendingThisMonth.toLocaleString()}원`,   color: 'text-amber-600',   sub: `${now.getMonth() + 1}월 미지급 수수료` },
+            { label: '관리 가맹 단체',        value: `${myTenants.length}개소`,                 color: 'text-slate-900',   sub: '가맹점 총계' },
+            { label: '누적 신도 결제액',      value: `${totalDonation.toLocaleString()}원`,      color: 'text-blue-600',  sub: '전체 결제 누적' },
+            { label: '수수료 누적 적립 (추정)', value: `${totalCommission.toLocaleString()}원`,    color: 'text-indigo-600', sub: '결제 승인 기반 추정치' },
+            { label: '이번 달 정산 예정액 (추정)', value: `${pendingThisMonth.toLocaleString()}원`, color: 'text-amber-600',   sub: `${now.getMonth() + 1}월 승인 기반 추정치` },
           ].map(({ label, value, color, sub }) => (
             <Card key={label} className="p-5 border-slate-200/90 rounded-2xl bg-white shadow-xs hover:border-slate-300 transition-colors space-y-1">
               <div className="text-xs font-bold text-slate-500">{label}</div>
@@ -184,6 +184,17 @@ export function PartnerHomeSection({
             </Card>
           ));
         })()}
+      </div>
+
+      {/* ⚠️ 정산 추정치 법적/회계적 명시 안내 */}
+      <div className="flex items-start gap-2 p-3.5 rounded-xl border border-amber-200/80 bg-amber-50/60 text-amber-900 text-xs leading-relaxed">
+        <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold text-amber-950">정산 데이터 안내: </span>
+          <span>
+            SoulPay는 금융망/PG사의 실제 입금 계좌를 직접 통제하지 않으므로, 화면에 표출되는 모든 수수료 및 정산 금액은 <strong>플랫폼 결제 승인 내역을 기준으로 자동 산출된 단순 추정 데이터</strong>입니다. 실제 최종 지급액은 PG사의 정산 주기, 취소/부분환불, 세무 원천징수 등에 따라 차이가 발생할 수 있습니다.
+          </span>
+        </div>
       </div>
     </div>
   );

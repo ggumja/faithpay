@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays, Search, Building2, CreditCard, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Receipt, TrendingUp, Users, CalendarDays, Search, Building2, CreditCard, RotateCcw, X, Info, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
@@ -346,9 +346,9 @@ export function PartnerCommissionsSection({
 
   /* ── 탭 정의 ── */
   const TABS: { key: MainTab; icon: any; label: string; badge?: number }[] = [
-    { key: 'commission',  icon: TrendingUp, label: '수수료 발생 내역',   badge: filteredComm.length },
-    { key: 'settlement',  icon: Receipt,    label: '정산 수령 내역',     badge: filteredSettlements.length },
-    ...(isAgency ? [{ key: 'agentPayout' as MainTab, icon: Users, label: '영업자별 지급 현황', badge: filteredAgentBreakdowns.length }] : []),
+    { key: 'commission',  icon: TrendingUp, label: '수수료 발생 내역 (추정)',   badge: filteredComm.length },
+    { key: 'settlement',  icon: Receipt,    label: '정산 수령 내역 (추정)',     badge: filteredSettlements.length },
+    ...(isAgency ? [{ key: 'agentPayout' as MainTab, icon: Users, label: '영업자별 지급 현황 (추정)', badge: filteredAgentBreakdowns.length }] : []),
   ];
 
   return (
@@ -356,10 +356,23 @@ export function PartnerCommissionsSection({
 
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">정산 관리</h1>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">정산(추정) 관리</h1>
         <p className="text-xs text-slate-500 mt-1 font-medium">
-          수수료 발생 원장 · 메인 관리자 입금 확정 · {isAgency ? '영업자별 하위 지급 현황' : '내 정산 수령 내역'}
+          수수료 발생 원장 · 실측 결제 승인 기준 추정 집계 · {isAgency ? '영업자별 하위 지급 현황(추정)' : '내 정산 수령 내역(추정)'}
         </p>
+      </div>
+
+      {/* ⚠️ 정산 추정액 안내 배너 (Financial Disclaimer) */}
+      <div className="p-4 rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-amber-50/30 text-amber-950 shadow-xs flex items-start gap-3">
+        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="text-xs leading-relaxed space-y-1">
+          <p className="font-bold text-amber-950 flex items-center gap-1.5">
+            <span>안내: 본 화면의 모든 수수료 및 정산 금액은 플랫폼 결제 성공 건을 기준으로 단순 집계한 <strong>정산 추정 데이터</strong>입니다.</span>
+          </p>
+          <p className="text-amber-800/90 text-[11.5px]">
+            SoulPay는 금융망/PG사의 실제 입금 계좌를 직접 통제하지 않으므로, 카드사별 영세/중소 우대수수료 환급, 승인 취소·환불 처리 시점, 정산 주기(D+N), 제세공과금(원천세/부가세) 등에 따라 실제 최종 통장 입금액과 차이가 발생할 수 있습니다.
+          </p>
+        </div>
       </div>
 
       {/* 메인 탭 */}
