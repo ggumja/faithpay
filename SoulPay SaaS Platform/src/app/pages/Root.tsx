@@ -426,19 +426,19 @@ export default function Root() {
             </div>
           </div>
 
-          {/* Right Visual Box */}
-          <div>
-            <div className="rp-hero-img-box">
-              <img
-                src="/soulpay/images/hero-illustration.png"
-                alt="소울페이 스마트 봉헌 솔루션"
-                className="rp-hero-img"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/images/hero-illustration.png';
-                }}
-              />
+            {/* Right Visual Box */}
+            <div>
+              <div className="rp-hero-img-box">
+                <img
+                  src="/images/hero-photo.jpg"
+                  alt="소울페이 스마트 봉헌 솔루션"
+                  className="rp-hero-img"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/images/hero-illustration.png';
+                  }}
+                />
+              </div>
             </div>
-          </div>
         </div>
       </section>
 
