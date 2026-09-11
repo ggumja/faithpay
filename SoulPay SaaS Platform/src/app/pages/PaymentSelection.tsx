@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -16,12 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandLogos';
 import { useTenantTerms } from '../hooks/useTenantTerms';
-import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
+// GBL-08 fix: useGlobalBroadcastNotice 직접 호출 제거 → useApp() 싱글턴 사용
 
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, tenants, donationFormData, setDonationFormData, currentAdmin } = useApp();
+  const { currentTenant, setCurrentTenant, tenants, donationFormData, setDonationFormData, currentAdmin, broadcastNotice, isMaintenance, checkMaintenanceJIT } = useApp();
   const location = useLocation();
   const terms = useTenantTerms(currentTenant);
 
@@ -102,8 +102,7 @@ export default function PaymentSelection() {
   const [enableNaverPay, setEnableNaverPay] = useState<boolean>(false);
   const [enableTossPay, setEnableTossPay] = useState<boolean>(false);
 
-  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
-  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 broadcastNotice / isMaintenance / checkMaintenanceJIT 공유 (개별 폴링 제거)
 
   useEffect(() => {
     if (donationFormData) {
@@ -266,13 +265,24 @@ export default function PaymentSelection() {
 
   const ft = FAITH_THEMES[currentTenant.religionType as ReligionId] ?? FAITH_THEMES.protestant;
 
+  // BUG-H fix: interval ID를 ref로 보관해 컴포넌트 언마운트 시 정리 가능하게 변경
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
   const pollDonationStatus = (donationId: string) => {
     let attempts = 0;
-    const interval = setInterval(async () => {
+    pollIntervalRef.current = setInterval(async () => {
       attempts++;
       if (attempts > 60) { // 3 minutes timeout
-        clearInterval(interval);
-        toast.error('결제 확인 시간이 초과되었습니다.');
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        toast.error('결제 확인 시스간이 초과되었습니다.');
         setIsProcessing(false);
         return;
       }
@@ -283,11 +293,11 @@ export default function PaymentSelection() {
           const donation = donationsRes.data.find(d => d.id === donationId);
           if (donation) {
             if (donation.paymentStatus === 'completed') {
-              clearInterval(interval);
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
               toast.success('결제가 완료되었습니다.');
               navigate(`/${tenantSlug}/complete?donId=${donationId}`);
             } else if (donation.paymentStatus === 'failed') {
-              clearInterval(interval);
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
               toast.error('결제에 실패하였습니다.');
               setIsProcessing(false);
             }
@@ -307,7 +317,12 @@ export default function PaymentSelection() {
       return;
     }
 
-    const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
+    // BUG-G fix: currentTenant.id가 없으면 결제 진행 중단 (slug를 UUID로 잘못 사용하던 오류 제거)
+    if (!currentTenant?.id) {
+      toast.error('단체 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    const targetTenantId = currentTenant.id;
     const activePg = (pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay').toLowerCase();
     const isToss = activePg.includes('toss');
     const isNanopay = !isToss;
@@ -454,8 +469,9 @@ export default function PaymentSelection() {
             if (err.code === 'USER_CANCEL') {
               toast.info('정기결제 카드 등록이 취소되었습니다.');
             } else {
-              toast.success('토스페이먼츠 정기 결제 빌링키 등록이 완료되었습니다.');
-              navigate(`/${tenantSlug}/complete?type=toss_billing`);
+              // BUG-I fix: 빌링키 등록 실패 시 toast.success + navigate 하던 오류 수정
+              // 오류(USER_CANCEL 외)는 엄연한 실패이므로 error 안내만 한다
+              toast.error(`카드 등록 오류: ${err.message || '알 수 없는 오류가 발생했습니다.'}`)
             }
             setIsProcessing(false);
           });

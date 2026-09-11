@@ -100,7 +100,7 @@ export const formatPhoneNumber = (phone: string): string => {
 export default function AdminAccountManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, setCurrentAdmin, updateTenantInfo } = useApp();
   const terms = useTenantTerms(currentTenant?.orgType);
 
   const [activeTab, setActiveTab] = useState<'accounts' | 'groups' | 'permissions'>('accounts');
@@ -443,6 +443,11 @@ export default function AdminAccountManagement() {
         },
       };
       updateTenantInfo(currentTenant.id, updatedTenant);
+    }
+
+    // 🔄 현재 로그인 세션(사이드바)에도 즉시 반영 — 로그아웃 없이 이름 변경 즉각 표시
+    if (currentAdmin && currentAdmin.email.toLowerCase() === cleanEmail) {
+      setCurrentAdmin({ ...currentAdmin, name: editName.trim() });
     }
 
     setIsEditStaffModalOpen(false);

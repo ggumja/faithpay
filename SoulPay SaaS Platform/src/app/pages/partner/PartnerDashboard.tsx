@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 
@@ -71,121 +71,122 @@ export default function PartnerDashboard() {
       ).slice(0, 6)
     : [];
 
-  /* ── 데이터 로드 ── */
-  useEffect(() => {
-    async function load() {
-      setIsLoading(true);
+  /* ── 데이터 로드 (BUG-J: navigate를 deps에 포함하기 위해 useCallback으로 추출) ── */
+  const loadDashboard = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // 세션 파트너 정보 읽기 (로그인 세션)
+      const raw = sessionStorage.getItem('soulpay_partner_session') || sessionStorage.getItem('faithpay_partner_session');
+      if (!raw) {
+        navigate('/partner/login');
+        return;
+      }
+      let sessionPartner: Partial<Partner> = {};
       try {
-        // 세션 파트너 정보 읽기 (로그인 세션)
-        const raw = sessionStorage.getItem('soulpay_partner_session') || sessionStorage.getItem('faithpay_partner_session');
-        if (!raw) {
-          navigate('/partner/login');
-          return;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.id) sessionPartner = parsed;
+      } catch {}
+
+      if (!sessionPartner.id) {
+        navigate('/partner/login');
+        return;
+      }
+
+      const sessionPartnerId = sessionPartner.id!;
+
+      // 1. 파트너 본인 정보 DB 조회
+      let currentPartner: Partner | null = null;
+      try {
+        const res = await partnerAPI.getById(sessionPartnerId);
+        if (res.success && res.data) {
+          currentPartner = res.data;
         }
-        let sessionPartner: Partial<Partner> = {};
+      } catch {}
+
+      if (!currentPartner) {
+        // 백업: getAll에서 세션 ID와 매칭되는 항목 탐색
         try {
-          const parsed = JSON.parse(raw);
-          if (parsed && parsed.id) sessionPartner = parsed;
-        } catch {}
-
-        if (!sessionPartner.id) {
-          navigate('/partner/login');
-          return;
-        }
-
-        const sessionPartnerId = sessionPartner.id!;
-
-        // 1. 파트너 본인 정보 DB 조회
-        let currentPartner: Partner | null = null;
-        try {
-          const res = await partnerAPI.getById(sessionPartnerId);
-          if (res.success && res.data) {
-            currentPartner = res.data;
+          const allRes = await partnerAPI.getAll();
+          if (allRes.success && Array.isArray(allRes.data) && allRes.data.length > 0) {
+            const matched = allRes.data.find(p => p.id === sessionPartnerId || p.email === sessionPartner.email);
+            if (matched) currentPartner = matched;
           }
         } catch {}
+      }
 
-        if (!currentPartner) {
-          // 백업: getAll에서 세션 ID와 매칭되는 항목 탐색
-          try {
-            const allRes = await partnerAPI.getAll();
-            if (allRes.success && Array.isArray(allRes.data) && allRes.data.length > 0) {
-              const matched = allRes.data.find(p => p.id === sessionPartnerId || p.email === sessionPartner.email);
-              if (matched) currentPartner = matched;
-            }
-          } catch {}
+      // DB에서도 찾지 못하면 로그인 redirect
+      if (!currentPartner) {
+        toast.error('파트너 정보를 불러오지 못했습니다. 다시 로그인해 주세요.');
+        sessionStorage.removeItem('faithpay_partner_session');
+        navigate('/partner/login');
+        return;
+      }
+
+      // 세션의 역할 정보 유지
+      if (sessionPartner.role) {
+        currentPartner.role = sessionPartner.role as any;
+      }
+
+      setPartner(currentPartner);
+      setEditPhone(currentPartner.phone ?? '');
+      setEditEmail(currentPartner.email ?? '');
+      setEditBank((currentPartner as any).bankName ?? '');
+      setEditAccount((currentPartner as any).accountNumber ?? '');
+      setEditHolder((currentPartner as any).accountHolder ?? '');
+
+      const activeRate = currentPartner.agencyRate ?? 0.5;
+      setEditAgencyRate(activeRate);
+
+      // 2. 소속 영업자 DB 조회
+      let fetchedSubAgents: Partner[] = [];
+      try {
+        const ar = await partnerAPI.getByParent(currentPartner.id);
+        if (ar.success && Array.isArray(ar.data)) {
+          fetchedSubAgents = ar.data;
         }
+      } catch {}
+      setSubAgents(fetchedSubAgents);
 
-        // DB에서도 찾지 못하면 로그인 redirect
-        if (!currentPartner) {
-          toast.error('파트너 정보를 불러오지 못했습니다. 다시 로그인해 주세요.');
-          sessionStorage.removeItem('faithpay_partner_session');
-          navigate('/partner/login');
-          return;
-        }
+      const rates: Record<string, number> = {};
+      fetchedSubAgents.forEach(a => {
+        rates[a.id] = (a as any).agencyRate ?? (a as any).commissionRate ?? activeRate;
+      });
+      setAgentRates(rates);
 
-        // 세션의 역할 정보 유지
-        if (sessionPartner.role) {
-          currentPartner.role = sessionPartner.role as any;
-        }
-
-        setPartner(currentPartner);
-        setEditPhone(currentPartner.phone ?? '');
-        setEditEmail(currentPartner.email ?? '');
-        setEditBank((currentPartner as any).bankName ?? '');
-        setEditAccount((currentPartner as any).accountNumber ?? '');
-        setEditHolder((currentPartner as any).accountHolder ?? '');
-
-        const activeRate = currentPartner.agencyRate ?? 0.5;
-        setEditAgencyRate(activeRate);
-
-        // 2. 소속 영업자 DB 조회
-        let fetchedSubAgents: Partner[] = [];
-        try {
-          const ar = await partnerAPI.getByParent(currentPartner.id);
-          if (ar.success && Array.isArray(ar.data)) {
-            fetchedSubAgents = ar.data;
-          }
-        } catch {}
-        setSubAgents(fetchedSubAgents);
-
-        const rates: Record<string, number> = {};
-        fetchedSubAgents.forEach(a => {
-          rates[a.id] = (a as any).agencyRate ?? (a as any).commissionRate ?? activeRate;
-        });
-        setAgentRates(rates);
-
-        // 3. 관할 가맹점(단체) DB 조회
-        try {
-          const tr = await partnerAPI.getPartnerTenants(currentPartner.id);
-          if (tr.success && Array.isArray(tr.data)) {
-            setMyTenants(tr.data);
-          } else {
-            setMyTenants([]);
-          }
-        } catch {
+      // 3. 관할 가맹점(단체) DB 조회
+      try {
+        const tr = await partnerAPI.getPartnerTenants(currentPartner.id);
+        if (tr.success && Array.isArray(tr.data)) {
+          setMyTenants(tr.data);
+        } else {
           setMyTenants([]);
         }
+      } catch {
+        setMyTenants([]);
+      }
 
-        // 4. 수수료 원장 DB 조회
-        try {
-          const cr = await partnerAPI.getCommissions(currentPartner.id);
-          if (cr.success && Array.isArray(cr.data)) {
-            setCommissions(cr.data);
-          } else {
-            setCommissions([]);
-          }
-        } catch {
+      // 4. 수수료 원장 DB 조회
+      try {
+        const cr = await partnerAPI.getCommissions(currentPartner.id);
+        if (cr.success && Array.isArray(cr.data)) {
+          setCommissions(cr.data);
+        } else {
           setCommissions([]);
         }
-      } catch (err) {
-        console.error('Failed to load partner dashboard:', err);
-        toast.error('포털 로딩 중 오류가 발생했습니다.');
-      } finally {
-        setIsLoading(false);
+      } catch {
+        setCommissions([]);
       }
+    } catch (err) {
+      console.error('Failed to load partner dashboard:', err);
+      toast.error('포털 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
     }
-    load();
-  }, []);
+  }, [navigate]); // BUG-J: navigate deps 추가
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
 
   /* ── 로딩 / 인증 가드 ── */
@@ -432,7 +433,7 @@ export default function PartnerDashboard() {
           )}
 
           {section === 'agents' && isAgency && (
-            <PartnerAgentsSection
+                      <PartnerAgentsSection
               partner={partner}
               subAgents={subAgents}
               agentRates={agentRates}
@@ -444,6 +445,7 @@ export default function PartnerDashboard() {
               setSelectedAgent={setSelectedAgent}
               tenants={tenants}
               commissions={commissions}
+              onAgentRegistered={loadDashboard}
             />
           )}
 

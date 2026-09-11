@@ -297,7 +297,9 @@ export default function MultiPartySettlementLedger() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url); // GBL-16 fix: Blob URL 즉시 해제 (메모리 누수 방지)
     toast.success('거래원장 CSV 파일이 다운로드되었습니다.');
+
   };
 
   return (

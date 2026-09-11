@@ -129,7 +129,7 @@ function inPeriod(dateStr: string, period: PeriodKey, customFrom: string, custom
   if (!dateStr) return false;
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return true;
+    if (isNaN(d.getTime())) return false;
 
     // 한국 표준시(KST) YYYY-MM-DD
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -337,12 +337,14 @@ export function PartnerCommissionsSection({
       })));
   }, [settlements, agentPayPeriod, agentFrom, agentTo]);
 
-  const agentMap = new Map<string, { name: string; businessType: string; taxType: string; totalNet: number; totalMargin: number; count: number }>();
-  filteredAgentBreakdowns.forEach(b => {
-    const prev = agentMap.get(b.agentId) ?? { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: 0, totalMargin: 0, count: 0 };
-    agentMap.set(b.agentId, { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: prev.totalNet + (b.netAgentReceived ?? (b as any).agentReceived ?? 0), totalMargin: prev.totalMargin + b.agencyMargin, count: prev.count + 1 });
-  });
-  const agentSummaries = Array.from(agentMap.entries()).map(([id, v]) => ({ id, ...v }));
+  const agentSummaries = useMemo(() => {
+    const agentMap = new Map<string, { name: string; businessType: string; taxType: string; totalNet: number; totalMargin: number; count: number }>();
+    filteredAgentBreakdowns.forEach(b => {
+      const prev = agentMap.get(b.agentId) ?? { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: 0, totalMargin: 0, count: 0 };
+      agentMap.set(b.agentId, { name: b.agentName, businessType: b.businessType ?? 'individual', taxType: b.taxType ?? 'withholding', totalNet: prev.totalNet + (b.netAgentReceived ?? (b as any).agentReceived ?? 0), totalMargin: prev.totalMargin + b.agencyMargin, count: prev.count + 1 });
+    });
+    return Array.from(agentMap.entries()).map(([id, v]) => ({ id, ...v }));
+  }, [filteredAgentBreakdowns]);
 
   /* ── 탭 정의 ── */
   const TABS: { key: MainTab; icon: any; label: string; badge?: number }[] = [

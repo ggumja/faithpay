@@ -8,7 +8,7 @@ import { Plus, Trash2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { donationItemsAPI, settingsAPI } from '../api/client';
 import { MemberTitleSelect } from '../components/common/MemberTitleSelect';
-import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
+// GBL-08 fix: useGlobalBroadcastNotice 직접 호출 제거 → useApp() 싱글턴 사용
 
 interface FamilyMember {
   name: string;
@@ -26,7 +26,7 @@ export default function DonationFlow() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const targetItemParam = searchParams.get('item') || searchParams.get('itemId');
-  const { tenants, currentTenant, setCurrentTenant, setDonationFormData } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, setDonationFormData, broadcastNotice, isMaintenance, checkMaintenanceJIT } = useApp();
 
   const [step, setStep] = useState(1);
   const [itemsLoaded, setItemsLoaded] = useState(false); // DB 항목 로딩 완료 여부
@@ -55,8 +55,7 @@ export default function DonationFlow() {
     return true;
   });
 
-  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
-  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 broadcastNotice / isMaintenance / checkMaintenanceJIT 공유
 
   // 💾 저장된 교인 성명 및 전화번호, 직분정보 자동 불러오기
   useEffect(() => {

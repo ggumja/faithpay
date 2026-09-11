@@ -33,7 +33,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI, settingsAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
-import { useGlobalBroadcastNotice } from '../../hooks/useGlobalBroadcastNotice';
+// GBL-08 fix: useGlobalBroadcastNotice 직접 호출 제거 → useApp() 싱글턴 사용
 
 const normalizeDonation = (d: any) => {
   const rawDate = d.createdAt ?? d.created_at ?? d.date;
@@ -54,29 +54,19 @@ const normalizeDonation = (d: any) => {
   const paymentMethod = rawMethod ? (String(rawMethod).includes('카드') ? '신용카드' : String(rawMethod)) : '신용카드';
 
   const rawStatus = d.paymentStatus ?? d.payment_status ?? d.status;
-  let paymentStatus = (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'completed';
-
-  if (paymentStatus === 'pending') {
-    const isInstantPayment = paymentMethod === '신용카드' || paymentMethod === '카카오페이' || paymentMethod === '네이버페이' || paymentMethod.includes('카드');
-    if (isInstantPayment) {
-      const createdTime = new Date(validCreatedAt).getTime();
-      const nowTime = Date.now();
-      const elapsedMinutes = (nowTime - createdTime) / (1000 * 60);
-      if (elapsedMinutes > 30) {
-        paymentStatus = 'failed';
-      }
-    }
-  }
-
   return {
     ...d,
     createdAt: validCreatedAt,
     donorName,
     paymentMethod,
-    paymentStatus,
+    // GBL-09 fix: 클라이언트에서 paymentStatus를 임의로 변환하지 않음.
+    // pending → failed 변환은 AGENTS.md "결제 상태 왜곡 금지" 위반.
+    // DB 원본 상태값을 그대로 사용하며, 오래된 pending 건 정리는 서버 사이드 배치로 처리.
+    paymentStatus: (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'pending',
     amount: Number(d.amount) || 0,
   };
 };
+
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -96,7 +86,7 @@ const getStatusBadge = (status: string) => {
 export default function AdminDashboard() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin, isTenantsLoaded } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, isTenantsLoaded, broadcastNotice } = useApp();
 
   const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
   const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
@@ -159,8 +149,7 @@ export default function AdminDashboard() {
     { month: mLabel3, cumulativeAmount: 0 },
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  // 전체 사찰/교회 실시간 브로드캐스트 공지 자동 동기화 (10초 폴링 + 멀티탭 브로드캐스트 채널)
-  const { notice: broadcastNotice } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 broadcastNotice 공유 (10초 개별 폴링 제거)
   const [isNoticeDismissed, setIsNoticeDismissed] = useState<boolean>(false);
 
   useEffect(() => {

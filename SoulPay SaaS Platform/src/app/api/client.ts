@@ -176,8 +176,14 @@ export const tenantAPI = {
       silentFail: true,
     } as any);
 
-    // 서버 DB에 단체 레코드가 없어서 404 반환 시 POST /tenants로 자동 생성(Upsert) 처리
-    if (!res.success) {
+    // GBL-13 fix: PUT 실패 시 POST fallback 조건을 404(단체 미존재)에만 엄격히 한정.
+    // 네트워크 오류·500 서버 오류에서는 POST를 재시도하지 않아 중복 단체 생성 방지.
+    const is404 = !res.success && (
+      res.error?.includes('HTTP 404') ||
+      res.error === 'Tenant not found' ||
+      res.error?.includes('not found')
+    );
+    if (is404) {
       return fetchAPI<Tenant>('/tenants', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -186,6 +192,7 @@ export const tenantAPI = {
 
     return res;
   },
+
 
   async updateTenantBanners(id: string, bannerImages: string[]): Promise<APIResponse<Tenant>> {
     return fetchAPI<Tenant>(`/tenants/${id}`, {
@@ -399,41 +406,9 @@ export const kakaoAuthAPI = {
   },
 
   async exchangeToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
-    // 1. 브라우저 직접 교환 (kauth.kakao.com 공식 CORS 엔드포인트 - 즉시 응답 및 불필요한 404 방지)
-    try {
-      const fetchToken = async (includeSecret: boolean) => {
-        const params: Record<string, string> = {
-          grant_type: 'authorization_code',
-          client_id: KAKAO_CONFIG.REST_API_KEY,
-          redirect_uri: redirectUri,
-          code,
-        };
-        if (includeSecret) {
-          params.client_secret = '3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol';
-        }
-        return fetch('https://kauth.kakao.com/oauth/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-          },
-          body: new URLSearchParams(params).toString(),
-        });
-      };
-
-      let res = await fetchToken(false);
-      let data = await res.json().catch(() => ({}));
-      if (!res.ok && (data.error_code === 'KOE010' || data.error === 'invalid_client')) {
-        res = await fetchToken(true);
-        data = await res.json().catch(() => ({}));
-      }
-      if (res.ok && data?.access_token) {
-        return data;
-      }
-    } catch {
-      // direct fetch failed, try backend proxy fallback
-    }
-
-    // 2. 백엔드 프록시 폴백
+    // 보안 정책: client_secret은 프론트엔드에 존재해서는 안 됩니다.
+    // 카카오 토큰 교환은 반드시 Edge Function 백엔드를 통해 처리합니다.
+    // (GBL-01 fix: 브라우저 직접 교환 + client_secret 하드코딩 제거)
     const backendRes = await fetchAPI<{ access_token: string }>('/auth/kakao/token', {
       method: 'POST',
       body: JSON.stringify({ code, redirectUri }),

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp, DonationFormData, DonationItem } from '../context/AppContext';
 import { donationAPI, subscriptionAPI, memberAPI, donationItemsAPI, kakaoAuthAPI } from '../api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
@@ -72,6 +72,8 @@ export interface HistoryItem {
 export default function MyDonations() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  // BUG-B fix: useLocation으로 교체 (window.location은 SPA 라우팅 파라미터 미반영)
+  const location = useLocation();
   const { tenants, currentTenant, setCurrentTenant } = useApp();
   const terms = useTenantTerms(currentTenant);
 
@@ -85,6 +87,11 @@ export default function MyDonations() {
   
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // BUG-A fix: OTP 관련 state 선언 (미선언으로 ReferenceError 발생하던 문제 수정)
+  const [otpCode, setOtpCode] = useState('');
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  void otpCode; // 현재 OTP 입력 UI가 없으므로 lint warning 방지용
 
   // 🔑 로그인 방식 상태
   const [showEmailLogin, setShowEmailLogin] = useState(false);
@@ -243,7 +250,8 @@ export default function MyDonations() {
       setHistory(prev => prev.map(h => ({ ...h, name: profileName })));
       toast.success('회원 프로필 정보 및 주소/비밀번호가 성공적으로 저장되었습니다.');
     } catch (e) {
-      toast.success('프로필 정보가 저장되었습니다.');
+      // BUG-E fix: 저장 실패 시 오류 안내 (기존에 catch 블록에서 toast.success를 사용하여 실패를 성공으로 안내하던 버그 수정)
+      toast.error('프로필 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsSavingProfile(false);
     }
@@ -372,7 +380,8 @@ export default function MyDonations() {
         setSubscriptions(realSubs);
       } else {
         // DB subscriptions 테이블에 아직 미등록된 레거시 이력인 경우만 결제 완료 이력에서 보조 매핑
-        const recurringLogs = matchedRaw.filter(d => d.isRecurring && (!d.paymentStatus || d.paymentStatus === 'completed'));
+        // BUG-D fix: null paymentStatus를 'completed'로 간주하던 오류 제거 — 엄격한 === 'completed' 필터 적용
+        const recurringLogs = matchedRaw.filter(d => d.isRecurring && d.paymentStatus === 'completed');
         const fetchedSubs: any[] = recurringLogs.map(d => ({
           id: d.id || `sub_${d.createdAt || Date.now()}`,
           tenantId: currentTenant.id,
@@ -455,9 +464,10 @@ export default function MyDonations() {
     }
   };
 
-  const handleDownloadReceipt = (id: string) => {
-    toast.success(`${id} 번호의 확인서를 다운로드합니다`);
-  };
+  // BUG-F fix: handleDownloadReceipt stub 제거 — 내부 UUID가 사용자에게 노출되고 실제 다운로드 기능 없음
+  // 영수증은 각 항목의 [영수증보기] 버튼(TaxReceiptModal)을 통해 제공됩니다.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleDownloadReceipt = (_id: string) => {};
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -1010,7 +1020,8 @@ export default function MyDonations() {
                     return true; // 'ALL'
                   });
 
-                  const completedList = dateFilteredHistory.filter(item => item.paymentStatus !== 'cancelled');
+                  // BUG-C fix: null/undefined/pending 상태를 완료로 간주하던 오류 수정 — 엄격하게 === 'completed'만 집계
+                  const completedList = dateFilteredHistory.filter(item => item.paymentStatus === 'completed');
                   const cancelledList = dateFilteredHistory.filter(item => item.paymentStatus === 'cancelled');
 
                   const filteredHistory = dateFilteredHistory.filter((item) => {

@@ -443,8 +443,10 @@ export default function PrayerManagement() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url); // GBL-16 fix: Blob URL 즉시 해제 (메모리 누수 방지)
 
     toast.success(`${filteredPrayers.length}건의 내역을 엑셀 CSV 파일로 다운로드했습니다.`);
+
   };
 
   return (

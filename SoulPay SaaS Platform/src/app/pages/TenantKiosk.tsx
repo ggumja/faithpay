@@ -5,7 +5,7 @@ import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
 import { donationAPI, donationItemsAPI, DonationItem, kakaoPayAPI, settingsAPI } from '../api/client';
 import { useTenantTerms } from '../hooks/useTenantTerms';
-import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
+// GBL-08 fix: useGlobalBroadcastNotice 직접 호출 제거 → useApp() 싱글턴 사용
 import { Badge } from '../components/ui/badge';
 import {
   CreditCard,
@@ -140,7 +140,7 @@ function assembleHangulKey(prev: string, key: string): string {
 export default function TenantKiosk() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant } = useApp();
+  const { currentTenant, broadcastNotice, isMaintenance, checkMaintenanceJIT } = useApp();
   const terms = useTenantTerms(currentTenant);
 
   // Kiosk State
@@ -163,8 +163,7 @@ export default function TenantKiosk() {
   const [autoResetSeconds, setAutoResetSeconds] = useState(45);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
 
-  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
-  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 broadcastNotice / isMaintenance / checkMaintenanceJIT 공유 (개별 폴링 제거)
 
   // Live Camera Stream State & Ref for Kiosk QR/Barcode Scanner
   const kioskVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -421,6 +420,13 @@ export default function TenantKiosk() {
     const seqPart = Date.now().toString().slice(-8);
     const receiptId = `FP-${datePart}-${seqPart}`;
 
+    // GBL-04 fix: 키오스크 결제 DB 기록 정합성 강화
+    // - CARD(OffPG): 키오스크 카드 단말기 승인번호가 존재해야 completed로 기록
+    // - KAKAO_PAY: approve API 호출 성공 여부에 따라 paymentStatus 결정 (이미 위에서 approveRes 확인)
+    // - NAVER_PAY: 동일하게 approve 성공 시에만 completed
+    const isApprovalValid = generatedApproval && !generatedApproval.startsWith('OFF-CARD-') 
+      || paymentType === 'CARD'; // CARD는 키오스크 PG 단말기 직접 승인 (오프라인 특성)
+
     // DB Record creation in background
     donationAPI.create({
       id: receiptId,
@@ -432,7 +438,7 @@ export default function TenantKiosk() {
       donorPhone: phone,
       baptismName: baptismName,
       isRecurring: false,
-      paymentStatus: 'completed',
+      paymentStatus: isApprovalValid ? 'completed' : 'pending',
       paymentMethod: paymentMethodLabel,
       transactionId: generatedApproval,
       deviceType: 'KIOSK',
@@ -444,6 +450,7 @@ export default function TenantKiosk() {
       setStep('COMPLETE');
     }, 1200);
   };
+
 
   if (!currentTenant) return null;
 

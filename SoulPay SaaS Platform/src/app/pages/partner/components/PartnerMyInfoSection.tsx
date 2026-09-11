@@ -67,12 +67,12 @@ export function PartnerMyInfoSection({
 
   // 법인 세무 필드
   const [editCorpName,  setEditCorpName]  = useState((partner as any).corpName  || partner.name || '');
-  const [editCorpReg,   setEditCorpReg]   = useState((partner as any).corpRegNo || '107-88-39201');
+  const [editCorpReg,   setEditCorpReg]   = useState((partner as any).corpRegNo || '');
   const [editCeoName,   setEditCeoName]   = useState((partner as any).ceoName   || '');
   const [editTaxEmail,  setEditTaxEmail]  = useState((partner as any).taxEmail  || partner.email || '');
   // 개인/프리랜서 세무 필드
   const [editRealName,  setEditRealName]  = useState((partner as any).realName  || partner.name || '');
-  const [editResNo,     setEditResNo]     = useState((partner as any).resNo     || '920110-1******');
+  const [editResNo,     setEditResNo]     = useState((partner as any).resNo     || '');
 
   const historyStorageKey = `soulpay:myinfo_history:${partner.id}`;
   const [history, setHistory] = useState<MyInfoHistoryEntry[]>(() => {
@@ -80,24 +80,7 @@ export function PartnerMyInfoSection({
       const raw = localStorage.getItem(historyStorageKey);
       if (raw) return JSON.parse(raw);
     } catch {}
-    return [
-      {
-        id: 'mh-1',
-        timestamp: '2026-08-03 11:30:00',
-        category: '정산 계좌 정보',
-        beforeVal: '계좌 미등록',
-        afterVal: `${editBank || '신한은행'} ${editAccount || '110-123-456789'} (예금주: ${editHolder || partner.name})`,
-        modifiedBy: `${partner.name} (${isAgency ? '대리점' : '영업자'})`,
-      },
-      {
-        id: 'mh-2',
-        timestamp: '2026-07-01 09:00:00',
-        category: '프로필 생성',
-        beforeVal: '신규 신청',
-        afterVal: `연락처: ${partner.phone || '미등록'} · 이메일: ${partner.email || '미등록'}`,
-        modifiedBy: '시스템 관리자',
-      },
-    ];
+    return [];
   });
 
   return (
