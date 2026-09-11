@@ -47,6 +47,7 @@ import {
   ShieldCheck,
   RotateCcw,
   Filter,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
@@ -56,6 +57,7 @@ import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
+import { openDaumPostcode } from '../../utils/daumPostcode';
 
 export interface MemberDonationHistoryItem {
   id: string;
@@ -92,6 +94,9 @@ export interface MemberDetailData {
   phone: string;
   email: string;
   address?: string;
+  zonecode?: string;
+  addressBase?: string;
+  addressDetail?: string;
   rrn?: string; // 주민등록번호 (기부금영수증 발급용)
   registeredDate: string;
   totalDonation: number;
@@ -126,6 +131,9 @@ export default function MemberDetailPage() {
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editZonecode, setEditZonecode] = useState('');
+  const [editAddressBase, setEditAddressBase] = useState('');
+  const [editAddressDetail, setEditAddressDetail] = useState('');
   const [editRrn, setEditRrn] = useState('');
   const [noteText, setNoteText] = useState('');
   // Tax Receipt On-Demand Dialog State
@@ -762,9 +770,36 @@ export default function MemberDetailPage() {
     setEditTitle(member.baptismName || '');
     setEditPhone(formatPhoneNumber(member.phone));
     setEditEmail(member.email || '');
+
+    // 주소 정보 분리 파싱 (우편번호 [12345], 기본주소, 상세주소)
+    let parsedZonecode = member.zonecode || '';
+    let parsedBase = member.addressBase || '';
+    let parsedDetail = member.addressDetail || '';
+
+    if (!parsedBase && member.address) {
+      const match = member.address.match(/^\[(\d{5})\]\s*(.*)$/);
+      if (match) {
+        parsedZonecode = parsedZonecode || match[1];
+        parsedBase = match[2].trim();
+      } else {
+        parsedBase = member.address.trim();
+      }
+    }
+
+    setEditZonecode(parsedZonecode);
+    setEditAddressBase(parsedBase);
+    setEditAddressDetail(parsedDetail);
     setEditAddress(member.address || '');
     setEditRrn(member.rrn || '');
     setIsEditModalOpen(true);
+  };
+
+  const handleSearchEditAddress = () => {
+    openDaumPostcode((res) => {
+      setEditZonecode(res.zonecode);
+      setEditAddressBase(res.address);
+      toast.success('주소가 선택되었습니다. 상세주소를 확인 또는 입력해 주세요.');
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -774,6 +809,9 @@ export default function MemberDetailPage() {
     }
 
     const cleanPhone = stripPhoneDigits(editPhone) || (member ? stripPhoneDigits(member.phone) : '');
+    const combinedAddress = editZonecode
+      ? `[${editZonecode}] ${editAddressBase}${editAddressDetail ? ' ' + editAddressDetail.trim() : ''}`.trim()
+      : `${editAddressBase}${editAddressDetail ? ' ' + editAddressDetail.trim() : ''}`.trim();
 
     // DB 및 영구 설정 실측 저장
     if (cleanPhone) {
@@ -782,8 +820,10 @@ export default function MemberDetailPage() {
           name: editName.trim(),
           baptismName: editTitle.trim(),
           email: editEmail.trim(),
-          address: editAddress.trim(),
-          fullAddress: editAddress.trim(),
+          zonecode: editZonecode.trim(),
+          address: editAddressBase.trim(),
+          addressDetail: editAddressDetail.trim(),
+          fullAddress: combinedAddress,
         });
       } catch (err) {
         console.warn('Failed to update member profile in DB:', err);
@@ -798,7 +838,10 @@ export default function MemberDetailPage() {
             baptismName: editTitle.trim(),
             phone: cleanPhone || prev.phone,
             email: editEmail.trim(),
-            address: editAddress.trim(),
+            address: combinedAddress,
+            zonecode: editZonecode.trim(),
+            addressBase: editAddressBase.trim(),
+            addressDetail: editAddressDetail.trim(),
             rrn: editRrn.trim() || prev.rrn,
           }
         : null
@@ -1611,12 +1654,49 @@ export default function MemberDetailPage() {
               />
             </div>
 
+            {/* 주소 (우편번호 검색 + 기본주소 + 상세주소) */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">주소</Label>
+              <Label className="text-xs font-semibold text-[var(--hm-ink-2)] flex items-center justify-between">
+                <span>주소</span>
+                <span className="text-[11px] text-blue-600 dark:text-blue-400 font-normal">카카오 우편번호 검색 지원</span>
+              </Label>
+
+              {/* 우편번호 & 우편번호 검색 버튼 */}
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={editZonecode}
+                  readOnly
+                  placeholder="우편번호"
+                  className="w-28 text-xs h-9 rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper-2)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums font-semibold"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSearchEditAddress}
+                  className="h-9 px-3 text-xs font-semibold border-blue-200 text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-1.5 shadow-2xs rounded-lg"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>주소 검색</span>
+                </Button>
+              </div>
+
+              {/* 기본 주소 */}
               <Input
-                value={editAddress}
-                onChange={(e) => setEditAddress(e.target.value)}
-                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
+                type="text"
+                value={editAddressBase}
+                onChange={(e) => setEditAddressBase(e.target.value)}
+                placeholder="기본 주소 (주소 검색 버튼을 이용하세요)"
+                className="text-xs h-9 rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
+              />
+
+              {/* 상세 주소 */}
+              <Input
+                type="text"
+                value={editAddressDetail}
+                onChange={(e) => setEditAddressDetail(e.target.value)}
+                placeholder="상세 주소를 입력하세요 (예: 101동 1002호 / 2층)"
+                className="text-xs h-9 rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
               />
             </div>
 

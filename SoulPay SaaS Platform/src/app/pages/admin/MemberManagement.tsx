@@ -48,6 +48,7 @@ import { normalizePhoneNumber } from '../../utils/phoneUtils';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { openDaumPostcode } from '../../utils/daumPostcode';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
@@ -71,6 +72,9 @@ export default function MemberManagement() {
   const [memberPhone, setMemberPhone] = useState('');
   const [memberEmail, setMemberEmail] = useState('');
   const [memberAddress, setMemberAddress] = useState('');
+  const [memberZonecode, setMemberZonecode] = useState('');
+  const [memberAddressBase, setMemberAddressBase] = useState('');
+  const [memberAddressDetail, setMemberAddressDetail] = useState('');
   const [memberRrn, setMemberRrn] = useState(''); // 주민등록번호 (기부금영수증 발급용)
 
   useEffect(() => {
@@ -253,8 +257,19 @@ export default function MemberManagement() {
     setMemberPhone('');
     setMemberEmail('');
     setMemberAddress('');
+    setMemberZonecode('');
+    setMemberAddressBase('');
+    setMemberAddressDetail('');
     setMemberRrn('');
     setIsAddMemberModalOpen(true);
+  };
+
+  const handleSearchMemberAddress = () => {
+    openDaumPostcode((res) => {
+      setMemberZonecode(res.zonecode);
+      setMemberAddressBase(res.address);
+      toast.success('주소가 선택되었습니다. 상세주소를 확인 또는 입력해 주세요.');
+    });
   };
 
   const handleAddMember = async () => {
@@ -269,13 +284,20 @@ export default function MemberManagement() {
       return;
     }
 
+    const combinedAddress = memberZonecode
+      ? `[${memberZonecode}] ${memberAddressBase}${memberAddressDetail ? ' ' + memberAddressDetail.trim() : ''}`.trim()
+      : `${memberAddressBase}${memberAddressDetail ? ' ' + memberAddressDetail.trim() : ''}`.trim();
+
     const newMem: MemberDetailData = {
       id: `mem_${Date.now()}`,
       name: memberName.trim(),
       baptismName: memberTitle.trim(),
       phone: cleanPhone,
       email: memberEmail.trim(),
-      address: memberAddress.trim(),
+      address: combinedAddress,
+      zonecode: memberZonecode.trim(),
+      addressBase: memberAddressBase.trim(),
+      addressDetail: memberAddressDetail.trim(),
       rrn: memberRrn.trim() || '',
       registeredDate: new Date().toISOString().slice(0, 10),
       totalDonation: 0,
@@ -290,8 +312,10 @@ export default function MemberManagement() {
         name: memberName.trim(),
         baptismName: memberTitle.trim(),
         email: memberEmail.trim(),
-        address: memberAddress.trim(),
-        fullAddress: memberAddress.trim(),
+        zonecode: memberZonecode.trim(),
+        address: memberAddressBase.trim(),
+        addressDetail: memberAddressDetail.trim(),
+        fullAddress: combinedAddress,
       });
     } catch (err) {
       console.warn('Failed to save new member to DB:', err);
@@ -309,6 +333,24 @@ export default function MemberManagement() {
     setMemberTitle(m.baptismName || '');
     setMemberPhone(formatPhoneNumber(m.phone));
     setMemberEmail(m.email);
+
+    let parsedZonecode = m.zonecode || '';
+    let parsedBase = m.addressBase || '';
+    let parsedDetail = m.addressDetail || '';
+
+    if (!parsedBase && m.address) {
+      const match = m.address.match(/^\[(\d{5})\]\s*(.*)$/);
+      if (match) {
+        parsedZonecode = parsedZonecode || match[1];
+        parsedBase = match[2].trim();
+      } else {
+        parsedBase = m.address.trim();
+      }
+    }
+
+    setMemberZonecode(parsedZonecode);
+    setMemberAddressBase(parsedBase);
+    setMemberAddressDetail(parsedDetail);
     setMemberAddress(m.address || '');
     setMemberRrn(m.rrn || '');
     setIsEditMemberModalOpen(true);
@@ -322,6 +364,9 @@ export default function MemberManagement() {
     }
 
     const cleanPhone = stripPhoneDigits(memberPhone) || stripPhoneDigits(editingMember.phone);
+    const combinedAddress = memberZonecode
+      ? `[${memberZonecode}] ${memberAddressBase}${memberAddressDetail ? ' ' + memberAddressDetail.trim() : ''}`.trim()
+      : `${memberAddressBase}${memberAddressDetail ? ' ' + memberAddressDetail.trim() : ''}`.trim();
 
     // DB 및 영구 설정 실측 저장
     if (cleanPhone) {
@@ -330,21 +375,26 @@ export default function MemberManagement() {
           name: memberName.trim(),
           baptismName: memberTitle.trim(),
           email: memberEmail.trim(),
-          address: memberAddress.trim(),
-          fullAddress: memberAddress.trim(),
+          zonecode: memberZonecode.trim(),
+          address: memberAddressBase.trim(),
+          addressDetail: memberAddressDetail.trim(),
+          fullAddress: combinedAddress,
         });
       } catch (err) {
         console.warn('Failed to persist member profile edit in DB:', err);
       }
     }
 
-    const updated = {
+    const updated: MemberDetailData = {
       ...editingMember,
       name: memberName.trim(),
       baptismName: memberTitle.trim(),
       phone: cleanPhone || editingMember.phone,
       email: memberEmail.trim(),
-      address: memberAddress.trim(),
+      address: combinedAddress,
+      zonecode: memberZonecode.trim(),
+      addressBase: memberAddressBase.trim(),
+      addressDetail: memberAddressDetail.trim(),
       rrn: memberRrn.trim() || editingMember.rrn,
     };
 
@@ -683,12 +733,45 @@ export default function MemberManagement() {
               />
             </div>
 
+            {/* 주소 (우편번호 검색 + 기본주소 + 상세주소) */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">주소</Label>
+              <Label className="text-xs font-bold flex items-center justify-between">
+                <span>주소</span>
+                <span className="text-[11px] text-blue-600 dark:text-blue-400 font-normal">카카오 우편번호 검색 지원</span>
+              </Label>
+              
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={memberZonecode}
+                  readOnly
+                  placeholder="우편번호"
+                  className="w-28 text-xs font-mono font-semibold bg-slate-100 dark:bg-zinc-800"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSearchMemberAddress}
+                  className="text-xs font-semibold gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>주소 검색</span>
+                </Button>
+              </div>
+
               <Input
-                placeholder="주소 입력"
-                value={memberAddress}
-                onChange={(e) => setMemberAddress(e.target.value)}
+                placeholder="기본 주소 (주소 검색 버튼을 이용하세요)"
+                value={memberAddressBase}
+                onChange={(e) => setMemberAddressBase(e.target.value)}
+                className="text-xs"
+              />
+
+              <Input
+                placeholder="상세 주소를 입력하세요 (예: 101동 1002호 / 2층)"
+                value={memberAddressDetail}
+                onChange={(e) => setMemberAddressDetail(e.target.value)}
+                className="text-xs"
               />
             </div>
 
@@ -762,11 +845,45 @@ export default function MemberManagement() {
               />
             </div>
 
+            {/* 주소 (우편번호 검색 + 기본주소 + 상세주소) */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold">주소</Label>
+              <Label className="text-xs font-bold flex items-center justify-between">
+                <span>주소</span>
+                <span className="text-[11px] text-blue-600 dark:text-blue-400 font-normal">카카오 우편번호 검색 지원</span>
+              </Label>
+              
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={memberZonecode}
+                  readOnly
+                  placeholder="우편번호"
+                  className="w-28 text-xs font-mono font-semibold bg-slate-100 dark:bg-zinc-800"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSearchMemberAddress}
+                  className="text-xs font-semibold gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  <span>주소 검색</span>
+                </Button>
+              </div>
+
               <Input
-                value={memberAddress}
-                onChange={(e) => setMemberAddress(e.target.value)}
+                placeholder="기본 주소 (주소 검색 버튼을 이용하세요)"
+                value={memberAddressBase}
+                onChange={(e) => setMemberAddressBase(e.target.value)}
+                className="text-xs"
+              />
+
+              <Input
+                placeholder="상세 주소를 입력하세요 (예: 101동 1002호 / 2층)"
+                value={memberAddressDetail}
+                onChange={(e) => setMemberAddressDetail(e.target.value)}
+                className="text-xs"
               />
             </div>
 
