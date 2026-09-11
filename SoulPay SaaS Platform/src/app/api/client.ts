@@ -499,20 +499,29 @@ export const otpAuthAPI = {
     });
   },
 
-  async verifyOtp(phone: string, otpCode: string): Promise<APIResponse<{ token: string; subscriptions: any[]; donations: any[] }>> {
+  async verifyOtp(phone: string, otpCode: string, tenantId?: string): Promise<APIResponse<{ token: string; subscriptions: any[]; donations: any[] }>> {
     return fetchAPI<{ token: string; subscriptions: any[]; donations: any[] }>('/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, otpCode }),
+      body: JSON.stringify({ phone, otpCode, tenantId }),
     });
   },
 };
 
 export const subscriptionAPI = {
-  async getByPhone(phone: string): Promise<APIResponse<any[]>> {
+  async getByPhone(phone: string, tenantId?: string): Promise<APIResponse<any[]>> {
     try {
       const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`, { silentFail: true } as any);
-      if (res.success) return res;
+      const query = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : '';
+      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}${query}`, { silentFail: true } as any);
+      if (res.success && Array.isArray(res.data)) {
+        if (tenantId) {
+          const filtered = res.data.filter((s: any) => 
+            s.tenantId === tenantId || s.tenant_id === tenantId
+          );
+          return { success: true, data: filtered };
+        }
+        return res;
+      }
       return { success: true, data: [] };
     } catch {
       return { success: true, data: [] };
@@ -694,11 +703,42 @@ export const donationAPI = {
 
     return { success: true, data: { found: false } };
   },
+
+  async deletePending(tenantId: string, id: string): Promise<APIResponse<any>> {
+    return fetchAPI(`/donations/pending/${id}?tenantId=${encodeURIComponent(tenantId)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ==================== MEMBER / DONOR API ====================
 
 export const memberAPI = {
+  /** 신도/회원 관리자 메모 조회 (단체별 격리 실측) */
+  async getNote(phone: string, tenantId: string): Promise<APIResponse<{ note: string }>> {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone || !tenantId) return { success: true, data: { note: '' } };
+    try {
+      const res = await fetchAPI<{ note: string }>(`/members/note/${cleanPhone}?tenantId=${encodeURIComponent(tenantId)}`, { silentFail: true } as any);
+      if (res.success && res.data) {
+        return res;
+      }
+      return { success: true, data: { note: '' } };
+    } catch {
+      return { success: true, data: { note: '' } };
+    }
+  },
+
+  /** 신도/회원 관리자 메모 저장 (단체별 격리 실측) */
+  async saveNote(phone: string, tenantId: string, note: string, adminEmail?: string): Promise<APIResponse<any>> {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone || !tenantId) return { success: false, error: '전화번호와 단체 정보가 필요합니다.' };
+    return fetchAPI('/members/note', {
+      method: 'POST',
+      body: JSON.stringify({ phone: cleanPhone, tenantId, note, adminEmail }),
+    });
+  },
+
   /** 신도/회원 프로필 조회 (DB 100% 실측 조회 - localStorage 미사용) */
   async getProfile(phone: string): Promise<APIResponse<{ name?: string; baptismName?: string; email?: string; address?: string; fullAddress?: string; zonecode?: string; addressDetail?: string }>> {
     const cleanPhone = phone.replace(/[^0-9]/g, '');

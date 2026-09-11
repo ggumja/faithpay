@@ -2773,9 +2773,9 @@ app.post("/make-server-d0d82cc7/auth/otp/send", async (c) => {
 });
 
 // 1초 SMS OTP 검증 및 구독/헌금 내역 조회
-app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
+const handleOtpVerify = async (c: any) => {
   try {
-    const { phone, otpCode } = await c.req.json();
+    const { phone, otpCode, tenantId } = await c.req.json();
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const isValid = await db.verifySmsOtp(cleanPhone, otpCode);
 
@@ -2783,10 +2783,17 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
       return c.json({ success: false, error: "인증번호가 올바르지 않거나 만료되었습니다." }, 400);
     }
 
-    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
+    let tid = tenantId;
+    if (tenantId) {
+      const tenant = await db.getTenantById(tenantId) || await db.getTenantBySlug(tenantId);
+      if (tenant) tid = tenant.id;
+    }
+
+    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone, tid);
     const allDonations = await db.getAllDonations();
-    const donations = allDonations.filter(d => 
-      d.donorPhone.replace(/[^0-9]/g, '') === cleanPhone && 
+    const donations = allDonations.filter((d: any) => 
+      d.donorPhone?.replace(/[^0-9]/g, '') === cleanPhone && 
+      (!tid || d.tenantId === tid || d.tenant_id === tid) &&
       (!d.paymentStatus || d.paymentStatus === 'completed' || d.paymentStatus === 'cancelled')
     );
 
@@ -2799,7 +2806,9 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
   } catch (error) {
     return c.json({ success: false, error: "OTP Verification failed" }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/auth/otp/verify", handleOtpVerify);
+app.post("/auth/otp/verify", handleOtpVerify);
 
 // 💬 카카오 로그인 토큰 교환
 const handleKakaoToken = async (c: any) => {
@@ -2889,7 +2898,8 @@ const handleGetSubscriptionsByPhone = async (c: any) => {
   try {
     const rawPhone = c.req.param("phone");
     const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
-    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
+    const tenantId = c.req.query("tenantId") || c.req.query("tenant_id");
+    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone, tenantId);
     return c.json({ success: true, data: subscriptions });
   } catch (error: any) {
     return c.json({ success: false, error: error?.message || "Failed to fetch subscriptions" }, 500);
@@ -3020,7 +3030,7 @@ const handleRegisterSubscription = async (c: any) => {
     const cleanPhone = donorPhone.replace(/[^0-9]/g, '');
 
     // 중복 생성 방지: 동일 테넌트, 전화번호, 빌키, 요일/일자의 활성 약정이 이미 존재하는지 확인
-    const existingSubs = await db.getSubscriptionsByPhone(cleanPhone);
+    const existingSubs = await db.getSubscriptionsByPhone(cleanPhone, tenantId);
     const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
     let normDow: number | null = null;
     if (recurringDayOfWeek !== undefined && recurringDayOfWeek !== null) {
@@ -4558,6 +4568,59 @@ app.get("/members/profile/:phone", handleGetProfile);
 app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
 app.post("/members/update-profile", handleUpdateProfile);
 
+// 📝 관리자 메모 조회 API (단체별 격리)
+const handleGetMemberNote = async (c: any) => {
+  try {
+    const rawPhone = c.req.param('phone');
+    const tenantId = c.req.query('tenantId') || c.req.query('tenant_id');
+    const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || !tenantId) {
+      return c.json({ success: true, data: { note: '' } });
+    }
+    const note = await db.getMemberNote(tenantId, cleanPhone);
+    return c.json({ success: true, data: { note } });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+// 📝 관리자 메모 저장 API (단체별 격리)
+const handleSaveMemberNote = async (c: any) => {
+  try {
+    const { tenantId, phone, note, adminEmail } = await c.req.json();
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!tenantId || !cleanPhone) {
+      return c.json({ success: false, error: 'tenantId and phone are required' }, 400);
+    }
+    const ok = await db.saveMemberNote(tenantId, cleanPhone, note || '', adminEmail);
+    return c.json({ success: ok, message: ok ? '메모가 저장되었습니다.' : '메모 저장 실패' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+// 🗑️ 미완료/대기 결제 건 정리(삭제) API
+const handleDeleteDonation = async (c: any) => {
+  try {
+    const id = c.req.param('id');
+    const tenantId = c.req.query('tenantId') || c.req.query('tenant_id');
+    if (!id || !tenantId) {
+      return c.json({ success: false, error: 'id and tenantId are required' }, 400);
+    }
+    const ok = await db.deleteDonation(id, tenantId);
+    return c.json({ success: ok, message: ok ? '성공적으로 삭제되었습니다.' : '삭제 실패' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+app.get("/make-server-d0d82cc7/members/note/:phone", handleGetMemberNote);
+app.get("/members/note/:phone", handleGetMemberNote);
+app.post("/make-server-d0d82cc7/members/note", handleSaveMemberNote);
+app.post("/members/note", handleSaveMemberNote);
+app.delete("/make-server-d0d82cc7/donations/pending/:id", handleDeleteDonation);
+app.delete("/donations/pending/:id", handleDeleteDonation);
+
 // 📱 신도/회원 이메일 로그인 API (DB 100% 실측 조회)
 const handleMemberLogin = async (c: any) => {
   try {
@@ -4666,4 +4729,5 @@ app.delete("/make-server-d0d82cc7/system-admins/:id", async (c) => {
   return c.json({ success: true });
 });
 
+export default app;
 Deno.serve(app.fetch);

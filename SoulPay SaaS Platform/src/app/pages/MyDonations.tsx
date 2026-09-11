@@ -360,9 +360,9 @@ export default function MyDonations() {
       // 정기결제 약정 목록: 실제 DB subscriptions 테이블에서 휴대폰 번호로 등록된 약정 실측 조회
       let realSubs: any[] = [];
       try {
-        const subRes = await subscriptionAPI.getByPhone(cleanPhone);
+        const subRes = await subscriptionAPI.getByPhone(cleanPhone, currentTenant.id);
         if (subRes.success && Array.isArray(subRes.data)) {
-          realSubs = subRes.data.filter((s: any) => !s.tenantId || s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id);
+          realSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
         }
       } catch (subErr) {
         console.warn('Failed to fetch real subscriptions from DB:', subErr);

@@ -47,6 +47,7 @@ import {
   ShieldCheck,
   RotateCcw,
   Filter,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
@@ -56,6 +57,8 @@ import { donationAPI, subscriptionAPI, memberAPI } from '../../api/client';
 import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { cleanPaymentMethod } from './DonationHistory';
 import { PeriodRangePicker, PeriodUnit, PeriodSelection } from '../../components/PeriodRangePicker';
+import { openDaumPostcode } from '../../utils/daumPostcode';
+import { MemberEditModal } from '../../components/admin/MemberEditModal';
 
 export interface MemberDonationHistoryItem {
   id: string;
@@ -92,6 +95,9 @@ export interface MemberDetailData {
   phone: string;
   email: string;
   address?: string;
+  zonecode?: string;
+  addressBase?: string;
+  addressDetail?: string;
   rrn?: string; // 주민등록번호 (기부금영수증 발급용)
   registeredDate: string;
   totalDonation: number;
@@ -121,12 +127,8 @@ export default function MemberDetailPage() {
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editTitle, setEditTitle] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editAddress, setEditAddress] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
   // Tax Receipt On-Demand Dialog State
   const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
   const [taxYear, setTaxYear] = useState('2026');
@@ -222,16 +224,19 @@ export default function MemberDetailPage() {
           // If no donation record exists yet, check if member has active subscription
           if (!rawMatch && targetDigits.length >= 8) {
             try {
-              const subRes = await subscriptionAPI.getByPhone(targetDigits);
+              const subRes = await subscriptionAPI.getByPhone(targetDigits, currentTenant.id);
               if (subRes.success && subRes.data && subRes.data.length > 0) {
-                const firstSub = subRes.data[0];
-                rawMatch = {
-                  id: firstSub.id,
-                  donorName: firstSub.donorName,
-                  donorPhone: firstSub.donorPhone,
-                  donorEmail: firstSub.donorEmail || '',
-                  createdAt: firstSub.createdAt,
-                };
+                const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                const firstSub = tenantSubs[0];
+                if (firstSub) {
+                  rawMatch = {
+                    id: firstSub.id,
+                    donorName: firstSub.donorName,
+                    donorPhone: firstSub.donorPhone,
+                    donorEmail: firstSub.donorEmail || '',
+                    createdAt: firstSub.createdAt,
+                  };
+                }
               }
             } catch (e) {
               console.warn('Subscription fallback check failed:', e);
@@ -252,13 +257,14 @@ export default function MemberDetailPage() {
             const lastCompleted = completedDonations[0];
             const lastDonationDate = lastCompleted?.createdAt ? lastCompleted.createdAt.split('T')[0] : '';
 
-            // 2. 정기 약정 현황 (Subscriptions) - 실제 DB subscriptions 테이블 100% 실측 조회
+            // 2. 정기 약정 현황 (Subscriptions) - 실제 DB subscriptions 테이블 100% 실측 조회 (현재 테넌트 격리)
             let subscriptionsList: MemberSubscriptionItem[] = [];
             if (digitsKey && digitsKey !== '미등록') {
               try {
-                const subRes = await subscriptionAPI.getByPhone(digitsKey);
+                const subRes = await subscriptionAPI.getByPhone(digitsKey, currentTenant.id);
                 if (subRes.success && Array.isArray(subRes.data)) {
-                  subscriptionsList = subRes.data.map((sub: any) => ({
+                  const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                  subscriptionsList = tenantSubs.map((sub: any) => ({
                     id: sub.id,
                     itemName: sub.itemName || `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)`,
                     monthlyAmount: sub.amount || 0,
@@ -355,6 +361,19 @@ export default function MemberDetailPage() {
               }
             }
 
+            // 3. 관리자 메모 실측 조회 (단체별 완벽 격리)
+            let resolvedNote = '';
+            if (digitsKey && digitsKey !== '미등록') {
+              try {
+                const noteRes = await memberAPI.getNote(digitsKey, currentTenant.id);
+                if (noteRes.success && noteRes.data?.note) {
+                  resolvedNote = noteRes.data.note;
+                }
+              } catch (noteErr) {
+                console.warn('Failed to load member note:', noteErr);
+              }
+            }
+
             const loadedMem: MemberDetailData = {
               id: memberId,
               name: resolvedName,
@@ -367,7 +386,7 @@ export default function MemberDetailPage() {
               totalDonation: totalSum,
               lastDonation: lastDonationDate,
               recurringCount: activeRecurringCount,
-              note: rawMatch.note || '',
+              note: resolvedNote || rawMatch.note || '',
               donationsHistory: donorDonations.map((d: any) => {
                 const dateObj = d.createdAt ? new Date(d.createdAt) : null;
                 const isValid = dateObj && !isNaN(dateObj.getTime());
@@ -378,6 +397,20 @@ export default function MemberDetailPage() {
                   ? `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`
                   : (d.createdAt && d.createdAt.includes('T') ? d.createdAt.split('T')[1]?.slice(0, 8) : '');
 
+                let effStatus = (d.paymentStatus || 'completed') as any;
+                let effFailureReason = d.failureReason;
+                // 즉시 결제(신용카드/간편결제 등)에서 30분 이상 경과한 'pending' 건은 결제 미완료/이탈(failed)로 정리
+                if (effStatus === 'pending' && d.createdAt) {
+                  const createdTime = new Date(d.createdAt).getTime();
+                  const elapsedMinutes = (Date.now() - createdTime) / (1000 * 60);
+                  if (elapsedMinutes > 30) {
+                    effStatus = 'failed';
+                    if (!effFailureReason) {
+                      effFailureReason = '결제 시간 초과 (미완료 이탈)';
+                    }
+                  }
+                }
+
                 return {
                   id: d.id,
                   date: datePart,
@@ -386,10 +419,10 @@ export default function MemberDetailPage() {
                   amount: d.amount || 0,
                   paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
                   type: d.isRecurring ? 'recurring' : 'once',
-                  status: (d.paymentStatus || 'completed') as any,
+                  status: effStatus,
                   cancelReason: d.cancelReason,
                   cancelApprovedAt: d.cancelApprovedAt,
-                  failureReason: d.failureReason,
+                  failureReason: effFailureReason,
                 };
               }),
               subscriptions: subscriptionsList,
@@ -488,9 +521,38 @@ export default function MemberDetailPage() {
     toast.success('연락처가 클립보드에 복사되었습니다.');
   };
 
-  const handleSaveNote = () => {
-    setMember((prev) => (prev ? { ...prev, note: noteText } : null));
-    toast.success('관리자 메모가 저장되었습니다.');
+  const handleSaveNote = async () => {
+    if (!member || !currentTenant) return;
+    setIsSavingNote(true);
+    try {
+      const res = await memberAPI.saveNote(member.phone, currentTenant.id, noteText, currentAdmin?.email);
+      if (res.success) {
+        setMember((prev) => (prev ? { ...prev, note: noteText } : null));
+        toast.success('관리자 메모가 DB에 안전하게 저장되었습니다.');
+      } else {
+        toast.error(res.error || '메모 저장에 실패했습니다.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '메모 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const handleDeleteDonationRecord = async (donationId: string) => {
+    if (!currentTenant) return;
+    if (!window.confirm('해당 미완료/실패 결제 시도 내역을 삭제하시겠습니까?')) return;
+    try {
+      const res = await donationAPI.deletePending(currentTenant.id, donationId);
+      if (res.success) {
+        toast.success('결제 시도 내역이 삭제되었습니다.');
+        loadMemberDetail();
+      } else {
+        toast.error(res.error || '내역 삭제에 실패했습니다.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '내역 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   // 1. 국세청 별지 제45호 서식 소득공제용 기부금 영수증 온디맨드 인쇄
@@ -757,54 +819,7 @@ export default function MemberDetailPage() {
   };
 
   const handleOpenEditModal = () => {
-    setEditName(member.name);
-    setEditTitle(member.baptismName || '');
-    setEditPhone(formatPhoneNumber(member.phone));
-    setEditEmail(member.email || '');
-    setEditAddress(member.address || '');
-    setEditRrn(member.rrn || '');
     setIsEditModalOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editName.trim()) {
-      toast.error('회원 성명을 입력해 주세요.');
-      return;
-    }
-
-    const cleanPhone = stripPhoneDigits(editPhone) || (member ? stripPhoneDigits(member.phone) : '');
-
-    // DB 및 영구 설정 실측 저장
-    if (cleanPhone) {
-      try {
-        await memberAPI.updateProfile(cleanPhone, {
-          name: editName.trim(),
-          baptismName: editTitle.trim(),
-          email: editEmail.trim(),
-          address: editAddress.trim(),
-          fullAddress: editAddress.trim(),
-        });
-      } catch (err) {
-        console.warn('Failed to update member profile in DB:', err);
-      }
-    }
-
-    setMember((prev) =>
-      prev
-        ? {
-            ...prev,
-            name: editName.trim(),
-            baptismName: editTitle.trim(),
-            phone: cleanPhone || prev.phone,
-            email: editEmail.trim(),
-            address: editAddress.trim(),
-            rrn: editRrn.trim() || prev.rrn,
-          }
-        : null
-    );
-
-    setIsEditModalOpen(false);
-    toast.success(`[${editName}] ${memberTerm} 정보가 수정 및 저장되었습니다.`);
   };
 
   const handleDelete = () => {
@@ -1204,6 +1219,16 @@ export default function MemberDetailPage() {
                                   <Printer className="h-3 w-3" />
                                   <span>인쇄</span>
                                 </button>
+                              ) : (don.status === 'failed' || don.status === 'pending') ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDonationRecord(don.id)}
+                                  title="미완료/실패 결제 시도 내역 삭제"
+                                  className="inline-flex items-center gap-1 h-7 px-2 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer rounded-md transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  <span>삭제</span>
+                                </button>
                               ) : don.status === 'cancelled' ? (
                                 <span className="text-xs text-[var(--hm-danger)] font-medium">취소</span>
                               ) : (
@@ -1436,11 +1461,16 @@ export default function MemberDetailPage() {
                   <div className="flex justify-end">
                     <button
                       type="button"
+                      disabled={isSavingNote}
                       onClick={handleSaveNote}
-                      className="inline-flex items-center gap-1.5 hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
+                      className="inline-flex items-center gap-1.5 hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all disabled:opacity-50"
                     >
-                      <Check className="h-3.5 w-3.5" />
-                      <span>메모 저장</span>
+                      {isSavingNote ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isSavingNote ? '저장 중...' : '메모 저장'}</span>
                     </button>
                   </div>
                 </div>
@@ -1556,98 +1586,14 @@ export default function MemberDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ✏️ 회원 정보 수정 모달 */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl p-6 border-[var(--hm-border)] bg-[var(--hm-paper)] shadow-xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-[var(--hm-ink)] flex items-center gap-2 font-[family-name:var(--font-display)]">
-              <Edit2 className="h-4 w-4 text-[var(--hm-accent)]" />
-              <span>{memberTerm} 정보 수정</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[var(--hm-ink-3)] mt-1">
-              선택한 {memberTerm}의 기본 정보를 수정합니다.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} autoComplete="off" className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">성명 (이름) *</Label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                required
-                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
-              />
-            </div>
-
-            <MemberTitleSelect
-              value={editTitle}
-              onChange={setEditTitle}
-              religionType={currentTenant.religionType}
-              showLabel={true}
-              label={getTitleLabel()}
-              selectClassName="rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
-              inputClassName="rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
-            />
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">휴대폰 번호</Label>
-              <Input
-                type="tel"
-                value={formatPhoneNumber(editPhone)}
-                onChange={(e) => setEditPhone(formatPhoneNumber(e.target.value))}
-                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">이메일 주소</Label>
-              <Input
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[var(--hm-ink-2)]">주소</Label>
-              <Input
-                value={editAddress}
-                onChange={(e) => setEditAddress(e.target.value)}
-                className="text-xs rounded-lg border-[var(--hm-border)] bg-[var(--hm-paper)] text-[var(--hm-ink)]"
-              />
-            </div>
-
-            <div className="bg-[var(--hm-paper-2)] border border-[var(--hm-border)] rounded-xl p-3 text-xs text-[var(--hm-ink-3)] space-y-1">
-              <p className="font-semibold text-[var(--hm-ink)] flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-[var(--hm-accent)]" />
-                <span>주민등록번호 보안 방침 안내</span>
-              </p>
-              <p className="text-[11px] leading-relaxed text-[var(--hm-ink-3)]">
-                개인정보보호법에 따라 주민등록번호는 회원 DB에 저장을 허용하지 않으며, 영수증 발급 시 1회성으로 안전하게 입력받습니다.
-              </p>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-xs border-[var(--hm-border)] text-[var(--hm-ink-2)] rounded-lg cursor-pointer"
-              >
-                취소
-              </Button>
-              <Button
-                type="submit"
-                className="hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs rounded-lg shadow-sm cursor-pointer"
-              >
-                수정 사항 저장
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* ✏️ 공통 회원 정보 수정 모달 */}
+      <MemberEditModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        member={member}
+        currentTenant={currentTenant}
+        onSaveSuccess={(updated) => setMember(updated)}
+      />
     </div>
   );
 }
