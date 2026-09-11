@@ -30,8 +30,18 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const navigate = useNavigate();
-  const { currentAdmin, setCurrentAdmin, currentTenant, setCurrentTenant } = useApp();
-  const terms = useTenantTerms(currentTenant);
+  const { currentAdmin, setCurrentAdmin, currentTenant, setCurrentTenant, tenants } = useApp();
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+  const effectiveTenant = (decodedSlug
+    ? tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      )
+    : null) || currentTenant;
+  const terms = useTenantTerms(effectiveTenant);
   const { canAccessMenu, getMenuPermission } = useAdminPermissions();
 
   // admin.soulpay.kr 또는 URL에 /admin 프리픽스가 없는 단독 관리자 경로 환경 판별
@@ -90,9 +100,9 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
         const rawName = currentAdmin?.name && currentAdmin.name !== '시스템 최고 관리자' ? currentAdmin.name : '';
         const adminDisplayName =
           rawName ||
-          currentTenant?.adminName ||
-          currentTenant?.businessInfo?.representativeName ||
-          currentTenant?.contact?.name ||
+          effectiveTenant?.adminName ||
+          effectiveTenant?.businessInfo?.representativeName ||
+          effectiveTenant?.contact?.name ||
           '대표 관리자';
 
         const adminRole = currentAdmin?.role === 'system_admin' ? 'tenant_admin' : (currentAdmin?.role || 'tenant_admin');
@@ -105,10 +115,10 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
             <div className="space-y-1.5 pt-0.5">
               {/* Organization Name & Role */}
               <div className="flex items-center justify-between gap-2">
-                {currentTenant?.name && (
+                {effectiveTenant?.name && (
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 min-w-0">
                     <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                    <span className="truncate">{currentTenant.name}</span>
+                    <span className="truncate">{effectiveTenant.name}</span>
                   </div>
                 )}
                 <span className="inline-flex items-center px-2 py-0.5 bg-white text-blue-700 text-[11px] font-bold rounded-full border border-blue-200 shadow-2xs whitespace-nowrap shrink-0">
