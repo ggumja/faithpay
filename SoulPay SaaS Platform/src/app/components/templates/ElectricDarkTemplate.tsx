@@ -8,7 +8,7 @@ import { donationAPI } from '../../api/client';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { navigateToAdminPortal } from '../../utils/domainUtils';
 import {
-  ChevronRight, Heart, Landmark, Star, Repeat, Shield, MapPin, Phone, Mail, Clock, ArrowLeft, Search, Sparkles, UserCheck
+  ChevronRight, Landmark, Star, Repeat, Shield, MapPin, Phone, Mail, Clock, ArrowLeft, Search, Sparkles, UserCheck
 } from 'lucide-react';
 
 /* ── Neo Modern (Electric Dark) Color Tokens ── */
@@ -25,19 +25,8 @@ const NEO = {
   textSub:       '#A1A1AA',
 };
 
-const itemIcons: Record<string, React.ReactNode> = {
-  '십일조':   <Landmark size={20} />,
-  '감사헌금': <Heart size={20} />,
-  '건축헌금': <Landmark size={20} />,
-  '인등보시': <Star size={20} />,
-  '불사공양': <Heart size={20} />,
-  '기도보시': <Sparkles size={20} />,
-  '교무금':   <Landmark size={20} />,
-  '미사예물': <Star size={20} />,
-  '특별봉헌': <Heart size={20} />,
-};
-
 function fmt(n: number) { return n.toLocaleString('ko-KR'); }
+
 
 const ELECTRIC_CSS = `
 /* Neo Modern Electric Dark Responsive Layout */

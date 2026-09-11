@@ -7,7 +7,7 @@ import { InstallBanner } from '../pwa/InstallBanner';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
 import { navigateToAdminPortal } from '../../utils/domainUtils';
-import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Heart, Star } from 'lucide-react';
+import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Star } from 'lucide-react';
 
 interface MinimalHeroTemplateProps {
   currentTenant: Tenant;
@@ -18,20 +18,8 @@ interface MinimalHeroTemplateProps {
   install: () => void | Promise<boolean | void>;
 }
 
-
-const itemIcons: Record<string, React.ReactNode> = {
-  '십일조':   <Landmark size={18} />,
-  '감사헌금': <Heart size={18} />,
-  '건축헌금': <Landmark size={18} />,
-  '인등보시': <Star size={18} />,
-  '불사공양': <Heart size={18} />,
-  '기도보시': <Sparkles size={18} />,
-  '교무금':   <Landmark size={18} />,
-  '미사예물': <Star size={18} />,
-  '특별봉헌': <Heart size={18} />,
-};
-
 const MINIMAL_CSS = `
+
 .mh-btn-spring {
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease, background-color 0.22s ease;
 }
