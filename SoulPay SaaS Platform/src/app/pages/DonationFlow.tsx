@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router';
 import { useApp, DonationItem } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
@@ -23,6 +23,8 @@ export default function DonationFlow() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const targetItemParam = searchParams.get('item') || searchParams.get('itemId');
   const { tenants, currentTenant, setCurrentTenant, setDonationFormData } = useApp();
 
   const [step, setStep] = useState(1);
@@ -162,7 +164,25 @@ export default function DonationFlow() {
     if (currentTenant) {
       donationItemsAPI.getItems(currentTenant.id).then((res) => {
         if (res.success && res.data && res.data.length > 0) {
-          if (!selectedItem || !res.data.some(i => i.id === selectedItem.id)) {
+          // targetItemParam 매칭 시도 (ID 우선, 그 다음 명칭 또는 URI 디코딩된 명칭)
+          let matchedItem: DonationItem | undefined;
+          if (targetItemParam) {
+            const cleanParam = targetItemParam.trim();
+            const decodedParam = decodeURIComponent(cleanParam).trim();
+            matchedItem = res.data.find(i => 
+              i.id === cleanParam || 
+              i.id.toLowerCase() === cleanParam.toLowerCase() ||
+              i.name === cleanParam || 
+              i.name.trim() === decodedParam
+            );
+          }
+
+          if (matchedItem) {
+            setSelectedItem(matchedItem);
+            if (matchedItem.allowRecurring && matchedItem.allowOneTime === false) {
+              setIsRecurring(true);
+            }
+          } else if (!selectedItem || !res.data.some(i => i.id === selectedItem.id)) {
             setSelectedItem(res.data.filter(i => i.enabled !== false)[0] ?? res.data[0]);
           }
         }
@@ -171,7 +191,7 @@ export default function DonationFlow() {
         setItemsLoaded(true); // 오류여도 로딩 완료 처리
       });
     }
-  }, [currentTenant]); // selectedItem 의존성 제거 - 무한 재호출 방지
+  }, [currentTenant, targetItemParam]); // selectedItem 의존성 제거 - 무한 재호출 방지
 
   useEffect(() => {
     if (location.state?.selectedItem) {

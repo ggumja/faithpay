@@ -92,13 +92,18 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
     return `https://pay.soulpay.kr/${tenant.slug}`;
   }, [tenant.slug]);
 
-  // 최종 QR 대상 URL
+  // 선택된 항목 객체 (ID 또는 기존 한글 명칭 호환)
+  const selectedItem = items.find((i) => i.id === selectedTarget || i.name === selectedTarget);
+  const selectedItemName = selectedItem ? selectedItem.name : (selectedTarget === 'main' ? '전체 수납 항목' : selectedTarget);
+
+  // 최종 QR 대상 URL (간결하고 빠른 QR 스캔을 위해 항목 고유 ID를 쿼리 파라미터로 적용)
   const targetUrl = (() => {
     const base = getAbsoluteBaseUrl();
     if (selectedTarget === 'main') {
       return base;
     }
-    return `${base}?item=${encodeURIComponent(selectedTarget)}`;
+    const itemParam = selectedItem ? selectedItem.id : selectedTarget;
+    return `${base}?item=${encodeURIComponent(itemParam)}`;
   })();
 
   // 캔버스에 QR 및 로고 합성 렌더링
@@ -207,7 +212,7 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
 
       const dataUrl = highResCanvas.toDataURL('image/png');
       const a = document.createElement('a');
-      const suffix = selectedTarget === 'main' ? '메인' : selectedTarget;
+      const suffix = selectedTarget === 'main' ? '메인' : (selectedItem?.name || selectedTarget);
       a.href = dataUrl;
       a.download = `${tenant.name}_모바일헌금_QR코드_${suffix}.png`;
       document.body.appendChild(a);
@@ -238,8 +243,6 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
         : tenant.religionType === 'catholic'
         ? '스마트 모바일 봉헌'
         : '스마트 모바일 헌금';
-
-    const selectedItemName = selectedTarget === 'main' ? '전체 수납 항목' : selectedTarget;
 
     printWin.document.write(`
       <!DOCTYPE html>
@@ -624,7 +627,7 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
                       >
                         <option value="">{itemTerm} 항목 선택...</option>
                         {items.map((item) => (
-                          <option key={item.id} value={item.name}>
+                          <option key={item.id} value={item.id}>
                             {item.name} ({item.category || '기본'})
                           </option>
                         ))}
