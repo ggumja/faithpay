@@ -33,6 +33,8 @@ const MemberDetailPage = lazy(() => import("./pages/admin/MemberDetailPage"));
 const SettlementReports = lazy(() => import("./pages/admin/SettlementReports"));
 const BannerManagement = lazy(() => import("./pages/admin/BannerManagement"));
 const OrganizationSettings = lazy(() => import("./pages/admin/OrganizationSettings"));
+const TenantDesignSettings = lazy(() => import("./pages/admin/TenantDesignSettings"));
+const TenantDocumentsSettings = lazy(() => import("./pages/admin/TenantDocumentsSettings"));
 const RecurringPendingPage = lazy(() => import("./pages/admin/RecurringPendingPage"));
 const AdminAccountManagement = lazy(() => import("./pages/admin/AdminAccountManagement"));
 const TenantAdminRouteGuard = lazy(() => import("./components/TenantAdminRouteGuard"));
@@ -240,6 +242,18 @@ export const router = createBrowserRouter([
           {
             path: "/:tenantSlug/admin/settings",
             Component: OrganizationSettings,
+          },
+          {
+            path: "/:tenantSlug/admin/settings/basic",
+            Component: OrganizationSettings,
+          },
+          {
+            path: "/:tenantSlug/admin/settings/design",
+            Component: TenantDesignSettings,
+          },
+          {
+            path: "/:tenantSlug/admin/settings/documents",
+            Component: TenantDocumentsSettings,
           },
           {
             path: "/:tenantSlug/admin/donations",

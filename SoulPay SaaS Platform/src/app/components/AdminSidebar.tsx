@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { Separator } from './ui/separator';
@@ -16,6 +17,10 @@ import {
   BarChart3,
   UserCheck,
   Building2,
+  ChevronDown,
+  ChevronRight,
+  Palette,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
@@ -87,6 +92,42 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
     }
   };
 
+  const isSettingsActive = currentPath.includes('/settings');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(true);
+
+  useEffect(() => {
+    if (isSettingsActive) {
+      setIsSettingsOpen(true);
+    }
+  }, [isSettingsActive]);
+
+  const settingsSubItems = [
+    {
+      id: 'settings_basic',
+      label: '기본정보',
+      icon: Building2,
+      path: `${prefix}/settings`,
+      isActive: (normCurr: string, normFull: string) =>
+        normCurr === normFull ||
+        normCurr.endsWith('/settings') ||
+        normCurr.endsWith('/settings/basic'),
+    },
+    {
+      id: 'settings_design',
+      label: '디자인',
+      icon: Palette,
+      path: `${prefix}/settings/design`,
+      isActive: (normCurr: string) => normCurr.includes('/settings/design'),
+    },
+    {
+      id: 'settings_docs',
+      label: '단체서류',
+      icon: ShieldCheck,
+      path: `${prefix}/settings/documents`,
+      isActive: (normCurr: string) => normCurr.includes('/settings/documents'),
+    },
+  ];
+
   return (
     <div className="w-64 bg-white border-r border-slate-200/80 h-screen sticky top-0 p-6 flex flex-col overflow-y-auto shrink-0 z-20 font-sans">
       <div className="mb-6">
@@ -146,6 +187,70 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
           const normalizedFull = fullPath.replace(/\/admin(?=\/|$)/, '') || '/';
           const isActive = currentPath === fullPath || normalizedCurrent === normalizedFull;
           const permLevel = getMenuPermission(item.id);
+
+          // 설정 메뉴인 경우 하위메뉴 아코디언 렌더링
+          if (item.id === 'settings') {
+            const isSettingsParentActive = isSettingsActive;
+
+            return (
+              <div key={item.id} className="space-y-0.5">
+                <div
+                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer select-none ${
+                    isSettingsParentActive
+                      ? 'bg-blue-50/70 text-blue-600 font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                  }`}
+                >
+                  <div className="flex items-center min-w-0">
+                    <item.icon className={`h-4 w-4 mr-2.5 shrink-0 ${isSettingsParentActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {permLevel === 'read' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium shrink-0">
+                        조회
+                      </span>
+                    )}
+                    {isSettingsOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                    )}
+                  </div>
+                </div>
+
+                {/* 설정 하위메뉴 목록 */}
+                {isSettingsOpen && (
+                  <div className="ml-4 pl-3 border-l-2 border-slate-100 space-y-0.5 pt-0.5 pb-1">
+                    {settingsSubItems.map((sub) => {
+                      const subFullPath = tenantSlug
+                        ? `/${tenantSlug}${sub.path}`
+                        : sub.path;
+                      const subNormalizedFull = subFullPath.replace(/\/admin(?=\/|$)/, '') || '/';
+                      const isSubActive = sub.isActive(normalizedCurrent, subNormalizedFull);
+                      const SubIcon = sub.icon;
+
+                      return (
+                        <Link key={sub.id} to={subFullPath}>
+                          <div
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] transition-colors cursor-pointer ${
+                              isSubActive
+                                ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                            }`}
+                          >
+                            <SubIcon className={`h-3 w-3 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="truncate">{sub.label}</span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
 
           return (
             <Link key={item.id} to={fullPath}>
