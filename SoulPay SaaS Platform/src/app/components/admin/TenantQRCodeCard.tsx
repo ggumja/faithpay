@@ -47,16 +47,8 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
   const themeColor = tenant.primaryColor || '#1B64DA';
   const qrColor = colorMode === 'theme' ? themeColor : '#000000';
 
-  // 풀 모바일 봉헌 절대 URL 계산 (카메라 스캔 시 필요)
+  // 풀 모바일 봉헌 절대 URL 계산 (오프라인 인쇄 및 스마트폰 스캔용 공식 상용 도메인)
   const getAbsoluteBaseUrl = useCallback(() => {
-    const rawPortalUrl = getPayPortalUrl(tenant.slug);
-    if (rawPortalUrl.startsWith('http://') || rawPortalUrl.startsWith('https://')) {
-      return rawPortalUrl;
-    }
-    if (typeof window !== 'undefined') {
-      const origin = window.location.origin;
-      return `${origin}/${tenant.slug}`;
-    }
     return `https://pay.soulpay.kr/${tenant.slug}`;
   }, [tenant.slug]);
 
