@@ -173,6 +173,10 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
       path: `${prefix}/settings/documents`,
       isActive: normalizedCurrent.includes('/settings/documents'),
     },
+  ].filter((item) => canAccessMenu(item.id));
+
+  // 5. 계정 그룹
+  const accountItems = [
     {
       id: 'accounts',
       label: '관리자 계정 관리',
@@ -340,6 +344,44 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
             </div>
             <div className="space-y-0.5">
               {settingsItems.map((item) => {
+                const fullPath = tenantSlug ? `/${tenantSlug}${item.path}` : item.path;
+                const Icon = item.icon;
+                const perm = getMenuPermission(item.id);
+
+                return (
+                  <Link key={item.path} to={fullPath}>
+                    <div
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
+                        item.isActive
+                          ? 'bg-blue-50 text-blue-600 font-bold'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center min-w-0">
+                        <Icon className={`h-4 w-4 mr-2.5 shrink-0 ${item.isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {perm === 'read' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium shrink-0">
+                          조회
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 5. 계정 그룹 */}
+        {accountItems.length > 0 && (
+          <div className="space-y-1">
+            <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 tracking-wider">
+              계정
+            </div>
+            <div className="space-y-0.5">
+              {accountItems.map((item) => {
                 const fullPath = tenantSlug ? `/${tenantSlug}${item.path}` : item.path;
                 const Icon = item.icon;
                 const perm = getMenuPermission(item.id);
