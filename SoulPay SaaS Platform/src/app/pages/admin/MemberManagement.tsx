@@ -126,7 +126,7 @@ export default function MemberManagement() {
           });
 
           // DB subscriptions 및 member profile 실측 조회 연동하여 약정 건수, 이메일, 주소 정확히 동기화
-          const phoneList = Array.from(map.keys()).filter((p) => p && p !== '미등록');
+          const phoneList = Array.from(map.keys()).filter((p) => p && p !== '미등록' && p.length >= 8);
           await Promise.all(
             phoneList.map(async (phone) => {
               try {

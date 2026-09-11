@@ -4432,7 +4432,7 @@ const handleUpdateProfile = async (c: any) => {
   }
 };
 
-// 📱 신도/회원 프로필 조회 API
+// 📱 신도/회원 프로필 조회 API (미등록 시 404 대신 data: null 반환하여 브라우저 콘솔 오류 방지)
 const handleGetProfile = async (c: any) => {
   try {
     const phone = c.req.param('phone');
@@ -4441,7 +4441,7 @@ const handleGetProfile = async (c: any) => {
     }
     const profile = await db.getDonorProfile(phone);
     if (!profile) {
-      return c.json({ success: false, error: 'Profile not found' }, 404);
+      return c.json({ success: true, data: null });
     }
     return c.json({ success: true, data: profile });
   } catch (error: any) {
