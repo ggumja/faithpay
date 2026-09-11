@@ -499,110 +499,110 @@ export default function MyDonations() {
         {!isAuthenticated ? (
           <Card className="shadow-lg border-none rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
             <CardHeader className="pb-4 border-b border-zinc-100 dark:border-zinc-800 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-zinc-100">
+              <div className="flex items-center justify-center gap-2 mb-1.5">
+                <CardTitle className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100">
                   {terms.donor} 마이페이지
                 </CardTitle>
               </div>
-              <Badge variant="outline" className="mx-auto text-xs text-indigo-700 bg-indigo-50 border-indigo-200">
+              <Badge variant="outline" className="mx-auto text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-50 border-indigo-200 px-3 py-1 rounded-lg">
                 {currentTenant.name} 전용
               </Badge>
-              <CardDescription className="text-xs text-zinc-500 pt-2">
-                카카오 1초 간편 로그인으로 본인 확인 후 헌금 내역과 기부금 영수증을 즉시 확인하실 수 있습니다.
+              <CardDescription className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 pt-2.5 leading-relaxed font-medium">
+                카카오 1초 간편 로그인으로 본인 확인 후 {terms.donation} 내역과 기부금 영수증을 즉시 확인하실 수 있습니다.
               </CardDescription>
             </CardHeader>
 
             <CardContent className="pt-6 space-y-5">
               {/* 💬 카카오 1초 간편 로그인 (원클릭 대표 인증) */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   type="button"
                   onClick={handleKakaoLogin}
                   disabled={isKakaoLoggingIn}
-                  className="w-full h-14 px-4 rounded-2xl bg-[#FEE500] hover:bg-[#FDD835] active:scale-[0.99] text-[#191919] font-black text-base flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-50"
+                  className="w-full h-14 sm:h-16 px-4 rounded-2xl bg-[#FEE500] hover:bg-[#FDD835] active:scale-[0.99] text-[#191919] font-black text-base sm:text-lg flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-50"
                 >
                   {isKakaoLoggingIn ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-[#191919]" />
+                    <Loader2 className="h-6 w-6 animate-spin text-[#191919]" />
                   ) : (
-                    <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 fill-current flex-shrink-0" viewBox="0 0 24 24">
                       <path d="M12 3C6.477 3 2 6.477 2 10.769c0 2.769 1.872 5.187 4.693 6.556-.206.775-.747 2.809-.854 3.245-.135.544.198.536.417.391.171-.113 2.716-1.846 3.822-2.602.627.09 1.27.139 1.922.139 5.523 0 10-3.477 10-7.769S17.523 3 12 3z"/>
                     </svg>
                   )}
                   <span>카카오로 1초 만에 간편 조회</span>
                 </button>
 
-                <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-3.5 space-y-2 text-xs text-slate-600 dark:text-zinc-400">
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-500 font-bold">✓</span>
-                    <span>문자 인증번호 입력 없이 카카오톡으로 1초 만에 안전 조회</span>
+                <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-4 sm:p-5 space-y-3 text-sm sm:text-base text-slate-700 dark:text-zinc-300 font-medium">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-amber-500 font-black text-base sm:text-lg flex-shrink-0 mt-0.5">✓</span>
+                    <span className="leading-snug">문자 인증번호 입력 없이 카카오톡으로 1초 만에 안전 조회</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">✓</span>
-                    <span>내가 봉헌한 헌금 내역 및 기부금 영수증 즉시 열람 및 출력</span>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-emerald-500 font-black text-base sm:text-lg flex-shrink-0 mt-0.5">✓</span>
+                    <span className="leading-snug">내가 동참한 {terms.donation} 내역 및 기부금 영수증 즉시 열람 및 출력</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-500 font-bold">✓</span>
-                    <span>신청한 정기 헌금(약정) 내역 확인 및 간편 일시정지/해지 관리</span>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-blue-500 font-black text-base sm:text-lg flex-shrink-0 mt-0.5">✓</span>
+                    <span className="leading-snug">신청한 정기 {terms.donation}(약정) 내역 확인 및 간편 일시정지/해지 관리</span>
                   </div>
                 </div>
               </div>
 
               {/* ✉️ 이메일 계정 로그인 전환 옵션 */}
-              <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 text-center">
+              <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 text-center">
                 {!showEmailLogin ? (
                   <button
                     type="button"
                     onClick={() => setShowEmailLogin(true)}
-                    className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-zinc-300 font-medium inline-flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="text-sm sm:text-base text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200 font-semibold inline-flex items-center gap-2 py-2 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                   >
-                    <Mail className="w-3.5 h-3.5" />
+                    <Mail className="w-4 h-4" />
                     등록된 이메일 계정으로 로그인하기
                   </button>
                 ) : (
-                  <div className="space-y-3 text-left pt-2">
+                  <div className="space-y-4 text-left pt-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-indigo-500" />
+                      <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-indigo-500" />
                         이메일 로그인
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowEmailLogin(false)}
-                        className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                        className="text-xs sm:text-sm text-slate-400 hover:text-slate-600 cursor-pointer font-medium"
                       >
                         접기
                       </button>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700">이메일 주소</Label>
+                    <div className="space-y-2">
+                      <Label className="text-sm sm:text-base font-bold text-slate-800">이메일 주소</Label>
                       <Input
                         type="email"
                         placeholder="example@email.com"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        className="h-11 rounded-xl bg-zinc-50 text-sm font-mono"
+                        className="h-12 rounded-xl bg-zinc-50 text-base font-mono"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700">비밀번호</Label>
+                    <div className="space-y-2">
+                      <Label className="text-sm sm:text-base font-bold text-slate-800">비밀번호</Label>
                       <Input
                         type="password"
                         placeholder="비밀번호 입력"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        className="h-11 rounded-xl bg-zinc-50 text-sm"
+                        className="h-12 rounded-xl bg-zinc-50 text-base"
                       />
                     </div>
                     <Button
-                      className="w-full h-11 text-sm font-bold rounded-xl text-white cursor-pointer shadow-xs mt-1"
+                      className="w-full h-12 text-base font-bold rounded-xl text-white cursor-pointer shadow-xs mt-1"
                       style={{ backgroundColor: currentTenant.primaryColor }}
                       onClick={handleEmailLogin}
                       disabled={isLoading}
                     >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                       이메일로 마이페이지 로그인
                     </Button>
-                    <p className="text-[11px] text-slate-500 text-center pt-1">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 text-center pt-2">
                       비밀번호를 잊으셨나요?{' '}
                       <button
                         type="button"
