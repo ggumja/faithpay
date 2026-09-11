@@ -155,67 +155,7 @@ export default function TenantDesignSettings() {
                 currentPath={currentPath}
               />
 
-              {/* 1. 로고 이미지 설정 */}
-              <Card className="mb-6 border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-                    로고 이미지 설정
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    모바일 봉헌 및 영수증 화면 상단에 표출될 단체 고유 로고를 등록하세요
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    {/* Preview */}
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex-shrink-0 w-24 h-24 rounded-lg border bg-slate-50 flex items-center justify-center overflow-hidden">
-                        {logoUrl ? (
-                          <img src={logoUrl} alt="단체 로고" className="w-full h-full object-cover" />
-                        ) : (
-                          <Building2 className="h-8 w-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      {logoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setLogoUrl('')}
-                          className="text-[11px] text-rose-500 hover:text-rose-700 font-medium hover:underline cursor-pointer"
-                        >
-                          로고 삭제
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="flex-1 w-full space-y-4">
-                      <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 hover:bg-slate-50 transition-colors relative cursor-pointer group">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                        />
-                        <Upload className="h-5 w-5 text-muted-foreground mb-1 group-hover:text-primary transition-colors" style={{ color: currentTenant.primaryColor }} />
-                        <p className="text-xs font-medium">로고 이미지 파일 선택 또는 드래그</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">최대 2MB (1:1 정사각형 권장)</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label htmlFor="logo-url" className="text-xs">또는 이미지 URL 직접 입력</Label>
-                        <Input
-                          id="logo-url"
-                          value={logoUrl}
-                          onChange={(e) => setLogoUrl(e.target.value)}
-                          placeholder="https://example.com/logo.png"
-                          className="text-xs"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 2. 🎨 봉헌 메인 랜딩 템플릿 선택 */}
+              {/* 1. 🎨 봉헌 메인 랜딩 템플릿 선택 */}
               <Card className="mb-6 border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -302,6 +242,66 @@ export default function TenantDesignSettings() {
                         </div>
                       );
                     })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 2. 로고 이미지 설정 */}
+              <Card className="mb-6 border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                    로고 이미지 설정
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    모바일 봉헌 및 영수증 화면 상단에 표출될 단체 고유 로고를 등록하세요
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col md:flex-row gap-6 items-start">
+                    {/* Preview */}
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex-shrink-0 w-24 h-24 rounded-lg border bg-slate-50 flex items-center justify-center overflow-hidden">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="단체 로고" className="w-full h-full object-cover" />
+                        ) : (
+                          <Building2 className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      {logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setLogoUrl('')}
+                          className="text-[11px] text-rose-500 hover:text-rose-700 font-medium hover:underline cursor-pointer"
+                        >
+                          로고 삭제
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1 w-full space-y-4">
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 hover:bg-slate-50 transition-colors relative cursor-pointer group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <Upload className="h-5 w-5 text-muted-foreground mb-1 group-hover:text-primary transition-colors" style={{ color: currentTenant.primaryColor }} />
+                        <p className="text-xs font-medium">로고 이미지 파일 선택 또는 드래그</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">최대 2MB (1:1 정사각형 권장)</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="logo-url" className="text-xs">또는 이미지 URL 직접 입력</Label>
+                        <Input
+                          id="logo-url"
+                          value={logoUrl}
+                          onChange={(e) => setLogoUrl(e.target.value)}
+                          placeholder="https://example.com/logo.png"
+                          className="text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
