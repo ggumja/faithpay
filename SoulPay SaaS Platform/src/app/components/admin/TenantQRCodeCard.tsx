@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { Tenant, DonationItem } from '../../context/AppContext';
 import { getPayPortalUrl } from '../../utils/domainUtils';
+import { donationItemsAPI } from '../../api/client';
 
 interface TenantQRCodeCardProps {
   tenant: Tenant;
@@ -29,6 +30,10 @@ interface TenantQRCodeCardProps {
 }
 
 export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCardProps) {
+  // 실제 DB에서 가져온 항목 리스트 상태
+  const [items, setItems] = useState<DonationItem[]>(donationItems);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+
   // 타겟 URL 선택 ('main' 또는 특정 항목명)
   const [selectedTarget, setSelectedTarget] = useState<'main' | string>('main');
   // QR 색상 모드 ('theme' 또는 'black')
@@ -42,6 +47,41 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const highResCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // 종교별 수납 용어 (보시 / 봉헌 / 헌금)
+  const itemTerm =
+    tenant.religionType === 'buddhist'
+      ? '보시'
+      : tenant.religionType === 'catholic'
+      ? '봉헌'
+      : '헌금';
+
+  // 실제 DB에서 헌금/보시 항목 목록 로드
+  useEffect(() => {
+    if (donationItems && donationItems.length > 0) {
+      setItems(donationItems);
+    }
+  }, [donationItems]);
+
+  useEffect(() => {
+    const targetKey = tenant.id || tenant.slug;
+    if (targetKey) {
+      setIsLoadingItems(true);
+      donationItemsAPI
+        .getItems(targetKey)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setItems(res.data);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load donation items for QR generator:', err);
+        })
+        .finally(() => {
+          setIsLoadingItems(false);
+        });
+    }
+  }, [tenant.id, tenant.slug]);
 
   // 단체 고유 기본 색상
   const themeColor = tenant.primaryColor || '#1B64DA';
@@ -432,13 +472,15 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
               </div>
               <div>
                 <CardTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-                  모바일 헌금·보시 전용 QR코드 생성기
+                  모바일 {itemTerm} 전용 QR코드 생성기
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
                     현장 비치 & 인쇄
                   </span>
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                  주보, 헌금함, 종무소, 의자 뒷면 등에 부착할 단체 전용 고해상도 QR코드를 생성하고 인쇄합니다.
+                  {tenant.religionType === 'buddhist'
+                    ? '법당 기둥, 종무소, 불전함 등에 부착할 사찰 전용 고해상도 QR코드를 생성하고 인쇄합니다.'
+                    : '주보, 헌금함, 안내데스크, 의자 뒷면 등에 부착할 단체 전용 고해상도 QR코드를 생성하고 인쇄합니다.'}
                 </CardDescription>
               </div>
             </div>
@@ -551,7 +593,7 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      모든 헌금 항목과 슬라이드 배너가 노출되는 공식 첫 화면
+                      모든 {itemTerm} 항목과 슬라이드 배너가 노출되는 공식 첫 화면
                     </p>
                   </button>
 
@@ -564,26 +606,31 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold text-slate-900">특정 항목 직행 바로가기</span>
+                      <span className="text-xs font-bold text-slate-900">특정 항목 바로가기</span>
                       {selectedTarget !== 'main' && (
                         <CheckCircle2 className="h-4 w-4 text-blue-600" />
                       )}
                     </div>
-                    {donationItems.length > 0 ? (
+                    {isLoadingItems ? (
+                      <div className="flex items-center gap-1.5 py-2 text-[11px] text-slate-400">
+                        <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <span>{itemTerm} 항목 목록을 불러오는 중...</span>
+                      </div>
+                    ) : items.length > 0 ? (
                       <select
                         value={selectedTarget === 'main' ? '' : selectedTarget}
                         onChange={(e) => setSelectedTarget(e.target.value || 'main')}
                         className="w-full text-xs font-medium bg-white border border-slate-200 rounded-lg p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                       >
-                        <option value="">항목 선택...</option>
-                        {donationItems.map((item) => (
+                        <option value="">{itemTerm} 항목 선택...</option>
+                        {items.map((item) => (
                           <option key={item.id} value={item.name}>
                             {item.name} ({item.category || '기본'})
                           </option>
                         ))}
                       </select>
                     ) : (
-                      <p className="text-[11px] text-slate-400">등록된 헌금 항목이 없습니다</p>
+                      <p className="text-[11px] text-slate-400">등록된 {itemTerm} 항목이 없습니다</p>
                     )}
                   </div>
                 </div>
