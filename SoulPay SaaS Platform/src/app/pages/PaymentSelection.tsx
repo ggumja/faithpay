@@ -116,8 +116,10 @@ export default function PaymentSelection() {
     settingsAPI.get('global_broadcast_notice')
       .then((res: any) => {
         if (!isMounted) return;
-        if (res?.value && res.value.isActive) {
-          setBroadcastNotice(res.value);
+        const raw = res?.data ?? res?.value ?? res;
+        const notice = (raw && typeof raw === 'object' && raw.value && typeof raw.value === 'object') ? raw.value : raw;
+        if (notice && notice.isActive) {
+          setBroadcastNotice(notice);
         } else {
           setBroadcastNotice(null);
         }
