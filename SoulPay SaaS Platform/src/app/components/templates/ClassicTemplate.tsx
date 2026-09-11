@@ -282,7 +282,6 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, hasNa
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobalt; e.currentTarget.style.background = C.cobaltBg; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = 'none'; }}
             >
-              <span>🔑</span>
               <span className="th-mypage-label-full">{terms.donor} 마이페이지</span>
               <span className="th-mypage-label-short">마이페이지</span>
             </button>
