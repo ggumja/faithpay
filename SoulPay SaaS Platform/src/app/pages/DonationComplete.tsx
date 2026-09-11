@@ -5,8 +5,8 @@ import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import TaxReceiptModal from '../components/TaxReceiptModal';
 import { donationAPI, tenantAPI, paymentAPI } from '../api/client';
-import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
+
 import { Share2, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import { generateTransactionId, formatTransactionId } from '../utils/transactionId';
 import { useTenantTerms } from '../hooks/useTenantTerms';
@@ -180,12 +180,6 @@ export default function DonationComplete() {
   }, [tenant, typeParam, authKeyParam, customerKeyParam]);
 
   useEffect(() => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-
     // 신도 세션 저장
     if (formData?.phone) {
       const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
@@ -195,6 +189,7 @@ export default function DonationComplete() {
       localStorage.setItem('faithpay_last_donor_phone', cleanPhone);
     }
   }, [formData]);
+
 
   // Supabase DB 기록 (서버에서 미생성된 거래만 1회 생성)
   useEffect(() => {
