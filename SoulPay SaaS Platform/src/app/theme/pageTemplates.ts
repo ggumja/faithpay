@@ -6,6 +6,7 @@ export interface PageTemplateInfo {
   subtitle: string;
   description: string;
   badge: string;
+  hidden?: boolean;
   previewColors: {
     primary: string;
     background: string;
@@ -36,6 +37,7 @@ export const PAGE_TEMPLATES: Record<TemplateId, PageTemplateInfo> = {
     subtitle: 'High-Contrast Neo Dark & Electric Green',
     description: '일렉트릭 네온 그린(#C7FF2E)과 필로 블랙(#0F0F0F)의 강렬한 고대비 현대적 UI 스타일입니다. 대시보드 스탯 카드와 둥근 캡슐 뱃지, 플로팅 액션 바가 특징입니다.',
     badge: '인기 템플릿',
+    hidden: true,
     previewColors: {
       primary: '#C7FF2E',
       background: '#0F0F0F',

@@ -15,6 +15,8 @@ const MemberDetailPage = lazy(() => import("../app/pages/admin/MemberDetailPage"
 const SettlementReports = lazy(() => import("../app/pages/admin/SettlementReports"));
 const BannerManagement = lazy(() => import("../app/pages/admin/BannerManagement"));
 const OrganizationSettings = lazy(() => import("../app/pages/admin/OrganizationSettings"));
+const TenantDesignSettings = lazy(() => import("../app/pages/admin/TenantDesignSettings"));
+const TenantDocumentsSettings = lazy(() => import("../app/pages/admin/TenantDocumentsSettings"));
 const RecurringPendingPage = lazy(() => import("../app/pages/admin/RecurringPendingPage"));
 const AdminAccountManagement = lazy(() => import("../app/pages/admin/AdminAccountManagement"));
 const OnboardingFlow = lazy(() => import("../app/pages/OnboardingFlow"));
@@ -57,6 +59,16 @@ export const adminRouter = createBrowserRouter([
           { path: "/:tenantSlug/admin/accounts", Component: AdminAccountManagement },
           { path: "/:tenantSlug/settings", Component: OrganizationSettings },
           { path: "/:tenantSlug/admin/settings", Component: OrganizationSettings },
+          { path: "/:tenantSlug/settings/basic", Component: OrganizationSettings },
+          { path: "/:tenantSlug/admin/settings/basic", Component: OrganizationSettings },
+          { path: "/:tenantSlug/settings/design", Component: TenantDesignSettings },
+          { path: "/:tenantSlug/admin/settings/design", Component: TenantDesignSettings },
+          { path: "/:tenantSlug/settings/banners", Component: BannerManagement },
+          { path: "/:tenantSlug/admin/settings/banners", Component: BannerManagement },
+          { path: "/:tenantSlug/settings/documents", Component: TenantDocumentsSettings },
+          { path: "/:tenantSlug/admin/settings/documents", Component: TenantDocumentsSettings },
+          { path: "/:tenantSlug/settings/accounts", Component: AdminAccountManagement },
+          { path: "/:tenantSlug/admin/settings/accounts", Component: AdminAccountManagement },
           { path: "/:tenantSlug/recurring-pending", Component: RecurringPendingPage },
           { path: "/:tenantSlug/admin/recurring-pending", Component: RecurringPendingPage },
           { path: "/:tenantSlug/statistics", Component: TenantStatisticsPage },
