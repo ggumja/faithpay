@@ -751,7 +751,7 @@
       <div class="nav-group-title">세무 및 정산</div>
       <ul class="nav-list">
         <li class="nav-item"><a href="#sec-tax"><span>11.</span> 기부금영수증 및 연말정산</a></li>
-        <li class="nav-item"><a href="#sec-settlement"><span>12.</span> 정산 리포트 및 송금 확인</a></li>
+        <li class="nav-item"><a href="#sec-settlement"><span>12.</span> 정산(추정) 및 수납 대사 리포트</a></li>
         <li class="nav-item"><a href="#sec-settings"><span>13.</span> 단체 정보 및 PG 환경 설정</a></li>
         <li class="nav-item"><a href="#sec-faq"><span>14.</span> 자주 묻는 질문 (FAQ)</a></li>
       </ul>
@@ -1205,48 +1205,105 @@
         </div>
       </section>
 
-      <!-- ── SECTION 12: 정산 리포트 및 송금 ── -->
+      <!-- ── SECTION 12: 정산(추정) 및 수납 대사 리포트 ── -->
       <section id="sec-settlement" class="manual-section">
         <div class="section-header">
           <div class="section-number">12</div>
-          <h2 class="section-title">정산 리포트 및 송금 내역 확인</h2>
+          <h2 class="section-title">정산(추정) 및 수납 대사 리포트</h2>
         </div>
         <p class="section-lead">
-          PG 수납 수수료를 공제한 실 지급액과 단체 공식 은행 통장으로의 자동 입금 스케줄을 투명하게 확인합니다.
+          SoulPay 플랫폼을 통해 결제 완료된 수납 건을 기준으로 계산된 <strong>추정 정산액(Estimated Settlement)</strong>과 일별/월별 수납 통계를 대사하고, 국세청 전산 제출용 파일을 생성합니다.
         </p>
 
+        <!-- ⚠️ 중요 법적/회계적 고지 (Financial Disclaimer) -->
+        <div class="callout callout-warning">
+          <div class="callout-icon">⚠️</div>
+          <div class="callout-body">
+            <div class="callout-title">안내: 본 화면의 정산 금액은 플랫폼 수납 집계 기준의 "추정액"입니다.</div>
+            <p style="margin-top: 4px; line-height: 1.7;">
+              SoulPay 관리자 화면에 표시되는 정산 금액은 <strong>플랫폼 결제 성공 건에 계약 기본 수수료율(예: 3.0%)을 단순 적용하여 계산한 예상 참고 수치(추정액)</strong>입니다.<br/>
+              실제 단체의 공식 은행 통장으로 입금되는 최종 확정 정산액은 <strong>PG사(나노페이 / 토스페이먼츠)의 정산 확정 원장</strong>에 의해 처리되며, 아래의 금융 세부 사유로 인해 플랫폼 추정치와 실제 입금액 간에 차이가 발생합니다.
+            </p>
+          </div>
+        </div>
+
         <div class="card">
-          <h3 class="card-title">📊 정산 주기 및 대사 체계</h3>
-          <p style="font-size: 14px; color: var(--color-slate-600); margin-bottom: 14px;">
-            SoulPay는 금융보안 규정에 따라 PG사 에스크로 정산망을 통하여 승인일 기준 <strong>D+3 영업일</strong>에 단체 정산 계좌로 자동 입금됩니다.
+          <h3 class="card-title">🔍 플랫폼 추정액과 통장 실제 입금액의 차이 발생 요인</h3>
+          <p style="font-size: 14px; color: var(--color-slate-600); margin-bottom: 16px;">
+            정산 대사 업무 시 통장 실입금액과 화면 숫자가 완전히 일치하지 않는 정상적인 사유는 다음과 같습니다:
           </p>
+
           <div class="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>결제 수단</th>
-                  <th>기본 정산 주기</th>
-                  <th>정산 대사 내역서 제공</th>
+                  <th style="width: 25%;">차이 발생 요인</th>
+                  <th style="width: 50%;">금융 및 PG사 정산 메커니즘</th>
+                  <th style="width: 25%;">단체 통장 반영 결과</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>신용카드 (모바일/온라인)</td>
-                  <td>D+3 영업일</td>
-                  <td>건별 승인번호, 카드사 수수료, 순입금액 표기</td>
+                  <td><strong>1. 영세/중소 우대수수료율 사후 환급</strong></td>
+                  <td>
+                    국세청 매출 신고 기준에 따라 여신금융협회에서 반기별(1월/7월)로 가맹점 등급을 재산정하여 <strong>0.5% ~ 1.5% 우대수수료율</strong>이 적용됩니다. 플랫폼 화면은 기본 계약 수수료율로 선계산되나, PG사에서 차액 환급금이 사후 추가 입금될 수 있습니다.
+                  </td>
+                  <td><span class="badge badge-green">통장 입금액이 더 클 수 있음</span></td>
                 </tr>
                 <tr>
-                  <td>간편결제 (카카오페이/토스페이)</td>
-                  <td>D+3 영업일</td>
-                  <td>간편결제사 수수료 공제 후 자동 입금</td>
+                  <td><strong>2. 카드사별 매입 정산 주기 분산</strong></td>
+                  <td>
+                    신한, 국민, 삼성 등 8대 카드사 및 간편결제사(카카오페이, 토스페이)마다 매입 전표 접수 시점(D+3, D+4, D+5 영업일)이 서로 상이하여 같은 날 결제된 건이라도 입금일이 1~2일 나뉘어 분할 입금됩니다.
+                  </td>
+                  <td><span class="badge badge-blue">일자별 분할 입금</span></td>
                 </tr>
                 <tr>
-                  <td>현장 키오스크 결제</td>
-                  <td>D+3 영업일</td>
-                  <td>VAN사 매입 전표 연동 실측 대사</td>
+                  <td><strong>3. 취소/환불 전표 상계 처리</strong></td>
+                  <td>
+                    결제 승인 후 신도 요청으로 취소(환불)가 접수된 경우, PG사 정산 주기상 차기 입금 예정액에서 취소 금액 및 수수료 반환액이 자동으로 상계(차감)된 후 순액만 입금됩니다.
+                  </td>
+                  <td><span class="badge badge-amber">취소액 상계 차감</span></td>
+                </tr>
+                <tr>
+                  <td><strong>4. 부가세(VAT) 및 원 단위 절사</strong></td>
+                  <td>
+                    결제 대행 수수료에 대한 부가세(VAT 10%) 부과 및 카드사 전표별 10원 단위/1원 단위 절사 규칙에 따라 소수점 단위 미세 차이가 발생합니다.
+                  </td>
+                  <td><span class="badge badge-slate">원 단위 미세 오차</span></td>
+                </tr>
+                <tr>
+                  <td><strong>5. 보증보험 및 지급 보류금</strong></td>
+                  <td>
+                    신규 단체의 월 결제 한도 초과 방지 또는 보증보험 증권 갱신 기간 중 PG사 리스크 관리 규정에 따라 일부 정산금이 일시 보류될 수 있습니다.
+                  </td>
+                  <td><span class="badge badge-rose">지급 보류 후 일괄 입금</span></td>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">🏛️ 공식 회계 장부 대사 및 세무 증빙 확인 기준</h3>
+          <div class="step-sequence">
+            <div class="step-item">
+              <div class="step-badge">1</div>
+              <div class="step-content">
+                <h4>SoulPay 리포트: 수납 원장 및 신도별 내역 확인</h4>
+                <p>
+                  단체 관리자 콘솔의 [정산 리포트]에서는 신도별 헌금/보시 일자, 거래번호, 항목별 수납 총액을 대사하고 <strong>[국세청 전산제출 파일(.txt)]</strong> 및 <strong>[엑셀 다운로드]</strong>를 통해 내부 헌금 장부 기록과 기부금영수증 대조를 수행합니다.
+                </p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-badge">2</div>
+              <div class="step-content">
+                <h4>PG사 상점관리자(포털): 법적 세무 증빙 및 통장 실입금액 대사</h4>
+                <p>
+                  단체의 최종 세무 신고, 매입 세금계산서 수취, 통장 통장 찍힌 실제 입금액과의 1원 단위 최종 대사는 단체 가입 시 발급된 <strong>나노페이 또는 토스페이먼츠 공식 [상점관리자(가맹점 포털)]</strong>의 정산 원장 내역서를 기준으로 확정합니다.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
