@@ -487,7 +487,7 @@ export default function MyDonations() {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs font-bold rounded-xl cursor-pointer shadow-xs"
+              className="bg-white/15 hover:bg-white/25 text-white border-white/40 text-sm sm:text-base font-bold rounded-xl cursor-pointer shadow-xs h-10 sm:h-11 px-4 sm:px-5"
             >
               로그아웃
             </Button>
@@ -621,11 +621,11 @@ export default function MyDonations() {
         ) : (
           <div className="space-y-6">
             {/* 🗂️ 마이페이지 서브 탭 서브메뉴 (봉헌 내역 / 정기결제 / 정보 관리) */}
-            <div className="flex bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl gap-1 border border-slate-200/80 dark:border-zinc-700 shadow-xs">
+            <div className="flex bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl gap-1.5 border border-slate-200/80 dark:border-zinc-700 shadow-xs">
               <button
                 type="button"
                 onClick={() => setActiveTab('history')}
-                className={`flex-1 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3.5 px-3 rounded-xl text-base sm:text-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'history'
                     ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
                     : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -633,7 +633,7 @@ export default function MyDonations() {
               >
                 <span>{terms.donation} 내역</span>
                 {history.length > 0 && (
-                  <Badge variant="secondary" className="ml-0.5 text-xs bg-slate-200 dark:bg-zinc-700 px-2 py-0.5 font-bold">
+                  <Badge variant="secondary" className="ml-0.5 text-xs sm:text-sm bg-slate-200 dark:bg-zinc-700 px-2.5 py-0.5 font-black">
                     {history.length}
                   </Badge>
                 )}
@@ -642,7 +642,7 @@ export default function MyDonations() {
               <button
                 type="button"
                 onClick={() => setActiveTab('recurring')}
-                className={`flex-1 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3.5 px-3 rounded-xl text-base sm:text-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'recurring'
                     ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
                     : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -650,7 +650,7 @@ export default function MyDonations() {
               >
                 <span>정기결제</span>
                 {activeSubscriptionsCount > 0 && (
-                  <Badge className="ml-0.5 text-xs bg-indigo-600 text-white px-2 py-0.5 font-bold">
+                  <Badge className="ml-0.5 text-xs sm:text-sm bg-indigo-600 text-white px-2.5 py-0.5 font-black">
                     {activeSubscriptionsCount}
                   </Badge>
                 )}
@@ -659,7 +659,7 @@ export default function MyDonations() {
               <button
                 type="button"
                 onClick={() => setActiveTab('profile')}
-                className={`flex-1 py-3 px-3 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3.5 px-3 rounded-xl text-base sm:text-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === 'profile'
                     ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
                     : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -933,14 +933,14 @@ export default function MyDonations() {
             {activeTab === 'history' && (
               <div className="space-y-6">
                 {/* 📅 기간 지정 필터 바 */}
-                <Card className="bg-white border border-slate-200 dark:border-zinc-800 p-4 sm:p-5 rounded-2xl shadow-xs space-y-3.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200">
+                <Card className="bg-white border border-slate-200 dark:border-zinc-800 p-5 sm:p-6 rounded-2xl shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                    <span className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-100">
                       {terms.donation} 내역 기간 지정
                     </span>
 
                     {/* 퀵 렌지 선택 버튼 */}
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {[
                         { key: 'THIS_YEAR', label: `올해 (${new Date().getFullYear()}년)` },
                         { key: 'LAST_YEAR', label: `작년 (${new Date().getFullYear() - 1}년)` },
@@ -950,7 +950,7 @@ export default function MyDonations() {
                         <button
                           key={key}
                           onClick={() => setQuickRange(key as any)}
-                          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold cursor-pointer border transition-all ${
+                          className={`px-4 py-2.5 rounded-xl text-sm sm:text-base font-bold cursor-pointer border transition-all ${
                             quickRange === key
                               ? 'bg-[#3182F6] text-white border-[#3182F6] shadow-xs'
                               : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300'
@@ -964,26 +964,26 @@ export default function MyDonations() {
 
                   {/* 직접 기간 입력 날짜 선택기 */}
                   {quickRange === 'CUSTOM' && (
-                    <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-slate-100 dark:border-zinc-800 text-xs sm:text-sm animate-in fade-in duration-150">
-                      <span className="font-bold text-slate-700 dark:text-zinc-300">조회 시작일:</span>
+                    <div className="flex flex-wrap items-center gap-3 pt-3.5 border-t border-slate-100 dark:border-zinc-800 text-sm sm:text-base animate-in fade-in duration-150">
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">조회 시작일:</span>
                       <input
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
+                        className="px-4 py-2.5 text-sm sm:text-base font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
                       />
                       <span className="text-slate-400 font-bold">~</span>
-                      <span className="font-bold text-slate-700 dark:text-zinc-300">종료일:</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">종료일:</span>
                       <input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
+                        className="px-4 py-2.5 text-sm sm:text-base font-bold rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-mono outline-none focus:border-[#3182F6]"
                       />
                       {(startDate || endDate) && (
                         <button
                           onClick={() => { setStartDate(''); setEndDate(''); }}
-                          className="text-xs sm:text-sm font-bold text-red-500 underline ml-auto cursor-pointer"
+                          className="text-sm font-bold text-red-500 underline ml-auto cursor-pointer"
                         >
                           날짜 초기화
                         </button>
@@ -1039,26 +1039,26 @@ export default function MyDonations() {
                     <>
                       {/* Stats Summary 카드 */}
                       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                        <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-xs">
-                          <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-400 mb-1.5 font-bold">
+                        <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-xs">
+                          <p className="text-base sm:text-lg text-slate-700 dark:text-zinc-300 mb-2 font-bold">
                             {rangeText} 실 {terms.donation} 총액
                           </p>
-                          <p className="text-2xl sm:text-3xl font-black font-mono tracking-tight" style={{ color: currentTenant.primaryColor }}>
+                          <p className="text-3xl sm:text-4xl font-black font-mono tracking-tight" style={{ color: currentTenant.primaryColor }}>
                             {filteredTotal.toLocaleString()}원
                           </p>
                           {cancelledCount > 0 && (
-                            <p className="text-xs sm:text-sm text-red-500 font-semibold mt-1.5">
+                            <p className="text-sm text-red-500 font-semibold mt-2">
                               (결제취소 {cancelledCount}건 제외됨)
                             </p>
                           )}
                         </div>
-                        <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-xs">
-                          <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-400 mb-1.5 font-bold">
+                        <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-xs">
+                          <p className="text-base sm:text-lg text-slate-700 dark:text-zinc-300 mb-2 font-bold">
                             {rangeText} 참여 횟수
                           </p>
-                          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 font-mono tracking-tight">{filteredCount}회</p>
+                          <p className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-zinc-100 font-mono tracking-tight">{filteredCount}회</p>
                           {cancelledCount > 0 && (
-                            <p className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 font-semibold mt-1.5">
+                            <p className="text-sm text-slate-400 dark:text-zinc-500 font-semibold mt-2">
                               총 {dateFilteredHistory.length}건 중 {cancelledCount}건 취소
                             </p>
                           )}
@@ -1066,41 +1066,41 @@ export default function MyDonations() {
                       </div>
 
                       {/* History List Header with Status Filter & View Mode Toggle */}
-                      <div className="space-y-4">
+                      <div className="space-y-4 pt-2">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100">
+                          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-zinc-100">
                             {terms.donation} 상세 내역 ({filteredHistory.length}건)
                           </h3>
 
                           <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
                             {/* 🔘 결제 상태 필터 (전체 / 결제완료 / 결제취소) */}
-                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl">
                               <button
                                 onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
-                                className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
                                   statusFilter === 'all'
-                                    ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs'
-                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                    ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-xs font-black'
+                                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                               >
                                 전체 ({dateFilteredHistory.length})
                               </button>
                               <button
                                 onClick={() => { setStatusFilter('completed'); setCurrentPage(1); }}
-                                className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
                                   statusFilter === 'completed'
-                                    ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
-                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                    ? 'bg-white dark:bg-zinc-700 text-emerald-700 dark:text-emerald-400 shadow-xs font-black'
+                                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                               >
                                 결제완료 ({completedList.length})
                               </button>
                               <button
                                 onClick={() => { setStatusFilter('cancelled'); setCurrentPage(1); }}
-                                className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
                                   statusFilter === 'cancelled'
-                                    ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs'
-                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                    ? 'bg-white dark:bg-zinc-700 text-red-600 dark:text-red-400 shadow-xs font-black'
+                                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                               >
                                 결제취소 ({cancelledList.length})
@@ -1108,31 +1108,31 @@ export default function MyDonations() {
                             </div>
 
                             {/* 📋 / ⊞ 뷰 모드 토글 (목록형 / 카드형) */}
-                            <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                            <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl">
                               <button
                                 type="button"
                                 onClick={() => setViewMode('list')}
                                 title="목록형으로 보기"
-                                className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                className={`flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
                                   viewMode === 'list'
-                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs'
-                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs font-black'
+                                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                               >
-                                <List className="h-4 w-4" />
+                                <List className="h-4.5 w-4.5" />
                                 <span className="hidden sm:inline">목록</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setViewMode('card')}
                                 title="카드형으로 보기"
-                                className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                className={`flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
                                   viewMode === 'card'
-                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs'
-                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-zinc-300'
+                                    ? 'bg-white dark:bg-zinc-700 text-[#3182F6] dark:text-blue-400 shadow-xs font-black'
+                                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                               >
-                                <LayoutGrid className="h-4 w-4" />
+                                <LayoutGrid className="h-4.5 w-4.5" />
                                 <span className="hidden sm:inline">카드</span>
                               </button>
                             </div>
@@ -1141,11 +1141,11 @@ export default function MyDonations() {
 
                         {filteredHistory.length === 0 ? (
                           <Card className="p-8 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                            <AlertCircle className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
-                            <p className="text-base font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                            <AlertCircle className="h-12 w-12 text-zinc-400 mx-auto mb-3" />
+                            <p className="text-lg font-bold text-zinc-800 dark:text-zinc-200 mb-2">
                               선택하신 기간 및 조건에 해당하는 {terms.donation} 내역이 없습니다.
                             </p>
-                            <p className="text-sm text-zinc-500">
+                            <p className="text-base text-zinc-500">
                               상단의 [전체] 버튼을 누르거나 필터 조건을 변경하여 조회해 보세요.
                             </p>
                           </Card>
@@ -1163,7 +1163,7 @@ export default function MyDonations() {
                                     <div
                                       key={item.id}
                                       onClick={() => setSelectedDetailItem(item)}
-                                      className={`group px-4 py-4 sm:px-5 sm:py-4.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                                      className={`group px-5 py-4.5 sm:px-6 sm:py-5 flex items-center justify-between gap-4 cursor-pointer transition-colors ${
                                         isCancelled
                                           ? 'hover:bg-red-50/30 dark:hover:bg-red-950/20 bg-red-50/5'
                                           : 'hover:bg-slate-50/90 dark:hover:bg-zinc-800/60'
@@ -1172,36 +1172,36 @@ export default function MyDonations() {
                                       {/* Left Column: Item Name & Badges & Meta */}
                                       <div className="flex-1 min-w-0 pr-2">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-black text-base sm:text-lg text-slate-900 dark:text-zinc-100 group-hover:text-[#3182F6] dark:group-hover:text-blue-400 transition-colors truncate">
+                                          <span className="font-black text-lg sm:text-xl text-slate-900 dark:text-zinc-100 group-hover:text-[#3182F6] dark:group-hover:text-blue-400 transition-colors truncate">
                                             {item.itemName}
                                           </span>
                                           {item.isRecurring && (
-                                            <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
+                                            <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
                                               정기
                                             </span>
                                           )}
                                           {isKiosk && (
-                                            <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
+                                            <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
                                               키오스크
                                             </span>
                                           )}
                                           {isCancelled && (
-                                            <span className="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-md bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
+                                            <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-md bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
                                               취소됨
                                             </span>
                                           )}
                                         </div>
 
-                                        <div className="flex items-center gap-2 mt-1.5 text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
-                                          <span className="font-mono text-slate-700 dark:text-zinc-300 font-semibold">{item.date}</span>
-                                          <span className="text-slate-300 dark:text-zinc-700">·</span>
-                                          <span className="truncate max-w-[140px] sm:max-w-[240px] text-slate-600 dark:text-zinc-400">
+                                        <div className="flex items-center gap-2 mt-2 text-sm sm:text-base text-slate-600 dark:text-zinc-300 font-medium">
+                                          <span className="font-mono text-slate-800 dark:text-zinc-200 font-bold">{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-600">·</span>
+                                          <span className="truncate max-w-[160px] sm:max-w-[260px] text-slate-700 dark:text-zinc-300">
                                             {cleanedMethod}
                                           </span>
                                           {isCancelled && item.cancelReason && (
                                             <>
-                                              <span className="text-slate-300 dark:text-zinc-700 hidden sm:inline">·</span>
-                                              <span className="text-red-600 dark:text-red-400 font-medium truncate max-w-[180px] hidden sm:inline">
+                                              <span className="text-slate-300 dark:text-zinc-600 hidden sm:inline">·</span>
+                                              <span className="text-red-600 dark:text-red-400 font-bold truncate max-w-[180px] hidden sm:inline">
                                                 사유: {item.cancelReason}
                                               </span>
                                             </>
@@ -1213,7 +1213,7 @@ export default function MyDonations() {
                                       <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
                                         <div className="text-right">
                                           <div
-                                            className={`text-base sm:text-lg font-black font-mono tracking-tight ${
+                                            className={`text-xl sm:text-2xl font-black font-mono tracking-tight ${
                                               isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : 'text-slate-900 dark:text-zinc-100'
                                             }`}
                                             style={!isCancelled && currentTenant?.primaryColor ? { color: currentTenant.primaryColor } : undefined}
@@ -1222,19 +1222,19 @@ export default function MyDonations() {
                                           </div>
                                           <div className="mt-1 flex items-center justify-end">
                                             {isCancelled ? (
-                                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs sm:text-sm font-bold bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-300">
+                                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs sm:text-sm font-bold bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
                                                 결제취소
                                               </span>
                                             ) : (
-                                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
+                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                                                 {item.status || '결제완료'}
                                               </span>
                                             )}
                                           </div>
                                         </div>
 
-                                        <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-zinc-200 group-hover:translate-x-0.5 transition-all" />
+                                        <ChevronRight className="h-6 w-6 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-zinc-200 group-hover:translate-x-0.5 transition-all" />
                                       </div>
                                     </div>
                                   );
@@ -1242,7 +1242,7 @@ export default function MyDonations() {
                               </div>
                             ) : (
                               /* ── ⊞ 카드형 뷰 (단건/소수 건수 확인 시 유용) ── */
-                              <div className="space-y-3.5">
+                              <div className="space-y-4">
                                 {paginatedHistory.map((item) => {
                                   const isCancelled = item.paymentStatus === 'cancelled';
                                   const isKiosk = item.deviceType === 'KIOSK' || (item.paymentMethod || '').includes('OffPG');
@@ -1251,7 +1251,7 @@ export default function MyDonations() {
                                     <div
                                       key={item.id}
                                       onClick={() => setSelectedDetailItem(item)}
-                                      className={`bg-white dark:bg-zinc-900 border rounded-2xl p-4 sm:p-5 transition-all shadow-xs hover:shadow-md cursor-pointer ${
+                                      className={`bg-white dark:bg-zinc-900 border rounded-2xl p-5 sm:p-6 transition-all shadow-xs hover:shadow-md cursor-pointer ${
                                         isCancelled
                                           ? 'border-red-200/80 dark:border-red-950/60 bg-red-50/10'
                                           : 'border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700'
@@ -1261,16 +1261,16 @@ export default function MyDonations() {
                                       <div className="flex items-start justify-between gap-3">
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-black text-lg sm:text-xl text-slate-900 dark:text-zinc-100">
+                                            <span className="font-black text-xl sm:text-2xl text-slate-900 dark:text-zinc-100">
                                               {item.itemName}
                                             </span>
                                             {item.isRecurring && (
-                                              <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
+                                              <span className="inline-flex items-center text-xs sm:text-sm font-bold px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/40">
                                                 정기
                                               </span>
                                             )}
                                             {isKiosk && (
-                                              <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
+                                              <span className="inline-flex items-center text-xs sm:text-sm font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/40">
                                                 키오스크
                                               </span>
                                             )}
@@ -1280,12 +1280,12 @@ export default function MyDonations() {
                                         {/* Status Badge */}
                                         <div className="flex-shrink-0">
                                           {isCancelled ? (
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
+                                            <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/60">
                                               결제취소
                                             </span>
                                           ) : (
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
-                                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60">
+                                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                               {item.status || '결제완료'}
                                             </span>
                                           )}
@@ -1293,9 +1293,9 @@ export default function MyDonations() {
                                       </div>
 
                                       {/* Amount Row */}
-                                      <div className="flex items-baseline gap-2 mt-2.5">
+                                      <div className="flex items-baseline gap-2.5 mt-3">
                                         <span
-                                          className={`text-2xl sm:text-3xl font-black tracking-tight font-mono ${
+                                          className={`text-3xl sm:text-4xl font-black tracking-tight font-mono ${
                                             isCancelled ? 'line-through text-slate-400 dark:text-zinc-500' : ''
                                           }`}
                                           style={!isCancelled && currentTenant?.primaryColor ? { color: currentTenant.primaryColor } : undefined}
@@ -1303,7 +1303,7 @@ export default function MyDonations() {
                                           {item.amount.toLocaleString()}원
                                         </span>
                                         {isCancelled && (
-                                          <span className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">
+                                          <span className="text-sm font-bold text-red-600 dark:text-red-400">
                                             (승인 취소됨)
                                           </span>
                                         )}
@@ -1311,10 +1311,10 @@ export default function MyDonations() {
 
                                       {/* 취소 사유 표출 */}
                                       {isCancelled && item.cancelReason && (
-                                        <div className="mt-2.5 text-xs sm:text-sm font-medium text-red-700 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-3.5 py-2.5 rounded-xl border border-red-200/60 dark:border-red-900/50">
+                                        <div className="mt-3 text-sm font-medium text-red-700 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-4 py-3 rounded-xl border border-red-200/60 dark:border-red-900/50">
                                           <span className="font-bold">취소 사유:</span> {item.cancelReason}
                                           {item.cancelledAt && (
-                                            <span className="text-slate-400 dark:text-zinc-500 ml-2">
+                                            <span className="text-slate-500 dark:text-zinc-400 ml-2">
                                               ({new Date(item.cancelledAt).toLocaleString('ko-KR')})
                                             </span>
                                           )}
@@ -1322,10 +1322,10 @@ export default function MyDonations() {
                                       )}
 
                                       {/* Footer Meta & Action */}
-                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                                        <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400">
-                                          <span className="font-mono text-slate-700 dark:text-zinc-300 font-semibold">{item.date}</span>
-                                          <span className="text-slate-300 dark:text-zinc-700">·</span>
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-3.5 border-t border-slate-100 dark:border-zinc-800/80">
+                                        <div className="flex items-center gap-2 text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-300">
+                                          <span className="font-mono text-slate-800 dark:text-zinc-200 font-bold">{item.date}</span>
+                                          <span className="text-slate-300 dark:text-zinc-600">·</span>
                                           <span className="truncate max-w-[220px] sm:max-w-none text-slate-700 dark:text-zinc-300">
                                             {cleanPaymentMethod(item.paymentMethod)}
                                           </span>
@@ -1335,7 +1335,7 @@ export default function MyDonations() {
                                           <Button
                                             variant="outline"
                                             size="sm"
-                                            className={`h-10 px-4 text-xs sm:text-sm font-bold rounded-xl cursor-pointer transition-colors shadow-xs ${
+                                            className={`h-11 px-5 text-sm sm:text-base font-bold rounded-xl cursor-pointer transition-colors shadow-xs ${
                                               isCancelled
                                                 ? 'text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:border-red-900'
                                                 : 'text-slate-700 dark:text-zinc-200 hover:text-slate-900 border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
@@ -1345,7 +1345,7 @@ export default function MyDonations() {
                                               setSelectedReceiptDonation(item);
                                             }}
                                           >
-                                            <Receipt className="h-4 w-4 mr-1.5 text-slate-500" />
+                                            <Receipt className="h-4.5 w-4.5 mr-1.5 text-slate-500" />
                                             {isCancelled ? '취소 영수증보기' : '영수증보기'}
                                           </Button>
                                         </div>
@@ -1358,17 +1358,17 @@ export default function MyDonations() {
 
                             {/* 📄 10개씩 페이징 컨트롤 바 */}
                             {totalPages > 1 && (
-                              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800 text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400">
+                              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800 text-sm sm:text-base font-semibold text-slate-700 dark:text-zinc-300">
                                 <div>
-                                  전체 <strong className="text-slate-900 dark:text-zinc-100">{filteredCount}</strong>건 중{' '}
-                                  <strong className="text-[#3182F6]">{(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredCount)}</strong>건 표시
+                                  전체 <strong className="text-slate-900 dark:text-zinc-100 font-black">{filteredCount}</strong>건 중{' '}
+                                  <strong className="text-[#3182F6] font-black">{(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredCount)}</strong>건 표시
                                 </div>
 
                                 <div className="flex items-center gap-1.5">
                                   <button
                                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                                     disabled={currentPage === 1}
-                                    className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors text-xs sm:text-sm"
+                                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors text-sm sm:text-base"
                                   >
                                     ◀ 이전
                                   </button>
@@ -1377,7 +1377,7 @@ export default function MyDonations() {
                                     <button
                                       key={pageNum}
                                       onClick={() => setCurrentPage(pageNum)}
-                                      className={`w-9 h-9 rounded-xl text-xs sm:text-sm font-black cursor-pointer border transition-all ${
+                                      className={`w-10 h-10 rounded-xl text-sm sm:text-base font-black cursor-pointer border transition-all ${
                                         currentPage === pageNum
                                           ? 'bg-[#3182F6] text-white border-[#3182F6] shadow-xs'
                                           : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 text-slate-700 dark:text-zinc-300'
@@ -1390,7 +1390,7 @@ export default function MyDonations() {
                                   <button
                                     onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                                     disabled={currentPage === totalPages}
-                                    className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors text-xs sm:text-sm"
+                                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-bold cursor-pointer transition-colors text-sm sm:text-base"
                                   >
                                     다음 ▶
                                   </button>
@@ -1404,32 +1404,28 @@ export default function MyDonations() {
                   );
                 })()}
 
-                <Card className="bg-amber-50 border-amber-200">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2 text-amber-800">
-                      <AlertCircle className="h-5 w-5" />
-                      <CardTitle className="text-base sm:text-lg font-bold">연말정산 안내</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-sm sm:text-base text-amber-800 leading-relaxed">
+                <Card className="bg-amber-50/90 border-amber-200 rounded-2xl p-5 sm:p-6 shadow-xs">
+                  <div className="flex items-center gap-2.5 text-amber-900 mb-2">
+                    <AlertCircle className="h-6 w-6 text-amber-700 flex-shrink-0" />
+                    <h4 className="text-lg sm:text-xl font-black">연말정산 안내</h4>
+                  </div>
+                  <p className="text-base sm:text-lg text-amber-900/90 leading-relaxed font-medium mb-4">
                     영수증 출력을 원하시는 경우 각 내역의 <strong>[영수증보기]</strong> 버튼을 누르시면 정식 영수증 확인 및 프린트/PDF 저장이 가능합니다.
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="outline" 
-                      className="w-full h-11 text-sm sm:text-base bg-white border-amber-200 text-amber-800 hover:bg-amber-100 font-bold cursor-pointer shadow-xs"
-                      onClick={() => navigate(`/${tenantSlug}/tax-receipt`)}
-                    >
-                      국세청 자동 간소화 제출 신청하기
-                    </Button>
-                  </CardFooter>
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-12 text-base sm:text-lg bg-white border-amber-300 text-amber-900 hover:bg-amber-100 font-bold cursor-pointer shadow-xs rounded-xl"
+                    onClick={() => navigate(`/${tenantSlug}/tax-receipt`)}
+                  >
+                    국세청 자동 간소화 제출 신청하기
+                  </Button>
                 </Card>
               </div>
             )}
 
             <Button 
               variant="ghost" 
-              className="w-full h-11 text-sm sm:text-base text-muted-foreground cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold"
+              className="w-full h-12 text-base sm:text-lg text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 font-bold"
               onClick={() => {
                 setIsAuthenticated(false);
                 setIsOtpSent(false);
