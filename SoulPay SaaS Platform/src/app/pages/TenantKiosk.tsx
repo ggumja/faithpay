@@ -432,7 +432,7 @@ export default function TenantKiosk() {
       {/* ── 🔵 헤더 (가독성 향상 대형 폰트) ── */}
       <header className="bg-white px-8 py-5 border-b border-[#E5E8EB] flex items-center justify-between shadow-2xs sticky top-0 z-30">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#E8F3FF] flex items-center justify-center p-2.5 border border-[#CEE4FE]">
+          <div className={`w-14 h-14 flex items-center justify-center ${currentTenant.logoUrl ? 'bg-transparent border-0' : 'rounded-2xl bg-[#E8F3FF] border border-[#CEE4FE] p-2.5'}`}>
             {currentTenant.logoUrl ? (
               <img src={currentTenant.logoUrl} alt={currentTenant.name} className="w-full h-full object-contain" />
             ) : (
