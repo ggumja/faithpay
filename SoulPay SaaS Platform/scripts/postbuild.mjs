@@ -32,7 +32,11 @@ for (const dir of targetDirs) {
     
     fs.copyFileSync(indexHtml, errorHtml);
     fs.writeFileSync(nojekyll, '');
-    console.log(`✅ [postbuild] Successfully created 404.html and .nojekyll in ${path.relative(rootDir, dir)}`);
+    const redirectsFile = path.join(dir, '_redirects');
+    if (!fs.existsSync(redirectsFile)) {
+      fs.writeFileSync(redirectsFile, '/* /index.html 200\n');
+    }
+    console.log(`✅ [postbuild] Successfully created 404.html, _redirects, and .nojekyll in ${path.relative(rootDir, dir)}`);
     handled = true;
   }
 }

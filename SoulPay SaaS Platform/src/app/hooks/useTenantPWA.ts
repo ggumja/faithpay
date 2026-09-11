@@ -7,8 +7,22 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+function resolveAbsoluteUrl(rawUrl?: string, fallbackPath: string = '/icon-192x192.png'): string {
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    return `${window.location.origin}${fallbackPath}`;
+  }
+  try {
+    return new URL(rawUrl, window.location.origin).href;
+  } catch {
+    return `${window.location.origin}${fallbackPath}`;
+  }
+}
+
 /** 테넌트 정보로 동적 manifest를 생성해 <link rel="manifest">를 교체한다 */
 function injectTenantManifest(tenant: Tenant) {
+  const icon192 = resolveAbsoluteUrl(tenant.logoUrl, '/icon-192x192.png');
+  const icon512 = resolveAbsoluteUrl(tenant.logoUrl, '/icon-512x512.png');
+
   const manifest = {
     name: tenant.name,
     short_name: tenant.name,
@@ -20,23 +34,17 @@ function injectTenantManifest(tenant: Tenant) {
     // 앱 실행 시 해당 테넌트 홈으로 바로 진입
     start_url: `${window.location.origin}/${tenant.slug}`,
     lang: 'ko',
-    icons: tenant.logoUrl ? [
+    icons: [
       {
-        src: tenant.logoUrl,
+        src: icon192,
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: tenant.logoUrl,
+        src: icon512,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable',
-      },
-    ] : [
-      {
-        src: '/favicon.svg',
-        sizes: '192x192',
-        type: 'image/svg+xml',
       },
     ],
   };
