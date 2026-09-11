@@ -4,7 +4,7 @@ import { useApp, DonationItem, Tenant } from '../context/AppContext';
 import { donationItemsAPI, tenantAPI, settingsAPI } from '../api/client';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { useTenantPWA } from '../hooks/useTenantPWA';
-import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice'; // kept for notifyBroadcastNoticeChanged re-export usage (GlobalBroadcastModal)
 import { ClassicTemplate } from '../components/templates/ClassicTemplate';
 import { ElectricDarkTemplate } from '../components/templates/ElectricDarkTemplate';
 import { MinimalHeroTemplate } from '../components/templates/MinimalHeroTemplate';
@@ -15,7 +15,7 @@ export default function TenantHome() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetItemParam = searchParams.get('item') || searchParams.get('itemId');
-  const { tenants, isTenantsLoaded, currentTenant, setCurrentTenant } = useApp();
+  const { tenants, isTenantsLoaded, currentTenant, setCurrentTenant, broadcastNotice, isMaintenance } = useApp();
 
   const [directTenant, setDirectTenant] = useState<Tenant | null>(null);
   const [isDirectLoading, setIsDirectLoading] = useState<boolean>(false);
@@ -78,8 +78,7 @@ export default function TenantHome() {
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState<boolean>(Boolean(targetItemParam));
 
-  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
-  const { notice: broadcastNotice, isMaintenance } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 공유 (10초 개별 폴링 제거)
 
   useEffect(() => {
     let isMounted = true;

@@ -176,8 +176,14 @@ export const tenantAPI = {
       silentFail: true,
     } as any);
 
-    // 서버 DB에 단체 레코드가 없어서 404 반환 시 POST /tenants로 자동 생성(Upsert) 처리
-    if (!res.success) {
+    // GBL-13 fix: PUT 실패 시 POST fallback 조건을 404(단체 미존재)에만 엄격히 한정.
+    // 네트워크 오류·500 서버 오류에서는 POST를 재시도하지 않아 중복 단체 생성 방지.
+    const is404 = !res.success && (
+      res.error?.includes('HTTP 404') ||
+      res.error === 'Tenant not found' ||
+      res.error?.includes('not found')
+    );
+    if (is404) {
       return fetchAPI<Tenant>('/tenants', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -186,6 +192,7 @@ export const tenantAPI = {
 
     return res;
   },
+
 
   async updateTenantBanners(id: string, bannerImages: string[]): Promise<APIResponse<Tenant>> {
     return fetchAPI<Tenant>(`/tenants/${id}`, {

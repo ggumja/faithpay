@@ -14,17 +14,40 @@ const app = new Hono();
 // Enable logger
 app.use('*', logger(console.log));
 
-// Enable CORS for all routes and methods
+// GBL-12 fix: CORS origin "wildcard(*)" → 환경변수(ALLOWED_ORIGINS) 기반 화이트리스트
+// ALLOWED_ORIGINS 환경변수: 쉼표 구분 도메인 목록 (예: https://soulpay.kr,https://app.soulpay.kr)
+// Supabase Dashboard → Edge Functions → Secrets 에서 반드시 설정할 것.
+// 미설정 시: 경고 로그 후 origin 검증 비활성화 (개발/테스트 환경 대응)
+const rawAllowedOrigins = Deno.env.get('ALLOWED_ORIGINS') || '';
+const allowedOriginList: string[] = rawAllowedOrigins
+  ? rawAllowedOrigins.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
+
+if (allowedOriginList.length === 0) {
+  console.warn('[GBL-12] ALLOWED_ORIGINS 환경변수 미설정. 운영 환경에서는 Supabase Secret으로 반드시 허용 도메인을 설정하세요.');
+}
+
 app.use(
   "/*",
   cors({
-    origin: "*",
+    origin: (origin) => {
+      // origin이 없는 경우(서버→서버, Supabase 내부 호출 등)는 허용
+      if (!origin) return origin;
+      // Supabase 도메인은 항상 허용
+      if (origin.endsWith('.supabase.co') || origin.endsWith('.supabase.in')) return origin;
+      // ALLOWED_ORIGINS 미설정 시 → origin 검증 비활성화 (모든 origin 통과)
+      if (allowedOriginList.length === 0) return origin;
+      // 허용 목록에 있는 origin만 통과, 나머지는 CORS 차단
+      if (allowedOriginList.includes(origin)) return origin;
+      return null;
+    },
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
   }),
 );
+
 
 // Health check endpoint
 app.get("/make-server-d0d82cc7/health", (c) => {
@@ -126,7 +149,14 @@ const handleGetTenantStaff = async (c: any) => {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: true });
 
-    if (!error && staffList && staffList.length > 0) {
+    // GBL-11 fix: DB 쿼리 오류와 데이터 미존재를 명확히 구분
+    // 쿼리 에러가 있을 때: 에러 로그 + 500 반환 (자동 생성 로직으로 넘어가지 않음)
+    if (error) {
+      console.error(`[GBL-11] tenant_admins 조회 실패 tenant(${tenantId}):`, error.message, error.code);
+      return c.json({ success: false, error: '관리자 계정 조회 중 오류가 발생했습니다.' }, 500);
+    }
+
+    if (staffList && staffList.length > 0) {
       // KV 호환 필드명 변환 (프론트엔드 호환성 유지)
       const mapped = staffList.map((s: any) => ({
         id: s.id,
@@ -141,6 +171,7 @@ const handleGetTenantStaff = async (c: any) => {
       }));
       return c.json({ success: true, data: mapped });
     }
+
 
     // DB에 계정 없으면 단체 대표자 정보로 초기 계정 자동 생성 후 저장
     const tenants = await db.getAllTenants();

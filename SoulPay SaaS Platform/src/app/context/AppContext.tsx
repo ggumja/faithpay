@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { tenantAPI, donationItemsAPI } from '../api/client';
 import { toast } from 'sonner';
+import { useGlobalBroadcastNotice, GlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 
 export type ReligionType = 'protestant' | 'buddhist' | 'catholic' | 'charity' | 'general';
 export type UserRole = 'system_admin' | 'tenant_admin' | 'finance_manager' | 'member';
@@ -54,14 +55,17 @@ export function getTenantPkCode(targetTenant?: any, allTenants?: any[]): string 
     return `fp${String(num).padStart(5, '0')}`;
   }
 
-  // 4. UUID 등 순수 문자열인 경우 앞 6자 해시
-  if (rawId.length >= 4) {
+  // 4. UUID 등 순수 문자열인 경우 해시 기반 결정론적 코드 생성 (길이 무관)
+  if (rawId.length >= 1) {
     let hash = 0;
     for (let i = 0; i < rawId.length; i++) hash = (hash * 31 + rawId.charCodeAt(i)) >>> 0;
     return `fp${String(hash % 100000).padStart(5, '0')}`;
   }
 
-  return `fp?????`;
+  // GBL-17 fix: rawId가 완전히 비어있는 경우 (사실상 도달 불가 — 상단에서 !targetTenant → '—' 처리)
+  // 'fp?????' 리터럴 반환 제거 → 방어적으로 fp00000 반환
+  return 'fp00000';
+
 }
 
 export interface SidebarBanner {
@@ -244,6 +248,11 @@ interface AppContextType {
   getTenantDonationItems: (tenant: Tenant) => DonationItem[];
   saveDonationItem: (tenantId: string, religionType: string, itemData: Partial<DonationItem>) => void;
   deleteDonationItem: (tenantId: string, religionType: string, itemId: string) => void;
+  // GBL-08 fix: 공지 폴링 싱글턴 — 컴포넌트별 개별 폴링 대신 Context에서 공유
+  broadcastNotice: GlobalBroadcastNotice | null;
+  isMaintenance: boolean;
+  checkMaintenanceJIT: () => Promise<{ isMaintenance: boolean; notice: GlobalBroadcastNotice | null }>;
+  refetchBroadcastNotice: () => Promise<GlobalBroadcastNotice | null>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -291,6 +300,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isTenantsLoaded, setIsTenantsLoaded] = useState<boolean>(false);
 
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null);
+
+  // GBL-08 fix: 공지 폴링 훅을 Context에서 단 1개만 인스턴스화 (5개 컴포넌트 개별 폴링 → 싱글턴)
+  const {
+    notice: broadcastNotice,
+    isMaintenance,
+    checkMaintenanceJIT,
+    refetch: refetchBroadcastNotice,
+  } = useGlobalBroadcastNotice(10000);
 
   const [donationFormData, setDonationFormData] = useState<DonationFormData | null>(null);
   const [currentAdmin, setCurrentAdminState] = useState<AdminUser | null>(() => {
@@ -571,6 +588,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getTenantDonationItems,
         saveDonationItem,
         deleteDonationItem,
+        // GBL-08: 공지 폴링 싱글턴 공유
+        broadcastNotice,
+        isMaintenance,
+        checkMaintenanceJIT,
+        refetchBroadcastNotice,
       }}
     >
       {children}
@@ -595,6 +617,11 @@ const defaultContextValue: AppContextType = {
   getTenantDonationItems: () => [],
   saveDonationItem: () => {},
   deleteDonationItem: () => {},
+  // GBL-08: 기본값 (Context 외부에서 호출 시 no-op)
+  broadcastNotice: null,
+  isMaintenance: false,
+  checkMaintenanceJIT: async () => ({ isMaintenance: false, notice: null }),
+  refetchBroadcastNotice: async () => null,
 };
 
 export function useApp() {

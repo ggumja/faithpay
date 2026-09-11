@@ -5,7 +5,7 @@ import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
 import { donationAPI, donationItemsAPI, DonationItem, kakaoPayAPI, settingsAPI } from '../api/client';
 import { useTenantTerms } from '../hooks/useTenantTerms';
-import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
+// GBL-08 fix: useGlobalBroadcastNotice 직접 호출 제거 → useApp() 싱글턴 사용
 import { Badge } from '../components/ui/badge';
 import {
   CreditCard,
@@ -140,7 +140,7 @@ function assembleHangulKey(prev: string, key: string): string {
 export default function TenantKiosk() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant } = useApp();
+  const { currentTenant, broadcastNotice, isMaintenance, checkMaintenanceJIT } = useApp();
   const terms = useTenantTerms(currentTenant);
 
   // Kiosk State
@@ -163,8 +163,7 @@ export default function TenantKiosk() {
   const [autoResetSeconds, setAutoResetSeconds] = useState(45);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
 
-  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
-  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 broadcastNotice / isMaintenance / checkMaintenanceJIT 공유 (개별 폴링 제거)
 
   // Live Camera Stream State & Ref for Kiosk QR/Barcode Scanner
   const kioskVideoRef = useRef<HTMLVideoElement | null>(null);

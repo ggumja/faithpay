@@ -16,12 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandLogos';
 import { useTenantTerms } from '../hooks/useTenantTerms';
-import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
+// GBL-08 fix: useGlobalBroadcastNotice 직접 호출 제거 → useApp() 싱글턴 사용
 
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { currentTenant, setCurrentTenant, tenants, donationFormData, setDonationFormData, currentAdmin } = useApp();
+  const { currentTenant, setCurrentTenant, tenants, donationFormData, setDonationFormData, currentAdmin, broadcastNotice, isMaintenance, checkMaintenanceJIT } = useApp();
   const location = useLocation();
   const terms = useTenantTerms(currentTenant);
 
@@ -102,8 +102,7 @@ export default function PaymentSelection() {
   const [enableNaverPay, setEnableNaverPay] = useState<boolean>(false);
   const [enableTossPay, setEnableTossPay] = useState<boolean>(false);
 
-  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
-  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
+  // GBL-08 fix: 공지 폴링 싱글턴 → useApp()에서 broadcastNotice / isMaintenance / checkMaintenanceJIT 공유 (개별 폴링 제거)
 
   useEffect(() => {
     if (donationFormData) {

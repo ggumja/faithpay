@@ -177,7 +177,10 @@ export default function DonationComplete() {
       toast.error('빌링키 처리 중 오류가 발생했습니다.');
       console.error('Billing flow error:', err);
     });
-  }, [tenant, typeParam, authKeyParam, customerKeyParam]);
+  }, [tenant, typeParam, authKeyParam, customerKeyParam, donIdParam, amountParam, formData, terms]);
+  // ↑ GBL-10 fix: 의존성 배열에 donIdParam, amountParam, formData, terms 추가.
+  //   billingChargedRef.current 가드로 중복 실행은 이미 방지됨.
+
 
   useEffect(() => {
     // 신도 세션 저장
