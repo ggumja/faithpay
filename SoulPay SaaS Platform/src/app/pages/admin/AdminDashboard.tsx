@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link, Navigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
+import { isAdminPortalDomain } from '../../utils/domainUtils';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -90,7 +91,7 @@ const getStatusBadge = (status: string) => {
 export default function AdminDashboard() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, isTenantsLoaded } = useApp();
   const terms = useTenantTerms(currentTenant);
 
   const [dbDonations, setDbDonations] = useState<any[]>([]);
@@ -129,6 +130,9 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // DB 테넌트 목록 조회가 완료될 때까지 비동기 평가 유예
+    if (!isTenantsLoaded) return;
+
     const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
     
     // 예약어 경로(partner, system, agency 등) 예외 방어
@@ -231,11 +235,29 @@ export default function AdminDashboard() {
     } else {
       setIsLoading(false);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [tenantSlug, tenants, isTenantsLoaded, setCurrentTenant]);
+
+  // 1. 단체 목록 및 DB 데이터 로딩 중 상태 (비동기 데이터 대기 동안 스피너 유지)
+  if (!isTenantsLoaded || (isLoading && !currentTenant)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
+        <div className="text-center space-y-3">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
+          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">단체 정보를 불러오는 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isDedicated = isAdminPortalDomain();
+  const defaultLoginTarget = tenantSlug
+    ? (isDedicated ? `/${tenantSlug}/login` : `/${tenantSlug}/admin/login`)
+    : (isDedicated ? '/login' : '/admin/login');
 
   const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
   const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
   const isInvalidTenantSlug = Boolean(
+    isTenantsLoaded &&
     tenantSlug &&
     (reservedSlugs.includes(decodedSlug) ||
       !tenants.find(
@@ -246,7 +268,7 @@ export default function AdminDashboard() {
       ))
   );
 
-  if (isInvalidTenantSlug) {
+  if (isInvalidTenantSlug || !currentTenant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <Card className="max-w-md w-full border-slate-200 shadow-sm rounded-2xl bg-white p-6 text-center space-y-4">
@@ -260,7 +282,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Button
-            onClick={() => navigate('/admin/login')}
+            onClick={() => navigate(defaultLoginTarget)}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold h-10 cursor-pointer"
           >
             단체 관리자 로그인으로 이동
@@ -270,20 +292,8 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!currentTenant) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
-        <div className="text-center space-y-3">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
-          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">단체 정보를 불러오는 중입니다...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!currentAdmin) {
-    const loginTarget = tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
-    return <Navigate to={loginTarget} replace />;
+    return <Navigate to={defaultLoginTarget} replace />;
   }
 
   // 타 단체 관리자 권한으로 다른 단체 대시보드 접근 차단 (system_admin 제외)
@@ -293,8 +303,7 @@ export default function AdminDashboard() {
     currentAdmin.tenantId !== currentTenant.id &&
     currentAdmin.tenantId !== currentTenant.slug
   ) {
-    const loginTarget = tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
-    return <Navigate to={loginTarget} replace />;
+    return <Navigate to={defaultLoginTarget} replace />;
   }
 
   const currentPath = `/${tenantSlug}/admin`;
