@@ -94,14 +94,6 @@ export default defineConfig({
               },
             },
           },
-          {
-            // JS / CSS — Stale-While-Revalidate
-            urlPattern: /\.(?:js|css)$/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'soulpay-static',
-            },
-          },
         ],
       },
     }),
