@@ -543,19 +543,6 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, h
                 {/* Header: Icon + Name + Badge */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      backgroundColor: `${ft.primary}12`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: ft.primary,
-                      flexShrink: 0,
-                    }}>
-                      {itemIcons[item.name] || <Heart size={18} />}
-                    </div>
                     <span style={{
                       fontWeight: 800,
                       fontSize: 16,
@@ -568,6 +555,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, h
                       {item.name}
                     </span>
                   </div>
+
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     {item.allowRecurring && (

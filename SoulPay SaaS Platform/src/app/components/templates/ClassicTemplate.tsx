@@ -8,8 +8,8 @@ import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
 import { navigateToAdminPortal } from '../../utils/domainUtils';
 import {
-  MapPin, Phone, Mail, Clock, ChevronRight,
-  Shield, Repeat, Landmark, Heart, Search, Star, Sparkles, ExternalLink
+  ChevronRight, MapPin, Phone, Mail, Clock,
+  Shield, Repeat, Landmark, Search, Star, Sparkles, ExternalLink
 } from 'lucide-react';
 
 const C = {
@@ -28,19 +28,8 @@ const C = {
   shadowMd:     '0 8px 24px -6px oklch(0.12 0.015 260 / 0.12), 0 3px 8px -2px oklch(0.12 0.015 260 / 0.08)',
 };
 
-const itemIcons: Record<string, React.ReactNode> = {
-  '십일조':   <Landmark size={18} />,
-  '감사헌금': <Heart size={18} />,
-  '건축헌금': <Landmark size={18} />,
-  '인등보시': <Star size={18} />,
-  '불사공양': <Heart size={18} />,
-  '기도보시': <Sparkles size={18} />,
-  '교무금':   <Landmark size={18} />,
-  '미사예물': <Star size={18} />,
-  '특별봉헌': <Heart size={18} />,
-};
-
 function fmt(n: number) { return n.toLocaleString('ko-KR'); }
+
 
 const RESPONSIVE_CSS = `
 .th-body         { display: flex; flex-direction: column; gap: 28px; padding: 32px 16px 80px; max-width: 1140px; margin: 0 auto; }
@@ -57,10 +46,8 @@ const RESPONSIVE_CSS = `
 .th-sidebar      { display: flex; flex-direction: column; gap: 20px; }
 .th-trust-badges { display: none; }
 .th-hero-copy    { max-width: 100%; }
-.th-hero-cta     { flex-wrap: wrap; }
-.th-row-grid     { grid-template-columns: 48px 1fr auto; gap: 16px; padding: 20px 22px; }
+.th-row-grid     { grid-template-columns: 1fr auto; gap: 16px; padding: 20px 22px; }
 .th-row-desc     { display: none; }
-.th-row-icon     { width: 48px; height: 48px; border-radius: 14px; }
 
 @media (min-width: 480px) {
   .th-body         { padding: 36px 20px 88px; }
@@ -726,24 +713,9 @@ function ClassicItemRow({ item, terminology, delay, onClick }: { item: DonationI
         transform: hovered ? 'translateY(-2px)' : 'none',
       } as React.CSSProperties}
     >
-      <div className="th-row-grid" style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto', gap: 16, padding: '20px 22px', alignItems: 'center' }}>
-        {/* Icon Box */}
-        <div className="th-row-icon" style={{
-          width: 48,
-          height: 48,
-          borderRadius: 14,
-          backgroundColor: hovered ? C.cobaltBg : C.paper,
-          border: `1px solid ${hovered ? C.cobaltBorder : C.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: hovered ? C.cobalt : C.ink2,
-          transition: 'all 220ms ease',
-        }}>
-          {itemIcons[item.name] || <Heart size={22} />}
-        </div>
-
+      <div className="th-row-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '20px 22px', alignItems: 'center' }}>
         <div style={{ minWidth: 0 }}>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 18, fontWeight: 900, color: C.ink, letterSpacing: '-0.02em' }}>{item.name}</span>
             {item.allowRecurring && (

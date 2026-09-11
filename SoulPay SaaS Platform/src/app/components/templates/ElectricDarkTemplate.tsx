@@ -428,21 +428,8 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-                    {/* Icon Box */}
-                    <div style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 18,
-                      backgroundColor: isDarkCard ? NEO.charcoal : NEO.lightBg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: isDarkCard ? NEO.electricGreen : NEO.black,
-                    }}>
-                      {itemIcons[item.name] || <Heart size={20} />}
-                    </div>
-
                     <div>
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: '-0.02em' }}>
                           {item.name}
