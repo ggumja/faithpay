@@ -21,12 +21,16 @@ import {
   ArrowUpRight,
   AlertCircle,
   Menu,
+  Bell,
+  AlertTriangle,
+  AlertOctagon,
+  X,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
-import { donationAPI } from '../../api/client';
+import { donationAPI, settingsAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 
@@ -154,6 +158,35 @@ export default function AdminDashboard() {
     { month: mLabel3, cumulativeAmount: 0 },
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [broadcastNotice, setBroadcastNotice] = useState<any>(null);
+  const [isNoticeDismissed, setIsNoticeDismissed] = useState<boolean>(false);
+
+  // 전체 사찰/교회 실시간 브로드캐스트 공지 조회
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchBroadcastNotice() {
+      try {
+        const res = await settingsAPI.get('global_broadcast_notice');
+        if (res.success && res.data) {
+          const raw = res.data;
+          const notice = (raw.value && typeof raw.value === 'object') ? raw.value : raw;
+          if (isMounted && notice && notice.isActive) {
+            setBroadcastNotice(notice);
+            const dismissedKey = `soulpay_dismissed_notice_${notice.id}`;
+            if (sessionStorage.getItem(dismissedKey)) {
+              setIsNoticeDismissed(true);
+            }
+          } else if (isMounted) {
+            setBroadcastNotice(null);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch broadcast notice:', err);
+      }
+    }
+    fetchBroadcastNotice();
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     // DB 테넌트 목록 조회가 완료될 때까지 비동기 평가 유예
@@ -372,6 +405,80 @@ export default function AdminDashboard() {
               {terms.donor} 페이지 보기
             </Button>
           </div>
+
+          {/* 전체 사찰/교회 실시간 브로드캐스트 공지 배너 */}
+          {broadcastNotice && broadcastNotice.isActive && !isNoticeDismissed && (
+            <div
+              className={`rounded-2xl border p-4 sm:p-5 transition-all shadow-sm relative overflow-hidden ${
+                broadcastNotice.noticeType === 'urgent'
+                  ? 'bg-rose-50/90 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 ring-1 ring-rose-500/20'
+                  : broadcastNotice.noticeType === 'warning'
+                  ? 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 ring-1 ring-amber-500/20'
+                  : 'bg-blue-50/90 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-950 dark:text-blue-100 ring-1 ring-blue-500/20'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                    broadcastNotice.noticeType === 'urgent'
+                      ? 'bg-rose-100 dark:bg-rose-900/60 text-rose-600'
+                      : broadcastNotice.noticeType === 'warning'
+                      ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-600'
+                      : 'bg-blue-100 dark:bg-blue-900/60 text-blue-600'
+                  }`}>
+                    {broadcastNotice.noticeType === 'urgent' ? (
+                      <AlertOctagon className="w-5 h-5 animate-pulse" />
+                    ) : broadcastNotice.noticeType === 'warning' ? (
+                      <AlertTriangle className="w-5 h-5" />
+                    ) : (
+                      <Bell className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        broadcastNotice.noticeType === 'urgent'
+                          ? 'bg-rose-200/80 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
+                          : broadcastNotice.noticeType === 'warning'
+                          ? 'bg-amber-200/80 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                          : 'bg-blue-200/80 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      }`}>
+                        {broadcastNotice.noticeType === 'urgent' ? '🚨 긴급 점검' : broadcastNotice.noticeType === 'warning' ? '⚠️ PG/서식 업데이트' : '📢 전체 공지'}
+                      </span>
+                      {broadcastNotice.isMaintenanceMode && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white animate-pulse">
+                          결제 일시 점검 가드 활성화
+                        </span>
+                      )}
+                      <h3 className="text-sm sm:text-base font-bold tracking-tight">
+                        {broadcastNotice.title}
+                      </h3>
+                    </div>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed opacity-90">
+                      {broadcastNotice.content}
+                    </p>
+                    <div className="text-[11px] opacity-60 pt-0.5">
+                      게재 시각: {broadcastNotice.createdAt ? new Date(broadcastNotice.createdAt).toLocaleString('ko-KR') : '방금 전'} • {broadcastNotice.createdBy || '시스템 관리자'}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNoticeDismissed(true);
+                    if (broadcastNotice.id) {
+                      sessionStorage.setItem(`soulpay_dismissed_notice_${broadcastNotice.id}`, 'true');
+                    }
+                  }}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer shrink-0"
+                  title="공지 닫기"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

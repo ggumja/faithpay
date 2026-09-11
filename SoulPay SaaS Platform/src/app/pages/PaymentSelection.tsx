@@ -8,9 +8,9 @@ import { Label } from '../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Separator } from '../components/ui/separator';
 import { Checkbox } from '../components/ui/checkbox';
-import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2, Camera } from 'lucide-react';
+import { ArrowLeft, CreditCard, Building2, Smartphone, Wallet, Loader2, Camera, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { paymentAPI, donationAPI, kakaoPayAPI, subscriptionAPI, API_BASE_URL } from '../api/client';
+import { paymentAPI, donationAPI, kakaoPayAPI, subscriptionAPI, settingsAPI, API_BASE_URL } from '../api/client';
 import { generateTransactionId } from '../utils/transactionId';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
@@ -100,6 +100,37 @@ export default function PaymentSelection() {
   const [enableKakaoPay, setEnableKakaoPay] = useState<boolean>(false);
   const [enableNaverPay, setEnableNaverPay] = useState<boolean>(false);
   const [enableTossPay, setEnableTossPay] = useState<boolean>(false);
+
+  // 전체 공지 & 결제 점검 모드 상태 (실제 DB system_settings 연동)
+  const [broadcastNotice, setBroadcastNotice] = useState<{
+    id: string;
+    title: string;
+    content: string;
+    noticeType: 'info' | 'warning' | 'urgent';
+    isMaintenanceMode: boolean;
+    isActive: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    settingsAPI.get('global_broadcast_notice')
+      .then((res: any) => {
+        if (!isMounted) return;
+        if (res?.value && res.value.isActive) {
+          setBroadcastNotice(res.value);
+        } else {
+          setBroadcastNotice(null);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load global broadcast notice:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const isMaintenance = Boolean(broadcastNotice?.isActive && broadcastNotice?.isMaintenanceMode);
 
   useEffect(() => {
     if (donationFormData) {
@@ -296,6 +327,11 @@ export default function PaymentSelection() {
   };
 
   const handlePayment = async () => {
+    if (isMaintenance) {
+      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제가 일시 중단되었습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
     const targetTenantId = currentTenant?.id || currentTenant?.slug || tenantSlug || '';
     const activePg = (pgProvider || currentTenant?.paymentConfig?.pgProvider || 'nanopay').toLowerCase();
     const isToss = activePg.includes('toss');
@@ -974,6 +1010,32 @@ export default function PaymentSelection() {
 
       {/* Main Form Area */}
       <main className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6">
+        {/* 결제 시스템 점검 안내 배너 */}
+        {isMaintenance && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-500/40 rounded-2xl p-5 flex items-start gap-4 text-rose-900 dark:text-rose-200 shadow-sm">
+            <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-rose-600 text-white uppercase tracking-wider">
+                  결제 시스템 점검 중
+                </span>
+              </div>
+              <h2 className="font-extrabold text-base sm:text-lg mt-1.5 text-rose-950 dark:text-rose-100">
+                {broadcastNotice?.title || '시스템 정기 점검 안내'}
+              </h2>
+              {broadcastNotice?.content && (
+                <p className="text-xs sm:text-sm mt-1 text-rose-800/90 dark:text-rose-200/90 whitespace-pre-wrap leading-relaxed">
+                  {broadcastNotice.content}
+                </p>
+              )}
+              <div className="mt-3 pt-2.5 border-t border-rose-200 dark:border-rose-800/60 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+                * 점검 진행 중에는 금융망 연동이 일시 차단되어 모든 전자결제가 일시 중단됩니다. 점검 완료 후 다시 시도해 주시기 바랍니다.
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Summary Card */}
         <Card className="border-zinc-200/80 dark:border-zinc-800 shadow-xs rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
@@ -1464,10 +1526,12 @@ export default function PaymentSelection() {
         <Button
           className="w-full h-14 text-sm font-bold tracking-wide rounded-xl text-white shadow-md disabled:bg-zinc-200 disabled:dark:bg-zinc-800 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer disabled:shadow-none"
           onClick={handlePayment}
-          disabled={!agreed || isProcessing}
-          style={agreed ? { backgroundColor: ft.primary } : {}}
+          disabled={!agreed || isProcessing || isMaintenance}
+          style={agreed && !isMaintenance ? { backgroundColor: ft.primary } : {}}
         >
-          {isProcessing ? (
+          {isMaintenance ? (
+            <span>⚠️ 시스템 점검 중 (결제 일시 중단)</span>
+          ) : isProcessing ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span>결제 처리 중...</span>
