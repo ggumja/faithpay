@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation } from 'react-router';
 import { useApp, Tenant } from '../../context/AppContext';
 import { getPayPortalUrl } from '../../utils/domainUtils';
@@ -17,6 +17,8 @@ import {
   ExternalLink,
   CheckCircle2,
   Sparkles,
+  FileImage,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RBACRouteGuard } from '../../components/RBACRouteGuard';
@@ -30,8 +32,10 @@ export default function TenantDesignSettings() {
   const donationItems = currentTenant ? getTenantDonationItems(currentTenant) : [];
 
   const [logoUrl, setLogoUrl] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('classic');
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
@@ -45,7 +49,13 @@ export default function TenantDesignSettings() {
 
     if (tenant) {
       setCurrentTenant(tenant);
-      setLogoUrl(tenant.logoUrl || '');
+      const url = tenant.logoUrl || '';
+      setLogoUrl(url);
+      if (url.startsWith('data:')) {
+        setUploadedFileName('첨부된 로고 이미지');
+      } else {
+        setUploadedFileName('');
+      }
       setSelectedTemplate((tenant.templateId as TemplateId) || 'classic');
     }
   }, [tenantSlug, setCurrentTenant, tenants]);
@@ -109,15 +119,26 @@ export default function TenantDesignSettings() {
       return;
     }
 
+    setUploadedFileName(file.name);
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       if (!dataUrl) return;
 
       setLogoUrl(dataUrl);
-      toast.success('로고 이미지가 업로드 되었습니다');
+      toast.success(`로고 이미지(${file.name})가 업로드되었습니다`);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl('');
+    setUploadedFileName('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -270,7 +291,7 @@ export default function TenantDesignSettings() {
                       {logoUrl && (
                         <button
                           type="button"
-                          onClick={() => setLogoUrl('')}
+                          onClick={handleRemoveLogo}
                           className="text-[11px] text-rose-500 hover:text-rose-700 font-medium hover:underline cursor-pointer"
                         >
                           로고 삭제
@@ -279,27 +300,80 @@ export default function TenantDesignSettings() {
                     </div>
 
                     <div className="flex-1 w-full space-y-4">
-                      <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 hover:bg-slate-50 transition-colors relative cursor-pointer group">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                        />
+                      {/* 숨겨진 파일 인풋 (브라우저 기본 버튼 노출 방지) */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+
+                      {/* 드래그 & 클릭 업로드 박스 */}
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 hover:bg-slate-50 transition-colors relative cursor-pointer group"
+                      >
                         <Upload className="h-5 w-5 text-muted-foreground mb-1 group-hover:text-primary transition-colors" style={{ color: currentTenant.primaryColor }} />
-                        <p className="text-xs font-medium">로고 이미지 파일 선택 또는 드래그</p>
+                        {uploadedFileName ? (
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600">
+                            <FileImage className="h-4 w-4 shrink-0" />
+                            <span className="truncate max-w-xs">{uploadedFileName}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">(클릭하여 변경)</span>
+                          </div>
+                        ) : (
+                          <p className="text-xs font-medium">로고 이미지 파일 선택 또는 드래그</p>
+                        )}
                         <p className="text-[10px] text-muted-foreground mt-0.5">최대 2MB (1:1 정사각형 권장)</p>
                       </div>
 
+                      {/* URL 또는 파일명 표시 입력 필드 */}
                       <div className="space-y-1">
-                        <Label htmlFor="logo-url" className="text-xs">또는 이미지 URL 직접 입력</Label>
-                        <Input
-                          id="logo-url"
-                          value={logoUrl}
-                          onChange={(e) => setLogoUrl(e.target.value)}
-                          placeholder="https://example.com/logo.png"
-                          className="text-xs"
-                        />
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="logo-url" className="text-xs">
+                            {logoUrl.startsWith('data:') ? '첨부된 이미지 파일' : '또는 이미지 URL 직접 입력'}
+                          </Label>
+                          {logoUrl.startsWith('data:') && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLogoUrl('');
+                                setUploadedFileName('');
+                              }}
+                              className="text-[11px] text-slate-500 hover:text-blue-600 hover:underline cursor-pointer"
+                            >
+                              URL 직접 입력으로 전환
+                            </button>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <Input
+                            id="logo-url"
+                            value={logoUrl.startsWith('data:') ? (uploadedFileName || '첨부된 로고 이미지 파일') : logoUrl}
+                            onChange={(e) => {
+                              setUploadedFileName('');
+                              setLogoUrl(e.target.value);
+                            }}
+                            readOnly={logoUrl.startsWith('data:')}
+                            placeholder="https://example.com/logo.png"
+                            className={`text-xs ${logoUrl.startsWith('data:') ? 'bg-slate-50 text-slate-700 font-medium cursor-default select-none pr-8' : logoUrl ? 'pr-8' : ''}`}
+                          />
+                          {logoUrl && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveLogo}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                              title="삭제"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        {logoUrl.startsWith('data:') && (
+                          <p className="text-[11px] text-slate-500">
+                            * 이미지가 파일 형태로 첨부되었습니다. 저장을 누르면 단체 로고로 반영됩니다.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
