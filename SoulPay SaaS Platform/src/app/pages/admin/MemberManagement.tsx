@@ -39,6 +39,7 @@ import {
   Calendar,
   Sparkles,
   UserCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
@@ -49,6 +50,7 @@ import { formatPhoneNumber, stripPhoneDigits } from './AdminAccountManagement';
 import { MemberDetailData } from './MemberDetailPage';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { openDaumPostcode } from '../../utils/daumPostcode';
+import { MemberEditModal } from '../../components/admin/MemberEditModal';
 
 export default function MemberManagement() {
   const { tenantSlug } = useParams();
@@ -66,7 +68,7 @@ export default function MemberManagement() {
   const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberDetailData | null>(null);
 
-  // Form inputs
+  // Form inputs (Add Modal)
   const [memberName, setMemberName] = useState('');
   const [memberTitle, setMemberTitle] = useState(''); // 법명/세례명/직분
   const [memberPhone, setMemberPhone] = useState('');
@@ -75,7 +77,6 @@ export default function MemberManagement() {
   const [memberZonecode, setMemberZonecode] = useState('');
   const [memberAddressBase, setMemberAddressBase] = useState('');
   const [memberAddressDetail, setMemberAddressDetail] = useState('');
-  const [memberRrn, setMemberRrn] = useState(''); // 주민등록번호 (기부금영수증 발급용)
 
   useEffect(() => {
     const tenant = tenants.find((t) => t.slug === tenantSlug);
@@ -260,7 +261,6 @@ export default function MemberManagement() {
     setMemberZonecode('');
     setMemberAddressBase('');
     setMemberAddressDetail('');
-    setMemberRrn('');
     setIsAddMemberModalOpen(true);
   };
 
@@ -298,7 +298,6 @@ export default function MemberManagement() {
       zonecode: memberZonecode.trim(),
       addressBase: memberAddressBase.trim(),
       addressDetail: memberAddressDetail.trim(),
-      rrn: memberRrn.trim() || '',
       registeredDate: new Date().toISOString().slice(0, 10),
       totalDonation: 0,
       lastDonation: '납부 기록 없음',
@@ -326,81 +325,10 @@ export default function MemberManagement() {
     toast.success(`[${newMem.name}] 신규 ${memberTerm}이(가) 등록되었습니다.`);
   };
 
-  // Open Edit Member Modal
+  // Open Edit Member Modal (공통 MemberEditModal 연동)
   const handleOpenEditModal = (m: MemberDetailData) => {
     setEditingMember(m);
-    setMemberName(m.name);
-    setMemberTitle(m.baptismName || '');
-    setMemberPhone(formatPhoneNumber(m.phone));
-    setMemberEmail(m.email);
-
-    let parsedZonecode = m.zonecode || '';
-    let parsedBase = m.addressBase || '';
-    let parsedDetail = m.addressDetail || '';
-
-    if (!parsedBase && m.address) {
-      const match = m.address.match(/^\[(\d{5})\]\s*(.*)$/);
-      if (match) {
-        parsedZonecode = parsedZonecode || match[1];
-        parsedBase = match[2].trim();
-      } else {
-        parsedBase = m.address.trim();
-      }
-    }
-
-    setMemberZonecode(parsedZonecode);
-    setMemberAddressBase(parsedBase);
-    setMemberAddressDetail(parsedDetail);
-    setMemberAddress(m.address || '');
-    setMemberRrn(m.rrn || '');
     setIsEditMemberModalOpen(true);
-  };
-
-  const handleSaveEditMember = async () => {
-    if (!editingMember) return;
-    if (!memberName.trim()) {
-      toast.error(`${memberTerm} 성명을 입력해 주세요.`);
-      return;
-    }
-
-    const cleanPhone = stripPhoneDigits(memberPhone) || stripPhoneDigits(editingMember.phone);
-    const combinedAddress = memberZonecode
-      ? `[${memberZonecode}] ${memberAddressBase}${memberAddressDetail ? ' ' + memberAddressDetail.trim() : ''}`.trim()
-      : `${memberAddressBase}${memberAddressDetail ? ' ' + memberAddressDetail.trim() : ''}`.trim();
-
-    // DB 및 영구 설정 실측 저장
-    if (cleanPhone) {
-      try {
-        await memberAPI.updateProfile(cleanPhone, {
-          name: memberName.trim(),
-          baptismName: memberTitle.trim(),
-          email: memberEmail.trim(),
-          zonecode: memberZonecode.trim(),
-          address: memberAddressBase.trim(),
-          addressDetail: memberAddressDetail.trim(),
-          fullAddress: combinedAddress,
-        });
-      } catch (err) {
-        console.warn('Failed to persist member profile edit in DB:', err);
-      }
-    }
-
-    const updated: MemberDetailData = {
-      ...editingMember,
-      name: memberName.trim(),
-      baptismName: memberTitle.trim(),
-      phone: cleanPhone || editingMember.phone,
-      email: memberEmail.trim(),
-      address: combinedAddress,
-      zonecode: memberZonecode.trim(),
-      addressBase: memberAddressBase.trim(),
-      addressDetail: memberAddressDetail.trim(),
-      rrn: memberRrn.trim() || editingMember.rrn,
-    };
-
-    setMembers((prev) => prev.map((m) => (m.id === editingMember.id ? updated : m)));
-    setIsEditMemberModalOpen(false);
-    toast.success(`[${updated.name}] ${memberTerm} 정보가 수정 및 저장되었습니다.`);
   };
 
   const handleDeleteMember = (id: string, name: string) => {
@@ -775,13 +703,15 @@ export default function MemberManagement() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-amber-700 dark:text-amber-400">주민등록번호 (소득공제 기부금영수증 발급용)</Label>
-              <Input
-                placeholder="예: 850101-1234567"
-                value={memberRrn}
-                onChange={(e) => setMemberRrn(e.target.value)}
-              />
+            {/* 주민등록번호 보안 방침 안내 (DB 미저장, 영수증 발급 시 1회성 입력 원칙) */}
+            <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-xl p-3 text-xs text-slate-500 space-y-1">
+              <p className="font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                <span>주민등록번호 보안 방침 안내</span>
+              </p>
+              <p className="text-[11px] leading-relaxed text-slate-500">
+                개인정보보호법에 따라 주민등록번호는 회원 DB에 저장을 허용하지 않으며, 소득공제용 영수증 발급 시 1회성으로 안전하게 입력받습니다.
+              </p>
             </div>
 
             <DialogFooter className="pt-2">
@@ -796,117 +726,16 @@ export default function MemberManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* ✏️ 회원 정보 수정 모달 */}
-      <Dialog open={isEditMemberModalOpen} onOpenChange={setIsEditMemberModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit2 className="h-5 w-5 text-blue-600" />
-              {memberTerm} 정보 수정
-            </DialogTitle>
-            <DialogDescription>
-              등록된 {memberTerm}의 기본 정보를 수정합니다.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={(e) => { e.preventDefault(); handleSaveEditMember(); }} autoComplete="off" className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">성명 (이름) *</Label>
-              <Input
-                value={memberName}
-                onChange={(e) => setMemberName(e.target.value)}
-                required
-              />
-            </div>
-
-            <MemberTitleSelect
-              value={memberTitle}
-              onChange={setMemberTitle}
-              religionType={currentTenant.religionType}
-              showLabel={true}
-              label={getTitleLabel()}
-            />
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">휴대폰 번호</Label>
-              <Input
-                type="tel"
-                value={formatPhoneNumber(memberPhone)}
-                onChange={(e) => setMemberPhone(formatPhoneNumber(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">이메일 주소</Label>
-              <Input
-                type="email"
-                value={memberEmail}
-                onChange={(e) => setMemberEmail(e.target.value)}
-              />
-            </div>
-
-            {/* 주소 (우편번호 검색 + 기본주소 + 상세주소) */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold flex items-center justify-between">
-                <span>주소</span>
-                <span className="text-[11px] text-blue-600 dark:text-blue-400 font-normal">카카오 우편번호 검색 지원</span>
-              </Label>
-              
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={memberZonecode}
-                  readOnly
-                  placeholder="우편번호"
-                  className="w-28 text-xs font-mono font-semibold bg-slate-100 dark:bg-zinc-800"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSearchMemberAddress}
-                  className="text-xs font-semibold gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50"
-                >
-                  <Search className="h-3.5 w-3.5" />
-                  <span>주소 검색</span>
-                </Button>
-              </div>
-
-              <Input
-                placeholder="기본 주소 (주소 검색 버튼을 이용하세요)"
-                value={memberAddressBase}
-                onChange={(e) => setMemberAddressBase(e.target.value)}
-                className="text-xs"
-              />
-
-              <Input
-                placeholder="상세 주소를 입력하세요 (예: 101동 1002호 / 2층)"
-                value={memberAddressDetail}
-                onChange={(e) => setMemberAddressDetail(e.target.value)}
-                className="text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-amber-700 dark:text-amber-400">주민등록번호 (소득공제 기부금영수증 발급용)</Label>
-              <Input
-                placeholder="예: 850101-1234567"
-                value={memberRrn}
-                onChange={(e) => setMemberRrn(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button variant="outline" type="button" onClick={() => setIsEditMemberModalOpen(false)}>
-                취소
-              </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                수정 사항 저장
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* ✏️ 공통 회원 정보 수정 모달 (MemberDetailPage와 100% 동일한 공통 컴포넌트) */}
+      <MemberEditModal
+        isOpen={isEditMemberModalOpen}
+        onOpenChange={setIsEditMemberModalOpen}
+        member={editingMember}
+        currentTenant={currentTenant}
+        onSaveSuccess={(updated) => {
+          setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        }}
+      />
     </div>
   );
 }
