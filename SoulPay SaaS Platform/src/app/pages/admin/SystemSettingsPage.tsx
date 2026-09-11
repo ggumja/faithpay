@@ -84,6 +84,17 @@ function FeeSettingsTab() {
 
   return (
     <div className="space-y-4">
+      {/* SA-H: DB 미연동 경고 배너 — 현재 저장 버튼은 메모리 state만 변경하며 DB에 저장되지 않습니다 */}
+      <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-[11.5px] text-amber-900">
+        <span className="text-base leading-none mt-0.5">⚠️</span>
+        <div>
+          <strong>DB 미연동 — 현재 저장 기능은 임시 상태입니다.</strong>
+          <div className="mt-0.5 text-amber-700">
+            저장 버튼을 눌러도 실제 데이터베이스에는 반영되지 않으며, 페이지를 새로고침하면 초기값(0)으로 초기화됩니다.
+            정식 운영 전 <code className="bg-amber-100 px-1 rounded">settingsAPI</code> 연동이 필요합니다.
+          </div>
+        </div>
+      </div>
       <div className={S.card}>
         <div className={S.head}>
           <Building size={13} className="text-[var(--hm-accent)] shrink-0" />
@@ -212,6 +223,17 @@ function AccountSettingsTab() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* SA-H: DB 미연동 경고 배너 — 현재 저장 버튼은 메모리 state만 변경하며 DB에 저장되지 않습니다 */}
+      <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-[11.5px] text-amber-900">
+        <span className="text-base leading-none mt-0.5">⚠️</span>
+        <div>
+          <strong>DB 미연동 — 현재 저장 기능은 임시 상태입니다.</strong>
+          <div className="mt-0.5 text-amber-700">
+            저장 버튼을 눌러도 실제 데이터베이스에는 반영되지 않으며, 페이지를 새로고침하면 초기값으로 초기화됩니다.
+            정식 운영 전 <code className="bg-amber-100 px-1 rounded">settingsAPI</code> 연동이 필요합니다.
+          </div>
+        </div>
+      </div>
       <div className={S.card}>
         <div className={S.head}>
           <Landmark size={14} className="text-emerald-600 shrink-0" />

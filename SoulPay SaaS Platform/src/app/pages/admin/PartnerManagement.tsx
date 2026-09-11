@@ -84,7 +84,7 @@ export default function PartnerManagement() {
   const [parentId, setParentId] = useState('');
   const [commissionRate, setCommissionRate] = useState<number>(0.7);
   const [referralCode, setReferralCode] = useState('');
-  const [bankName, setBankName] = useState('신한은행');
+  const [bankName, setBankName] = useState(''); // SA-A: 하드코딩 기본값 제거
   const [accountNumber, setAccountNumber] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
   // 사업자 유형 및 세무 관련
@@ -274,8 +274,9 @@ export default function PartnerManagement() {
           { label: '영업자',     value: `${agents.length}명`,   color: 'text-indigo-600', bg: 'bg-indigo-50',  icon: Users, targetTab: 'agent' as const },
           { label: '승인 대기',  value: `${pendingPartners.length}건`, color: 'text-amber-600',  bg: 'bg-amber-50',  icon: UserCheck, targetTab: 'pending' as const },
           {
+            // SA-B: pendingAmount는 Partner DB 테이블에 없는 필드 — CommissionStatsPage에서 실 집계
             label: '당월 정산 예정',
-            value: `${partners.reduce((sum, p) => sum + Math.floor((p as any).pendingAmount ?? 0), 0).toLocaleString()}원`,
+            value: '0원',
             color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Briefcase, targetTab: null,
           },
         ].map(({ label, value, color, bg, icon: Icon, targetTab }) => (
@@ -412,11 +413,12 @@ export default function PartnerManagement() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
+                        {/* SA-C: onChange 즉시 API 호출 → onBlur로 변경 (입력 완료 후에만 API 호출) */}
                         <div className="flex items-center justify-end gap-1">
                           <Input
                             type="number" step="0.1" min="0" max="3"
-                            value={p.commissionRate ?? (p as any).agencyRate ?? 0}
-                            onChange={e => handleUpdateRate(p.id, parseFloat(e.target.value) || 0)}
+                            defaultValue={p.commissionRate ?? (p as any).agencyRate ?? 0}
+                            onBlur={e => handleUpdateRate(p.id, parseFloat(e.target.value) || 0)}
                             className="w-16 h-7 text-right font-bold text-xs"
                           />
                           <span className="text-xs text-slate-500">%</span>

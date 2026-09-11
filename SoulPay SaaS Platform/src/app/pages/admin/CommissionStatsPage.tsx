@@ -7,12 +7,15 @@ import {
 import { partnerAPI, Partner, PartnerCommission } from '../../api/client';
 import { toast } from 'sonner';
 
-/* ── 수수료 구조 상수 ── */
+/* ── 수수료 구조 상수 ──
+ * SA-I: 아래 상수는 settingsAPI(DB) 미연동 상태. SystemSettingsPage에서 설정한 값이 여기
+ * 반영되지 않음. DB API 연동 시 useEffect에서 fetchSystemSettings()로 교체 필요.
+ */
 const FEE = {
-  pgCostRate:          1.5,  // 고정
-  platformProfitRate:  0.5,  // 고정
-  defaultCustomerRate: 3.0,  // 기준 (영업자 역량에 따라 변동)
-  defaultAgencyRate:   0.5,  // 대리점 고정율 (대리점이 자체 설정)
+  pgCostRate:          1.5,  // PG 원가 (DB SystemSettings 연동 예정)
+  platformProfitRate:  0.5,  // 플랫폼 마진 (DB SystemSettings 연동 예정)
+  defaultCustomerRate: 3.0,  // 기준 고객 부담율
+  defaultAgencyRate:   0.5,  // 대리점 고정율
 };
 
 /* ── style atoms ── */
@@ -230,7 +233,8 @@ export default function CommissionStatsPage() {
                             </thead>
                             <tbody>
                               {p.commissions.map(c => {
-                                const platformFee = Math.round(c.donationAmount * 0.005);
+                                // SA-J: 0.005 하드코딩 → FEE.platformProfitRate 상수 사용
+                                const platformFee = Math.round(c.donationAmount * (FEE.platformProfitRate / 100));
                                 return (
                                   <tr key={c.id} className="border-b border-[var(--hm-border)] last:border-0">
                                     <td className="text-[11.5px] py-2 px-2 text-[var(--hm-ink)]">{c.tenantName}</td>
@@ -238,7 +242,8 @@ export default function CommissionStatsPage() {
                                     <td className="text-[11.5px] py-2 px-2 font-mono text-[var(--hm-ink-3)]">{fmt(platformFee)}</td>
                                     <td className="text-[11.5px] py-2 px-2 font-mono font-semibold text-[var(--hm-ink)]">
                                       {fmt(c.commissionAmount)}
-                                      <span className="text-[9.5px] text-[var(--hm-ink-3)] ml-1">({((c.commissionAmount/c.donationAmount)*100).toFixed(2)}%)</span>
+                                      {/* SA-K: donationAmount === 0 시 NaN% 방지 */}
+                                      <span className="text-[9.5px] text-[var(--hm-ink-3)] ml-1">({c.donationAmount > 0 ? ((c.commissionAmount/c.donationAmount)*100).toFixed(2) : '0.00'}%)</span>
                                     </td>
 
                                     <td className="py-2 px-2">

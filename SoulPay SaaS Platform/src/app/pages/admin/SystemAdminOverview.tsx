@@ -114,10 +114,10 @@ export default function SystemAdminOverview() {
       const partnerRes = await partnerAPI.getAll().catch(() => null);
       if (partnerRes?.success && Array.isArray(partnerRes.data)) {
         setPartnerCount(partnerRes.data.length);
-        // 미정산 수수료 합산 (pending 상태)
+        // SA-M: slice(0, 10) 제거 → 전체 파트너 미정산 수수료 집계
         let unsettledTotal = 0;
         await Promise.all(
-          partnerRes.data.slice(0, 10).map(async (p) => {
+          partnerRes.data.map(async (p) => {
             try {
               const commRes = await partnerAPI.getCommissions(p.id);
               if (commRes?.success && Array.isArray(commRes.data)) {
@@ -631,9 +631,16 @@ export default function SystemAdminOverview() {
                 <span className="font-mono font-bold text-slate-800 dark:text-zinc-100">{failureRate}%</span>
                 <span className="text-[11px] text-slate-400">(정상 안전 임계치: 5% 미만)</span>
               </div>
-              <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                이상 징후 없음
-              </span>
+              {/* SA-G: failureRate 기준 조건부 렌더링 — 항상 '이상 징후 없음' 표시하던 버그 수정 */}
+              {parseFloat(failureRate) >= 5 ? (
+                <span className="text-[11px] text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                  ⚠️ 실패율 경고 ({failureRate}%)
+                </span>
+              ) : (
+                <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  이상 징후 없음
+                </span>
+              )}
             </div>
 
             {/* 트랜잭션 테이블 */}
