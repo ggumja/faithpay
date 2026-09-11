@@ -428,14 +428,14 @@ export default function DonationFlow() {
                             <button
                               key={c}
                               onClick={() => setAmount((amount || 0) + c)}
-                              className="h-10 px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap"
+                              className="h-11 px-4 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-sm font-extrabold transition-all cursor-pointer shadow-xs whitespace-nowrap"
                             >
                               + {fmt(c)}원
                             </button>
                           ))}
                           <button
                             onClick={() => setAmount(0)}
-                            className="h-10 px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                            className="h-11 px-4 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-sm font-extrabold transition-all cursor-pointer shadow-xs"
                           >
                             ↺ 초기화
                           </button>
@@ -445,18 +445,18 @@ export default function DonationFlow() {
 
                     {/* Direct keyboard input field */}
                     <div>
-                      <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
+                      <label className="block text-sm font-extrabold text-zinc-700 dark:text-zinc-300 mb-2 tracking-tight">
                         직접 입력
                       </label>
-                      <div className="flex items-center gap-2 h-13 px-4 bg-zinc-100 dark:bg-zinc-850 rounded-xl border border-transparent focus-within:border-zinc-350 dark:focus-within:border-zinc-700 transition-colors">
+                      <div className="flex items-center gap-2 h-14 px-4 bg-zinc-100 dark:bg-zinc-850 rounded-2xl border border-transparent focus-within:border-zinc-400 dark:focus-within:border-zinc-700 transition-colors">
                         <input
                           type="number"
                           value={amount || ''}
                           onChange={(e) => setAmount(Number(e.target.value))}
                           placeholder="금액을 입력하세요"
-                          className="flex-1 bg-transparent border-0 outline-none text-base font-extrabold text-zinc-900 dark:text-zinc-100"
+                          className="flex-1 bg-transparent border-0 outline-none text-lg font-black text-zinc-900 dark:text-zinc-100"
                         />
-                        <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">원</span>
+                        <span className="text-sm font-extrabold text-zinc-500 dark:text-zinc-400">원</span>
                       </div>
                     </div>
                   </div>
@@ -634,23 +634,23 @@ export default function DonationFlow() {
                                 placeholder="성명 (예: 홍길동)" 
                                 value={member.name} 
                                 onChange={(e) => updateFamilyMember(i, 'name', e.target.value)}
-                                className="w-full h-11 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
+                                className="w-full h-12 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-base font-bold text-zinc-850 dark:text-zinc-150" 
                               />
                               <input 
                                 placeholder="생년월일 (예: 1990-05-15)" 
                                 value={member.birthDate} 
                                 onChange={(e) => updateFamilyMember(i, 'birthDate', e.target.value)}
-                                className="w-full h-11 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-xs font-bold text-zinc-850 dark:text-zinc-150" 
+                                className="w-full h-12 px-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl outline-none text-base font-bold text-zinc-850 dark:text-zinc-150" 
                               />
                             </div>
                             
                             <Select value={member.calendar} onValueChange={(v) => updateFamilyMember(i, 'calendar', v)}>
-                              <SelectTrigger className="h-11 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-xs font-semibold rounded-xl">
+                              <SelectTrigger className="h-12 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-sm font-bold rounded-xl">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="solar" className="text-xs">양력 (Solar)</SelectItem>
-                                <SelectItem value="lunar" className="text-xs">음력 (Lunar)</SelectItem>
+                                <SelectItem value="solar" className="text-sm font-semibold">양력 (Solar)</SelectItem>
+                                <SelectItem value="lunar" className="text-sm font-semibold">음력 (Lunar)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -659,10 +659,10 @@ export default function DonationFlow() {
 
                       <button
                         onClick={addFamilyMember}
-                        className="w-full h-12 rounded-xl border border-dashed text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-3 bg-white/80"
+                        className="w-full h-13 rounded-xl border border-dashed text-sm font-extrabold transition-colors cursor-pointer flex items-center justify-center gap-2 mt-3 bg-white/80"
                         style={{ borderColor: ft.primaryBgStrong, color: ft.primary }}
                       >
-                        <Plus size={14} /> 
+                        <Plus size={16} /> 
                         <span>가족 축원 인원 추가</span>
                       </button>
                     </div>
@@ -685,7 +685,7 @@ export default function DonationFlow() {
                   onChange={(e) => setPrayerText(e.target.value)}
                   placeholder={prayerPlaceholder}
                   rows={6}
-                  className="w-full p-4 bg-zinc-100 dark:bg-zinc-850 rounded-xl border border-transparent focus:border-zinc-350 dark:focus:border-zinc-700 outline-none text-sm font-semibold leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-450 dark:placeholder:text-zinc-550"
+                  className="w-full p-4 bg-zinc-100 dark:bg-zinc-850 rounded-2xl border border-transparent focus:border-zinc-400 dark:focus:border-zinc-700 outline-none text-base font-semibold leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-450 dark:placeholder:text-zinc-550"
                 />
               </div>
             )}
@@ -864,10 +864,10 @@ export default function DonationFlow() {
               onClick={step < totalSteps ? handleNext : handleSubmit}
               disabled={step === 1 && selectedItem.amountType === 'flexible' && amount < 1000}
               style={{
-                width: '100%', height: 52, borderRadius: 14,
+                width: '100%', height: 58, borderRadius: 16,
                 border: 'none', cursor: 'pointer',
-                fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 700,
-                letterSpacing: '0.02em', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-body)', fontSize: 17, fontWeight: 800,
+                letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'filter 150ms ease, transform 150ms ease',
                 color: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'var(--hm-ink-3)' : 'white',
                 background: (step === 1 && selectedItem.amountType === 'flexible' && amount < 1000) ? 'var(--hm-paper-2)' : ft.heroGradient,
@@ -896,7 +896,7 @@ function FPInput({ label, value, onChange, placeholder, type = 'text' }: {
 }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--hm-ink-3)', marginBottom: 8, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+      <label style={{ display: 'block', fontSize: 14, fontWeight: 800, color: 'var(--hm-ink)', marginBottom: 8, letterSpacing: '-0.01em' }}>
         {label}
       </label>
       <input
@@ -904,9 +904,9 @@ function FPInput({ label, value, onChange, placeholder, type = 'text' }: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{ width: '100%', height: 48, padding: '0 16px', background: 'var(--hm-paper-2)', border: '1px solid oklch(0.14 0.015 260 / 0.10)', borderRadius: 12, outline: 'none', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)', color: 'var(--hm-ink)', transition: 'border-color 150ms ease', boxSizing: 'border-box' }}
+        style={{ width: '100%', height: 52, padding: '0 16px', background: 'var(--hm-paper-2)', border: '1px solid oklch(0.14 0.015 260 / 0.15)', borderRadius: 14, outline: 'none', fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-body)', color: 'var(--hm-ink)', transition: 'border-color 150ms ease', boxSizing: 'border-box' }}
         onFocus={e => (e.target.style.borderColor = 'oklch(0.55 0.12 265)')}
-        onBlur={e => (e.target.style.borderColor = 'oklch(0.14 0.015 260 / 0.10)')}
+        onBlur={e => (e.target.style.borderColor = 'oklch(0.14 0.015 260 / 0.15)')}
       />
     </div>
   );
@@ -920,7 +920,7 @@ function RecurringOption({ label, desc, selected, onClick, ft }: {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left border rounded-xl p-5 flex items-center gap-4 cursor-pointer transition-all duration-200"
+      className="w-full text-left border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all duration-200"
       style={{
         borderColor: selected ? ft.primary : 'var(--border)',
         color: selected ? '#fff' : 'inherit',
@@ -928,19 +928,19 @@ function RecurringOption({ label, desc, selected, onClick, ft }: {
       }}
     >
       <div 
-        className="w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+        className="w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
         style={{
           borderColor: selected ? '#fff' : 'rgba(112, 115, 124, 0.4)',
           background: selected ? '#fff' : 'transparent',
         }}
       >
-        {selected && <div className="w-2.5 h-2.5 rounded-full" style={{ background: ft.primary }} />}
+        {selected && <div className="w-3 h-3 rounded-full" style={{ background: ft.primary }} />}
       </div>
       <div>
-        <h4 className="text-sm font-extrabold tracking-tight">{label}</h4>
+        <h4 className="text-base font-extrabold tracking-tight">{label}</h4>
         <p 
-          className="text-xs mt-0.5 font-medium transition-colors"
-          style={{ color: selected ? 'rgba(255,255,255,0.78)' : 'var(--fp-fg-tertiary)' }}
+          className="text-sm mt-1 font-medium transition-colors"
+          style={{ color: selected ? 'rgba(255,255,255,0.85)' : 'var(--fp-fg-tertiary)' }}
         >
           {desc}
         </p>

@@ -84,27 +84,31 @@ const MINIMAL_CSS = `
 @media (max-width: 640px) {
   .mh-nav-inner {
     padding: 10px 14px;
-    gap: 6px;
+    gap: 8px;
   }
   .mh-nav-tenant-name {
-    max-width: 120px;
-    font-size: 13px;
+    max-width: 220px;
+    font-size: 16px;
+    font-weight: 800;
   }
   .mh-mypage-full { display: none; }
   .mh-mypage-short { display: inline; }
   .mh-btn-mypage {
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
   }
   .mh-btn-admin {
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
   }
 }
 
 @media (max-width: 360px) {
   .mh-nav-tenant-name {
-    max-width: 90px;
+    max-width: 160px;
+    font-size: 15px;
   }
 }
 
