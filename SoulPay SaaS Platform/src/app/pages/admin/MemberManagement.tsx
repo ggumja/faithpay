@@ -136,7 +136,7 @@ export default function MemberManagement() {
             phoneList.map(async (phone) => {
               try {
                 const [subRes, profRes] = await Promise.allSettled([
-                  subscriptionAPI.getByPhone(phone),
+                  subscriptionAPI.getByPhone(phone, currentTenant.id),
                   memberAPI.getProfile(phone),
                 ]);
 
@@ -144,10 +144,11 @@ export default function MemberManagement() {
                 if (!memberEntry) return;
 
                 if (subRes.status === 'fulfilled' && subRes.value.success && Array.isArray(subRes.value.data)) {
-                  const activeCount = subRes.value.data.filter((s: any) => s.status === 'active').length;
+                  const tenantSubs = subRes.value.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                  const activeCount = tenantSubs.filter((s: any) => s.status === 'active').length;
                   memberEntry.recurringCount = Math.max(memberEntry.recurringCount, activeCount);
-                  if (!memberEntry.email && subRes.value.data.length > 0) {
-                    const firstWithEmail = subRes.value.data.find((s: any) => s.donorEmail);
+                  if (!memberEntry.email && tenantSubs.length > 0) {
+                    const firstWithEmail = tenantSubs.find((s: any) => s.donorEmail);
                     if (firstWithEmail) memberEntry.email = firstWithEmail.donorEmail;
                   }
                 }

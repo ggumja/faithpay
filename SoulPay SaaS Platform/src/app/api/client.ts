@@ -499,20 +499,29 @@ export const otpAuthAPI = {
     });
   },
 
-  async verifyOtp(phone: string, otpCode: string): Promise<APIResponse<{ token: string; subscriptions: any[]; donations: any[] }>> {
+  async verifyOtp(phone: string, otpCode: string, tenantId?: string): Promise<APIResponse<{ token: string; subscriptions: any[]; donations: any[] }>> {
     return fetchAPI<{ token: string; subscriptions: any[]; donations: any[] }>('/auth/otp/verify', {
       method: 'POST',
-      body: JSON.stringify({ phone, otpCode }),
+      body: JSON.stringify({ phone, otpCode, tenantId }),
     });
   },
 };
 
 export const subscriptionAPI = {
-  async getByPhone(phone: string): Promise<APIResponse<any[]>> {
+  async getByPhone(phone: string, tenantId?: string): Promise<APIResponse<any[]>> {
     try {
       const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}`, { silentFail: true } as any);
-      if (res.success) return res;
+      const query = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : '';
+      const res = await fetchAPI<any[]>(`/subscriptions/phone/${cleanPhone}${query}`, { silentFail: true } as any);
+      if (res.success && Array.isArray(res.data)) {
+        if (tenantId) {
+          const filtered = res.data.filter((s: any) => 
+            s.tenantId === tenantId || s.tenant_id === tenantId
+          );
+          return { success: true, data: filtered };
+        }
+        return res;
+      }
       return { success: true, data: [] };
     } catch {
       return { success: true, data: [] };

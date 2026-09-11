@@ -647,11 +647,12 @@ export default function PaymentSelection() {
                 }
                 checkAttempts++;
                 try {
-                  const subRes = await subscriptionAPI.getByPhone(donorPhone);
+                  const subRes = await subscriptionAPI.getByPhone(donorPhone, currentTenant?.id);
                   if (subRes.success && subRes.data && subRes.data.length > 0) {
                     const recentSub = subRes.data.find((s: any) => {
+                      const matchesTenant = !currentTenant?.id || s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug;
                       const createdAt = new Date(s.createdAt || s.created_at).getTime();
-                      return createdAt >= popupOpenedAt - 5000;
+                      return matchesTenant && createdAt >= popupOpenedAt - 5000;
                     });
                     if (recentSub) {
                       clearInterval(dbPollTimer);

@@ -223,16 +223,19 @@ export default function MemberDetailPage() {
           // If no donation record exists yet, check if member has active subscription
           if (!rawMatch && targetDigits.length >= 8) {
             try {
-              const subRes = await subscriptionAPI.getByPhone(targetDigits);
+              const subRes = await subscriptionAPI.getByPhone(targetDigits, currentTenant.id);
               if (subRes.success && subRes.data && subRes.data.length > 0) {
-                const firstSub = subRes.data[0];
-                rawMatch = {
-                  id: firstSub.id,
-                  donorName: firstSub.donorName,
-                  donorPhone: firstSub.donorPhone,
-                  donorEmail: firstSub.donorEmail || '',
-                  createdAt: firstSub.createdAt,
-                };
+                const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                const firstSub = tenantSubs[0];
+                if (firstSub) {
+                  rawMatch = {
+                    id: firstSub.id,
+                    donorName: firstSub.donorName,
+                    donorPhone: firstSub.donorPhone,
+                    donorEmail: firstSub.donorEmail || '',
+                    createdAt: firstSub.createdAt,
+                  };
+                }
               }
             } catch (e) {
               console.warn('Subscription fallback check failed:', e);
@@ -253,13 +256,14 @@ export default function MemberDetailPage() {
             const lastCompleted = completedDonations[0];
             const lastDonationDate = lastCompleted?.createdAt ? lastCompleted.createdAt.split('T')[0] : '';
 
-            // 2. 정기 약정 현황 (Subscriptions) - 실제 DB subscriptions 테이블 100% 실측 조회
+            // 2. 정기 약정 현황 (Subscriptions) - 실제 DB subscriptions 테이블 100% 실측 조회 (현재 테넌트 격리)
             let subscriptionsList: MemberSubscriptionItem[] = [];
             if (digitsKey && digitsKey !== '미등록') {
               try {
-                const subRes = await subscriptionAPI.getByPhone(digitsKey);
+                const subRes = await subscriptionAPI.getByPhone(digitsKey, currentTenant.id);
                 if (subRes.success && Array.isArray(subRes.data)) {
-                  subscriptionsList = subRes.data.map((sub: any) => ({
+                  const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                  subscriptionsList = tenantSubs.map((sub: any) => ({
                     id: sub.id,
                     itemName: sub.itemName || `${currentTenant.terminology?.donation || '헌금/봉헌'} (정기)`,
                     monthlyAmount: sub.amount || 0,

@@ -1452,14 +1452,21 @@ export async function createSubscription(sub: Omit<Subscription, 'id' | 'created
   };
 }
 
-export async function getSubscriptionsByPhone(phone: string): Promise<Subscription[]> {
+export async function getSubscriptionsByPhone(phone: string, tenantId?: string): Promise<Subscription[]> {
   const sb = pgClient();
   const cleanPhone = phone.replace(/[^0-9]/g, '');
-  const { data } = await sb
+  let query = sb
     .from('subscriptions')
     .select('*')
-    .eq('donor_phone', cleanPhone)
-    .order('created_at', { ascending: false });
+    .eq('donor_phone', cleanPhone);
+
+  if (tenantId) {
+    const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+    const tid = tenant?.id ?? tenantId;
+    query = query.eq('tenant_id', tid);
+  }
+
+  const { data } = await query.order('created_at', { ascending: false });
   return (data ?? []).map((r: any) => ({
     id: r.id, tenantId: r.tenant_id, donorName: r.donor_name,
     donorPhone: r.donor_phone, donorEmail: r.donor_email,

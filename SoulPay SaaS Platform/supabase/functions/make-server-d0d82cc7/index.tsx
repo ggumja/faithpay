@@ -2773,9 +2773,9 @@ app.post("/make-server-d0d82cc7/auth/otp/send", async (c) => {
 });
 
 // 1초 SMS OTP 검증 및 구독/헌금 내역 조회
-app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
+const handleOtpVerify = async (c: any) => {
   try {
-    const { phone, otpCode } = await c.req.json();
+    const { phone, otpCode, tenantId } = await c.req.json();
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const isValid = await db.verifySmsOtp(cleanPhone, otpCode);
 
@@ -2783,10 +2783,17 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
       return c.json({ success: false, error: "인증번호가 올바르지 않거나 만료되었습니다." }, 400);
     }
 
-    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
+    let tid = tenantId;
+    if (tenantId) {
+      const tenant = await db.getTenantById(tenantId) || await db.getTenantBySlug(tenantId);
+      if (tenant) tid = tenant.id;
+    }
+
+    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone, tid);
     const allDonations = await db.getAllDonations();
-    const donations = allDonations.filter(d => 
-      d.donorPhone.replace(/[^0-9]/g, '') === cleanPhone && 
+    const donations = allDonations.filter((d: any) => 
+      d.donorPhone?.replace(/[^0-9]/g, '') === cleanPhone && 
+      (!tid || d.tenantId === tid || d.tenant_id === tid) &&
       (!d.paymentStatus || d.paymentStatus === 'completed' || d.paymentStatus === 'cancelled')
     );
 
@@ -2799,7 +2806,9 @@ app.post("/make-server-d0d82cc7/auth/otp/verify", async (c) => {
   } catch (error) {
     return c.json({ success: false, error: "OTP Verification failed" }, 500);
   }
-});
+};
+app.post("/make-server-d0d82cc7/auth/otp/verify", handleOtpVerify);
+app.post("/auth/otp/verify", handleOtpVerify);
 
 // 💬 카카오 로그인 토큰 교환
 const handleKakaoToken = async (c: any) => {
@@ -2889,7 +2898,8 @@ const handleGetSubscriptionsByPhone = async (c: any) => {
   try {
     const rawPhone = c.req.param("phone");
     const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
-    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone);
+    const tenantId = c.req.query("tenantId") || c.req.query("tenant_id");
+    const subscriptions = await db.getSubscriptionsByPhone(cleanPhone, tenantId);
     return c.json({ success: true, data: subscriptions });
   } catch (error: any) {
     return c.json({ success: false, error: error?.message || "Failed to fetch subscriptions" }, 500);
@@ -3020,7 +3030,7 @@ const handleRegisterSubscription = async (c: any) => {
     const cleanPhone = donorPhone.replace(/[^0-9]/g, '');
 
     // 중복 생성 방지: 동일 테넌트, 전화번호, 빌키, 요일/일자의 활성 약정이 이미 존재하는지 확인
-    const existingSubs = await db.getSubscriptionsByPhone(cleanPhone);
+    const existingSubs = await db.getSubscriptionsByPhone(cleanPhone, tenantId);
     const dayMap: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
     let normDow: number | null = null;
     if (recurringDayOfWeek !== undefined && recurringDayOfWeek !== null) {

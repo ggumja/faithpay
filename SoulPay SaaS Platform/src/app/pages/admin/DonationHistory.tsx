@@ -714,9 +714,10 @@ export default function DonationHistory() {
           // 2. Fallback: Query backend for active subscriptions by phone
           if (!subId && targetDonation.donorPhone) {
             try {
-              const subRes = await subscriptionAPI.getByPhone(targetDonation.donorPhone);
+              const subRes = await subscriptionAPI.getByPhone(targetDonation.donorPhone, currentTenant.id);
               if (subRes.success && subRes.data && subRes.data.length > 0) {
-                const activeSub = subRes.data.find((s) => s.status === 'active' || s.status !== 'cancelled');
+                const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                const activeSub = tenantSubs.find((s: any) => s.status === 'active' || s.status !== 'cancelled');
                 if (activeSub) {
                   subId = activeSub.id;
                 }
