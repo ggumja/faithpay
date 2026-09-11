@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
-import { Building2, Palette, FileText } from 'lucide-react';
+import { Building2, Palette, FileText, Image as ImageIcon } from 'lucide-react';
 import { isAdminPortalDomain } from '../../utils/domainUtils';
 
 interface TenantSettingsNavProps {
   tenantSlug?: string;
-  activeTab: 'basic' | 'design' | 'documents';
+  activeTab: 'basic' | 'design' | 'banners' | 'documents';
   currentPath: string;
 }
 
@@ -33,6 +33,13 @@ export function TenantSettingsNav({ tenantSlug, activeTab, currentPath }: Tenant
       path: getPath('design'),
     },
     {
+      id: 'banners',
+      label: '배너 관리',
+      desc: '상단 히어로 배너, 사이드 광고 배너',
+      icon: ImageIcon,
+      path: getPath('banners'),
+    },
+    {
       id: 'documents',
       label: '단체서류',
       desc: '고유번호증, 통장사본, 정관, 인증서류',
@@ -46,10 +53,10 @@ export function TenantSettingsNav({ tenantSlug, activeTab, currentPath }: Tenant
       {/* Page Title & Subtitle */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
-          설정 및 단체 관리
+          설정 및 환경 관리
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
-          단체의 기본 정보, 모바일 랜딩 디자인 및 인증 서류를 체계적으로 관리하세요
+          단체의 기본 정보, 모바일 랜딩 디자인, 홍보 배너 및 인증 서류를 체계적으로 관리하세요
         </p>
       </div>
 

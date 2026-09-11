@@ -252,8 +252,16 @@ export const router = createBrowserRouter([
             Component: TenantDesignSettings,
           },
           {
+            path: "/:tenantSlug/admin/settings/banners",
+            Component: BannerManagement,
+          },
+          {
             path: "/:tenantSlug/admin/settings/documents",
             Component: TenantDocumentsSettings,
+          },
+          {
+            path: "/:tenantSlug/admin/settings/accounts",
+            Component: AdminAccountManagement,
           },
           {
             path: "/:tenantSlug/admin/donations",

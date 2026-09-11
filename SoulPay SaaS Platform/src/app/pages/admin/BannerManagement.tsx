@@ -11,6 +11,7 @@ import { Switch } from '../../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
+import { TenantSettingsNav } from '../../components/admin/TenantSettingsNav';
 import {
   Menu,
   Plus,
@@ -442,6 +443,13 @@ export default function BannerManagement() {
           {/* Content Body */}
           <div className="p-6 lg:p-8 overflow-x-hidden">
             <div className="w-full space-y-6 max-w-6xl">
+              {/* Common Settings Nav Tabs */}
+              <TenantSettingsNav
+                tenantSlug={tenantSlug}
+                activeTab="banners"
+                currentPath={currentPath}
+              />
+
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-2.5">
