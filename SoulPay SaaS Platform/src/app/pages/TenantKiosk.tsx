@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
-import { donationAPI, donationItemsAPI, DonationItem, kakaoPayAPI } from '../api/client';
+import { donationAPI, donationItemsAPI, DonationItem, kakaoPayAPI, settingsAPI } from '../api/client';
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { Badge } from '../components/ui/badge';
 import {
@@ -25,6 +25,7 @@ import {
   QrCode,
   Scan,
   Camera,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -160,6 +161,27 @@ export default function TenantKiosk() {
   const [approvalNo, setApprovalNo] = useState('');
   const [autoResetSeconds, setAutoResetSeconds] = useState(45);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
+
+  // 전체 공지 & 결제 점검 모드 상태 (실제 DB system_settings 연동)
+  const [broadcastNotice, setBroadcastNotice] = useState<any>(null);
+  useEffect(() => {
+    let isMounted = true;
+    settingsAPI.get('global_broadcast_notice')
+      .then((res: any) => {
+        if (!isMounted) return;
+        if (res?.value && res.value.isActive) {
+          setBroadcastNotice(res.value);
+        } else {
+          setBroadcastNotice(null);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load global broadcast notice in Kiosk:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
+
+  const isMaintenance = Boolean(broadcastNotice?.isActive && broadcastNotice?.isMaintenanceMode);
 
   // Live Camera Stream State & Ref for Kiosk QR/Barcode Scanner
   const kioskVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -317,6 +339,10 @@ export default function TenantKiosk() {
 
   // Select Fast Anonymous Mode
   const startAnonymousTrack = () => {
+    if (isMaintenance) {
+      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 키오스크를 이용하실 수 없습니다.');
+      return;
+    }
     setIsAnonymous(true);
     setDonorName('무기명');
     setPhoneDigits('');
@@ -326,6 +352,10 @@ export default function TenantKiosk() {
 
   // Select Phone Track
   const startPhoneTrack = () => {
+    if (isMaintenance) {
+      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 키오스크를 이용하실 수 없습니다.');
+      return;
+    }
     setIsAnonymous(false);
     setPhoneDigits('');
     setDonorName('');
@@ -335,6 +365,10 @@ export default function TenantKiosk() {
 
   // Submit OffPG Card / Easy Payment
   const processOffPgPayment = async () => {
+    if (isMaintenance) {
+      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제를 진행할 수 없습니다.');
+      return;
+    }
     if (!currentTenant) {
       toast.error('단체 정보가 유효하지 않습니다.');
       return;
@@ -501,6 +535,30 @@ export default function TenantKiosk() {
         {/* STEP 0: 2-Track 모드 선택 */}
         {step === 'MODE_SELECT' && (
           <div className="space-y-10 text-center my-auto">
+            {isMaintenance && (
+              <div className="bg-rose-50 border-2 border-rose-400 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto flex items-start gap-4 text-left shadow-lg">
+                <div className="p-3 rounded-2xl bg-rose-100 text-rose-600 shrink-0">
+                  <AlertTriangle className="w-8 h-8" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="px-3 py-1 rounded-full text-xs font-black bg-rose-600 text-white uppercase tracking-wider">
+                    결제 시스템 점검 중
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-rose-950 mt-2">
+                    {broadcastNotice?.title || '키오스크 결제 시스템 점검 중'}
+                  </h2>
+                  {broadcastNotice?.content && (
+                    <p className="text-sm sm:text-base text-rose-800/90 mt-2 whitespace-pre-wrap leading-relaxed">
+                      {broadcastNotice.content}
+                    </p>
+                  )}
+                  <p className="text-xs sm:text-sm font-bold text-rose-700 mt-3 pt-3 border-t border-rose-200">
+                    * 금융 PG사 정기 점검으로 인해 현장 카드 및 간편결제가 일시 중단됩니다. 불편을 드려 대단히 죄송합니다.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#E8F3FF] text-[#1B64DA] text-sm font-black border border-[#CEE4FE]">
                 <Sparkles className="w-4 h-4" /> 현장 오프라인 터치 결제

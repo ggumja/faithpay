@@ -436,6 +436,29 @@ app.delete("/make-server-d0d82cc7/settings/:key", async (c) => {
 });
 
 
+// 전체 결제 시스템 점검 모드(Maintenance Mode) 실시간 검증 헬퍼
+async function checkGlobalPaymentMaintenance(): Promise<{ isMaintenance: boolean; notice?: any }> {
+  try {
+    const sb = db.pgClient();
+    const { data } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'global_broadcast_notice')
+      .maybeSingle();
+
+    if (data?.value) {
+      const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      if (val?.isActive && val?.isMaintenanceMode) {
+        return { isMaintenance: true, notice: val };
+      }
+    }
+    return { isMaintenance: false };
+  } catch (err) {
+    console.warn('Failed to check global payment maintenance:', err);
+    return { isMaintenance: false };
+  }
+}
+
 // ==================== PAYMENT CANCEL ROUTE ====================
 
 // 결제 취소 처리 (토스페이먼츠 및 나노페이 통합)
@@ -716,6 +739,16 @@ app.delete("/make-server-d0d82cc7/payment/:tenantId", async (c) => {
 // 수기결제 처리
 app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
+
     const { tenantId, donationData, paymentData } = await c.req.json();
     
     // DB에서 테넌트 결제 설정 조회
@@ -877,6 +910,16 @@ app.post("/make-server-d0d82cc7/admin/migrate-payment-methods", async (c) => {
 // 토스페이먼츠(TossPayments) 승인 API 연동 (/v1/payments/confirm)
 app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
+
     const { tenantId, paymentKey, orderId, amount, donorName, donorPhone, itemName, itemId } = await c.req.json();
     const config = await db.getPaymentConfig(tenantId);
     
@@ -1137,6 +1180,16 @@ app.get("/make-server-d0d82cc7/payment/settlements/toss/:tenantId", async (c) =>
 // 인증결제 요청 처리
 app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
+
     const { tenantId, donationData, deviceType, payWay } = await c.req.json();
     
     // DB에서 테넌트 결제 설정 조회
@@ -1390,6 +1443,15 @@ async function executeNanoPayBillPay({
 // 빌키 발급 요청 (카드 인증창 호출)
 app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
     const { tenantId, donationData } = await c.req.json();
     if (!tenantId) {
       return c.json({ success: false, error: "tenantId is required" }, 400);
@@ -3373,6 +3435,16 @@ app.delete("/make-server-d0d82cc7/donations/:tenantId/:id", async (c) => {
 // 1. Kakao Pay Ready (결제 준비 - TC0ONETIME)
 app.post("/make-server-d0d82cc7/kakaopay/ready", async (c) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
+
     const { partner_order_id, partner_user_id, item_name, total_amount, approval_url, cancel_url, fail_url } = await c.req.json();
 
     const origin = c.req.header("origin") || c.req.header("referer")?.replace(/\/$/, '') || "https://soulpay.kr";
@@ -3429,6 +3501,16 @@ app.post("/make-server-d0d82cc7/kakaopay/ready", async (c) => {
 // 2. Kakao Pay Approve (결제 승인 - TC0ONETIME)
 app.post("/make-server-d0d82cc7/kakaopay/approve", async (c) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
+
     const { tid, partner_order_id, partner_user_id, pg_token } = await c.req.json();
 
     const payload = {
@@ -4059,6 +4141,17 @@ app.patch("/make-server-d0d82cc7/partners/:id/channel-share", async (c) => {
 // 매일 지정 시각(Cron / GitHub Actions)에 트리거되어 정기결제(일/주/월)를 자동 승인하는 상용 배치 스케줄러
 const handleRecurringBatchRun = async (c: any) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      console.log('[Recurring Batch Scheduler] Skipped batch run due to active system maintenance mode');
+      return c.json({
+        success: true,
+        message: '전체 결제 시스템 점검 모드가 활성화되어 있어 정기결제 자동 배치를 일시 건너뜁니다.',
+        isMaintenance: true,
+        processedCount: 0,
+      });
+    }
+
     // ⚡ KST (UTC+9) 기준 현재 시각 실측 산출
     const now = new Date();
     const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -4253,6 +4346,16 @@ app.post("/payment/recurring/batch-run", handleRecurringBatchRun);
 // 단일 정기결제 약정 즉시 청구 (Dev 테스트 및 관리자 즉시 청구)
 const handleChargeSubscriptionNow = async (c: any) => {
   try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    if (maintenance.isMaintenance) {
+      return c.json({
+        success: false,
+        error: maintenance.notice?.title ? `[시스템 점검] ${maintenance.notice.title}` : '현재 금융 결제망 정기 점검 중으로 모든 전자결제 승인이 일시 중단되었습니다. 점검 완료 후 다시 시도해 주세요.',
+        code: 'SYSTEM_MAINTENANCE',
+        isMaintenance: true
+      }, 503);
+    }
+
     const { subscriptionId } = await c.req.json();
     if (!subscriptionId) {
       return c.json({ success: false, error: 'subscriptionId is required' }, 400);
