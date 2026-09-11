@@ -209,6 +209,7 @@ export default function AgentDashboard() {
               onClick={() => {
                 sessionStorage.removeItem('soulpay_partner_session');
                 sessionStorage.removeItem('faithpay_partner_session');
+                localStorage.removeItem('soulpay_partner_last_activity');
                 toast.success('로그아웃되었습니다.');
                 navigate('/partner/login');
               }}
