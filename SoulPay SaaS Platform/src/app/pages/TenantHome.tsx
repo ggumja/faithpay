@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { useApp, DonationItem, Tenant } from '../context/AppContext';
 import { donationItemsAPI, tenantAPI } from '../api/client';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
@@ -12,6 +12,8 @@ import { AlertCircle, Home, UserPlus, Clock } from 'lucide-react';
 export default function TenantHome() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetItemParam = searchParams.get('item') || searchParams.get('itemId');
   const { tenants, isTenantsLoaded, currentTenant, setCurrentTenant } = useApp();
 
   const [directTenant, setDirectTenant] = useState<Tenant | null>(null);
@@ -73,10 +75,12 @@ export default function TenantHome() {
 
   const { canInstall, hasNativePrompt, install } = useTenantPWA(targetTenant || undefined);
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
+  const [isItemsLoading, setIsItemsLoading] = useState<boolean>(Boolean(targetItemParam));
 
   useEffect(() => {
     let isMounted = true;
     if (targetTenant) {
+      if (targetItemParam) setIsItemsLoading(true);
       donationItemsAPI.getItems(targetTenant.id).then(async (res) => {
         if (!isMounted) return;
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
@@ -90,17 +94,42 @@ export default function TenantHome() {
             setDbItems([]);
           }
         }
+        if (isMounted) setIsItemsLoading(false);
       }).catch(() => {
-        if (isMounted) setDbItems([]);
+        if (isMounted) {
+          setDbItems([]);
+          setIsItemsLoading(false);
+        }
       });
     }
     return () => {
       isMounted = false;
     };
-  }, [targetTenant]);
+  }, [targetTenant, targetItemParam]);
 
-  // 로딩 상태: 전체 테넌트 목록이 아직 로드 중이거나 직접 조회가 진행 중일 때
-  if (!isTenantsLoaded || (isDirectLoading && !targetTenant)) {
+  // 특정 항목 바로가기 (QR 코드 또는 ?item= / ?itemId= 쿼리 파라미터 진입 시 해당 헌금/보시 입력창으로 직행)
+  useEffect(() => {
+    if (!targetItemParam || !targetTenant || dbItems.length === 0) return;
+
+    const trimmedParam = targetItemParam.trim();
+    const matchedItem = dbItems.find(
+      (i) =>
+        i.id === trimmedParam ||
+        i.id.toLowerCase() === trimmedParam.toLowerCase() ||
+        i.name === trimmedParam ||
+        i.name.trim() === decodeURIComponent(trimmedParam).trim()
+    );
+
+    if (matchedItem) {
+      navigate(`/${targetTenant.slug}/donate?item=${encodeURIComponent(matchedItem.id)}`, {
+        state: { selectedItem: matchedItem },
+        replace: true,
+      });
+    }
+  }, [targetItemParam, targetTenant, dbItems, navigate]);
+
+  // 로딩 상태: 전체 테넌트 목록이 아직 로드 중이거나 직접 조회가 진행 중일 때, 또는 특정 항목 바로가기 파라미터가 있어 항목 매칭 대기 중일 때
+  if (!isTenantsLoaded || (isDirectLoading && !targetTenant) || (targetItemParam && isItemsLoading)) {
     return (
       <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>

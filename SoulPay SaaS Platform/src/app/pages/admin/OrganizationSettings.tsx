@@ -39,6 +39,7 @@ import { openDaumPostcode } from '../../utils/daumPostcode';
 import { Separator } from '../../components/ui/separator';
 import { RBACRouteGuard } from '../../components/RBACRouteGuard';
 import { PAGE_TEMPLATES, TemplateId } from '../../theme/pageTemplates';
+import { TenantQRCodeCard } from '../../components/admin/TenantQRCodeCard';
 
 interface ScheduleItem {
   label: string;
@@ -48,7 +49,8 @@ interface ScheduleItem {
 export default function OrganizationSettings() {
   const { tenantSlug } = useParams();
   const location = useLocation();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, updateTenantInfo, getTenantDonationItems } = useApp();
+  const donationItems = currentTenant ? getTenantDonationItems(currentTenant) : [];
   
   // Form state
   const addressDetailRef = useRef<HTMLInputElement>(null);
@@ -458,6 +460,11 @@ export default function OrganizationSettings() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* 📱 단체 전용 모바일 헌금·보시 QR코드 생성 및 현장 인쇄 카드 */}
+            {currentTenant && (
+              <TenantQRCodeCard tenant={currentTenant} donationItems={donationItems} />
+            )}
 
             {/* Basic Information */}
             <Card className="mb-6">
