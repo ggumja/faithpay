@@ -237,9 +237,11 @@ export default function TenantDesignSettings() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {Object.values(PAGE_TEMPLATES).map((tmpl) => {
-                      const isSelected = selectedTemplate === tmpl.id;
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.values(PAGE_TEMPLATES)
+                      .filter((tmpl) => !tmpl.hidden)
+                      .map((tmpl) => {
+                        const isSelected = selectedTemplate === tmpl.id;
                       return (
                         <div
                           key={tmpl.id}
