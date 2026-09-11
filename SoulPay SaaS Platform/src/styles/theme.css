@@ -175,6 +175,16 @@ body {
   transform: translateY(0);
   filter: brightness(0.95);
 }
+
+/* Compact Cobalt Button Utility */
+.hm-cobalt-btn {
+  background: var(--hm-cobalt-gradient) !important;
+  color: #ffffff !important;
+}
+.hm-cobalt-btn:hover {
+  filter: brightness(1.12);
+}
+
 .hm-btn-primary:focus-visible {
   outline: 2px solid var(--hm-accent);
   outline-offset: 3px;
