@@ -132,6 +132,10 @@ export const router = createBrowserRouter([
         Component: AdminLogin,
       },
       {
+        path: "/admin/*",
+        Component: AdminRedirectGuard,
+      },
+      {
         path: "/:tenantSlug/login",
         Component: AdminLogin,
       },
@@ -220,8 +224,16 @@ export const router = createBrowserRouter([
             Component: DonationMenuManagement,
           },
           {
+            path: "/:tenantSlug/members",
+            Component: MemberManagement,
+          },
+          {
             path: "/:tenantSlug/admin/members",
             Component: MemberManagement,
+          },
+          {
+            path: "/:tenantSlug/members/:memberId",
+            Component: MemberDetailPage,
           },
           {
             path: "/:tenantSlug/admin/members/:memberId",

@@ -436,13 +436,37 @@ export default function MemberDetailPage() {
     );
   }
 
-  if (isLoading || !member) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
         <div className="text-center space-y-3">
           <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto" />
           <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">회원 상세 정보를 불러오는 중입니다...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!member) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 p-4">
+        <Card className="max-w-md w-full p-8 text-center space-y-4 border-slate-200 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-xl font-bold">
+            !
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">회원 정보를 찾을 수 없습니다</h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              요청하신 회원(ID: {memberId})의 납부 또는 등록 내역이 존재하지 않거나 삭제되었습니다.
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate(`/${tenantSlug}/admin/members`)}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs h-9 rounded-lg cursor-pointer"
+          >
+            회원 관리 목록으로 돌아가기
+          </Button>
+        </Card>
       </div>
     );
   }
@@ -577,7 +601,7 @@ export default function MemberDetailPage() {
 
             <div class="total-amount-area">
               <p style="margin: 0; font-size: 11px; color: #555;">${taxYear}년도 연간 기부 합계 금액 (Total Tax-Deductible Donation)</p>
-              <h2>₩ ${member.totalDonation.toLocaleString()} 원</h2>
+              <h2>${member.totalDonation.toLocaleString()} 원</h2>
             </div>
 
             <div class="notice-box">
@@ -683,7 +707,7 @@ export default function MemberDetailPage() {
 
             <div class="amount-box">
               <p style="margin: 0 0 5px 0; font-size: 12px; color: #4b5563;">총 납부 금액 (Amount Paid)</p>
-              <h2>₩ ${targetAmount.toLocaleString()} 원</h2>
+              <h2>${targetAmount.toLocaleString()} 원</h2>
             </div>
 
             <div class="footer-msg">
@@ -912,7 +936,7 @@ export default function MemberDetailPage() {
                 <button
                   type="button"
                   onClick={() => handlePrintReceipt()}
-                  className="inline-flex items-center gap-1.5 bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
+                  className="inline-flex items-center gap-1.5 hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
                 >
                   <Printer className="h-3.5 w-3.5" />
                   <span>전체 {donationTerm} 확인서</span>
@@ -925,7 +949,7 @@ export default function MemberDetailPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[var(--hm-ink-3)] block">총 누적 {donationTerm}액</span>
                 <span className="text-2xl font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums tracking-tight block">
-                  ₩ {member.totalDonation.toLocaleString()}
+                  {member.totalDonation.toLocaleString()}원
                 </span>
                 <span className="text-[11px] text-[var(--hm-ink-3)] block">실측 결제 완료 기준</span>
               </div>
@@ -1070,7 +1094,7 @@ export default function MemberDetailPage() {
                       </span>
                       <span className="text-[var(--hm-border)]">|</span>
                       <span>
-                        기간 실납부 합계: <strong className="text-[var(--hm-ink)] font-black font-[family-name:var(--font-mono)] tabular-nums">₩ {filteredCompletedSum.toLocaleString()}원</strong>
+                        기간 실납부 합계: <strong className="text-[var(--hm-ink)] font-black font-[family-name:var(--font-mono)] tabular-nums">{filteredCompletedSum.toLocaleString()}원</strong>
                       </span>
                     </div>
                   </div>
@@ -1129,11 +1153,11 @@ export default function MemberDetailPage() {
                             <TableCell className="text-right py-3 font-[family-name:var(--font-mono)] tabular-nums">
                               {don.status === 'completed' ? (
                                 <span className="font-black text-[var(--hm-ink)] text-sm">
-                                  ₩ {don.amount.toLocaleString()}원
+                                  {don.amount.toLocaleString()}원
                                 </span>
                               ) : (
                                 <span className="font-normal text-[var(--hm-ink-3)] line-through text-sm">
-                                  ₩ {don.amount.toLocaleString()}원
+                                  {don.amount.toLocaleString()}원
                                 </span>
                               )}
                             </TableCell>
@@ -1264,7 +1288,7 @@ export default function MemberDetailPage() {
                           <div className="flex items-baseline justify-between pt-1">
                             <span className="text-xs font-medium text-[var(--hm-ink-3)]">약정 금액</span>
                             <span className="text-lg font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums">
-                              ₩ {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
+                              {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
                             </span>
                           </div>
 
@@ -1413,7 +1437,7 @@ export default function MemberDetailPage() {
                     <button
                       type="button"
                       onClick={handleSaveNote}
-                      className="inline-flex items-center gap-1.5 bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
+                      className="inline-flex items-center gap-1.5 hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
                     >
                       <Check className="h-3.5 w-3.5" />
                       <span>메모 저장</span>
@@ -1466,7 +1490,7 @@ export default function MemberDetailPage() {
                 <Input
                   type="text"
                   readOnly
-                  value={`₩ ${member.totalDonation.toLocaleString()}원`}
+                  value={`${member.totalDonation.toLocaleString()}원`}
                   className="text-xs bg-[var(--hm-paper-2)] border-[var(--hm-border)] font-bold font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink)] cursor-not-allowed rounded-lg"
                 />
               </div>
@@ -1523,7 +1547,7 @@ export default function MemberDetailPage() {
             <Button
               type="button"
               onClick={handleGenerateTaxReceipt}
-              className="bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs gap-1.5 cursor-pointer rounded-lg shadow-sm"
+              className="hm-cobalt-btn bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs gap-1.5 cursor-pointer rounded-lg shadow-sm"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>영수증 출력 / PDF 저장</span>
@@ -1616,7 +1640,7 @@ export default function MemberDetailPage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-[var(--hm-cobalt-gradient)] hover:brightness-110 text-white font-semibold text-xs rounded-lg shadow-sm cursor-pointer"
+                className="hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs rounded-lg shadow-sm cursor-pointer"
               >
                 수정 사항 저장
               </Button>

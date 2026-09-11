@@ -1,20 +1,27 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { useApp } from '../../context/AppContext';
 
 export default function AdminRedirectGuard() {
   const navigate = useNavigate();
-  const { currentAdmin, currentTenant } = useApp();
+  const location = useLocation();
+  const { currentAdmin, currentTenant, tenants } = useApp();
 
   useEffect(() => {
+    const subpath = location.pathname.replace(/^\/admin/, '') || '';
+    const targetSlug = currentTenant?.slug || tenants.find(t => t.id === currentAdmin?.tenantId)?.slug;
+
     if (currentAdmin?.role === 'system_admin') {
-      navigate('/system/admin', { replace: true });
-    } else if (currentAdmin?.role === 'tenant_admin' && currentTenant?.slug) {
-      navigate(`/${currentTenant.slug}/admin`, { replace: true });
+      navigate('/system/admin' + subpath, { replace: true });
+    } else if (targetSlug) {
+      navigate(`/${targetSlug}/admin${subpath}`, { replace: true });
+    } else if (currentAdmin && tenants.length === 0) {
+      // 테넌트 목록 로딩 중 대기
+      return;
     } else {
-      navigate('/system/admin', { replace: true });
+      navigate('/admin/login', { replace: true });
     }
-  }, [currentAdmin, currentTenant, navigate]);
+  }, [currentAdmin, currentTenant, tenants, location.pathname, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
