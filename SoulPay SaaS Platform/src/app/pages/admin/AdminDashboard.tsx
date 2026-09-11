@@ -23,7 +23,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '../../components/ui/sheet';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
 import { donationAPI } from '../../api/client';
@@ -348,6 +348,8 @@ export default function AdminDashboard() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0">
+            <SheetTitle className="sr-only">관리자 메뉴 네비게이션</SheetTitle>
+            <SheetDescription className="sr-only">관리자 페이지 사이드바 메뉴</SheetDescription>
             <AdminSidebar tenantSlug={tenantSlug} currentPath={currentPath} />
           </SheetContent>
         </Sheet>
