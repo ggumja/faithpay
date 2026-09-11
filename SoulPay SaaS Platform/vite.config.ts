@@ -72,29 +72,12 @@ export default defineConfig({
         ],
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallbackDenylist: [/^\/system\/admin\/.*/, /^https:\/\/.*\.supabase\.co\/.*/],
-        runtimeCaching: [
-          {
-            // Supabase API 및 백엔드 API — 캐시하지 않고 즉시 직통
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkOnly',
-          },
-
-          {
-            // 정적 이미지 자산 — 캐시 우선
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'soulpay-images',
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30일
-              },
-            },
-          },
-        ],
+        // 🚀 Zero-Cache 링크/바로가기 전용 PWA 설정
+        // JS, CSS, HTML 등 정적 파일을 브라우저 디스크에 캐시하지 않아 구버전 충돌 및 강제 새로고침을 원천 방지
+        globPatterns: [],
+        cleanupOutdatedCaches: true,
+        navigateFallback: null,
+        runtimeCaching: [],
       },
     }),
   ],

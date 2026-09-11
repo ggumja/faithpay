@@ -22,6 +22,17 @@ export function setupServiceWorker(): void {
     host === '127.0.0.1' ||
     host.endsWith('.local');
 
+  // 기존 구버전에서 디스크에 축적되었던 잔여 캐시 스토리지 1회성 완전 소거
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      for (const name of names) {
+        if (name.includes('soulpay') || name.includes('workbox') || name.includes('precache')) {
+          caches.delete(name);
+        }
+      }
+    }).catch(() => {});
+  }
+
   // Dev 및 통합 테스트 환경: 브라우저에 남아있을 수 있는 구형 Service Worker 및 캐시를 완전히 정리
   if (isDevHost) {
     if ('serviceWorker' in navigator) {
@@ -35,15 +46,15 @@ export function setupServiceWorker(): void {
     return;
   }
 
-  // 상용 환경: 백그라운드 안전 등록 (진행 중인 세션 강제 새로고침 금지)
+  // 상용 환경: Zero-Cache 링크 바로가기용 Service Worker 안전 등록 (진행 중인 세션 강제 새로고침 금지)
   try {
     registerSW({
       immediate: false,
       onNeedRefresh() {
-        console.log('[PWA] 최신 버전 서비스 워커가 백그라운드에 준비되었습니다. 다음 방문 시 자동 적용됩니다.');
+        console.log('[PWA] 바로가기 전용 Service Worker 준비 완료');
       },
       onOfflineReady() {
-        console.log('[PWA] 오프라인 리소스 준비 완료');
+        console.log('[PWA] 바로가기 준비 완료');
       },
     });
   } catch (err) {
