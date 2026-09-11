@@ -128,6 +128,7 @@ export default function MemberDetailPage() {
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
   // Tax Receipt On-Demand Dialog State
   const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
   const [taxYear, setTaxYear] = useState('2026');
@@ -360,6 +361,19 @@ export default function MemberDetailPage() {
               }
             }
 
+            // 3. 관리자 메모 실측 조회 (단체별 완벽 격리)
+            let resolvedNote = '';
+            if (digitsKey && digitsKey !== '미등록') {
+              try {
+                const noteRes = await memberAPI.getNote(digitsKey, currentTenant.id);
+                if (noteRes.success && noteRes.data?.note) {
+                  resolvedNote = noteRes.data.note;
+                }
+              } catch (noteErr) {
+                console.warn('Failed to load member note:', noteErr);
+              }
+            }
+
             const loadedMem: MemberDetailData = {
               id: memberId,
               name: resolvedName,
@@ -372,7 +386,7 @@ export default function MemberDetailPage() {
               totalDonation: totalSum,
               lastDonation: lastDonationDate,
               recurringCount: activeRecurringCount,
-              note: rawMatch.note || '',
+              note: resolvedNote || rawMatch.note || '',
               donationsHistory: donorDonations.map((d: any) => {
                 const dateObj = d.createdAt ? new Date(d.createdAt) : null;
                 const isValid = dateObj && !isNaN(dateObj.getTime());
@@ -383,6 +397,20 @@ export default function MemberDetailPage() {
                   ? `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`
                   : (d.createdAt && d.createdAt.includes('T') ? d.createdAt.split('T')[1]?.slice(0, 8) : '');
 
+                let effStatus = (d.paymentStatus || 'completed') as any;
+                let effFailureReason = d.failureReason;
+                // 즉시 결제(신용카드/간편결제 등)에서 30분 이상 경과한 'pending' 건은 결제 미완료/이탈(failed)로 정리
+                if (effStatus === 'pending' && d.createdAt) {
+                  const createdTime = new Date(d.createdAt).getTime();
+                  const elapsedMinutes = (Date.now() - createdTime) / (1000 * 60);
+                  if (elapsedMinutes > 30) {
+                    effStatus = 'failed';
+                    if (!effFailureReason) {
+                      effFailureReason = '결제 시간 초과 (미완료 이탈)';
+                    }
+                  }
+                }
+
                 return {
                   id: d.id,
                   date: datePart,
@@ -391,10 +419,10 @@ export default function MemberDetailPage() {
                   amount: d.amount || 0,
                   paymentMethod: cleanPaymentMethod(d.paymentMethod || d.payMethod || d.method),
                   type: d.isRecurring ? 'recurring' : 'once',
-                  status: (d.paymentStatus || 'completed') as any,
+                  status: effStatus,
                   cancelReason: d.cancelReason,
                   cancelApprovedAt: d.cancelApprovedAt,
-                  failureReason: d.failureReason,
+                  failureReason: effFailureReason,
                 };
               }),
               subscriptions: subscriptionsList,
@@ -493,9 +521,38 @@ export default function MemberDetailPage() {
     toast.success('연락처가 클립보드에 복사되었습니다.');
   };
 
-  const handleSaveNote = () => {
-    setMember((prev) => (prev ? { ...prev, note: noteText } : null));
-    toast.success('관리자 메모가 저장되었습니다.');
+  const handleSaveNote = async () => {
+    if (!member || !currentTenant) return;
+    setIsSavingNote(true);
+    try {
+      const res = await memberAPI.saveNote(member.phone, currentTenant.id, noteText, currentAdmin?.email);
+      if (res.success) {
+        setMember((prev) => (prev ? { ...prev, note: noteText } : null));
+        toast.success('관리자 메모가 DB에 안전하게 저장되었습니다.');
+      } else {
+        toast.error(res.error || '메모 저장에 실패했습니다.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '메모 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const handleDeleteDonationRecord = async (donationId: string) => {
+    if (!currentTenant) return;
+    if (!window.confirm('해당 미완료/실패 결제 시도 내역을 삭제하시겠습니까?')) return;
+    try {
+      const res = await donationAPI.deletePending(currentTenant.id, donationId);
+      if (res.success) {
+        toast.success('결제 시도 내역이 삭제되었습니다.');
+        loadMemberDetail();
+      } else {
+        toast.error(res.error || '내역 삭제에 실패했습니다.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || '내역 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   // 1. 국세청 별지 제45호 서식 소득공제용 기부금 영수증 온디맨드 인쇄
@@ -1162,6 +1219,16 @@ export default function MemberDetailPage() {
                                   <Printer className="h-3 w-3" />
                                   <span>인쇄</span>
                                 </button>
+                              ) : (don.status === 'failed' || don.status === 'pending') ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDonationRecord(don.id)}
+                                  title="미완료/실패 결제 시도 내역 삭제"
+                                  className="inline-flex items-center gap-1 h-7 px-2 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer rounded-md transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  <span>삭제</span>
+                                </button>
                               ) : don.status === 'cancelled' ? (
                                 <span className="text-xs text-[var(--hm-danger)] font-medium">취소</span>
                               ) : (
@@ -1394,11 +1461,16 @@ export default function MemberDetailPage() {
                   <div className="flex justify-end">
                     <button
                       type="button"
+                      disabled={isSavingNote}
                       onClick={handleSaveNote}
-                      className="inline-flex items-center gap-1.5 hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all"
+                      className="inline-flex items-center gap-1.5 hm-cobalt-btn bg-blue-600 hover:brightness-110 text-white font-semibold text-xs h-9 px-4 rounded-lg shadow-sm cursor-pointer transition-all disabled:opacity-50"
                     >
-                      <Check className="h-3.5 w-3.5" />
-                      <span>메모 저장</span>
+                      {isSavingNote ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isSavingNote ? '저장 중...' : '메모 저장'}</span>
                     </button>
                   </div>
                 </div>

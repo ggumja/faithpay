@@ -4568,6 +4568,59 @@ app.get("/members/profile/:phone", handleGetProfile);
 app.post("/make-server-d0d82cc7/members/update-profile", handleUpdateProfile);
 app.post("/members/update-profile", handleUpdateProfile);
 
+// 📝 관리자 메모 조회 API (단체별 격리)
+const handleGetMemberNote = async (c: any) => {
+  try {
+    const rawPhone = c.req.param('phone');
+    const tenantId = c.req.query('tenantId') || c.req.query('tenant_id');
+    const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || !tenantId) {
+      return c.json({ success: true, data: { note: '' } });
+    }
+    const note = await db.getMemberNote(tenantId, cleanPhone);
+    return c.json({ success: true, data: { note } });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+// 📝 관리자 메모 저장 API (단체별 격리)
+const handleSaveMemberNote = async (c: any) => {
+  try {
+    const { tenantId, phone, note, adminEmail } = await c.req.json();
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!tenantId || !cleanPhone) {
+      return c.json({ success: false, error: 'tenantId and phone are required' }, 400);
+    }
+    const ok = await db.saveMemberNote(tenantId, cleanPhone, note || '', adminEmail);
+    return c.json({ success: ok, message: ok ? '메모가 저장되었습니다.' : '메모 저장 실패' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+// 🗑️ 미완료/대기 결제 건 정리(삭제) API
+const handleDeleteDonation = async (c: any) => {
+  try {
+    const id = c.req.param('id');
+    const tenantId = c.req.query('tenantId') || c.req.query('tenant_id');
+    if (!id || !tenantId) {
+      return c.json({ success: false, error: 'id and tenantId are required' }, 400);
+    }
+    const ok = await db.deleteDonation(id, tenantId);
+    return c.json({ success: ok, message: ok ? '성공적으로 삭제되었습니다.' : '삭제 실패' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+};
+
+app.get("/make-server-d0d82cc7/members/note/:phone", handleGetMemberNote);
+app.get("/members/note/:phone", handleGetMemberNote);
+app.post("/make-server-d0d82cc7/members/note", handleSaveMemberNote);
+app.post("/members/note", handleSaveMemberNote);
+app.delete("/make-server-d0d82cc7/donations/pending/:id", handleDeleteDonation);
+app.delete("/donations/pending/:id", handleDeleteDonation);
+
 // 📱 신도/회원 이메일 로그인 API (DB 100% 실측 조회)
 const handleMemberLogin = async (c: any) => {
   try {
@@ -4676,4 +4729,5 @@ app.delete("/make-server-d0d82cc7/system-admins/:id", async (c) => {
   return c.json({ success: true });
 });
 
+export default app;
 Deno.serve(app.fetch);

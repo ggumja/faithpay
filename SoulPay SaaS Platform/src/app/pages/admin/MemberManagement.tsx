@@ -135,9 +135,10 @@ export default function MemberManagement() {
           await Promise.all(
             phoneList.map(async (phone) => {
               try {
-                const [subRes, profRes] = await Promise.allSettled([
+                const [subRes, profRes, noteRes] = await Promise.allSettled([
                   subscriptionAPI.getByPhone(phone, currentTenant.id),
                   memberAPI.getProfile(phone),
+                  memberAPI.getNote(phone, currentTenant.id),
                 ]);
 
                 const memberEntry = map.get(phone);
@@ -159,6 +160,10 @@ export default function MemberManagement() {
                   if (p.fullAddress || p.address) memberEntry.address = p.fullAddress || p.address;
                   if (p.name && (memberEntry.name === '무기명' || !memberEntry.name)) memberEntry.name = p.name;
                   if (p.baptismName) memberEntry.baptismName = p.baptismName;
+                }
+
+                if (noteRes.status === 'fulfilled' && noteRes.value.success && noteRes.value.data?.note) {
+                  memberEntry.note = noteRes.value.data.note;
                 }
               } catch (e) {
                 console.warn('Failed to load extra data for member', phone, e);

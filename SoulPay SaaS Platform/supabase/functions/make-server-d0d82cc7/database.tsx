@@ -859,6 +859,39 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
 }
 
 function rowToDonation(data: any): Donation {
+  let paymentStatus = data.payment_status;
+  let failureReason = data.failure_reason;
+
+  // 30분 이상 경과한 'pending'(대기) 건은 결제 미완료/이탈(failed)로 자동 정리
+  if (paymentStatus === 'pending' && data.created_at) {
+    const createdTime = new Date(data.created_at).getTime();
+    const elapsedMinutes = (Date.now() - createdTime) / (1000 * 60);
+    if (elapsedMinutes > 30) {
+      paymentStatus = 'failed';
+      if (!failureReason) {
+        failureReason = '결제 시간 초과 (미완료 이탈)';
+      }
+      // 백그라운드 DB 갱신 (비동기, 쿼리 응답 블로킹 방지)
+      if (data.id) {
+        try {
+          const sb = pgClient();
+          sb.from('donations')
+            .update({
+              payment_status: 'failed',
+              failure_reason: failureReason,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', data.id)
+            .then(({ error }: any) => {
+              if (error) console.error('Failed to auto-expire pending donation in DB:', error.message);
+            });
+        } catch (e) {
+          console.error('Error initiating auto-expire for donation:', e);
+        }
+      }
+    }
+  }
+
   return {
     id: data.id,
     tenantId: data.tenant_id,
@@ -872,12 +905,12 @@ function rowToDonation(data: any): Donation {
     baptismName: data.baptism_name,
     isRecurring: data.is_recurring,
     recurringDay: data.recurring_day,
-    paymentStatus: data.payment_status,
+    paymentStatus,
     paymentMethod: data.payment_method,
     transactionId: data.transaction_id,
     approveNo: data.approve_no,
     receiptUrl: data.receipt_url,
-    failureReason: data.failure_reason,
+    failureReason,
     cancelReason: data.cancel_reason,
     cancelTransactionId: data.cancel_transaction_id,
     cancelApprovedAt: data.cancel_approved_at,
@@ -1092,9 +1125,15 @@ export async function cancelDonationAndLedger(
   return rowToDonation(data);
 }
 
-export async function deleteDonation(id: string): Promise<boolean> {
+export async function deleteDonation(id: string, tenantId?: string): Promise<boolean> {
   const sb = pgClient();
-  const { error } = await sb.from('donations').delete().eq('id', id);
+  let query = sb.from('donations').delete().eq('id', id);
+  if (tenantId) {
+    const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+    const tid = tenant?.id ?? tenantId;
+    query = query.eq('tenant_id', tid);
+  }
+  const { error } = await query;
   if (error) {
     console.error('deleteDonation failed:', error.message);
     return false;
@@ -2999,6 +3038,72 @@ export async function updateDonorProfile(
   }
   return { updatedCount: Math.max(updatedCount, 1) };
 }
+
+// 📝 관리자 메모 조회 (단체별 완벽 격리)
+export async function getMemberNote(tenantId: string, phone: string): Promise<string> {
+  const sb = pgClient();
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone || !tenantId) return '';
+
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
+
+  try {
+    const { data: setting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', `member_note_${tid}_${cleanPhone}`)
+      .maybeSingle();
+
+    if (setting?.value) {
+      if (typeof setting.value === 'string') return setting.value;
+      if (typeof setting.value === 'object' && setting.value.note !== undefined) {
+        return setting.value.note || '';
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching member note:', err);
+  }
+  return '';
+}
+
+// 📝 관리자 메모 저장 (단체별 완벽 격리)
+export async function saveMemberNote(tenantId: string, phone: string, note: string, adminEmail?: string): Promise<boolean> {
+  const sb = pgClient();
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (!cleanPhone || !tenantId) return false;
+
+  const tenant = await getTenantById(tenantId) || await getTenantBySlug(tenantId);
+  const tid = tenant?.id ?? tenantId;
+
+  try {
+    const payload = {
+      note: note.trim(),
+      tenantId: tid,
+      phone: cleanPhone,
+      updatedAt: new Date().toISOString(),
+      updatedBy: adminEmail || 'admin',
+    };
+
+    const { error } = await sb
+      .from('system_settings')
+      .upsert({
+        key: `member_note_${tid}_${cleanPhone}`,
+        value: payload,
+        description: `관리자 메모 (${tid} - ${cleanPhone})`,
+      }, { onConflict: 'key' });
+
+    if (error) {
+      console.error('Failed to save member note:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error saving member note:', err);
+    return false;
+  }
+}
+
 
 // 📱 신도/회원 프로필 조회
 export async function getDonorProfile(phone: string): Promise<any | null> {
