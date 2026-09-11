@@ -399,41 +399,9 @@ export const kakaoAuthAPI = {
   },
 
   async exchangeToken(code: string, redirectUri: string): Promise<{ access_token: string }> {
-    // 1. 브라우저 직접 교환 (kauth.kakao.com 공식 CORS 엔드포인트 - 즉시 응답 및 불필요한 404 방지)
-    try {
-      const fetchToken = async (includeSecret: boolean) => {
-        const params: Record<string, string> = {
-          grant_type: 'authorization_code',
-          client_id: KAKAO_CONFIG.REST_API_KEY,
-          redirect_uri: redirectUri,
-          code,
-        };
-        if (includeSecret) {
-          params.client_secret = '3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol';
-        }
-        return fetch('https://kauth.kakao.com/oauth/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-          },
-          body: new URLSearchParams(params).toString(),
-        });
-      };
-
-      let res = await fetchToken(false);
-      let data = await res.json().catch(() => ({}));
-      if (!res.ok && (data.error_code === 'KOE010' || data.error === 'invalid_client')) {
-        res = await fetchToken(true);
-        data = await res.json().catch(() => ({}));
-      }
-      if (res.ok && data?.access_token) {
-        return data;
-      }
-    } catch {
-      // direct fetch failed, try backend proxy fallback
-    }
-
-    // 2. 백엔드 프록시 폴백
+    // 보안 정책: client_secret은 프론트엔드에 존재해서는 안 됩니다.
+    // 카카오 토큰 교환은 반드시 Edge Function 백엔드를 통해 처리합니다.
+    // (GBL-01 fix: 브라우저 직접 교환 + client_secret 하드코딩 제거)
     const backendRes = await fetchAPI<{ access_token: string }>('/auth/kakao/token', {
       method: 'POST',
       body: JSON.stringify({ code, redirectUri }),

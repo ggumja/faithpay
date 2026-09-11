@@ -64,50 +64,12 @@ app.post("/make-server-d0d82cc7/admin/patch-donations-schema", async (c) => {
   }
 });
 
-// 🔧 임시 디버그: donations 테이블 스키마 확인
+// GBL-14 fix: /debug/schema 라우트 비활성화 — 운영 환경에서 donations 테이블에 테스트 INSERT 수행하는 위험한 라우트.
+// 이 엔드포인트는 데이터 오염 및 보안 위험으로 인해 운영 환경에서 완전히 차단됨.
 app.get("/make-server-d0d82cc7/debug/schema", async (c) => {
-  try {
-    const sb = db.pgClient();
-
-    // 1. 테이블 select 시도 (존재 여부 + 에러 확인)
-    const { data: tableCheck, error: tableErr } = await sb
-      .from('donations')
-      .select('*')
-      .limit(1);
-
-    // 2. 직접 insert 시도 (에러 메시지 캡처)
-    const testId = `schema-test-${Date.now()}`;
-    const testRow = {
-      id: testId,
-      tenant_id: '9370d6bf-13e6-430c-a39d-35e4a8a9967b',
-      item_id: 'default',
-      item_name: '스키마테스트',
-      amount: 1,
-      donor_name: '테스트',
-      donor_phone: '01000000000',
-      payment_status: 'completed',
-      payment_method: '테스트',
-      transaction_id: 'test',
-      is_recurring: false,
-    };
-    const { data: ins, error: insErr } = await sb.from('donations').insert(testRow).select('id').single();
-
-    // 3. 다시 조회해서 실제로 insert됐는지 확인
-    const { data: verify, error: verErr } = await sb.from('donations').select('id').eq('id', testId).maybeSingle();
-
-    return c.json({
-      tableExists: !tableErr,
-      tableError: tableErr?.message ?? null,
-      selectRowCount: tableCheck?.length ?? 0,
-      insertSuccess: !insErr,
-      insertError: insErr?.message ?? null,
-      verifyFound: !!verify,
-      verifyError: verErr?.message ?? null,
-    });
-  } catch (e: any) {
-    return c.json({ fatalError: e.message });
-  }
+  return c.json({ success: false, error: '이 디버그 엔드포인트는 보안 정책에 의해 비활성화되었습니다.' }, 403);
 });
+
 
 
 // ==================== TENANT ROUTES ====================
@@ -183,16 +145,28 @@ const handleGetTenantStaff = async (c: any) => {
     // DB에 계정 없으면 단체 대표자 정보로 초기 계정 자동 생성 후 저장
     const tenants = await db.getAllTenants();
     const tenant = tenants.find((t: any) => t.id === tenantId || t.slug === tenantId);
-    const primaryEmail = (tenant?.contact?.email || `admin@${tenant?.slug || 'soulpay'}.or.kr`).trim().toLowerCase();
+
+    // GBL-02 fix: 단체 contact.email 미설정 시 하드코딩 fallback 금지 → 명시적 에러 반환
+    const primaryEmail = tenant?.contact?.email?.trim().toLowerCase();
+    if (!primaryEmail) {
+      console.error(`[GBL-02] tenant_staff auto-create: tenant(${tenantId}) has no contact.email. Aborting upsert.`);
+      return c.json({ success: true, data: [] });
+    }
+
+    // GBL-02 fix: 초기 비밀번호는 난수 임시 비밀번호로 생성 (admin1234! 하드코딩 제거)
+    const randomBytes = new Uint8Array(10);
+    crypto.getRandomValues(randomBytes);
+    const tempPassword = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
     const primaryName = tenant?.contact?.name || `${tenant?.name || '가맹점'} 대표 관리자`;
     const primaryPhone = tenant?.contact?.phone || '';
 
-    const { data: created } = await sb
+    const { data: created, error: upsertError } = await sb
       .from('tenant_admins')
       .upsert({
         tenant_id: tenantId,
         email: primaryEmail,
-        password: 'admin1234!',
+        password: tempPassword,
         name: primaryName,
         phone: primaryPhone,
         role: 'tenant_admin',
@@ -201,6 +175,11 @@ const handleGetTenantStaff = async (c: any) => {
       }, { onConflict: 'tenant_id,email' })
       .select('id, tenant_id, email, password, name, role, status, phone, group_id, created_at')
       .single();
+
+    if (upsertError) {
+      console.error(`[GBL-02] tenant_admins upsert failed for tenant(${tenantId}):`, upsertError.message);
+      return c.json({ success: true, data: [] });
+    }
 
     const init = created ? [{
       id: created.id,
@@ -236,11 +215,18 @@ const handleSaveTenantStaff = async (c: any) => {
     await sb.from('tenant_admins').delete().eq('tenant_id', tenantId);
 
     if (staffList.length > 0) {
+      // GBL-02 fix: staffList에 비밀번호가 없는 항목은 저장 거부 (admin1234! 하드코딩 제거)
+      const invalidItems = staffList.filter((s: any) => !s.password || s.password.trim().length < 6);
+      if (invalidItems.length > 0) {
+        console.error(`[GBL-02] staffList contains items without a valid password. Rejecting save.`);
+        return c.json({ success: false, error: '모든 관리자 계정에 유효한 비밀번호(6자 이상)가 필요합니다.' }, 400);
+      }
+
       const rows = staffList.map((s: any) => ({
         id: s.id?.startsWith('admin-') ? undefined : s.id,  // 임시 ID 제거 → DB auto-generate
         tenant_id: tenantId,
         email: s.email,
-        password: s.password || 'admin1234!',
+        password: s.password,
         name: s.name,
         phone: s.phone || '',
         role: s.groupId || s.role || 'tenant_admin',

@@ -37,7 +37,37 @@ export default function KakaoPayApprovePage() {
       const itemId = pending.itemId || 'general';
       const itemName = pending.itemName || '온라인 봉헌금';
 
+      // GBL-03 fix: pg_token을 받은 즉시 completed INSERT하지 않고,
+      // 반드시 백엔드(/kakaopay/approve)를 통해 카카오 서버에서 승인 검증 후 INSERT.
+      if (!pgToken) {
+        setStatus('error');
+        setErrorMessage('카카오페이 승인 토큰(pg_token)이 없습니다.');
+        return;
+      }
+
+      if (!tenantId) {
+        setStatus('error');
+        setErrorMessage('결제 세션 정보가 유실되었습니다. 다시 시도해 주세요.');
+        return;
+      }
+
       try {
+        // 1단계: 백엔드에서 카카오 /payment/approve API 호출하여 검증
+        const { kakaoPayAPI } = await import('../api/client');
+        const approveRes = await kakaoPayAPI.approve({
+          tid,
+          partner_order_id: partnerOrderId,
+          partner_user_id: donorPhone || tenantId,
+          pg_token: pgToken,
+        });
+
+        if (!approveRes.success) {
+          setStatus('error');
+          setErrorMessage(approveRes.error || '카카오페이 승인이 거절되었습니다.');
+          return;
+        }
+
+        // 2단계: 카카오 서버 검증 성공 후에만 DB INSERT
         const receiptId = generateTransactionId();  // YYYYMMDDHHMM-NNNNNNN
 
         await donationAPI.create({
@@ -52,7 +82,7 @@ export default function KakaoPayApprovePage() {
           isRecurring: false,
           paymentStatus: 'completed',
           paymentMethod: '카카오페이',
-          transactionId: tid,
+          transactionId: approveRes.data?.aid || tid,
           deviceType: 'WEB',
         });
 
@@ -79,6 +109,7 @@ export default function KakaoPayApprovePage() {
 
     processApprove();
   }, [searchParams, navigate]);
+
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col justify-center items-center p-6 text-center font-sans">

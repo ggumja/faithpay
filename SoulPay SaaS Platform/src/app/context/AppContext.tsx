@@ -387,11 +387,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (response.success && response.data) {
         toast.success('배너가 DB에 저장되었습니다.');
       } else {
-        toast.success('배너가 저장되었습니다.');
+        // GBL-06 fix: API 응답 실패 시 toast.success 대신 toast.error로 명확히 안내
+        toast.error('배너 저장에 실패했습니다. (서버 오류) 새로고침 후 다시 시도해 주세요.');
       }
     } catch (error) {
       console.error('Failed to update tenant banners on server:', error);
-      toast.success('배너가 메모리에 저장되었습니다.');
+      // GBL-06 fix: 네트워크 예외 시도 toast.success 대신 toast.error
+      toast.error('배너 저장 중 오류가 발생했습니다. (네트워크 오류) 잠시 후 다시 시도해 주세요.');
     }
   }, []);
 
@@ -403,11 +405,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (response.success && response.data) {
         toast.success('사이드 광고 배너가 저장되었습니다.');
       } else {
-        toast.success('사이드 배너가 저장되었습니다.');
+        // GBL-06 fix: API 응답 실패 시 toast.success 대신 toast.error
+        toast.error('사이드 배너 저장에 실패했습니다. (서버 오류) 새로고침 후 다시 시도해 주세요.');
       }
     } catch (error) {
       console.error('Failed to update tenant sidebar banners on server:', error);
-      toast.success('사이드 배너가 메모리에 저장되었습니다.');
+      // GBL-06 fix: 네트워크 예외 시도 toast.success 대신 toast.error
+      toast.error('사이드 배너 저장 중 오류가 발생했습니다. (네트워크 오류) 잠시 후 다시 시도해 주세요.');
     }
   }, []);
 

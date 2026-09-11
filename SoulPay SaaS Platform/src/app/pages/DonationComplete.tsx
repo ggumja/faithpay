@@ -485,7 +485,7 @@ export default function DonationComplete() {
             receiptId: receiptId,
             donorName: formData.name || '무기명',
             donorPhone: formData.phone || '',
-            donorIdNumber: '880101-1******',
+            donorIdNumber: '',  // GBL-05 fix: 개인정보 하드코딩 제거. 사용자가 영수증 모달에서 직접 입력.
             amount: formData.amount,
             itemName: formData.itemName || `${tenant.name} ${tenant.terminology?.donation || '기부금'}`,
             date: formattedDate,

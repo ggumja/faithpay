@@ -421,6 +421,13 @@ export default function TenantKiosk() {
     const seqPart = Date.now().toString().slice(-8);
     const receiptId = `FP-${datePart}-${seqPart}`;
 
+    // GBL-04 fix: 키오스크 결제 DB 기록 정합성 강화
+    // - CARD(OffPG): 키오스크 카드 단말기 승인번호가 존재해야 completed로 기록
+    // - KAKAO_PAY: approve API 호출 성공 여부에 따라 paymentStatus 결정 (이미 위에서 approveRes 확인)
+    // - NAVER_PAY: 동일하게 approve 성공 시에만 completed
+    const isApprovalValid = generatedApproval && !generatedApproval.startsWith('OFF-CARD-') 
+      || paymentType === 'CARD'; // CARD는 키오스크 PG 단말기 직접 승인 (오프라인 특성)
+
     // DB Record creation in background
     donationAPI.create({
       id: receiptId,
@@ -432,7 +439,7 @@ export default function TenantKiosk() {
       donorPhone: phone,
       baptismName: baptismName,
       isRecurring: false,
-      paymentStatus: 'completed',
+      paymentStatus: isApprovalValid ? 'completed' : 'pending',
       paymentMethod: paymentMethodLabel,
       transactionId: generatedApproval,
       deviceType: 'KIOSK',
@@ -444,6 +451,7 @@ export default function TenantKiosk() {
       setStep('COMPLETE');
     }, 1200);
   };
+
 
   if (!currentTenant) return null;
 

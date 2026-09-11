@@ -54,29 +54,19 @@ const normalizeDonation = (d: any) => {
   const paymentMethod = rawMethod ? (String(rawMethod).includes('카드') ? '신용카드' : String(rawMethod)) : '신용카드';
 
   const rawStatus = d.paymentStatus ?? d.payment_status ?? d.status;
-  let paymentStatus = (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'completed';
-
-  if (paymentStatus === 'pending') {
-    const isInstantPayment = paymentMethod === '신용카드' || paymentMethod === '카카오페이' || paymentMethod === '네이버페이' || paymentMethod.includes('카드');
-    if (isInstantPayment) {
-      const createdTime = new Date(validCreatedAt).getTime();
-      const nowTime = Date.now();
-      const elapsedMinutes = (nowTime - createdTime) / (1000 * 60);
-      if (elapsedMinutes > 30) {
-        paymentStatus = 'failed';
-      }
-    }
-  }
-
   return {
     ...d,
     createdAt: validCreatedAt,
     donorName,
     paymentMethod,
-    paymentStatus,
+    // GBL-09 fix: 클라이언트에서 paymentStatus를 임의로 변환하지 않음.
+    // pending → failed 변환은 AGENTS.md "결제 상태 왜곡 금지" 위반.
+    // DB 원본 상태값을 그대로 사용하며, 오래된 pending 건 정리는 서버 사이드 배치로 처리.
+    paymentStatus: (rawStatus && String(rawStatus).trim().length > 0) ? String(rawStatus).trim() : 'pending',
     amount: Number(d.amount) || 0,
   };
 };
+
 
 const getStatusBadge = (status: string) => {
   switch (status) {
