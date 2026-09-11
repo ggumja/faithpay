@@ -978,23 +978,23 @@ export default function PaymentSelection() {
         {/* Summary Card */}
         <Card className="border-zinc-200/80 dark:border-zinc-800 shadow-xs rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
-            <CardTitle className="text-base font-extrabold">최종 봉헌 내역</CardTitle>
+            <CardTitle className="text-lg font-extrabold">최종 {terms.donation} 내역</CardTitle>
           </CardHeader>
           <CardContent className="pt-6 flex flex-col gap-4">
-            <div className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">봉헌 항목</span>
-                <span className="font-bold text-zinc-850 dark:text-zinc-150">{donationFormData.itemName}</span>
+            <div className="flex flex-col gap-2.5 text-base">
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 dark:text-zinc-400 font-semibold">{terms.donation} 항목</span>
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">{donationFormData.itemName}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">성명</span>
-                <span className="font-bold text-zinc-850 dark:text-zinc-150">{donationFormData.name}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 dark:text-zinc-400 font-semibold">성명</span>
+                <span className="font-extrabold text-zinc-900 dark:text-zinc-100">{donationFormData.name}</span>
               </div>
               {donationFormData.isRecurring && (
                 <>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500 dark:text-zinc-400 font-medium">결제 주기</span>
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 dark:text-zinc-400 font-semibold">결제 주기</span>
+                    <span className="font-extrabold text-indigo-600 dark:text-indigo-400">
                       {recurringInterval === 'daily'
                         ? '매일 결제'
                         : recurringInterval === 'weekly'
@@ -1002,9 +1002,9 @@ export default function PaymentSelection() {
                         : `매월 ${recurringDay || 10}일`}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500 dark:text-zinc-400 font-medium">첫 결제 시점</span>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500 dark:text-zinc-400 font-semibold">첫 결제 시점</span>
+                    <span className="font-extrabold text-zinc-900 dark:text-zinc-100">
                       {firstPaymentTiming === 'immediate'
                         ? '⚡ 오늘 즉시 1차 결제'
                         : `📅 ${scheduledFirstPaymentDate} 첫 결제`}
@@ -1018,16 +1018,16 @@ export default function PaymentSelection() {
             
             <div className="flex justify-between items-center">
               <div>
-                <span className="text-base font-extrabold text-zinc-500 dark:text-zinc-400">
+                <span className="text-base sm:text-lg font-extrabold text-zinc-700 dark:text-zinc-300">
                   {donationFormData.isRecurring && firstPaymentTiming === 'scheduled' ? '오늘 결제 금액' : '총 결제 금액'}
                 </span>
                 {donationFormData.isRecurring && firstPaymentTiming === 'scheduled' && (
-                  <p className="text-[11px] text-zinc-400 font-medium mt-0.5">
+                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
                     정기 약정 금액: {donationFormData.amount.toLocaleString()}원
                   </p>
                 )}
               </div>
-              <span className="text-3xl font-extrabold" style={{ color: ft.primary }}>
+              <span className="text-3xl sm:text-4xl font-black tracking-tight" style={{ color: ft.primary }}>
                 {donationFormData.isRecurring && firstPaymentTiming === 'scheduled'
                   ? '0원'
                   : `${donationFormData.amount.toLocaleString()}원`}
@@ -1039,8 +1039,8 @@ export default function PaymentSelection() {
         {/* Payment Method Selector Card */}
         <Card className="border-zinc-200/80 dark:border-zinc-800 shadow-xs rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
-            <CardTitle className="text-base font-extrabold">결제 수단 선택</CardTitle>
-            <CardDescription className="text-xs text-zinc-450 dark:text-zinc-500 font-medium">
+            <CardTitle className="text-lg font-extrabold">결제 수단 선택</CardTitle>
+            <CardDescription className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1">
               안전하고 투명한 금융 거래를 위해 공식 결제대행사(PG)를 거쳐 결제가 진행됩니다.
             </CardDescription>
           </CardHeader>
@@ -1049,10 +1049,10 @@ export default function PaymentSelection() {
               
               {/* Easy Payment option */}
               {!donationFormData.isRecurring && enableEasyPayment && (
-                <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 transition-colors">
-                  <div className="flex items-center space-x-2.5 mb-3">
-                    <RadioGroupItem value="simple" id="simple" className="border-zinc-300 dark:border-zinc-700" />
-                    <Label htmlFor="simple" className="flex-1 cursor-pointer font-bold text-sm">
+                <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 transition-colors">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <RadioGroupItem value="simple" id="simple" className="w-5 h-5 border-zinc-300 dark:border-zinc-700" />
+                    <Label htmlFor="simple" className="flex-1 cursor-pointer font-extrabold text-base">
                       간편결제
                     </Label>
                   </div>

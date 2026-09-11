@@ -13,7 +13,7 @@ import { isAdminPortalDomain } from '../utils/domainUtils';
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
-  const { tenants, setCurrentAdmin, setCurrentTenant } = useApp();
+  const { tenants, setCurrentAdmin, setCurrentTenant, isTenantsLoaded } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -127,6 +127,11 @@ export default function AdminLogin() {
 
     // 1. URL에 특정 단체 slug가 명시된 경우 (예: /dream/admin/login, /gakwonsa/admin/login)
     if (tenantSlug) {
+      if (!isTenantsLoaded) {
+        toast.info('가맹 단체 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+
       const urlTenant = tenants.find((t) => t.slug === tenantSlug || t.id === tenantSlug);
       if (!urlTenant) {
         toast.error('등록되지 않은 단체입니다. 주소를 다시 확인해 주세요.');

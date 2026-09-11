@@ -26,7 +26,20 @@ export default function TenantAdminRouteGuard() {
   // 2. 단체 관리자(tenant_admin, finance_manager 등)가 타 단체 대시보드에 접근하려 할 때 차단
   // (단, 최고 시스템 관리자 system_admin은 전역 모니터링 허용)
   if (currentAdmin.role !== 'system_admin' && tenantSlug) {
-    const targetTenant = currentTenant || tenants.find(t => t.slug === tenantSlug || t.id === tenantSlug);
+    const decodedSlug = decodeURIComponent(tenantSlug).trim().toLowerCase();
+    const targetTenant =
+      tenants.find(
+        t =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      ) ||
+      (currentTenant && (
+        (currentTenant.slug && currentTenant.slug.toLowerCase() === decodedSlug) ||
+        (currentTenant.id && currentTenant.id.toLowerCase() === decodedSlug)
+      ) ? currentTenant : null);
+
     if (
       targetTenant &&
       currentAdmin.tenantId !== targetTenant.id &&

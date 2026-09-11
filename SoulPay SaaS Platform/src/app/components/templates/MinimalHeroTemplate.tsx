@@ -7,29 +7,19 @@ import { InstallBanner } from '../pwa/InstallBanner';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
 import { navigateToAdminPortal } from '../../utils/domainUtils';
-import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Heart, Star } from 'lucide-react';
+import { ChevronRight, MapPin, Phone, Clock, Sparkles, Search, Repeat, Landmark, Star } from 'lucide-react';
 
 interface MinimalHeroTemplateProps {
   currentTenant: Tenant;
   allItems: DonationItem[];
   ft: FaithTheme;
   canInstall: boolean;
-  install: () => void;
+  hasNativePrompt?: boolean;
+  install: () => void | Promise<boolean | void>;
 }
 
-const itemIcons: Record<string, React.ReactNode> = {
-  '십일조':   <Landmark size={18} />,
-  '감사헌금': <Heart size={18} />,
-  '건축헌금': <Landmark size={18} />,
-  '인등보시': <Star size={18} />,
-  '불사공양': <Heart size={18} />,
-  '기도보시': <Sparkles size={18} />,
-  '교무금':   <Landmark size={18} />,
-  '미사예물': <Star size={18} />,
-  '특별봉헌': <Heart size={18} />,
-};
-
 const MINIMAL_CSS = `
+
 .mh-btn-spring {
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease, background-color 0.22s ease;
 }
@@ -84,27 +74,31 @@ const MINIMAL_CSS = `
 @media (max-width: 640px) {
   .mh-nav-inner {
     padding: 10px 14px;
-    gap: 6px;
+    gap: 8px;
   }
   .mh-nav-tenant-name {
-    max-width: 120px;
-    font-size: 13px;
+    max-width: 220px;
+    font-size: 16px;
+    font-weight: 800;
   }
   .mh-mypage-full { display: none; }
   .mh-mypage-short { display: inline; }
   .mh-btn-mypage {
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
   }
   .mh-btn-admin {
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
   }
 }
 
 @media (max-width: 360px) {
   .mh-nav-tenant-name {
-    max-width: 90px;
+    max-width: 160px;
+    font-size: 15px;
   }
 }
 
@@ -174,7 +168,7 @@ const MINIMAL_CSS = `
 }
 `;
 
-export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, install }: MinimalHeroTemplateProps) {
+export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, hasNativePrompt, install }: MinimalHeroTemplateProps) {
   const navigate = useNavigate();
   const terms = useTenantTerms(currentTenant);
   const [search, setSearch] = useState('');
@@ -197,7 +191,15 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', color: '#0F172A', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
       <style>{MINIMAL_CSS}</style>
-      {canInstall && <InstallBanner tenant={currentTenant} onInstall={install} primaryColor={ft.primary} />}
+      {canInstall && (
+        <InstallBanner
+          tenant={currentTenant}
+          onInstall={install}
+          hasNativePrompt={hasNativePrompt}
+          primaryColor={ft.primary}
+        />
+      )}
+
 
       {/* ── Sticky Nav ── */}
       <nav style={{
@@ -529,19 +531,6 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
                 {/* Header: Icon + Name + Badge */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      backgroundColor: `${ft.primary}12`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: ft.primary,
-                      flexShrink: 0,
-                    }}>
-                      {itemIcons[item.name] || <Heart size={18} />}
-                    </div>
                     <span style={{
                       fontWeight: 800,
                       fontSize: 16,
@@ -554,6 +543,7 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
                       {item.name}
                     </span>
                   </div>
+
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     {item.allowRecurring && (

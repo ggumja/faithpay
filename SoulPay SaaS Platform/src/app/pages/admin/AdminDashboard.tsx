@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link, Navigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
+import { isAdminPortalDomain } from '../../utils/domainUtils';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -90,8 +91,34 @@ const getStatusBadge = (status: string) => {
 export default function AdminDashboard() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-  const terms = useTenantTerms(currentTenant);
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, isTenantsLoaded } = useApp();
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+  const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
+  const isReserved = reservedSlugs.includes(decodedSlug);
+
+  // 1. 현재 URL의 tenantSlug와 일치하는 테넌트를 tenants 목록에서 우선 동기 탐색
+  const matchedTenant = decodedSlug
+    ? tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      )
+    : currentTenant;
+
+  // 2. 일치하는 테넌트가 있다면 그것을 effectiveTenant로 확정, 없으면 currentTenant가 해당 슬러그와 일치할 때만 허용
+  const effectiveTenant = matchedTenant || (
+    currentTenant &&
+    ((currentTenant.slug && currentTenant.slug.toLowerCase() === decodedSlug) ||
+     (currentTenant.id && currentTenant.id.toLowerCase() === decodedSlug) ||
+     (!tenantSlug))
+      ? currentTenant
+      : null
+  );
+
+  const terms = useTenantTerms(effectiveTenant);
 
   const [dbDonations, setDbDonations] = useState<any[]>([]);
   const [donationViewMode, setDonationViewMode] = useState<'today' | 'recent'>('today');
@@ -129,30 +156,22 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
-    
+    // DB 테넌트 목록 조회가 완료될 때까지 비동기 평가 유예
+    if (!isTenantsLoaded) return;
+
     // 예약어 경로(partner, system, agency 등) 예외 방어
-    const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
-    if (reservedSlugs.includes(decodedSlug)) {
+    if (isReserved) {
       setIsLoading(false);
       return;
     }
 
-    const tenant = decodedSlug
-      ? tenants.find(
-          (t) =>
-            (t.slug && t.slug.toLowerCase() === decodedSlug) ||
-            (t.id && t.id.toLowerCase() === decodedSlug) ||
-            (t.name && t.name.toLowerCase() === decodedSlug) ||
-            (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
-        )
-      : currentTenant;
-
-    if (tenant) {
-      setCurrentTenant(tenant);
+    if (effectiveTenant) {
+      if (effectiveTenant.id !== currentTenant?.id) {
+        setCurrentTenant(effectiveTenant);
+      }
 
       // Supabase DB 비동기 수납 실데이터 조율
-      donationAPI.getByTenant(tenant.id).then((res) => {
+      donationAPI.getByTenant(effectiveTenant.id).then((res) => {
         if (res.success && res.data) {
           const list = assignSequentialDonationIds(res.data);
           setDbDonations(list);
@@ -231,22 +250,33 @@ export default function AdminDashboard() {
     } else {
       setIsLoading(false);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [tenantSlug, isTenantsLoaded, effectiveTenant?.id]);
 
-  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
-  const reservedSlugs = ['partner', 'system', 'admin', 'agency', 'agent', 'onboarding'];
-  const isInvalidTenantSlug = Boolean(
+  // 1. 단체 목록 로딩 중 상태 (전체 DB 테넌트 목록 조회가 끝날 때까지 스피너 유지)
+  if (!isTenantsLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
+        <div className="text-center space-y-3">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
+          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">단체 정보를 불러오는 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isDedicated = isAdminPortalDomain();
+  const defaultLoginTarget = tenantSlug
+    ? (isDedicated ? `/${tenantSlug}/login` : `/${tenantSlug}/admin/login`)
+    : (isDedicated ? '/login' : '/admin/login');
+
+  // 2. 가맹 단체를 찾을 수 없는 경우: 전체 단체 목록 조회가 완료(isTenantsLoaded)되었음에도 해당 단체가 없을 때만 명확한 에러 카드 표출
+  const isInvalidTenant = Boolean(
+    isTenantsLoaded &&
     tenantSlug &&
-    (reservedSlugs.includes(decodedSlug) ||
-      !tenants.find(
-        (t) =>
-          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
-          (t.id && t.id.toLowerCase() === decodedSlug) ||
-          (t.name && t.name.toLowerCase() === decodedSlug)
-      ))
+    (isReserved || !effectiveTenant)
   );
 
-  if (isInvalidTenantSlug) {
+  if (isInvalidTenant || !effectiveTenant) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <Card className="max-w-md w-full border-slate-200 shadow-sm rounded-2xl bg-white p-6 text-center space-y-4">
@@ -260,7 +290,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Button
-            onClick={() => navigate('/admin/login')}
+            onClick={() => navigate(defaultLoginTarget)}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold h-10 cursor-pointer"
           >
             단체 관리자 로그인으로 이동
@@ -270,31 +300,18 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!currentTenant) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
-        <div className="text-center space-y-3">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
-          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">단체 정보를 불러오는 중입니다...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!currentAdmin) {
-    const loginTarget = tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
-    return <Navigate to={loginTarget} replace />;
+    return <Navigate to={defaultLoginTarget} replace />;
   }
 
   // 타 단체 관리자 권한으로 다른 단체 대시보드 접근 차단 (system_admin 제외)
   if (
     currentAdmin.role !== 'system_admin' &&
-    currentTenant &&
-    currentAdmin.tenantId !== currentTenant.id &&
-    currentAdmin.tenantId !== currentTenant.slug
+    effectiveTenant &&
+    currentAdmin.tenantId !== effectiveTenant.id &&
+    currentAdmin.tenantId !== effectiveTenant.slug
   ) {
-    const loginTarget = tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
-    return <Navigate to={loginTarget} replace />;
+    return <Navigate to={defaultLoginTarget} replace />;
   }
 
   const currentPath = `/${tenantSlug}/admin`;
@@ -346,7 +363,7 @@ export default function AdminDashboard() {
                 대시보드
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
-                {currentTenant.name}
+                {effectiveTenant.name}
               </p>
             </div>
             <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
@@ -360,7 +377,7 @@ export default function AdminDashboard() {
               <div className="text-sm font-bold text-slate-700 dark:text-zinc-300">
                 이번 달 총 {terms.donation}액
               </div>
-              <div className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: currentTenant.primaryColor }}>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight" style={{ color: effectiveTenant.primaryColor }}>
                 {totalMonthlyAmount.toLocaleString()}원
               </div>
               <p className="text-xs text-slate-400">
@@ -430,7 +447,7 @@ export default function AdminDashboard() {
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip formatter={(value: number) => `${value.toLocaleString()}원`} />
-                    <Bar dataKey="amount" fill={currentTenant.primaryColor} />
+                    <Bar dataKey="amount" fill={effectiveTenant.primaryColor} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -455,7 +472,7 @@ export default function AdminDashboard() {
                     <Line
                       type="monotone"
                       dataKey="amount"
-                      stroke={currentTenant.primaryColor}
+                      stroke={effectiveTenant.primaryColor}
                       strokeWidth={2.5}
                       dot={{ r: 4 }}
                     />

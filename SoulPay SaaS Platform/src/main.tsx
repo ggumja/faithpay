@@ -2,41 +2,38 @@
 import { createRoot } from "react-dom/client";
 import App from "./app/App.tsx";
 import "./styles/index.css";
-import { registerSW } from "virtual:pwa-register";
+import { setupServiceWorker } from "./app/utils/pwaUtils";
 
-  // Service Worker 자동 최신화 — 구형 JS 번들 캐시 방지
-  const updateSW = registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      console.log("[PWA] New version detected, clearing cache...");
-      if ('caches' in window) {
-        caches.keys().then((names) => {
-          for (let name of names) caches.delete(name);
-        });
-      }
-      updateSW(true);
-    },
-    onOfflineReady() {
-      console.log("[PWA] 오프라인 준비 완료");
-    },
-  });
+// Service Worker 안전 등록 및 Dev 환경 자동 정리
+setupServiceWorker();
 
-  // 🔄 신규 배포 시 구버전 번들 청크 해시 불일치로 인한 오류 방지 (자동 새로고침 복구)
-  window.addEventListener("vite:preloadError", () => {
-    console.warn("[Vite] 신규 배포가 감지되었습니다. 최신 번들을 적용하기 위해 페이지를 자동 갱신합니다.");
+// 🔄 신규 배포 청크 불일치 시 30초 쿨다운을 둔 안전한 1회 복구 (무한 새로고침 및 세션 깜빡임 차단)
+window.addEventListener("vite:preloadError", (event) => {
+  const reloadKey = "preload_reload_" + window.location.pathname;
+  const lastReload = sessionStorage.getItem(reloadKey);
+  const now = Date.now();
+  if (!lastReload || now - Number(lastReload) > 30000) {
+    sessionStorage.setItem(reloadKey, String(now));
+    console.warn("[Vite] 신규 배포 청크 갱신을 위해 1회 새로고침을 수행합니다.");
     window.location.reload();
-  });
+  } else {
+    console.warn("[Vite] 반복 새로고침 방지를 위해 추가 새로고침을 차단했습니다.");
+    event?.preventDefault?.();
+  }
+});
 
-  window.addEventListener("error", (e) => {
-    const msg = e?.message || "";
-    if (msg.includes("Failed to fetch dynamically imported module") || msg.includes("Importing a module script failed")) {
-      const reloadKey = "chunk_reload_" + window.location.pathname;
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, "1");
-        window.location.reload();
-      }
+window.addEventListener("error", (e) => {
+  const msg = e?.message || "";
+  if (msg.includes("Failed to fetch dynamically imported module") || msg.includes("Importing a module script failed")) {
+    const reloadKey = "chunk_reload_" + window.location.pathname;
+    const lastReload = sessionStorage.getItem(reloadKey);
+    const now = Date.now();
+    if (!lastReload || now - Number(lastReload) > 30000) {
+      sessionStorage.setItem(reloadKey, String(now));
+      window.location.reload();
     }
-  });
+  }
+});
 
   createRoot(document.getElementById("root")!).render(<App />);
   

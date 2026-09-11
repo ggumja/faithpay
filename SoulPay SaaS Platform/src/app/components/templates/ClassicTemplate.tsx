@@ -8,8 +8,8 @@ import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { formatPhoneNumber } from '../../utils/phoneUtils';
 import { navigateToAdminPortal } from '../../utils/domainUtils';
 import {
-  MapPin, Phone, Mail, Clock, ChevronRight,
-  Shield, Repeat, Landmark, Heart, Search, Star, Sparkles, ExternalLink
+  ChevronRight, MapPin, Phone, Mail, Clock,
+  Shield, Repeat, Landmark, Search, Star, Sparkles, ExternalLink
 } from 'lucide-react';
 
 const C = {
@@ -28,19 +28,8 @@ const C = {
   shadowMd:     '0 8px 24px -6px oklch(0.12 0.015 260 / 0.12), 0 3px 8px -2px oklch(0.12 0.015 260 / 0.08)',
 };
 
-const itemIcons: Record<string, React.ReactNode> = {
-  '십일조':   <Landmark size={18} />,
-  '감사헌금': <Heart size={18} />,
-  '건축헌금': <Landmark size={18} />,
-  '인등보시': <Star size={18} />,
-  '불사공양': <Heart size={18} />,
-  '기도보시': <Sparkles size={18} />,
-  '교무금':   <Landmark size={18} />,
-  '미사예물': <Star size={18} />,
-  '특별봉헌': <Heart size={18} />,
-};
-
 function fmt(n: number) { return n.toLocaleString('ko-KR'); }
+
 
 const RESPONSIVE_CSS = `
 .th-body         { display: flex; flex-direction: column; gap: 28px; padding: 32px 16px 80px; max-width: 1140px; margin: 0 auto; }
@@ -57,10 +46,8 @@ const RESPONSIVE_CSS = `
 .th-sidebar      { display: flex; flex-direction: column; gap: 20px; }
 .th-trust-badges { display: none; }
 .th-hero-copy    { max-width: 100%; }
-.th-hero-cta     { flex-wrap: wrap; }
-.th-row-grid     { grid-template-columns: 48px 1fr auto; gap: 16px; padding: 20px 22px; }
+.th-row-grid     { grid-template-columns: 1fr auto; gap: 16px; padding: 20px 22px; }
 .th-row-desc     { display: none; }
-.th-row-icon     { width: 48px; height: 48px; border-radius: 14px; }
 
 @media (min-width: 480px) {
   .th-body         { padding: 36px 20px 88px; }
@@ -111,33 +98,33 @@ const RESPONSIVE_CSS = `
 .th-header-inner {
   max-width: 1120px;
   margin: 0 auto;
-  height: 60px;
+  height: 64px;
   padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
 }
 .th-tenant-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  flex-shrink: 1;
+  flex: 1;
 }
 .th-tenant-name {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  max-width: 340px;
 }
 .th-nav-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex-shrink: 0;
 }
@@ -146,42 +133,46 @@ const RESPONSIVE_CSS = `
 .th-admin-label-full { display: inline; }
 .th-admin-label-short { display: none; }
 .th-btn-mypage {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 7px 14px;
+  font-size: 13px;
 }
 .th-btn-admin {
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 7px 12px;
+  font-size: 13px;
 }
 
 @media (max-width: 640px) {
   .th-header-inner {
-    padding: 0 10px;
-    gap: 4px;
+    padding: 0 12px;
+    gap: 8px;
+    height: 60px;
   }
   .th-tenant-name {
-    max-width: 100px;
-    font-size: 13px;
+    max-width: 220px;
+    font-size: 17px;
+    font-weight: 900;
   }
   .th-mypage-label-full { display: none; }
   .th-mypage-label-short { display: inline; }
   .th-admin-label-full { display: none; }
   .th-admin-label-short { display: inline; }
   .th-btn-mypage {
-    padding: 5px 8px !important;
-    font-size: 11px !important;
-    gap: 3px !important;
+    padding: 6px 11px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    gap: 4px !important;
   }
   .th-btn-admin {
-    padding: 5px 7px !important;
-    font-size: 11px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
   }
 }
 
 @media (max-width: 380px) {
   .th-tenant-name {
-    max-width: 76px;
-    font-size: 12px;
+    max-width: 160px;
+    font-size: 15px;
   }
   .th-btn-admin {
     display: none;
@@ -194,16 +185,18 @@ interface ClassicTemplateProps {
   allItems: DonationItem[];
   ft: FaithTheme;
   canInstall: boolean;
-  install: () => void;
+  hasNativePrompt?: boolean;
+  install: () => void | Promise<boolean | void>;
 }
 
-export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, install }: ClassicTemplateProps) {
+export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, hasNativePrompt, install }: ClassicTemplateProps) {
   const navigate = useNavigate();
   const terms = useTenantTerms(currentTenant);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recurring' | 'onetime'>('all');
   const heroRef = useRef<HTMLDivElement>(null);
   const [heroVisible, setHeroVisible] = useState(true);
+
   const [bannerIndex, setBannerIndex] = useState(0);
 
   useEffect(() => {
@@ -252,12 +245,19 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
       }}>
         <div className="th-header-inner">
           <div className="th-tenant-info">
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: ft.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <Motif kind={ft.motif} size={16} color={ft.primary} />
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: ft.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              {currentTenant.logoUrl ? (
+                <img
+                  src={currentTenant.logoUrl}
+                  alt={currentTenant.name}
+                  style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6 }}
+                />
+              ) : (
+                <Motif kind={ft.motif} size={20} color={ft.primary} />
+              )}
             </div>
             <div style={{ minWidth: 0, overflow: 'hidden' }}>
-              <div className="th-tenant-name" style={{ color: C.ink }}>{currentTenant.name}</div>
-              <div style={{ fontSize: 11, color: C.ink3, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ft.name}</div>
+              <span className="th-tenant-name" style={{ color: C.ink }}>{currentTenant.name}</span>
             </div>
           </div>
 
@@ -292,9 +292,11 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
           <InstallBanner
             tenant={currentTenant}
             onInstall={install}
+            hasNativePrompt={hasNativePrompt}
             primaryColor={ft.primary}
           />
         )}
+
       </header>
 
       {/* ── Hero ── */}
@@ -322,24 +324,24 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
         <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(52px, 8vw, 84px) clamp(20px, 4vw, 24px) clamp(44px, 6vw, 72px)', position: 'relative', zIndex: 2 }}>
           <div className="th-hero-grid">
             <div className="th-animate th-hero-copy">
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(0, 0, 0, 0.45)', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: 9999, padding: '5px 14px', marginBottom: 20, backdropFilter: 'blur(12px)' }}>
-                <Motif kind={ft.motif} size={12} color="white" />
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'white', letterSpacing: '0.04em', fontWeight: 600 }}>{ft.greeting}</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0, 0, 0, 0.45)', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: 9999, padding: '6px 16px', marginBottom: 20, backdropFilter: 'blur(12px)' }}>
+                <Motif kind={ft.motif} size={14} color="white" />
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'white', letterSpacing: '0.04em', fontWeight: 700 }}>{ft.greeting}</span>
               </div>
 
-              <h1 style={{ fontSize: 'clamp(32px, 5.5vw, 60px)', fontWeight: 900, color: 'white', lineHeight: 1.08, letterSpacing: '-0.04em', marginBottom: 16, textShadow: '0 2px 20px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)' }}>
+              <h1 style={{ fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 900, color: 'white', lineHeight: 1.15, letterSpacing: '-0.04em', marginBottom: 18, textShadow: '0 2px 20px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)' }}>
                 {currentTenant.name}
               </h1>
-              <p style={{ fontSize: 'clamp(15px, 2vw, 17.5px)', color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.7, maxWidth: 660, marginBottom: 32, fontWeight: 400, textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
+              <p style={{ fontSize: 'clamp(17px, 2.3vw, 20px)', color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.75, maxWidth: 660, marginBottom: 32, fontWeight: 500, textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
                 {currentTenant.description}
               </p>
 
               <div className="th-trust-badges" style={{ gap: 20, flexWrap: 'wrap' }}>
                 {[['ISMS-P', '정보보호 인증'], ['PCI-DSS', '결제 보안'], ['SSL', '256-bit']].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Shield size={12} color="rgba(255,255,255,0.75)" />
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.04em', fontWeight: 700 }}>{k}</span>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{v}</span>
+                    <Shield size={14} color="rgba(255,255,255,0.85)" />
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'rgba(255,255,255,0.95)', letterSpacing: '0.04em', fontWeight: 700 }}>{k}</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -373,8 +375,8 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
       {/* ── Body ── */}
       <div className="th-body">
         <main id="items-section">
-          <div className="th-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div className="th-tabs" style={{ display: 'flex', background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 4, gap: 3 }}>
+          <div className="th-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22, gap: 12, flexWrap: 'wrap' }}>
+            <div className="th-tabs" style={{ display: 'flex', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 4, gap: 4 }}>
               {([
                 { key: 'all',      label: '전체' },
                 { key: 'recurring', label: '정기' },
@@ -382,7 +384,7 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               ] as const).map(tab => (
                 <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                   className="th-btn-spring"
-                  style={{ height: 32, padding: '0 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', transition: 'all 180ms ease',
+                  style={{ height: 38, padding: '0 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', transition: 'all 180ms ease',
                     background: activeTab === tab.key ? C.cobalt : 'transparent',
                     color:      activeTab === tab.key ? 'white'  : C.ink3,
                   }}
@@ -390,22 +392,22 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
               ))}
             </div>
 
-            <div className="th-search-wrap" style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.ink3, pointerEvents: 'none' }} />
+            <div className="th-search-wrap" style={{ position: 'relative', minWidth: 200, flex: 1, maxWidth: 360 }}>
+              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: C.ink3, pointerEvents: 'none' }} />
               <input
                 type="text" placeholder="항목 검색…" value={search} onChange={e => setSearch(e.target.value)}
-                style={{ height: 38, paddingLeft: 34, paddingRight: 14, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 13, fontFamily: 'inherit', color: C.ink, background: C.card, outline: 'none', width: '100%', transition: 'all 180ms ease', boxSizing: 'border-box' }}
+                style={{ height: 44, paddingLeft: 40, paddingRight: 14, border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 15, fontFamily: 'inherit', color: C.ink, background: C.card, outline: 'none', width: '100%', transition: 'all 180ms ease', boxSizing: 'border-box' }}
                 onFocus={e => { e.target.style.borderColor = C.cobalt; e.target.style.boxShadow = `0 0 0 3px ${C.cobaltBg}`; }}
                 onBlur={e  => { e.target.style.borderColor = C.border; e.target.style.boxShadow = 'none'; }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: C.ink, letterSpacing: '-0.02em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+            <h2 style={{ fontSize: 21, fontWeight: 900, color: C.ink, letterSpacing: '-0.02em' }}>
               {terms.donation} 항목
             </h2>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: C.cobalt, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, padding: '2px 9px', borderRadius: 6 }}>{filtered.length}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 800, color: C.cobalt, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, padding: '3px 11px', borderRadius: 8 }}>{filtered.length}</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -640,16 +642,16 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
 
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: C.shadow }}>
             <div style={{ padding: '16px 18px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Clock size={14} color={C.cobalt} />
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Clock size={16} color={C.cobalt} />
               </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>{scheduleLabel}</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: C.ink }}>{scheduleLabel}</span>
             </div>
             <div>
               {currentTenant.schedule?.map((s, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '11px 18px', borderBottom: i < (currentTenant.schedule?.length ?? 0) - 1 ? `1px solid ${C.border}` : 'none' }}>
-                  <span style={{ fontSize: 13, color: C.ink2, fontWeight: 500 }}>{s.label}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: C.cobalt, fontWeight: 700, background: C.cobaltBg, padding: '3px 9px', borderRadius: 6, whiteSpace: 'nowrap' }}>{s.time}</span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, padding: '13px 18px', borderBottom: i < (currentTenant.schedule?.length ?? 0) - 1 ? `1px solid ${C.border}` : 'none' }}>
+                  <span style={{ fontSize: 15, color: C.ink2, fontWeight: 600 }}>{s.label}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: C.cobalt, fontWeight: 700, background: C.cobaltBg, padding: '4px 10px', borderRadius: 8, whiteSpace: 'nowrap' }}>{s.time}</span>
                 </div>
               ))}
             </div>
@@ -657,28 +659,30 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
 
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: C.shadow }}>
             <div style={{ padding: '16px 18px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MapPin size={14} color={C.cobalt} />
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MapPin size={16} color={C.cobalt} />
               </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>연락처 및 안내</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: C.ink }}>연락처 및 안내</span>
             </div>
-            <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {currentTenant.address && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <MapPin size={14} color={C.cobalt} style={{ marginTop: 2, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: C.ink2, lineHeight: 1.5, fontWeight: 500 }}>{currentTenant.address}</span>
+                  <MapPin size={16} color={C.cobalt} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <span style={{ fontSize: 15, color: C.ink2, lineHeight: 1.55, fontWeight: 500 }}>{currentTenant.address}</span>
                 </div>
               )}
               {currentTenant.contact?.phone && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Phone size={14} color={C.cobalt} style={{ flexShrink: 0 }} />
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: C.ink, fontWeight: 600 }}>{formatPhoneNumber(currentTenant.contact.phone)}</span>
+                  <Phone size={16} color={C.cobalt} style={{ flexShrink: 0 }} />
+                  <a href={`tel:${currentTenant.contact.phone}`} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: C.ink, fontWeight: 700, textDecoration: 'none' }}>
+                    {formatPhoneNumber(currentTenant.contact.phone)}
+                  </a>
                 </div>
               )}
               {currentTenant.contact?.email && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Mail size={14} color={C.cobalt} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: C.ink2, wordBreak: 'break-all', fontWeight: 500 }}>{currentTenant.contact.email}</span>
+                  <Mail size={16} color={C.cobalt} style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 14, color: C.ink2, wordBreak: 'break-all', fontWeight: 500 }}>{currentTenant.contact.email}</span>
                 </div>
               )}
             </div>
@@ -702,59 +706,44 @@ function ClassicItemRow({ item, terminology, delay, onClick }: { item: DonationI
         width: '100%', textAlign: 'left', cursor: 'pointer',
         background: C.card,
         border: `1px solid ${hovered ? C.cobaltBorder : C.border}`,
-        borderRadius: 14,
+        borderRadius: 16,
         display: 'block',
         boxShadow: hovered ? `0 0 0 3px ${C.cobaltBg}, ${C.shadowMd}` : C.shadow,
         transition: 'all 220ms cubic-bezier(0.16, 1, 0.3, 1)',
         transform: hovered ? 'translateY(-2px)' : 'none',
       } as React.CSSProperties}
     >
-      <div className="th-row-grid" style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 16, padding: '18px 20px', alignItems: 'center' }}>
-        {/* Icon Box */}
-        <div className="th-row-icon" style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          backgroundColor: hovered ? C.cobaltBg : C.paper,
-          border: `1px solid ${hovered ? C.cobaltBorder : C.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: hovered ? C.cobalt : C.ink2,
-          transition: 'all 220ms ease',
-        }}>
-          {itemIcons[item.name] || <Heart size={18} />}
-        </div>
-
+      <div className="th-row-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, padding: '20px 22px', alignItems: 'center' }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: '-0.01em' }}>{item.name}</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 18, fontWeight: 900, color: C.ink, letterSpacing: '-0.02em' }}>{item.name}</span>
             {item.allowRecurring && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, color: C.cobalt, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, padding: '2px 7px', borderRadius: 6, letterSpacing: '0.02em' }}>
-                <Repeat size={10} /> 정기
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: C.cobalt, background: C.cobaltBg, border: `1px solid ${C.cobaltBorder}`, padding: '3px 8px', borderRadius: 6, letterSpacing: '0.02em' }}>
+                <Repeat size={11} /> 정기
               </span>
             )}
             {item.allowOneTime !== false && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, color: '#059669', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 7px', borderRadius: 6, letterSpacing: '0.02em' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: '#059669', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '3px 8px', borderRadius: 6, letterSpacing: '0.02em' }}>
                 1회성
               </span>
             )}
             {item.amountType === 'fixed' && item.fixedAmount && (
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: C.ink, background: C.paper, border: `1px solid ${C.border}`, padding: '2px 8px', borderRadius: 6 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 800, color: C.ink, background: C.paper, border: `1px solid ${C.border}`, padding: '3px 9px', borderRadius: 6 }}>
                 {fmt(item.fixedAmount)}원
               </span>
             )}
           </div>
           {item.description && (
-            <p className="th-row-desc" style={{ fontSize: 13, color: C.ink3, lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', fontWeight: 400 }}>
+            <p className="th-row-desc" style={{ fontSize: 14.5, color: C.ink3, lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontWeight: 400 }}>
               {item.description}
             </p>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: hovered ? C.cobalt : C.ink3, transition: 'all 220ms', flexShrink: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{terminology}</span>
-          <ChevronRight size={15} style={{ transform: hovered ? 'translateX(3px)' : 'none', transition: 'transform 220ms ease' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: hovered ? C.cobalt : C.ink3, transition: 'all 220ms', flexShrink: 0 }}>
+          <span style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{terminology}</span>
+          <ChevronRight size={17} style={{ transform: hovered ? 'translateX(3px)' : 'none', transition: 'transform 220ms ease' }} />
         </div>
       </div>
     </button>

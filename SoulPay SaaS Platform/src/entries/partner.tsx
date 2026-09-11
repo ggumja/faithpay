@@ -2,19 +2,9 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 import { partnerRouter } from "../routes/partnerRoutes";
 import "../styles/index.css";
-import { registerSW } from "virtual:pwa-register";
+import { setupServiceWorker } from "../app/utils/pwaUtils";
 
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    if ('caches' in window) {
-      caches.keys().then((names) => {
-        for (const name of names) caches.delete(name);
-      });
-    }
-    updateSW(true);
-  },
-});
+setupServiceWorker();
 
 createRoot(document.getElementById("root")!).render(
   <RouterProvider router={partnerRouter} />
