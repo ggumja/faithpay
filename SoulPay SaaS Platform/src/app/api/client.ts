@@ -705,30 +705,17 @@ export const memberAPI = {
     if (!cleanPhone) return { success: false, error: '유효한 전화번호가 필요합니다.' };
 
     try {
-      const res = await fetchAPI<any>(`/members/profile/${cleanPhone}`);
+      const res = await fetchAPI<any>(`/members/profile/${cleanPhone}`, { silentFail: true } as any);
       if (res.success && res.data) {
         const raw = res.data;
         const profile = (raw.value && typeof raw.value === 'object') ? { ...raw.value, ...raw } : { ...raw };
         if (profile.value === null) delete profile.value;
         return { success: true, data: profile };
       }
-    } catch (err) {
-      console.warn('Primary fetch member profile failed, trying settings fallback:', err);
+      return { success: true, data: undefined };
+    } catch {
+      return { success: true, data: undefined };
     }
-
-    try {
-      const setRes = await settingsAPI.get(`member_profile_${cleanPhone}`);
-      if (setRes.success && setRes.data) {
-        const raw = setRes.data;
-        const profile = (raw.value && typeof raw.value === 'object') ? { ...raw.value, ...raw } : { ...raw };
-        if (profile.value === null) delete profile.value;
-        return { success: true, data: profile };
-      }
-    } catch (setErr) {
-      console.warn('Settings get fallback failed:', setErr);
-    }
-
-    return { success: false, data: undefined };
   },
 
   /** 신도/회원 프로필 정보 업데이트 (DB 100% 영구 실측 저장 - localStorage 미사용) */

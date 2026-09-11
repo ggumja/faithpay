@@ -307,6 +307,7 @@ export default function PartnerDashboard() {
               onClick={() => {
                 sessionStorage.removeItem('soulpay_partner_session');
                 sessionStorage.removeItem('faithpay_partner_session');
+                localStorage.removeItem('soulpay_partner_last_activity');
                 toast.success('파트너 포털에서 로그아웃 되었습니다.');
                 navigate('/partner/login');
               }}

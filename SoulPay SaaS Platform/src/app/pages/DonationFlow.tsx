@@ -4,10 +4,11 @@ import { useApp, DonationItem } from '../context/AppContext';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif, MotifLarge } from '../components/Motif';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { donationItemsAPI } from '../api/client';
+import { donationItemsAPI, settingsAPI } from '../api/client';
 import { MemberTitleSelect } from '../components/common/MemberTitleSelect';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 
 interface FamilyMember {
   name: string;
@@ -53,6 +54,9 @@ export default function DonationFlow() {
     }
     return true;
   });
+
+  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
+  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
 
   // 💾 저장된 교인 성명 및 전화번호, 직분정보 자동 불러오기
   useEffect(() => {
@@ -310,7 +314,14 @@ export default function DonationFlow() {
     else navigate(-1);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // 결제 진행 직전 최신 점검 상태 즉시 1회 재검증 (관리자가 방금 해제한 경우 새로고침 없이 즉시 통과)
+    const { isMaintenance: jitMaintenance, notice: latestNotice } = await checkMaintenanceJIT();
+    if (jitMaintenance) {
+      toast.error(latestNotice?.title ? `[시스템 점검] ${latestNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제 진행이 일시 중단되었습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
     setDonationFormData({
       itemId: selectedItem.id,
       itemName: selectedItem.name,
@@ -377,6 +388,31 @@ export default function DonationFlow() {
 
       {/* Main Flow Content Card */}
       <main style={{ maxWidth: 640, margin: '0 auto', padding: '28px 16px 0' }}>
+        {/* 결제 시스템 점검 안내 배너 */}
+        {isMaintenance && (
+          <div className="bg-rose-50 border-2 border-rose-400/60 rounded-2xl p-4 sm:p-5 mb-5 flex items-start gap-3.5 text-rose-950 shadow-sm">
+            <div className="p-2 rounded-xl bg-rose-100 text-rose-600 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white uppercase tracking-wider">
+                결제 시스템 점검 중
+              </span>
+              <h3 className="font-extrabold text-sm sm:text-base mt-1 text-rose-950">
+                {broadcastNotice?.title || '시스템 정기 점검 안내'}
+              </h3>
+              {broadcastNotice?.content && (
+                <p className="text-xs sm:text-sm mt-1 text-rose-800 whitespace-pre-wrap leading-relaxed">
+                  {broadcastNotice.content}
+                </p>
+              )}
+              <p className="text-[11px] font-semibold text-rose-700 mt-2">
+                * 점검 중에는 금융망 연동이 일시 중단되어 전자결제를 진행하실 수 없습니다.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="hm-card hm-animate-scale-in" style={{ background: 'white', overflow: 'hidden' }}>
           
           {/* Header Title Badge */}

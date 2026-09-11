@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { useApp, DonationItem, Tenant } from '../context/AppContext';
-import { donationItemsAPI, tenantAPI } from '../api/client';
+import { donationItemsAPI, tenantAPI, settingsAPI } from '../api/client';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { useTenantPWA } from '../hooks/useTenantPWA';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 import { ClassicTemplate } from '../components/templates/ClassicTemplate';
 import { ElectricDarkTemplate } from '../components/templates/ElectricDarkTemplate';
 import { MinimalHeroTemplate } from '../components/templates/MinimalHeroTemplate';
@@ -76,6 +77,9 @@ export default function TenantHome() {
   const { canInstall, hasNativePrompt, install } = useTenantPWA(targetTenant || undefined);
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState<boolean>(Boolean(targetItemParam));
+
+  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
+  const { notice: broadcastNotice, isMaintenance } = useGlobalBroadcastNotice(10000);
 
   useEffect(() => {
     let isMounted = true;
@@ -203,41 +207,55 @@ export default function TenantHome() {
   // 템플릿 ID에 따른 분기 렌더링 ('electric-dark' | 'minimal-hero' | 'classic')
   const templateId = targetTenant.templateId || 'classic';
 
-  switch (templateId) {
-    case 'electric-dark':
-      return (
-        <ElectricDarkTemplate
-          currentTenant={targetTenant}
-          allItems={allItems}
-          ft={ft}
-          canInstall={canInstall}
-          hasNativePrompt={hasNativePrompt}
-          install={install}
-        />
-      );
-    case 'minimal-hero':
-      return (
-        <MinimalHeroTemplate
-          currentTenant={targetTenant}
-          allItems={allItems}
-          ft={ft}
-          canInstall={canInstall}
-          hasNativePrompt={hasNativePrompt}
-          install={install}
-        />
-      );
-    case 'classic':
-    default:
-      return (
-        <ClassicTemplate
-          currentTenant={targetTenant}
-          allItems={allItems}
-          ft={ft}
-          canInstall={canInstall}
-          hasNativePrompt={hasNativePrompt}
-          install={install}
-        />
-      );
-  }
+  const renderTemplateContent = () => {
+    switch (templateId) {
+      case 'electric-dark':
+        return (
+          <ElectricDarkTemplate
+            currentTenant={targetTenant}
+            allItems={allItems}
+            ft={ft}
+            canInstall={canInstall}
+            hasNativePrompt={hasNativePrompt}
+            install={install}
+          />
+        );
+      case 'minimal-hero':
+        return (
+          <MinimalHeroTemplate
+            currentTenant={targetTenant}
+            allItems={allItems}
+            ft={ft}
+            canInstall={canInstall}
+            hasNativePrompt={hasNativePrompt}
+            install={install}
+          />
+        );
+      case 'classic':
+      default:
+        return (
+          <ClassicTemplate
+            currentTenant={targetTenant}
+            allItems={allItems}
+            ft={ft}
+            canInstall={canInstall}
+            hasNativePrompt={hasNativePrompt}
+            install={install}
+          />
+        );
+    }
+  };
+
+  return (
+    <>
+      {isMaintenance && (
+        <div className="bg-rose-600 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 flex items-center justify-center gap-2 sticky top-0 z-50 shadow-md">
+          <AlertCircle className="w-4 h-4 shrink-0 animate-bounce" />
+          <span>[시스템 점검 안내] {broadcastNotice?.title || '결제 시스템 정기 점검이 진행 중입니다.'} (전자결제가 일시 중단됩니다)</span>
+        </div>
+      )}
+      {renderTemplateContent()}
+    </>
+  );
 
 }

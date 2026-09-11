@@ -299,7 +299,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.role) return parsed;
+          if (parsed && parsed.role) {
+            // 세션 유효시간 검증 (시스템 관리자: 30분, 단체 관리자: 60분)
+            const lastActivityStr = localStorage.getItem('soulpay_admin_last_activity');
+            if (lastActivityStr) {
+              const lastActivity = parseInt(lastActivityStr, 10);
+              const maxIdleMs = parsed.role === 'system_admin' ? 30 * 60 * 1000 : 60 * 60 * 1000;
+              if (Date.now() - lastActivity > maxIdleMs) {
+                localStorage.removeItem('soulpay_current_admin');
+                localStorage.removeItem('faithpay_current_admin');
+                localStorage.removeItem('soulpay_admin_last_activity');
+                return null;
+              }
+            } else {
+              localStorage.setItem('soulpay_admin_last_activity', Date.now().toString());
+            }
+            return parsed;
+          }
         } catch (e) {}
       }
     }
@@ -311,9 +327,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       if (admin) {
         localStorage.setItem('soulpay_current_admin', JSON.stringify(admin));
+        localStorage.setItem('soulpay_admin_last_activity', Date.now().toString());
       } else {
         localStorage.removeItem('soulpay_current_admin');
         localStorage.removeItem('faithpay_current_admin');
+        localStorage.removeItem('soulpay_admin_last_activity');
       }
     }
   }, []);

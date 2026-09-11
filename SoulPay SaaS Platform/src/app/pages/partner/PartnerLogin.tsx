@@ -44,6 +44,7 @@ export default function PartnerLogin() {
         // sessionStorage 사용 — 탭 닫힘 시 자동 파기
         sessionStorage.setItem('soulpay_partner_session', JSON.stringify(found));
         sessionStorage.setItem('faithpay_partner_session', JSON.stringify(found));
+        localStorage.setItem('soulpay_partner_last_activity', Date.now().toString());
         toast.success(`${found.name}님, 환영합니다!`);
         if (found.role === 'sales_agent') {
           navigate('/agent/dashboard');

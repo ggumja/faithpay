@@ -4,6 +4,7 @@ import { AppProvider } from '../context/AppContext';
 import { Toaster } from '../components/ui/sonner';
 import PageLoadingFallback from '../components/common/PageLoadingFallback';
 import { getForwardUrlFromRootDomain } from '../utils/domainUtils';
+import { SessionTimeoutWatcher } from '../components/common/SessionTimeoutWatcher';
 
 export default function RootLayout() {
   const location = useLocation();
@@ -28,6 +29,7 @@ export default function RootLayout() {
       <Suspense fallback={<PageLoadingFallback />}>
         <Outlet />
       </Suspense>
+      <SessionTimeoutWatcher />
       <Toaster position="top-center" richColors closeButton />
     </AppProvider>
   );
