@@ -198,16 +198,18 @@ interface ClassicTemplateProps {
   allItems: DonationItem[];
   ft: FaithTheme;
   canInstall: boolean;
-  install: () => void;
+  hasNativePrompt?: boolean;
+  install: () => void | Promise<boolean | void>;
 }
 
-export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, install }: ClassicTemplateProps) {
+export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, hasNativePrompt, install }: ClassicTemplateProps) {
   const navigate = useNavigate();
   const terms = useTenantTerms(currentTenant);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recurring' | 'onetime'>('all');
   const heroRef = useRef<HTMLDivElement>(null);
   const [heroVisible, setHeroVisible] = useState(true);
+
   const [bannerIndex, setBannerIndex] = useState(0);
 
   useEffect(() => {
@@ -303,9 +305,11 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, insta
           <InstallBanner
             tenant={currentTenant}
             onInstall={install}
+            hasNativePrompt={hasNativePrompt}
             primaryColor={ft.primary}
           />
         )}
+
       </header>
 
       {/* ── Hero ── */}

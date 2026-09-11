@@ -14,8 +14,10 @@ interface MinimalHeroTemplateProps {
   allItems: DonationItem[];
   ft: FaithTheme;
   canInstall: boolean;
-  install: () => void;
+  hasNativePrompt?: boolean;
+  install: () => void | Promise<boolean | void>;
 }
+
 
 const itemIcons: Record<string, React.ReactNode> = {
   '십일조':   <Landmark size={18} />,
@@ -178,7 +180,7 @@ const MINIMAL_CSS = `
 }
 `;
 
-export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, install }: MinimalHeroTemplateProps) {
+export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, hasNativePrompt, install }: MinimalHeroTemplateProps) {
   const navigate = useNavigate();
   const terms = useTenantTerms(currentTenant);
   const [search, setSearch] = useState('');
@@ -201,7 +203,15 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, i
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', color: '#0F172A', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
       <style>{MINIMAL_CSS}</style>
-      {canInstall && <InstallBanner tenant={currentTenant} onInstall={install} primaryColor={ft.primary} />}
+      {canInstall && (
+        <InstallBanner
+          tenant={currentTenant}
+          onInstall={install}
+          hasNativePrompt={hasNativePrompt}
+          primaryColor={ft.primary}
+        />
+      )}
+
 
       {/* ── Sticky Nav ── */}
       <nav style={{

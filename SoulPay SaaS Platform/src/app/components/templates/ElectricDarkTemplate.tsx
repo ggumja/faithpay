@@ -104,10 +104,11 @@ interface ElectricDarkTemplateProps {
   allItems: DonationItem[];
   ft: FaithTheme;
   canInstall: boolean;
-  install: () => void;
+  hasNativePrompt?: boolean;
+  install: () => void | Promise<boolean | void>;
 }
 
-export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, install }: ElectricDarkTemplateProps) {
+export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, hasNativePrompt, install }: ElectricDarkTemplateProps) {
   const navigate = useNavigate();
   const [selectedItemId, setSelectedItemId] = useState<string>(allItems[0]?.id || '');
   const [search, setSearch] = useState('');
@@ -171,9 +172,11 @@ export function ElectricDarkTemplate({ currentTenant, allItems, ft, canInstall, 
         <InstallBanner
           tenant={currentTenant}
           onInstall={install}
+          hasNativePrompt={hasNativePrompt}
           primaryColor={NEO.electricGreen}
         />
       )}
+
 
       <div className="neo-wrap space-y-6">
 

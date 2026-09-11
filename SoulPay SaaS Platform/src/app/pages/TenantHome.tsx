@@ -71,7 +71,7 @@ export default function TenantHome() {
     }
   }, [targetTenant, currentTenant, setCurrentTenant]);
 
-  const { canInstall, install } = useTenantPWA(targetTenant || undefined);
+  const { canInstall, hasNativePrompt, install } = useTenantPWA(targetTenant || undefined);
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
 
   useEffect(() => {
@@ -121,28 +121,20 @@ export default function TenantHome() {
           </div>
 
           <h2 className="text-xl font-extrabold text-slate-900 mb-2">
-            존재하지 않는 URL입니다
+            요청하신 단체를 찾을 수 없습니다
           </h2>
           <p className="text-xs text-slate-500 leading-relaxed mb-6">
-            요청하신 주소 <span className="font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">/{tenantSlug}</span> 에 해당하는 단체 공간을 찾을 수 없습니다. 주소를 다시 확인해 주시거나 새로운 단체 가입을 신청해 주세요.
+            주소가 잘못되었거나 등록되지 않은 단체 공간입니다.<br />
+            영문 식별자(Slug) 또는 링크를 다시 한번 확인해 주세요.
           </p>
 
-          <div className="w-full flex flex-col gap-2.5">
-            <button
-              onClick={() => navigate('/')}
-              className="w-full h-12 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors cursor-pointer shadow-sm"
-            >
-              <Home size={15} />
-              <span>SoulPay 메인으로 이동</span>
-            </button>
-            <button
-              onClick={() => navigate('/onboarding')}
-              className="w-full h-12 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 font-bold text-xs flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors cursor-pointer"
-            >
-              <UserPlus size={15} />
-              <span>새 단체 가입신청 하기</span>
-            </button>
-          </div>
+          <button
+            onClick={() => navigate('/')}
+            className="w-full h-12 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors cursor-pointer shadow-sm"
+          >
+            <Home size={15} />
+            <span>메인으로 이동</span>
+          </button>
         </div>
       </div>
     );
@@ -190,6 +182,7 @@ export default function TenantHome() {
           allItems={allItems}
           ft={ft}
           canInstall={canInstall}
+          hasNativePrompt={hasNativePrompt}
           install={install}
         />
       );
@@ -200,6 +193,7 @@ export default function TenantHome() {
           allItems={allItems}
           ft={ft}
           canInstall={canInstall}
+          hasNativePrompt={hasNativePrompt}
           install={install}
         />
       );
@@ -211,8 +205,10 @@ export default function TenantHome() {
           allItems={allItems}
           ft={ft}
           canInstall={canInstall}
+          hasNativePrompt={hasNativePrompt}
           install={install}
         />
       );
   }
+
 }
