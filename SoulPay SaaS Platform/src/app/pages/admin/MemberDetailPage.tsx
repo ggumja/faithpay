@@ -577,7 +577,7 @@ export default function MemberDetailPage() {
 
             <div class="total-amount-area">
               <p style="margin: 0; font-size: 11px; color: #555;">${taxYear}년도 연간 기부 합계 금액 (Total Tax-Deductible Donation)</p>
-              <h2>₩ ${member.totalDonation.toLocaleString()} 원</h2>
+              <h2>${member.totalDonation.toLocaleString()} 원</h2>
             </div>
 
             <div class="notice-box">
@@ -683,7 +683,7 @@ export default function MemberDetailPage() {
 
             <div class="amount-box">
               <p style="margin: 0 0 5px 0; font-size: 12px; color: #4b5563;">총 납부 금액 (Amount Paid)</p>
-              <h2>₩ ${targetAmount.toLocaleString()} 원</h2>
+              <h2>${targetAmount.toLocaleString()} 원</h2>
             </div>
 
             <div class="footer-msg">
@@ -925,7 +925,7 @@ export default function MemberDetailPage() {
               <div className="space-y-1">
                 <span className="text-xs font-medium text-[var(--hm-ink-3)] block">총 누적 {donationTerm}액</span>
                 <span className="text-2xl font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums tracking-tight block">
-                  ₩ {member.totalDonation.toLocaleString()}
+                  {member.totalDonation.toLocaleString()}원
                 </span>
                 <span className="text-[11px] text-[var(--hm-ink-3)] block">실측 결제 완료 기준</span>
               </div>
@@ -1070,7 +1070,7 @@ export default function MemberDetailPage() {
                       </span>
                       <span className="text-[var(--hm-border)]">|</span>
                       <span>
-                        기간 실납부 합계: <strong className="text-[var(--hm-ink)] font-black font-[family-name:var(--font-mono)] tabular-nums">₩ {filteredCompletedSum.toLocaleString()}원</strong>
+                        기간 실납부 합계: <strong className="text-[var(--hm-ink)] font-black font-[family-name:var(--font-mono)] tabular-nums">{filteredCompletedSum.toLocaleString()}원</strong>
                       </span>
                     </div>
                   </div>
@@ -1129,11 +1129,11 @@ export default function MemberDetailPage() {
                             <TableCell className="text-right py-3 font-[family-name:var(--font-mono)] tabular-nums">
                               {don.status === 'completed' ? (
                                 <span className="font-black text-[var(--hm-ink)] text-sm">
-                                  ₩ {don.amount.toLocaleString()}원
+                                  {don.amount.toLocaleString()}원
                                 </span>
                               ) : (
                                 <span className="font-normal text-[var(--hm-ink-3)] line-through text-sm">
-                                  ₩ {don.amount.toLocaleString()}원
+                                  {don.amount.toLocaleString()}원
                                 </span>
                               )}
                             </TableCell>
@@ -1264,7 +1264,7 @@ export default function MemberDetailPage() {
                           <div className="flex items-baseline justify-between pt-1">
                             <span className="text-xs font-medium text-[var(--hm-ink-3)]">약정 금액</span>
                             <span className="text-lg font-black text-[var(--hm-ink)] font-[family-name:var(--font-mono)] tabular-nums">
-                              ₩ {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
+                              {sub.monthlyAmount.toLocaleString()}원 / {sub.recurringInterval === 'weekly' ? '주' : '월'}
                             </span>
                           </div>
 
@@ -1466,7 +1466,7 @@ export default function MemberDetailPage() {
                 <Input
                   type="text"
                   readOnly
-                  value={`₩ ${member.totalDonation.toLocaleString()}원`}
+                  value={`${member.totalDonation.toLocaleString()}원`}
                   className="text-xs bg-[var(--hm-paper-2)] border-[var(--hm-border)] font-bold font-[family-name:var(--font-mono)] tabular-nums text-[var(--hm-ink)] cursor-not-allowed rounded-lg"
                 />
               </div>

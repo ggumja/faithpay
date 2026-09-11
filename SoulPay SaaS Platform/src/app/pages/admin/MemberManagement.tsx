@@ -470,7 +470,7 @@ export default function MemberManagement() {
                 총 누적 {donationTerm}액
               </div>
               <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                ₩ {totalDonationsAmount.toLocaleString()}원
+                {totalDonationsAmount.toLocaleString()}원
               </div>
               <p className="text-xs text-slate-400">정상 승인 완료 총액</p>
             </Card>
@@ -480,7 +480,7 @@ export default function MemberManagement() {
                 평균 누적 {donationTerm}액
               </div>
               <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-zinc-100 tracking-tight">
-                ₩ {avgDonationAmount.toLocaleString()}원
+                {avgDonationAmount.toLocaleString()}원
               </div>
               <p className="text-xs text-slate-400">회원 1인당 평균 후원</p>
             </Card>
@@ -583,7 +583,7 @@ export default function MemberManagement() {
                           )}
                         </TableCell>
                         <TableCell className="text-right font-black text-slate-900 dark:text-zinc-100 font-mono">
-                          ₩ {m.totalDonation.toLocaleString()}원
+                          {m.totalDonation.toLocaleString()}원
                         </TableCell>
                         <TableCell className="font-mono text-xs text-slate-500">
                           {m.lastDonation || '-'}
