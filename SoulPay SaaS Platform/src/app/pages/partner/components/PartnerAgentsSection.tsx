@@ -22,6 +22,8 @@ interface PartnerAgentsSectionProps {
   setSelectedAgent: (agent: Partner | null) => void;
   tenants: any[];
   commissions?: any[];
+  /** BUG-C: window.location.reload() 대신 부모에서 데이터를 재로드하는 콜백 */
+  onAgentRegistered?: () => void;
 }
 
 export function PartnerAgentsSection({
@@ -36,6 +38,7 @@ export function PartnerAgentsSection({
   setSelectedAgent,
   tenants,
   commissions = [],
+  onAgentRegistered,
 }: PartnerAgentsSectionProps) {
   // PG·플랫폼 원가 — DB(system_settings)에서 로드
   const [pgCost2, setPgCost2] = useState(1.5);
@@ -59,16 +62,37 @@ export function PartnerAgentsSection({
   const [newAgentBusinessNumber, setNewAgentBusinessNumber] = useState('');
   const [newAgentRepresentative, setNewAgentRepresentative] = useState('');
   const [newAgentTaxEmail,       setNewAgentTaxEmail]       = useState('');
-  const [newAgentBankName,       setNewAgentBankName]       = useState('신한은행');
+  // BUG-B: 은행명 하드코딩 제거 — 빈 문자열로 시작, 사용자가 직접 입력
+  const [newAgentBankName,       setNewAgentBankName]       = useState('');
   const [newAgentAccountNumber,  setNewAgentAccountNumber]  = useState('');
   const [newAgentAccountHolder,  setNewAgentAccountHolder]  = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // 영업자별 수수료 합산 (실제 DB commissions 원장 기반)
+  // BUG-I: editAgencyRate props 변경 시 newAgentRate state 동기화
+  useEffect(() => {
+    setNewAgentRate(editAgencyRate);
+  }, [editAgencyRate]);
+
+  // 영업자별 수수료 누적 합산 (실제 DB commissions 원장 기반)
   const getAgentCommissionSum = (agentId: string): number => {
     return commissions
       .filter((c: any) => c.partnerId === agentId || c.agentId === agentId)
       .reduce((s: number, c: any) => s + (c.commissionAmount ?? 0), 0);
+  };
+
+  // BUG-H: monthlyAmount는 DB에 없는 필드 — commissions 원장으로 당월 결제액 직접 집계
+  const getAgentMonthlyDonation = (agentId: string): number => {
+    const now = new Date();
+    return commissions
+      .filter((c: any) => {
+        const isThisAgent = c.partnerId === agentId || c.agentId === agentId;
+        if (!isThisAgent) return false;
+        try {
+          const d = new Date(c.createdAt);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        } catch { return false; }
+      })
+      .reduce((s: number, c: any) => s + (c.donationAmount ?? 0), 0);
   };
 
 
@@ -117,9 +141,9 @@ export function PartnerAgentsSection({
         setNewAgentAccountNumber('');
         setNewAgentAccountHolder('');
         setNewAgentBusinessType('freelancer');
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        // BUG-C: SPA 라우터를 우회하는 window.location.reload() 제거
+        // 부모에서 전달한 콜백을 호출해 데이터만 재로드
+        onAgentRegistered?.();
       } else {
         toast.error(res.error || '영업자 등록에 실패했습니다.');
       }
@@ -321,9 +345,10 @@ export function PartnerAgentsSection({
         <div className="space-y-5">
           {/* 요약 KPI */}
           {(() => {
+            // BUG-H: monthlyAmount → 실DB commissions 기반 당월 결제액 집계
             const agencyOverridingMargin = displayAgents.reduce((s, a) => {
               if (a.status !== 'active') return s;
-              const agentMonthly = (a as any).monthlyAmount ?? 0;
+              const agentMonthly = getAgentMonthlyDonation(a.id);
               const aRate = a.id === partner.id ? editAgencyRate : (agentRates[a.id] ?? (a as any).agencyRate ?? editAgencyRate ?? 0.5);
               return s + Math.round(agentMonthly * aRate / 100);
             }, 0);
@@ -376,7 +401,8 @@ export function PartnerAgentsSection({
                       <TableBody>
                         {displayAgents.map(agent => {
                           const isAgencyDirect = agent.id === partner.id;
-                          const agentMonthly = (agent as any).monthlyAmount ?? 0;
+                          // BUG-H: monthlyAmount → 실DB commissions 기반 당월 결제액
+                          const agentMonthly = getAgentMonthlyDonation(agent.id);
                           const agentAgencyRate = isAgencyDirect
                             ? editAgencyRate
                             : (agentRates[agent.id] ?? (agent as any).agencyRate ?? editAgencyRate ?? 0.5);
@@ -642,10 +668,10 @@ export function PartnerAgentsSection({
                 </div>
               </div>
 
-              {/* 초기 임시 비밀번호 안내 */}
-              <div className="p-2.5 bg-purple-50/70 border border-purple-200 rounded-lg flex items-center justify-between text-xs text-purple-900">
-                <span className="font-semibold">초기 로그인 비밀번호:</span>
-                <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border border-purple-200">admin1234!</span>
+              {/* BUG-B: 초기 비밀번호 평문 노출 제거 — 이메일 발송 안내로 교체 */}
+              <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg flex items-center gap-2 text-xs text-blue-800">
+                <span className="text-base">📧</span>
+                <span>등록 완료 후 영업자 이메일로 <strong>임시 비밀번호</strong>가 자동 발송됩니다.</span>
               </div>
 
               <div className="flex gap-2.5 pt-2">

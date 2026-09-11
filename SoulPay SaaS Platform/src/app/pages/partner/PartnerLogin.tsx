@@ -99,25 +99,11 @@ export default function PartnerLogin() {
     }
   };
 
-  // 파트너 비밀번호 재설정
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = resetEmail.trim().toLowerCase();
-
-    try {
-      const res = await partnerAPI.getAll();
-      if (res.success && Array.isArray(res.data)) {
-        const found = res.data.find(p => p.email?.toLowerCase() === cleanEmail);
-        if (found) {
-          setResetDone(true);
-          toast.success(`📧 ${found.name} 파트너님의 이메일(${cleanEmail})로 비밀번호 재설정 링크가 발송되었습니다.`);
-          return;
-        }
-      }
-      toast.error('입력하신 이메일로 등록된 파트너 계정이 존재하지 않습니다.');
-    } catch {
-      toast.error('비밀번호 재설정 처리 중 오류가 발생했습니다.');
-    }
+    // TODO: 비밀번호 재설정 이메일 발송 API (partnerAPI.resetPassword) 연동 필요
+    // 현재 백엔드 엔드포인트 미구현 — 관리자 문의 안내로 대체
+    toast.error('비밀번호 재설정 기능은 현재 준비 중입니다. 고객센터(support@soulpay.kr)로 문의해 주세요.');
   };
 
   return (
