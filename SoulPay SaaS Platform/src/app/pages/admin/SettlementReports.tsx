@@ -130,8 +130,9 @@ export default function SettlementReports() {
 
   // DB에서 실제 결제 및 승인 취소 내역 조회 및 월별 정산 집계
   useEffect(() => {
-    if (!currentTenant?.id && !tenantSlug) return;
-    const targetTenantId = currentTenant?.id || tenantSlug;
+    // BUG-5 fix: currentTenant.id가 확보된 후에만 조회 (slug는 UUID가 아니므로 사용 금지)
+    if (!currentTenant?.id) return;
+    const targetTenantId = currentTenant.id;
 
     const fetchRealSettlements = async () => {
       try {

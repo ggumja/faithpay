@@ -32,7 +32,6 @@ import {
   Menu,
   Eye,
   Edit2,
-  Trash2,
   Phone,
   Mail,
   RefreshCw,
@@ -96,7 +95,7 @@ export default function MemberManagement() {
           const map = new Map<string, MemberDetailData>();
           
           res.data.forEach((d: any) => {
-            const isCompleted = !d.paymentStatus || d.paymentStatus === 'completed';
+            const isCompleted = d.paymentStatus === 'completed';
             const rawPhone = d.donorPhone || '';
             const digitsKey = stripPhoneDigits(rawPhone) || '미등록';
 
@@ -119,8 +118,11 @@ export default function MemberManagement() {
               if (isCompleted) {
                 existing.totalDonation += d.amount || 0;
                 if (d.isRecurring) existing.recurringCount += 1;
-                if (!existing.lastDonation && d.createdAt) {
-                  existing.lastDonation = d.createdAt.split('T')[0];
+                // BUG-4 fix: 최신 날짜 비교하여 항상 가장 최근 납부일을 유지
+                if (d.createdAt) {
+                  if (!existing.lastDonation || d.createdAt > existing.lastDonation) {
+                    existing.lastDonation = d.createdAt.split('T')[0];
+                  }
                 }
               }
               if (existing.name === '무기명' && d.donorName) existing.name = d.donorName;
@@ -337,12 +339,10 @@ export default function MemberManagement() {
     setIsEditMemberModalOpen(true);
   };
 
-  const handleDeleteMember = (id: string, name: string) => {
-    if (confirm(`정말로 [${name}] ${memberTerm} 정보를 삭제하시겠습니까?`)) {
-      setMembers((prev) => prev.filter((m) => m.id !== id));
-      toast.success(`[${name}] ${memberTerm} 정보가 삭제되었습니다.`);
-    }
-  };
+  // NOTE: 회원 삭제 기능은 제공하지 않습니다.
+  // 회원 목록은 donations 실측 데이터 집계이므로 UI state만 삭제하면 새로고침 시 복구되며,
+  // 실제 결제/헌금 내역까지 삭제하는 것은 데이터 무결성 및 정산 정확성에 치명적입니다.
+  // 개인정보 삭제가 필요한 경우 시스템 관리자에게 문의하세요.
 
   // UTF-8 BOM CSV Excel Export Engine
   const handleExportCSV = () => {
@@ -594,15 +594,7 @@ export default function MemberManagement() {
                               <Edit2 className="h-3.5 w-3.5" />
                               수정
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title={`${memberTerm} 삭제`}
-                              onClick={() => handleDeleteMember(m.id, m.name)}
-                              className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+
                           </div>
                         </TableCell>
                       </TableRow>

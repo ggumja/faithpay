@@ -31,7 +31,7 @@ interface SubscriptionRecord {
 }
 
 export default function RecurringSchedulerPage() {
-  const { tenants } = useApp();
+  const { tenants, currentAdmin } = useApp();
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
   const [recurringDonations, setRecurringDonations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +96,23 @@ export default function RecurringSchedulerPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // BUG-7 fix: 전체 단체 구독 데이터를 조회하는 시스템 전용 페이지 → system_admin 권한 필수
+  if (!currentAdmin || currentAdmin.role !== 'system_admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950 p-4">
+        <div className="max-w-sm w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-2xl p-8 text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto text-xl font-bold">🔒</div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">접근 권한 없음</h2>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              정기결제 스케줄러 관리는 <strong>시스템 관리자(system_admin)</strong>만 접근할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 개별 약정 즉시 청구 테스트 핸들러
   const [chargingSubId, setChargingSubId] = useState<string | null>(null);

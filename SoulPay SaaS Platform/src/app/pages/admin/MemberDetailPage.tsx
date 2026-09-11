@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
@@ -204,8 +204,8 @@ export default function MemberDetailPage() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  useEffect(() => {
-    async function loadMemberDetail() {
+  const loadMemberDetail = useCallback(async () => {
+    {
       if (!currentTenant || !memberId) return;
       setIsLoading(true);
 
@@ -252,7 +252,7 @@ export default function MemberDetailPage() {
             donorDonations.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
             // 1. 실 납부 완료 건 집계 (취소/실패 건은 총액 및 최근 납부일 산정에서 엄격 제외)
-            const completedDonations = donorDonations.filter((d: any) => !d.paymentStatus || d.paymentStatus === 'completed');
+            const completedDonations = donorDonations.filter((d: any) => d.paymentStatus === 'completed');
             const totalSum = completedDonations.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
             const lastCompleted = completedDonations[0];
             const lastDonationDate = lastCompleted?.createdAt ? lastCompleted.createdAt.split('T')[0] : '';
@@ -441,8 +441,11 @@ export default function MemberDetailPage() {
         setIsLoading(false);
       }
     }
-    loadMemberDetail();
   }, [currentTenant, memberId]);
+
+  useEffect(() => {
+    loadMemberDetail();
+  }, [loadMemberDetail]);
 
   if (!currentTenant) {
     return (
