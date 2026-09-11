@@ -8,6 +8,7 @@ import { Plus, Trash2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { donationItemsAPI, settingsAPI } from '../api/client';
 import { MemberTitleSelect } from '../components/common/MemberTitleSelect';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 
 interface FamilyMember {
   name: string;
@@ -54,30 +55,8 @@ export default function DonationFlow() {
     return true;
   });
 
-  // 전체 공지 & 결제 점검 모드 상태 (실제 DB system_settings 연동)
-  const [broadcastNotice, setBroadcastNotice] = useState<any>(null);
-  useEffect(() => {
-    let isMounted = true;
-    settingsAPI.get('global_broadcast_notice')
-      .then((res: any) => {
-        if (!isMounted) return;
-        const raw = res?.data ?? res?.value ?? res;
-        const notice = (raw && typeof raw === 'object' && raw.value && typeof raw.value === 'object') ? raw.value : raw;
-        if (notice && notice.isActive) {
-          setBroadcastNotice(notice);
-        } else {
-          setBroadcastNotice(null);
-        }
-      })
-      .catch((err) => {
-        console.warn('Failed to load global broadcast notice in DonationFlow:', err);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const isMaintenance = Boolean(broadcastNotice?.isActive && broadcastNotice?.isMaintenanceMode);
+  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
+  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
 
   // 💾 저장된 교인 성명 및 전화번호, 직분정보 자동 불러오기
   useEffect(() => {
@@ -335,9 +314,11 @@ export default function DonationFlow() {
     else navigate(-1);
   };
 
-  const handleSubmit = () => {
-    if (isMaintenance) {
-      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제 진행이 일시 중단되었습니다.');
+  const handleSubmit = async () => {
+    // 결제 진행 직전 최신 점검 상태 즉시 1회 재검증 (관리자가 방금 해제한 경우 새로고침 없이 즉시 통과)
+    const { isMaintenance: jitMaintenance, notice: latestNotice } = await checkMaintenanceJIT();
+    if (jitMaintenance) {
+      toast.error(latestNotice?.title ? `[시스템 점검] ${latestNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제 진행이 일시 중단되었습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
 

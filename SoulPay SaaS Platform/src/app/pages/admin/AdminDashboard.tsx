@@ -33,6 +33,7 @@ import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI, settingsAPI } from '../../api/client';
 import { assignSequentialDonationIds } from './DonationHistory';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { useGlobalBroadcastNotice } from '../../hooks/useGlobalBroadcastNotice';
 
 const normalizeDonation = (d: any) => {
   const rawDate = d.createdAt ?? d.created_at ?? d.date;
@@ -158,35 +159,18 @@ export default function AdminDashboard() {
     { month: mLabel3, cumulativeAmount: 0 },
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [broadcastNotice, setBroadcastNotice] = useState<any>(null);
+  // 전체 사찰/교회 실시간 브로드캐스트 공지 자동 동기화 (10초 폴링 + 멀티탭 브로드캐스트 채널)
+  const { notice: broadcastNotice } = useGlobalBroadcastNotice(10000);
   const [isNoticeDismissed, setIsNoticeDismissed] = useState<boolean>(false);
 
-  // 전체 사찰/교회 실시간 브로드캐스트 공지 조회
   useEffect(() => {
-    let isMounted = true;
-    async function fetchBroadcastNotice() {
-      try {
-        const res = await settingsAPI.get('global_broadcast_notice');
-        if (res.success && res.data) {
-          const raw = res.data;
-          const notice = (raw.value && typeof raw.value === 'object') ? raw.value : raw;
-          if (isMounted && notice && notice.isActive) {
-            setBroadcastNotice(notice);
-            const dismissedKey = `soulpay_dismissed_notice_${notice.id}`;
-            if (sessionStorage.getItem(dismissedKey)) {
-              setIsNoticeDismissed(true);
-            }
-          } else if (isMounted) {
-            setBroadcastNotice(null);
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch broadcast notice:', err);
-      }
+    if (broadcastNotice?.id) {
+      const dismissedKey = `soulpay_dismissed_notice_${broadcastNotice.id}`;
+      setIsNoticeDismissed(Boolean(sessionStorage.getItem(dismissedKey)));
+    } else {
+      setIsNoticeDismissed(false);
     }
-    fetchBroadcastNotice();
-    return () => { isMounted = false; };
-  }, []);
+  }, [broadcastNotice?.id]);
 
   useEffect(() => {
     // DB 테넌트 목록 조회가 완료될 때까지 비동기 평가 유예

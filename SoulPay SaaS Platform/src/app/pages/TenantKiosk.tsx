@@ -5,6 +5,7 @@ import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { Motif } from '../components/Motif';
 import { donationAPI, donationItemsAPI, DonationItem, kakaoPayAPI, settingsAPI } from '../api/client';
 import { useTenantTerms } from '../hooks/useTenantTerms';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 import { Badge } from '../components/ui/badge';
 import {
   CreditCard,
@@ -162,28 +163,8 @@ export default function TenantKiosk() {
   const [autoResetSeconds, setAutoResetSeconds] = useState(45);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
 
-  // 전체 공지 & 결제 점검 모드 상태 (실제 DB system_settings 연동)
-  const [broadcastNotice, setBroadcastNotice] = useState<any>(null);
-  useEffect(() => {
-    let isMounted = true;
-    settingsAPI.get('global_broadcast_notice')
-      .then((res: any) => {
-        if (!isMounted) return;
-        const raw = res?.data ?? res?.value ?? res;
-        const notice = (raw && typeof raw === 'object' && raw.value && typeof raw.value === 'object') ? raw.value : raw;
-        if (notice && notice.isActive) {
-          setBroadcastNotice(notice);
-        } else {
-          setBroadcastNotice(null);
-        }
-      })
-      .catch((err) => {
-        console.warn('Failed to load global broadcast notice in Kiosk:', err);
-      });
-    return () => { isMounted = false; };
-  }, []);
-
-  const isMaintenance = Boolean(broadcastNotice?.isActive && broadcastNotice?.isMaintenanceMode);
+  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
+  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
 
   // Live Camera Stream State & Ref for Kiosk QR/Barcode Scanner
   const kioskVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -340,9 +321,10 @@ export default function TenantKiosk() {
   };
 
   // Select Fast Anonymous Mode
-  const startAnonymousTrack = () => {
-    if (isMaintenance) {
-      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 키오스크를 이용하실 수 없습니다.');
+  const startAnonymousTrack = async () => {
+    const { isMaintenance: jitMaintenance, notice: latestNotice } = await checkMaintenanceJIT();
+    if (jitMaintenance) {
+      toast.error(latestNotice?.title ? `[시스템 점검] ${latestNotice.title}` : '현재 금융 결제망 정기 점검 중으로 키오스크를 이용하실 수 없습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
     setIsAnonymous(true);
@@ -353,9 +335,10 @@ export default function TenantKiosk() {
   };
 
   // Select Phone Track
-  const startPhoneTrack = () => {
-    if (isMaintenance) {
-      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 키오스크를 이용하실 수 없습니다.');
+  const startPhoneTrack = async () => {
+    const { isMaintenance: jitMaintenance, notice: latestNotice } = await checkMaintenanceJIT();
+    if (jitMaintenance) {
+      toast.error(latestNotice?.title ? `[시스템 점검] ${latestNotice.title}` : '현재 금융 결제망 정기 점검 중으로 키오스크를 이용하실 수 없습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
     setIsAnonymous(false);
@@ -367,8 +350,9 @@ export default function TenantKiosk() {
 
   // Submit OffPG Card / Easy Payment
   const processOffPgPayment = async () => {
-    if (isMaintenance) {
-      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제를 진행할 수 없습니다.');
+    const { isMaintenance: jitMaintenance, notice: latestNotice } = await checkMaintenanceJIT();
+    if (jitMaintenance) {
+      toast.error(latestNotice?.title ? `[시스템 점검] ${latestNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제를 진행할 수 없습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
     if (!currentTenant) {

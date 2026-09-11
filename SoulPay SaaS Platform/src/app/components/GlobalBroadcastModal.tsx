@@ -6,6 +6,7 @@ import { Textarea } from './ui/textarea';
 import { Megaphone, X, Bell, AlertTriangle, CheckCircle2, Trash2, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsAPI } from '../api/client';
+import { notifyBroadcastNoticeChanged } from '../hooks/useGlobalBroadcastNotice';
 
 export interface GlobalBroadcastNotice {
   id: string;
@@ -83,6 +84,7 @@ export default function GlobalBroadcastModal({ onClose }: Props) {
       const res = await settingsAPI.set('global_broadcast_notice', payload);
       if (res.success) {
         toast.success('[전체 공지 등록 완료]\n모든 단체 관리자 대시보드 상단에 실시간 게재되었습니다.');
+        notifyBroadcastNoticeChanged();
         onClose();
       } else {
         toast.error(res.error || '공지 등록에 실패했습니다. 다시 시도해주세요.');
@@ -119,6 +121,7 @@ export default function GlobalBroadcastModal({ onClose }: Props) {
       const res = await settingsAPI.set('global_broadcast_notice', payload);
       if (res.success) {
         toast.success('전체 공지 및 점검 모드가 성공적으로 종료되었습니다.');
+        notifyBroadcastNoticeChanged();
         setActiveNotice(null);
         setTitle('');
         setContent('');

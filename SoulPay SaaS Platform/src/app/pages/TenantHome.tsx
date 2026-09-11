@@ -4,6 +4,7 @@ import { useApp, DonationItem, Tenant } from '../context/AppContext';
 import { donationItemsAPI, tenantAPI, settingsAPI } from '../api/client';
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { useTenantPWA } from '../hooks/useTenantPWA';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 import { ClassicTemplate } from '../components/templates/ClassicTemplate';
 import { ElectricDarkTemplate } from '../components/templates/ElectricDarkTemplate';
 import { MinimalHeroTemplate } from '../components/templates/MinimalHeroTemplate';
@@ -77,38 +78,8 @@ export default function TenantHome() {
   const [dbItems, setDbItems] = useState<DonationItem[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState<boolean>(Boolean(targetItemParam));
 
-  // 전체 공지 & 결제 점검 모드 상태 (실제 DB system_settings 연동)
-  const [broadcastNotice, setBroadcastNotice] = useState<{
-    id: string;
-    title: string;
-    content: string;
-    noticeType: 'info' | 'warning' | 'urgent';
-    isMaintenanceMode: boolean;
-    isActive: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    settingsAPI.get('global_broadcast_notice')
-      .then((res: any) => {
-        if (!isMounted) return;
-        const raw = res?.data ?? res?.value ?? res;
-        const notice = (raw && typeof raw === 'object' && raw.value && typeof raw.value === 'object') ? raw.value : raw;
-        if (notice && notice.isActive) {
-          setBroadcastNotice(notice);
-        } else {
-          setBroadcastNotice(null);
-        }
-      })
-      .catch((err) => {
-        console.warn('Failed to load global broadcast notice:', err);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const isMaintenance = Boolean(broadcastNotice?.isActive && broadcastNotice?.isMaintenanceMode);
+  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
+  const { notice: broadcastNotice, isMaintenance } = useGlobalBroadcastNotice(10000);
 
   useEffect(() => {
     let isMounted = true;

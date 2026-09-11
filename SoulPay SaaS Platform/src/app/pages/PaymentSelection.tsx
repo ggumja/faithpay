@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { FAITH_THEMES, ReligionId } from '../theme/faithTheme';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../components/PayBrandLogos';
 import { useTenantTerms } from '../hooks/useTenantTerms';
+import { useGlobalBroadcastNotice } from '../hooks/useGlobalBroadcastNotice';
 
 export default function PaymentSelection() {
   const { tenantSlug } = useParams();
@@ -101,38 +102,8 @@ export default function PaymentSelection() {
   const [enableNaverPay, setEnableNaverPay] = useState<boolean>(false);
   const [enableTossPay, setEnableTossPay] = useState<boolean>(false);
 
-  // 전체 공지 & 결제 점검 모드 상태 (실제 DB system_settings 연동)
-  const [broadcastNotice, setBroadcastNotice] = useState<{
-    id: string;
-    title: string;
-    content: string;
-    noticeType: 'info' | 'warning' | 'urgent';
-    isMaintenanceMode: boolean;
-    isActive: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    settingsAPI.get('global_broadcast_notice')
-      .then((res: any) => {
-        if (!isMounted) return;
-        const raw = res?.data ?? res?.value ?? res;
-        const notice = (raw && typeof raw === 'object' && raw.value && typeof raw.value === 'object') ? raw.value : raw;
-        if (notice && notice.isActive) {
-          setBroadcastNotice(notice);
-        } else {
-          setBroadcastNotice(null);
-        }
-      })
-      .catch((err) => {
-        console.warn('Failed to load global broadcast notice:', err);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const isMaintenance = Boolean(broadcastNotice?.isActive && broadcastNotice?.isMaintenanceMode);
+  // 실시간 전체 공지 & 결제 점검 모드 자동 동기화 (새로고침 없이 10초 폴링 + 탭 가시성 + 브로드캐스트 채널 연동)
+  const { notice: broadcastNotice, isMaintenance, checkMaintenanceJIT } = useGlobalBroadcastNotice(10000);
 
   useEffect(() => {
     if (donationFormData) {
@@ -329,8 +300,10 @@ export default function PaymentSelection() {
   };
 
   const handlePayment = async () => {
-    if (isMaintenance) {
-      toast.error(broadcastNotice?.title ? `[시스템 점검] ${broadcastNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제가 일시 중단되었습니다. 잠시 후 다시 시도해 주세요.');
+    // 결제 직전 최신 점검 상태 즉시 1회 재검증 (관리자가 방금 해제한 경우 즉시 통과)
+    const { isMaintenance: jitMaintenance, notice: latestNotice } = await checkMaintenanceJIT();
+    if (jitMaintenance) {
+      toast.error(latestNotice?.title ? `[시스템 점검] ${latestNotice.title}` : '현재 금융 결제망 정기 점검 중으로 결제가 일시 중단되었습니다. 잠시 후 다시 시도해 주세요.');
       return;
     }
 
