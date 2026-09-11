@@ -215,18 +215,21 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, h
             <div style={{
               width: 32,
               height: 32,
+              borderRadius: 10,
+              backgroundColor: `${ft.primary}15`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              backgroundColor: currentTenant.logoUrl ? 'transparent' : `${ft.primary}15`,
-              borderRadius: currentTenant.logoUrl ? 0 : 10,
+              border: 'none',
+              boxShadow: 'none',
+              overflow: 'hidden',
             }}>
               {currentTenant.logoUrl ? (
                 <img
                   src={currentTenant.logoUrl}
                   alt={currentTenant.name}
-                  style={{ width: 32, height: 32, objectFit: 'contain' }}
+                  style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 6 }}
                 />
               ) : (
                 <Motif kind={ft.motif} size={16} color={ft.primary} />

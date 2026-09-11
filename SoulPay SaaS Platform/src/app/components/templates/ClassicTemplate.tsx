@@ -248,19 +248,21 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, hasNa
             <div style={{
               width: 38,
               height: 38,
+              borderRadius: 10,
+              background: ft.primaryBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              background: currentTenant.logoUrl ? 'transparent' : ft.primaryBg,
-              borderRadius: currentTenant.logoUrl ? 0 : 10,
-              boxShadow: currentTenant.logoUrl ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
+              boxShadow: 'none',
+              border: 'none',
+              overflow: 'hidden',
             }}>
               {currentTenant.logoUrl ? (
                 <img
                   src={currentTenant.logoUrl}
                   alt={currentTenant.name}
-                  style={{ width: 36, height: 36, objectFit: 'contain' }}
+                  style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6 }}
                 />
               ) : (
                 <Motif kind={ft.motif} size={20} color={ft.primary} />
