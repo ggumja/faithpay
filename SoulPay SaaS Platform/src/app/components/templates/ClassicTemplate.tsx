@@ -245,7 +245,19 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, hasNa
       }}>
         <div className="th-header-inner">
           <div className="th-tenant-info">
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: ft.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: ft.primaryBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: 'none',
+              border: 'none',
+              overflow: 'hidden',
+            }}>
               {currentTenant.logoUrl ? (
                 <img
                   src={currentTenant.logoUrl}
@@ -270,7 +282,6 @@ export function ClassicTemplate({ currentTenant, allItems, ft, canInstall, hasNa
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.cobalt; e.currentTarget.style.background = C.cobaltBg; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = 'none'; }}
             >
-              <span>🔑</span>
               <span className="th-mypage-label-full">{terms.donor} 마이페이지</span>
               <span className="th-mypage-label-short">마이페이지</span>
             </button>

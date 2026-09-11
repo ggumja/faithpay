@@ -212,8 +212,28 @@ export function MinimalHeroTemplate({ currentTenant, allItems, ft, canInstall, h
       }}>
         <div className="mh-nav-inner">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexShrink: 1 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${ft.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Motif kind={ft.motif} size={16} color={ft.primary} />
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: 10,
+              backgroundColor: `${ft.primary}15`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: 'none',
+              boxShadow: 'none',
+              overflow: 'hidden',
+            }}>
+              {currentTenant.logoUrl ? (
+                <img
+                  src={currentTenant.logoUrl}
+                  alt={currentTenant.name}
+                  style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 6 }}
+                />
+              ) : (
+                <Motif kind={ft.motif} size={16} color={ft.primary} />
+              )}
             </div>
             <span className="mh-nav-tenant-name">{currentTenant.name}</span>
           </div>
