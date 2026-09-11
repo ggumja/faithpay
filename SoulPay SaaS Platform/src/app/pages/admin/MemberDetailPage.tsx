@@ -126,6 +126,7 @@ export default function MemberDetailPage() {
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editRrn, setEditRrn] = useState('');
   const [noteText, setNoteText] = useState('');
   // Tax Receipt On-Demand Dialog State
   const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
