@@ -485,13 +485,22 @@ export default function AdminAccountManagement() {
   };
 
   const handleResetPassword = async (staff: StaffAdminUser) => {
-    const defaultPw = generateTempPassword();
-    const nextList = staffList.map((s) => (s.id === staff.id ? { ...s, password: defaultPw } : s));
-    setStaffList(nextList);
-    // ✅ DB 즉시 반영 (이메일 발송 포함)
-    await persistStaffToDB(currentTenant.id, nextList);
-    toast.success(`[${staff.name}] 임시 비밀번호로 초기화되었습니다. 등록된 이메일로 임시 비밀번호가 발송됩니다.`);
+    try {
+      const res = await adminAPI.resetTenantAdminPassword(currentTenant.id, staff.email);
+      if (res.success) {
+        toast.success(`[${staff.name}] 임시 비밀번호가 발급되어 ${staff.email}로 발송되었습니다.`);
+        // 로컬 staffList에도 새 비밀번호 반영 (UI 동기화)
+        if (res.data?.tempPassword) {
+          setStaffList((prev) => prev.map((s) => s.id === staff.id ? { ...s, password: res.data!.tempPassword } : s));
+        }
+      } else {
+        toast.error(res.error || '비밀번호 재설정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('비밀번호 재설정 중 오류가 발생했습니다.');
+    }
   };
+
 
   /** 내 비밀번호 직접 변경 핸들러 */
   const handleChangeMyPassword = async (e: React.FormEvent) => {
