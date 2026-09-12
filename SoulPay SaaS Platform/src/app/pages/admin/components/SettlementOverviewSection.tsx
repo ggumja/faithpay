@@ -1,21 +1,19 @@
 import { useState, useEffect } from 'react';
 import {
   CreditCard,
-  Building2,
   DollarSign,
   TrendingUp,
-  AlertTriangle,
   CheckCircle2,
-  Clock,
-  ArrowRight,
+  XCircle,
+  ExternalLink,
   ShieldCheck,
-  Zap,
+  Building2,
   RefreshCw,
+  Users,
+  Layers,
 } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
-
 import { API_BASE_URL } from '../../../api/client';
-
 
 const S = {
   card: 'bg-white dark:bg-zinc-900 rounded-[12px] border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs',
@@ -52,7 +50,7 @@ const EMPTY_METRICS: OverviewMetrics = {
   platformFeeTotal: 0,
   partnerFeeTotal: 0,
   feeDepositTotal: 0,
-  partnerRateTotal: 1.0,
+  partnerRateTotal: 0,
   paidCount: 0,
   pendingCount: 0,
   pendingAmount: 0,
@@ -65,7 +63,7 @@ const EMPTY: Overview = {
 };
 
 export default function SettlementOverviewSection() {
-  const [timeRange, setTimeRange] = useState<'today' | 'month' | 'total'>('month');
+  const [timeRange, setTimeRange] = useState<'month' | 'total'>('month');
   const [overview, setOverview] = useState<Overview>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +73,6 @@ export default function SettlementOverviewSection() {
       setLoading(true);
       setError(null);
       const res = await fetch(`${API_BASE_URL}/admin/settlements/overview`);
-
       if (!res.ok) {
         throw new Error(`HTTP error ${res.status}`);
       }
@@ -97,32 +94,65 @@ export default function SettlementOverviewSection() {
     }
   };
 
+  useEffect(() => {
+    fetchOverview();
+  }, []);
 
-  useEffect(() => { fetchOverview(); }, []);
-
-  // 기간 선택에 따른 stats 결산
   const raw = timeRange === 'total' ? overview.allTime : overview.thisMonth;
-  const stats = {
-    grossAmount:   raw.grossAmount,
-    tenantPayout:  raw.tenantPayout ?? Math.round(raw.grossAmount * 0.97),
-    pgFee:         raw.pgFeeTotal ?? Math.round(raw.grossAmount * 0.015),
-    platformFee:   raw.platformFeeTotal ?? Math.round(raw.grossAmount * 0.005),
-    partnerFee:    raw.partnerFeeTotal ?? Math.round(raw.grossAmount * 0.01),
-    feeDeposit:    raw.feeDepositTotal ?? ((raw.platformFeeTotal ?? 0) + (raw.partnerFeeTotal ?? 0)),
-    partnerRate:   raw.partnerRateTotal ?? 1.0,
-    netProfit:     raw.platformFeeTotal ?? Math.round(raw.grossAmount * 0.005),
-    pendingCount:  overview.thisMonth.pendingCount,
-    pendingAmount: overview.thisMonth.pendingAmount,
-  };
-
-
+  const grossAmount = raw.grossAmount || 0;
+  const platformFee = raw.platformFeeTotal || 0;
+  const partnerFee = raw.partnerFeeTotal || 0;
+  const partnerCount = (overview.partners.masterAgency || 0) + (overview.partners.salesAgent || 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── 기간 선택 + 새로고침 ── */}
+      {/* ── 📢 PG사 자동 스플릿 직정산 공식 안내 배너 ── */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-xl p-4.5 text-slate-800 dark:text-zinc-200 shadow-2xs">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="font-bold text-sm text-blue-900 dark:text-blue-300">
+                PG사 자동 스플릿(Split) 직정산 시스템 안내
+              </span>
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-[10px] font-bold">
+                직정산 원칙
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+              가맹단체(교회/성당/사찰)의 헌금 대금 및 영업대리점 수수료는 <strong>나노PG / 토스PG의 금융망 자동 분기(Split) 정산</strong>을 통해 각 사업자/개인 통장으로 직접 입금됩니다.
+              <br className="hidden sm:inline" />
+              단체별 계약 수수료율, 공제 세액 및 최종 실입금 내역은 계약된 PG사의 상점관리자에서 확인하실 수 있습니다.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <a
+              href="https://admin.nanopay.co.kr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-white dark:bg-zinc-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-zinc-700 hover:bg-blue-50 transition-colors shadow-2xs"
+            >
+              <span>나노페이 관리자</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            <a
+              href="https://app.tosspayments.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-white dark:bg-zinc-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-zinc-700 hover:bg-blue-50 transition-colors shadow-2xs"
+            >
+              <span>토스페이먼츠 상점</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 기간 선택 바 ── */}
       <div className="flex items-center justify-between bg-slate-100/70 dark:bg-zinc-800/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800">
         <div className="flex gap-1">
-          {(['today', 'month', 'total'] as const).map((range) => (
+          {(['month', 'total'] as const).map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
@@ -132,7 +162,7 @@ export default function SettlementOverviewSection() {
                   : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900'
               }`}
             >
-              {range === 'today' ? '오늘 정산' : range === 'month' ? '이번 달 정산' : '누적 전체'}
+              {range === 'month' ? '이번 달 집계' : '누적 전체 집계'}
             </button>
           ))}
         </div>
@@ -142,7 +172,7 @@ export default function SettlementOverviewSection() {
           {!loading && !error && (
             <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              DB 실시간 데이터
+              실측 DB 기반 집계
             </span>
           )}
           <button
@@ -155,193 +185,136 @@ export default function SettlementOverviewSection() {
         </div>
       </div>
 
-      {/* ── KPI 카드 5종 ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* ── 핵심 실측 KPI 카드 4종 ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. 총 결제 승인액 */}
         <div className={S.card}>
           <div className={S.kpiTitle}>
-            <span>총 수수료 원금 (Gross)</span>
+            <span>총 결제 승인 원금 (Gross)</span>
             <CreditCard className="h-4 w-4 text-blue-600" />
           </div>
-          <div className={S.kpiVal}>{stats.grossAmount.toLocaleString()}원</div>
+          <div className={S.kpiVal}>{grossAmount.toLocaleString()}원</div>
           <div className={S.subText}>
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-            <span>partner_commissions 합산</span>
+            <span>SoulPay 결제 승인 원장 합산</span>
           </div>
         </div>
 
-        {/* 2. 가맹단체 정산 완료액 */}
+        {/* 2. SoulPay 플랫폼 수수료 */}
         <div className={S.card}>
           <div className={S.kpiTitle}>
-            <span>가맹단체 입금 완료액</span>
-            <Building2 className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className={S.kpiVal}>{stats.tenantPayout.toLocaleString()}원</div>
-          <div className={S.subText}>
-            <span className="font-bold text-emerald-600">97%</span>
-            <span>교회/성당/사찰 지급금</span>
-          </div>
-        </div>
-
-        {/* 3. 플랫폼 총 수수료 */}
-        <div className={S.card}>
-          <div className={S.kpiTitle}>
-            <span>플랫폼 수수료 (0.5%)</span>
+            <span>플랫폼 이용료 수익 (0.5%)</span>
             <DollarSign className="h-4 w-4 text-purple-600" />
           </div>
-          <div className={S.kpiVal}>{stats.platformFee.toLocaleString()}원</div>
+          <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400 tracking-tight">
+            {platformFee.toLocaleString()}원
+          </div>
           <div className={S.subText}>
-            <span className="font-bold text-purple-600">0.5%</span>
-            <span>SoulPay 수수료 수익</span>
+            <span className="font-bold text-purple-600">SoulPay</span>
+            <span>솔루션 제공 수수료 수익</span>
           </div>
         </div>
 
-        {/* 4. 파트너/에이전트 수수료 */}
+        {/* 3. 영업대리점 수수료 분구 풀 */}
         <div className={S.card}>
           <div className={S.kpiTitle}>
-            <span>영업 파트너 지급금</span>
+            <span>영업 파트너 분구 풀</span>
             <TrendingUp className="h-4 w-4 text-amber-600" />
           </div>
-          <div className={S.kpiVal}>{stats.partnerFee.toLocaleString()}원</div>
+          <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 tracking-tight">
+            {partnerFee.toLocaleString()}원
+          </div>
           <div className={S.subText}>
-            <span className="font-bold text-amber-600">
-              {stats.partnerRate.toFixed(1)}%
-            </span>
-            <span>대리점·영업자 배분금 ({overview.partners.masterAgency + overview.partners.salesAgent}명)</span>
+            <Users className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+            <span>등록 대리점·영업자 {partnerCount}명 기준 배분</span>
           </div>
         </div>
 
-        {/* 5. 수수료 계좌 정산 풀 */}
+        {/* 4. 분구 수수료 총액 */}
         <div className={S.card}>
           <div className={S.kpiTitle}>
-            <span>수수료 계좌 정산 풀</span>
-            <ShieldCheck className="h-4 w-4 text-indigo-600" />
+            <span>시스템 수수료 풀 합계</span>
+            <Layers className="h-4 w-4 text-indigo-600" />
           </div>
           <div className="text-2xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
-            {stats.feeDeposit.toLocaleString()}원
+            {(platformFee + partnerFee).toLocaleString()}원
           </div>
           <div className={S.subText}>
-            <span className="font-bold text-indigo-600">{(0.5 + stats.partnerRate).toFixed(1)}%</span>
-            <span>플랫폼(0.5%) + 파트너({stats.partnerRate.toFixed(1)}%)</span>
+            <span className="font-bold text-indigo-600">스플릿</span>
+            <span>플랫폼 + 파트너 분구 합계</span>
           </div>
         </div>
       </div>
 
-      {/* ── 5단계 실시간 정산 파이프라인 ── */}
+      {/* ── PG사 자동 스플릿 정산 흐름 인포그래픽 ── */}
       <div className="bg-white dark:bg-zinc-900 rounded-[12px] border border-slate-200 dark:border-zinc-800 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-500" />
+            <Building2 className="h-5 w-5 text-blue-600" />
             <h3 className="font-bold text-slate-800 dark:text-zinc-100 text-sm">
-              5단계 실시간 정산 처리 파이프라인 현황
+              SoulPay &times; PG사 금융망 스플릿(Split) 직정산 프로세스
             </h3>
           </div>
-          <span className="text-xs text-slate-500 font-medium">자동 배치 주기: D+1 09:00</span>
+          <span className="text-xs text-slate-500 font-medium">안전한 자금 보호 (미보관 구조)</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
-          {/* Step 1: 수수료 원장 */}
-          <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/50 space-y-2 relative">
-            <div className="flex items-center justify-between text-xs font-bold text-blue-900 dark:text-blue-200">
-              <span>1. 수수료 원장</span>
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-[10px]">
-                {overview.thisMonth.paidCount + overview.thisMonth.pendingCount}건
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {/* Step 1 */}
+          <div className="p-4 bg-slate-50 dark:bg-zinc-800/60 rounded-xl border border-slate-200 dark:border-zinc-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-700 dark:text-blue-300">STEP 1. 결제 승인</span>
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                실시간
               </Badge>
             </div>
-            <div className="text-lg font-bold font-mono text-blue-950 dark:text-blue-100">
-              {stats.grossAmount.toLocaleString()}원
-            </div>
-            <p className="text-[11px] text-blue-700 dark:text-blue-300">
-              결제 승인 원금 집계
+            <p className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+              신도/기부자 헌금 결제
             </p>
-            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-400 z-10" />
+            <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+              신용카드, 간편결제(카카오/토스페이/네이버페이)로 결제 시 PG사(나노PG/토스PG)를 통해 즉시 승인됩니다.
+            </p>
           </div>
 
-          {/* Step 2: PG 수수료 공제 */}
-          <div className="p-4 bg-purple-50/70 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900/50 space-y-2 relative">
-            <div className="flex items-center justify-between text-xs font-bold text-purple-900 dark:text-purple-200">
-              <span>2. PG 수수료 공제</span>
-              <span className="text-[11px] font-mono text-purple-700">1.5% 공제</span>
+          {/* Step 2 */}
+          <div className="p-4 bg-slate-50 dark:bg-zinc-800/60 rounded-xl border border-slate-200 dark:border-zinc-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-purple-700 dark:text-purple-300">STEP 2. 원가 수수료 공제</span>
+              <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">
+                PG사 처리
+              </Badge>
             </div>
-            <div className="text-lg font-bold font-mono text-purple-950 dark:text-purple-100">
-              -{stats.pgFee.toLocaleString()}원
-            </div>
-            <p className="text-[11px] text-purple-700 dark:text-purple-300">
-              토스 PG 원가 차감
+            <p className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+              단체별 계약 PG 수수료 차감
             </p>
-            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-400 z-10" />
+            <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+              각 단체가 PG사와 약정한 개별 수수료율에 따라 결제 원가가 공제되며, PG사가 정산 분할을 계산합니다.
+            </p>
           </div>
 
-          {/* Step 3: 가맹단체 직정산 입금 */}
-          <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-2 relative">
-            <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
-              <span>3. 가맹단체 직정산 입금</span>
-              <span className="text-[11px] font-mono text-emerald-700">97.0% 지급</span>
+          {/* Step 3 */}
+          <div className="p-4 bg-slate-50 dark:bg-zinc-800/60 rounded-xl border border-slate-200 dark:border-zinc-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">STEP 3. 금융망 직정산 입금</span>
+              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                D+N 직입금
+              </Badge>
             </div>
-            <div className="text-lg font-bold font-mono text-emerald-950 dark:text-emerald-100">
-              {stats.tenantPayout.toLocaleString()}원
-            </div>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-              교회/성당/사찰 계좌 입금
+            <p className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+              당사자별 계좌로 분할 입금
             </p>
-            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400 z-10" />
+            <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 leading-relaxed">
+              <strong>가맹단체 통장</strong>(헌금 실입금), <strong>대리점 통장</strong>(수수료), <strong>SoulPay 통장</strong>(플랫폼료)으로 PG사가 직접 분할 송금합니다.
+            </p>
           </div>
+        </div>
 
-          {/* Step 4: 플랫폼 수수료 입금 */}
-          <div className="p-4 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50 space-y-2 relative">
-            <div className="flex items-center justify-between text-xs font-bold text-indigo-900 dark:text-indigo-200">
-              <span>4. 플랫폼 수수료 입금</span>
-              <span className="text-[11px] font-mono text-indigo-700">0.5% 입금</span>
-            </div>
-            <div className="text-lg font-bold font-mono text-indigo-950 dark:text-indigo-100">
-              {stats.platformFee.toLocaleString()}원
-            </div>
-            <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
-              SoulPay 플랫폼 순수익
-            </p>
-            <ArrowRight className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 z-10" />
-          </div>
-
-          {/* Step 5: 파트너 수수료 입금 */}
-          <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
-              <span>5. 파트너 수수료 입금</span>
-              <span className="text-[11px] font-mono text-amber-700">
-                {stats.partnerRate.toFixed(1)}% 배분
-              </span>
-            </div>
-            <div className="text-lg font-bold font-mono text-amber-950 dark:text-amber-100">
-              {stats.partnerFee.toLocaleString()}원
-            </div>
-            <p className="text-[11px] text-amber-700 dark:text-amber-300">
-              대리점(0.5%) + 영업자(0.5%)
-            </p>
-          </div>
+        <div className="bg-slate-50 dark:bg-zinc-800/30 p-3 rounded-lg border border-slate-200/80 dark:border-zinc-700/80 text-[11.5px] text-slate-600 dark:text-zinc-400 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+          <span>
+            SoulPay는 회원의 자금을 별도 보관하거나 수동으로 이체하지 않으며, 공인된 전자지급결제대행사(PG)의 법적 분리 계좌 체계에 따라 정산이 투명하게 자동 집행됩니다.
+          </span>
         </div>
       </div>
-
-      {/* ── 예외 및 보류 건 알림 바 ── */}
-      {stats.pendingCount > 0 && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-amber-900">
-                정산 확인 필요 건수 {stats.pendingCount}건 (총 {stats.pendingAmount.toLocaleString()}원)
-              </p>
-              <p className="text-[11.5px] text-amber-800">
-                [지급 실행 &amp; 뱅킹 송금] 탭에서 확인하세요.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="px-3 py-1.5 text-xs font-bold bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors cursor-pointer"
-          >
-            예외 건 처리하기
-          </button>
-        </div>
-      )}
     </div>
   );
 }
