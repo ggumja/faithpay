@@ -7,6 +7,30 @@ import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
 import { sendDonationReceiptEmail, sendPasswordResetEmail } from "./email.ts";
 
+/**
+ * 이메일 주소 결정 헬퍼
+ * 1) 인자로 받은 email이 있으면 우선 사용
+ * 2) 없으면 subscriptions 테이블에서 donor_phone + tenant_id로 조회
+ * - 결제 폼에 이메일 입력 없이 사용자 프로필 이메일만 있는 경우 대응
+ */
+async function resolveEmail(
+  email: string | null | undefined,
+  phone: string | null | undefined,
+  tenantId: string | null | undefined,
+): Promise<string> {
+  if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return email.trim();
+  }
+  if (!phone || !tenantId) return '';
+  try {
+    const subs = await db.getSubscriptionsByPhone(phone, tenantId);
+    const found = subs.find((s: any) => s.donorEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.donorEmail));
+    return found?.donorEmail?.trim() || '';
+  } catch (_) {
+    return '';
+  }
+}
+
 const app = new Hono();
 
 
@@ -965,10 +989,11 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
         transactionId: result.tranNo || result.apprNo,
       });
       // 결제 완료 이메일 발송 (non-blocking: 이메일 실패 시 결제 응답 영향 없음)
-      if (donationData.email) {
+      resolveEmail(donationData.email, donationData.phone, tenantId).then(async (resolvedTo) => {
+        if (!resolvedTo) return;
         const tenant = await db.getTenant(tenantId).catch(() => null);
-        sendDonationReceiptEmail({
-          to: donationData.email,
+        return sendDonationReceiptEmail({
+          to: resolvedTo,
           donorName: donationData.name || '헌금자',
           tenantName: tenant?.name || tenantId,
           itemName: donationData.itemName || '봉헌금',
@@ -977,8 +1002,8 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
           approveNo: result.apprNo,
           paymentMethod: '신용카드',
           isRecurring: donationData.isRecurring || false,
-        }).catch((e) => console.warn('[Email] 수동결제 영수증 발송 실패:', e?.message));
-      }
+        });
+      }).catch((e) => console.warn('[Email] 수동결제 영수증 발송 실패:', e?.message));
       return c.json({ success: true, data: donation });
     } else {
       return c.json({ success: false, error: result.resultMsg, data: result }, 400);
@@ -1125,10 +1150,11 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
       });
 
       // 결제 완료 이메일 발송 (non-blocking)
-      if (donorEmail) {
+      resolveEmail(donorEmail, donorPhone, tenantId).then(async (resolvedTo) => {
+        if (!resolvedTo) return;
         const tenant = await db.getTenant(tenantId).catch(() => null);
-        sendDonationReceiptEmail({
-          to: donorEmail,
+        return sendDonationReceiptEmail({
+          to: resolvedTo,
           donorName: donorName || result.customerName || '헌금자',
           tenantName: tenant?.name || tenantId,
           itemName: result.orderName || itemName || '봉헌금',
@@ -1137,8 +1163,8 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
           approveNo: approveNo,
           paymentMethod: result.method || 'card',
           receiptUrl: result.receipt?.url,
-        }).catch((e) => console.warn('[Email] 토스 결제 영수증 발송 실패:', e?.message));
-      }
+        });
+      }).catch((e) => console.warn('[Email] 토스 결제 영수증 발송 실패:', e?.message));
 
       return c.json({
         success: true,
@@ -1313,10 +1339,11 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
     });
 
     // 정기결제 즉시청구 완료 이메일 발송 (non-blocking)
-    if (customerEmail) {
+    resolveEmail(customerEmail, donorPhone || customerMobilePhone, tenantId).then(async (resolvedTo) => {
+      if (!resolvedTo) return;
       const billingTenant = await db.getTenant(tenantId).catch(() => null);
-      sendDonationReceiptEmail({
-        to: customerEmail,
+      return sendDonationReceiptEmail({
+        to: resolvedTo,
         donorName: customerName || '헌금자',
         tenantName: billingTenant?.name || tenantId,
         itemName: itemName || orderName || '정기 봉헌금',
@@ -1326,8 +1353,8 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
         paymentMethod: '정기결제(토스)',
         isRecurring: true,
         receiptUrl: result.receipt?.url,
-      }).catch((e) => console.warn('[Email] 토스 빌링 charge 영수증 발송 실패:', e?.message));
-    }
+      });
+    }).catch((e) => console.warn('[Email] 토스 빌링 charge 영수증 발송 실패:', e?.message));
 
     return c.json({
       success: true,
@@ -2746,11 +2773,13 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
           });
 
           // 정기결제 최초 결제 완료 이메일 발송 (non-blocking)
-          const recipientEmail = donationData.email || meta.donorEmail || '';
-          if (recipientEmail && firstPaymentCharged) {
-            db.getTenant(tenantId).then((tenantInfo) => {
+          if (firstPaymentCharged) {
+            const rawEmail = donationData.email || meta.donorEmail || '';
+            resolveEmail(rawEmail, donorPhone, tenantId).then(async (resolvedTo) => {
+              if (!resolvedTo) return;
+              const tenantInfo = await db.getTenant(tenantId).catch(() => null);
               return sendDonationReceiptEmail({
-                to: recipientEmail,
+                to: resolvedTo,
                 donorName: donorName || '헌금자',
                 tenantName: tenantInfo?.name || tenantId,
                 itemName,
@@ -3400,12 +3429,14 @@ const handleCertCallback = async (c: any) => {
             } catch (lErr) {
               console.warn('Failed to record ledger from cert callback:', lErr);
             }
-            // 결제 완료 영수증 이메일 발송 (non-blocking)
-            const donorEmailAddr = updated.donor_email || donation.donor_email || '';
-            if (donorEmailAddr) {
+            // 결제 완료 영수증 이메일 발송 — donor_email 없으면 subscriptions에서 전화번호로 fallback
+            const rawDonorEmail = updated.donor_email || donation.donor_email || '';
+            const rawDonorPhone = updated.donor_phone || donation.donor_phone || '';
+            resolveEmail(rawDonorEmail, rawDonorPhone, donation.tenant_id).then(async (resolvedTo) => {
+              if (!resolvedTo) return;
               const certTenant = await db.getTenant(donation.tenant_id).catch(() => null);
-              sendDonationReceiptEmail({
-                to: donorEmailAddr,
+              return sendDonationReceiptEmail({
+                to: resolvedTo,
                 donorName: updated.donor_name || donation.donor_name || '헌금자',
                 tenantName: certTenant?.name || donation.tenant_id,
                 itemName: updated.item_name || donation.item_name || '봉헌금',
@@ -3413,8 +3444,8 @@ const handleCertCallback = async (c: any) => {
                 transactionId: tranNo,
                 approveNo: apprNo,
                 paymentMethod,
-              }).catch((e) => console.warn('[Email] cert 콜백 영수증 발송 실패:', e?.message));
-            }
+              });
+            }).catch((e) => console.warn('[Email] cert 콜백 영수증 발송 실패:', e?.message));
           }
           console.log(`✅ Certified payment successful for donation: ${donation.id} (method: ${paymentMethod}, cardSrc: ${cardSrc || 'N/A'})`);
         } else {
