@@ -3093,7 +3093,11 @@ const handleKakaoToken = async (c: any) => {
       return c.json({ success: false, error: "code and redirectUri are required" }, 400);
     }
     // 카카오 앱 키 — Supabase Secret에서 주입 (하드코딩 금지)
-    const KAKAO_CLIENT_ID = Deno.env.get("KAKAO_CLIENT_ID") || "9a0d1863232123049b37547090372fc5";
+    const KAKAO_CLIENT_ID = Deno.env.get("KAKAO_CLIENT_ID");
+    if (!KAKAO_CLIENT_ID) {
+      console.error("[Kakao Token] KAKAO_CLIENT_ID Secret이 설정되지 않았습니다.");
+      return c.json({ success: false, error: "카카오 로그인 설정이 완료되지 않았습니다.", code: "KAKAO_NOT_CONFIGURED" }, 500);
+    }
     const KAKAO_CLIENT_SECRET = Deno.env.get("KAKAO_CLIENT_SECRET");
     const sendTokenRequest = async (includeSecret: boolean) => {
       const params: Record<string, string> = {
