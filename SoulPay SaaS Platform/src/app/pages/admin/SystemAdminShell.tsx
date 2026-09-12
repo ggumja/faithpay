@@ -7,7 +7,7 @@ import { useApp } from '../../context/AppContext';
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
   Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins, UserCog,
-  LayoutDashboard, Activity, FileText,
+  LayoutDashboard, Activity, FileText, PlusCircle,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -75,6 +75,11 @@ const S = {
   sidefoot:   'px-2 py-2.5 border-t border-[var(--hm-border)]',
   header:     'h-[50px] bg-[var(--hm-paper)] border-b border-[var(--hm-border)] flex items-center px-5 gap-3 shrink-0',
   iconBtn:    'p-1.5 rounded-md text-[var(--hm-ink-3)] hover:bg-[var(--hm-paper-2)] transition-colors cursor-pointer border-none bg-transparent',
+  searchBar:  'flex items-center gap-2 px-3 py-1 rounded-[6px] bg-[var(--hm-paper-2)] border border-[var(--hm-border)] text-[12px] w-56 text-[var(--hm-ink)]',
+  searchInput:'bg-transparent border-none outline-hidden text-[12px] text-[var(--hm-ink)] placeholder:text-[var(--hm-ink-3)] w-full',
+  badge:      'inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[10px] font-semibold bg-[var(--hm-accent-bg)] text-[var(--hm-accent)]',
+  content:    'flex-1 overflow-y-auto p-6 bg-[var(--hm-paper-2)]',
+  card:       'bg-[var(--hm-paper)] rounded-[8px] border border-[var(--hm-border)] p-4',
 };
 
 export default function SystemAdminShell() {
@@ -83,7 +88,6 @@ export default function SystemAdminShell() {
   const { tenants, currentAdmin } = useApp();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [tenantsOpen, setTenantsOpen] = useState(true);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,50 +162,35 @@ export default function SystemAdminShell() {
               </button>
             </div>
 
-            {/* 단체 목록 관리 (collapsible) */}
-            <div>
-              <p className={S.navSection}>단체 관리</p>
+            {/* 단체 목록 관리 (직접 노출) */}
+            <div className="space-y-0.5">
+              <p className={S.navSection}>단체 목록 관리</p>
               <button
-                onClick={() => setTenantsOpen(p => !p)}
-                className={S.navParent(['tenants','pending','tenantDetail','tenantNew'].includes(active))}
+                onClick={() => navigate('/system/admin/tenants')}
+                className={S.navItem(active === 'tenants' || active === 'tenantDetail')}
               >
-                <Building2 size={13} className={['tenants','pending','tenantDetail','tenantNew'].includes(active) ? 'text-[var(--hm-accent)]' : 'text-[var(--hm-ink-3)]'} />
-                <span className="flex-1">단체 목록 관리</span>
-                {tenantsOpen
-                  ? <ChevronDown size={11} className="opacity-50" />
-                  : <ChevronRight size={11} className="opacity-50" />}
+                <Building2 size={13} className={active === 'tenants' || active === 'tenantDetail' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">단체 목록</span>
               </button>
-
-              {tenantsOpen && (
-                <div className="mt-0.5 space-y-0.5">
-                  <button
-                    onClick={() => navigate('/system/admin/tenants')}
-                    className={S.subItem(active === 'tenants' || active === 'tenantDetail')}
-                  >
-                    <span className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
-                    단체 목록
-                  </button>
-                  <button
-                    onClick={() => navigate('/system/admin/tenants/new')}
-                    className={S.subItem(active === 'tenantNew')}
-                  >
-                    <span className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
-                    신규 단체 등록
-                  </button>
-                  <button
-                    onClick={() => navigate('/system/admin/tenants/pending')}
-                    className={S.subItem(active === 'pending' || active === 'pendingDetail')}
-                  >
-                    <span className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
-                    승인요청 목록
-                    {pendingCount > 0 && (
-                      <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-                        {pendingCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              )}
+              <button
+                onClick={() => navigate('/system/admin/tenants/new')}
+                className={S.navItem(active === 'tenantNew')}
+              >
+                <PlusCircle size={13} className={active === 'tenantNew' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">신규 단체 등록</span>
+              </button>
+              <button
+                onClick={() => navigate('/system/admin/tenants/pending')}
+                className={S.navItem(active === 'pending' || active === 'pendingDetail')}
+              >
+                <Clock size={13} className={active === 'pending' || active === 'pendingDetail' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">승인요청 목록</span>
+                {pendingCount > 0 && (
+                  <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* 정산 및 수수료 관리 */}
