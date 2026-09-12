@@ -103,6 +103,19 @@ async function fetchAPI<T>(
     }
 
     if (!response.ok) {
+      // 401 Unauthorized: 세션 만료 처리 — 로그인 페이지로 강제 이동
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('soulpay_current_admin');
+          localStorage.removeItem('soulpay_admin_last_activity');
+          const isAdminPage = window.location.pathname.includes('/admin') &&
+            !window.location.pathname.includes('/admin/login');
+          if (isAdminPage) {
+            window.location.href = '/admin/login?expired=1';
+          }
+        }
+        return { success: false, error: '세션이 만료되었습니다. 다시 로그인해 주세요.' };
+      }
       if (!(options as any)?.silentFail) {
         console.warn(`API Warning (${endpoint}): HTTP ${response.status}`);
       }
@@ -1294,7 +1307,7 @@ export const tenantAdminAPI = {
     if (account.status === 'locked' || account.status === 'suspended') {
       return { success: false, error: '비활성화된 계정입니다.' };
     }
-    if (account.password !== password && password !== 'admin1234!' && password !== 'admin1234') {
+    if (account.password !== password) {
       return { success: false, error: '비밀번호가 올바르지 않습니다.' };
     }
     return { success: true, data: account };
