@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -107,7 +107,7 @@ export const formatPhoneNumber = (phone: string): string => {
 export default function AdminAccountManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
-  const { tenants, currentTenant, setCurrentTenant, currentAdmin, setCurrentAdmin, updateTenantInfo } = useApp();
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin, setCurrentAdmin } = useApp();
   const terms = useTenantTerms(currentTenant?.orgType);
 
   const [activeTab, setActiveTab] = useState<'accounts' | 'groups' | 'permissions'>('accounts');
@@ -121,6 +121,7 @@ export default function AdminAccountManagement() {
 
   // 👤 스태프 사용자 목록 State
   const [staffList, setStaffList] = useState<StaffAdminUser[]>([]);
+  const [isStaffLoading, setIsStaffLoading] = useState(false);
 
   // 🛡️ RBAC 권한 매트릭스 State
   const [permissionMatrix, setPermissionMatrix] = useState<MenuPermissionItem[]>([]);
@@ -152,6 +153,42 @@ export default function AdminAccountManagement() {
   const [groupColor, setGroupColor] = useState('emerald');
   const [groupMenuPermissions, setGroupMenuPermissions] = useState<Record<string, PermissionLevel>>({});
 
+  // ==================== DB 연동 핬들러 ====================
+
+  /** tenant_admins 테이블에서 스태프 목록을 DB 직접 조회 */
+  const fetchStaffFromDB = useCallback(async (tenantId: string) => {
+    setIsStaffLoading(true);
+    try {
+      const res = await adminAPI.getTenantStaff(tenantId);
+      if (res.success && Array.isArray(res.data)) {
+        setStaffList(res.data as StaffAdminUser[]);
+      } else {
+        setStaffList([]);
+      }
+    } catch (e) {
+      console.error('[AdminAccountManagement] fetchStaff 오류:', e);
+      setStaffList([]);
+    } finally {
+      setIsStaffLoading(false);
+    }
+  }, []);
+
+  /** 현재 staffList 상태를 DB에 전체 persist */
+  const persistStaffToDB = useCallback(async (tenantId: string, list: StaffAdminUser[]) => {
+    try {
+      const res = await adminAPI.saveTenantStaff(tenantId, list);
+      if (!res.success) {
+        console.error('[AdminAccountManagement] persistStaff 실패:', res.error);
+        toast.error(res.error || '관리자 계정 DB 저장 중 오류가 발생했습니다.');
+      }
+    } catch (e) {
+      console.error('[AdminAccountManagement] persistStaff 예외:', e);
+      toast.error('관리자 계정 DB 저장 중 오류가 발생했습니다.');
+    }
+  }, []);
+
+  // =========================================================
+
   useEffect(() => {
     const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
     const tenant = tenants.find(
@@ -165,45 +202,17 @@ export default function AdminAccountManagement() {
     if (tenant) {
       setCurrentTenant(tenant);
 
-      // 관리자 그룹 — TODO: DB API 연동 시 tenantAPI.getGroups(tenant.id) 로 교체
-      // 현재는 DB 미지원으로 초기화 상태 유지 (localStorage 미사용)
-
-      // 로컬 스토리지 잔재 계정 키 완전 파기 및 DB 실시간 직접 수신
+      // 로컬 스토리지 잔재 계정 키 완전 파기
       Object.keys(localStorage).forEach((key) => {
         if (key.includes('staff') || key.includes('soulpay_staff')) {
           localStorage.removeItem(key);
         }
       });
 
-      // DB /tenants 에 저장된 가맹점 실측 담당자 정보만 표출 (100% DB 직결)
-      const registeredEmail = tenant.adminEmail || (tenant.contact?.email ? tenant.contact.email.trim().toLowerCase() : '');
-      const registeredName =
-        tenant.adminName ||
-        (tenant.contact?.name && tenant.contact.name.trim() !== '시스템 최고 관리자' ? tenant.contact.name.trim() : '') ||
-        tenant.businessInfo?.representativeName ||
-        (tenant.name ? `${tenant.name} 관리자` : '대표 관리자');
-      const registeredPhone = tenant.adminPhone || tenant.contact?.phone || '';
+      // ✅ DB 실측 조회 — tenant_admins 테이블 100% 직결
+      fetchStaffFromDB(tenant.id);
 
-      if (registeredEmail) {
-        setStaffList([
-          {
-            id: `admin-${tenant.id}`,
-            name: registeredName,
-            email: registeredEmail,
-            phone: registeredPhone,
-            groupId: 'tenant_admin',
-            password: tenant.tempPassword || generateTempPassword(),
-            status: 'active',
-            createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-            lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
-          },
-        ]);
-      } else {
-        setStaffList([]);
-      }
-
-      // 권한 매트릭스 — TODO: DB API 연동 시 tenantAPI.getPermissions(tenant.id) 로 교체
-      // 현재는 시스템 기본값 사용 (localStorage 미사용)
+      // 권한 매트릭스 — 시스템 기본값 (추후 DB 연동 예정)
       setPermissionMatrix([
         { id: 'dashboard', menuName: '대시보드', path: '/admin', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
         { id: 'donations', menuName: '수납/보시 내역', path: '/admin/donations', groupPermissions: { tenant_admin: 'full', finance_manager: 'full', staff: 'read' } },
@@ -218,7 +227,7 @@ export default function AdminAccountManagement() {
         { id: 'settings', menuName: '설정', path: '/admin/settings', groupPermissions: { tenant_admin: 'full', finance_manager: 'none', staff: 'none' } },
       ]);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [tenantSlug, tenants, setCurrentTenant, fetchStaffFromDB]);
 
 
 
@@ -356,7 +365,7 @@ export default function AdminAccountManagement() {
   };
 
   // 👤 스태프 계정 추가
-  const handleAddStaff = () => {
+  const handleAddStaff = async () => {
     if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
       toast.error('성명, 이메일, 비밀번호를 모두 입력해 주세요');
       return;
@@ -387,7 +396,8 @@ export default function AdminAccountManagement() {
       lastLoginAt: '방금 생성됨',
     };
 
-    setStaffList((prev) => [...prev, newStaff]);
+    const nextList = [...staffList, newStaff];
+    setStaffList(nextList);
     setIsAddStaffModalOpen(false);
 
     setNewName('');
@@ -396,6 +406,8 @@ export default function AdminAccountManagement() {
     setNewPassword('');
     setSelectedGroupId('finance_manager');
 
+    // ✅ DB 즉시 반영
+    await persistStaffToDB(currentTenant.id, nextList);
     toast.success(`[${newStaff.name}] 신규 관리자 계정이 성공적으로 추가되었습니다.`);
   };
 
@@ -409,7 +421,7 @@ export default function AdminAccountManagement() {
     setIsEditStaffModalOpen(true);
   };
 
-  const handleSaveEditStaff = () => {
+  const handleSaveEditStaff = async () => {
     if (!editingStaff) return;
     if (!editName.trim() || !editEmail.trim()) {
       toast.error('성명과 이메일을 입력해 주세요');
@@ -424,33 +436,18 @@ export default function AdminAccountManagement() {
       return;
     }
 
-    setStaffList((prev) =>
-      prev.map((s) =>
-        s.id === editingStaff.id
-          ? {
-              ...s,
-              name: editName.trim(),
-              email: cleanEmail,
-              phone: stripPhoneDigits(editPhone) || '미입력',
-              groupId: editGroupId,
-            }
-          : s
-      )
+    const nextList = staffList.map((s) =>
+      s.id === editingStaff.id
+        ? {
+            ...s,
+            name: editName.trim(),
+            email: cleanEmail,
+            phone: stripPhoneDigits(editPhone) || '미입력',
+            groupId: editGroupId,
+          }
+        : s
     );
-
-    // 💾 Supabase 백엔드 데이터베이스 영구 반영 (PUT /tenants/:id)
-    if (currentTenant) {
-      const updatedTenant = {
-        ...currentTenant,
-        contact: {
-          ...currentTenant.contact,
-          name: editName.trim(),
-          email: cleanEmail,
-          phone: stripPhoneDigits(editPhone) || currentTenant.contact?.phone || '',
-        },
-      };
-      updateTenantInfo(currentTenant.id, updatedTenant);
-    }
+    setStaffList(nextList);
 
     // 🔄 현재 로그인 세션(사이드바)에도 즉시 반영 — 로그아웃 없이 이름 변경 즉각 표시
     if (currentAdmin && currentAdmin.email.toLowerCase() === cleanEmail) {
@@ -458,37 +455,45 @@ export default function AdminAccountManagement() {
     }
 
     setIsEditStaffModalOpen(false);
+
+    // ✅ DB 즉시 반영
+    await persistStaffToDB(currentTenant.id, nextList);
     toast.success(`[${editName.trim()}] 관리자 계정 정보가 DB에 반영되었습니다.`);
   };
 
-  const handleToggleStatus = (id: string) => {
-    setStaffList((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const nextStatus = item.status === 'active' ? 'locked' : 'active';
-          toast.info(`[${item.name}] 계정이 ${nextStatus === 'active' ? '잠금 해제' : '일시 잠금'}되었습니다.`);
-          return { ...item, status: nextStatus };
-        }
-        return item;
-      })
-    );
+  const handleToggleStatus = async (id: string) => {
+    const nextList = staffList.map((item) => {
+      if (item.id === id) {
+        const nextStatus = item.status === 'active' ? 'locked' : 'active';
+        toast.info(`[${item.name}] 계정이 ${nextStatus === 'active' ? '잠금 해제' : '일시 잠금'}되었습니다.`);
+        return { ...item, status: nextStatus };
+      }
+      return item;
+    });
+    setStaffList(nextList);
+    // ✅ DB 즉시 반영
+    await persistStaffToDB(currentTenant.id, nextList);
   };
 
-  const handleResetPassword = (staff: StaffAdminUser) => {
+  const handleResetPassword = async (staff: StaffAdminUser) => {
     const defaultPw = generateTempPassword();
-    setStaffList((prev) =>
-      prev.map((s) => (s.id === staff.id ? { ...s, password: defaultPw } : s))
-    );
+    const nextList = staffList.map((s) => (s.id === staff.id ? { ...s, password: defaultPw } : s));
+    setStaffList(nextList);
+    // ✅ DB 즉시 반영
+    await persistStaffToDB(currentTenant.id, nextList);
     toast.success(`[${staff.name}] 계정 비밀번호가 임시 비밀번호로 초기화되었습니다. (${defaultPw})`);
   };
 
-  const handleDeleteStaff = (id: string, name: string) => {
+  const handleDeleteStaff = async (id: string, name: string) => {
     if (staffList.length <= 1) {
       toast.error('최소 1개 이상의 최고 관리자 계정이 유지되어야 합니다.');
       return;
     }
     if (confirm(`정말로 [${name}] 관리자 계정을 삭제하시겠습니까?`)) {
-      setStaffList((prev) => prev.filter((item) => item.id !== id));
+      const nextList = staffList.filter((item) => item.id !== id);
+      setStaffList(nextList);
+      // ✅ DB 즉시 반영
+      await persistStaffToDB(currentTenant.id, nextList);
       toast.success(`[${name}] 계정이 삭제되었습니다.`);
     }
   };
@@ -651,7 +656,25 @@ export default function AdminAccountManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {staffList.map((staff) => (
+                      {isStaffLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-10 text-slate-400 dark:text-zinc-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                              </svg>
+                              관리자 계정 목록 조회 중...
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : staffList.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-10 text-slate-400 dark:text-zinc-500">
+                            등록된 관리자 계정이 없습니다. 우측 상단 '신규 관리자 추가'로 계정을 생성하세요.
+                          </TableCell>
+                        </TableRow>
+                      ) : staffList.map((staff) => (
                         <TableRow key={staff.id}>
                           <TableCell className="font-bold text-slate-900 dark:text-zinc-100">
                             {staff.name}
