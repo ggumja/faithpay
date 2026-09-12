@@ -890,26 +890,48 @@ export default function TenantDetailPage() {
                   </div>
 
                   {/* 배정 시 예상 수수료 분구 경로 안내 */}
-                  <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 text-xs flex flex-col justify-center space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500 block">선택된 파트너 분구 경로:</span>
+                  <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 text-xs flex flex-col justify-center space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-500 block">수수료 분구 정책 실시간 프리뷰 (계약 {contractRate}%):</span>
                     {(() => {
-                      if (selectedPartnerId === 'SYSTEM') {
-                        return <span className="text-xs text-slate-600 font-semibold">플랫폼 본사 (파트너 분구 없음)</span>;
+                      const pool = Math.max(0, contractRate - 1.5 - 0.5); // 영업채널 풀
+                      if (selectedPartnerId === 'SYSTEM' || !selectedPartnerId) {
+                        return (
+                          <div className="space-y-0.5">
+                            <span className="text-xs text-slate-800 dark:text-zinc-200 font-bold block">
+                              🏢 [시나리오 1] 본사 직접 영업 (파트너 분구 없음)
+                            </span>
+                            <span className="text-[11px] text-slate-500 block">
+                              PG원가 1.5% 제외 후 본사 순수익 {(contractRate - 1.5).toFixed(1)}% 전액 플랫폼 귀속 (대리점 0% · 영업자 0%)
+                            </span>
+                          </div>
+                        );
                       }
                       const p = partners.find(item => item.id === selectedPartnerId);
-                      if (!p) return <span className="text-xs text-slate-400">선택된 정보 없음</span>;
+                      if (!p) return <span className="text-xs text-slate-400">선택된 파트너 정보 없음</span>;
                       if (p.role === 'master_agency') {
                         return (
-                          <span className="text-xs text-blue-700 dark:text-blue-400 font-bold">
-                            🏛️ 대리점: {p.name} (대리점 직속 관리, 요율: {p.agencyRate ?? p.commissionRate}%)
-                          </span>
+                          <div className="space-y-0.5">
+                            <span className="text-xs text-blue-700 dark:text-blue-400 font-bold block">
+                              🏛️ [시나리오 2] 대리점 직접 영업: {p.name} (옵션 A 적용)
+                            </span>
+                            <span className="text-[11px] text-blue-600 dark:text-blue-300 block">
+                              영업채널 풀 {pool.toFixed(1)}% 전액 대리점 수취 (영업자 배분 0%) | 플랫폼 순수익 0.5% | PG 1.5%
+                            </span>
+                          </div>
                         );
                       }
                       const agency = partners.find(a => a.id === p.parentId);
+                      const agencyMargin = Math.min(pool, p.agencyRate ?? 0.5);
+                      const agentMargin = Math.max(0, pool - agencyMargin);
                       return (
-                        <span className="text-xs text-purple-700 dark:text-purple-400 font-bold">
-                          🏛️ 대리점: {agency?.name || 'SoulPay 본사'} ➔ 👤 영업자: {p.name} (요율: {p.commissionRate}%)
-                        </span>
+                        <div className="space-y-0.5">
+                          <span className="text-xs text-purple-700 dark:text-purple-400 font-bold block">
+                            👤 [시나리오 3] 영업자 유치 영업: {p.name}
+                          </span>
+                          <span className="text-[11px] text-purple-600 dark:text-purple-300 block">
+                            대리점({agency?.name || '직속대리점'}) 오버라이딩 {agencyMargin.toFixed(1)}% + 영업자 순수익 {agentMargin.toFixed(1)}% | 플랫폼 0.5% | PG 1.5%
+                          </span>
+                        </div>
                       );
                     })()}
                   </div>

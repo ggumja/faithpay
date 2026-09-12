@@ -748,7 +748,9 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
     }
 
     const tenantName = kvTenant?.name || tenantDb?.name || '가맹 단체';
-    const partnerId = tenantDb?.registered_by_partner_id || (kvTenant as any)?.registeredByPartnerId || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const rawPartnerId = tenantDb?.registered_by_partner_id || (kvTenant as any)?.registeredByPartnerId;
+    const HQ_PARTNER_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const partnerId = (rawPartnerId && rawPartnerId !== 'SYSTEM') ? rawPartnerId : HQ_PARTNER_ID;
 
     // 2. 파트너 정보 조회 (대리점명, 영업자명 도출)
     let partnerDb: any = null;
@@ -763,30 +765,82 @@ export async function recordDonationToLedger(donation: Donation): Promise<any> {
       console.warn('Partner DB lookup warning:', e);
     }
 
-    let agencyName = 'HQ (본사)';
-    let agentName = partnerDb?.name || '직접 영업';
+    const contractRate = Number(tenantDb?.contract_rate || 3.0);
+    const pgCostRate = 1.5;
+    const basePlatformRate = 0.5;
+    const channelPoolRate = Math.max(0, contractRate - pgCostRate - basePlatformRate); // 예: 3.0 - 1.5 - 0.5 = 1.0%
 
-    if (partnerDb?.role === 'master_agency') {
+    let partnerRole = 'hq_direct';
+    let agencyName = '플랫폼 본사';
+    let agentName = '-';
+    let agencyRate = 0.0;
+    let agentRate = 0.0;
+    let finalPlatformRate = basePlatformRate;
+
+    // 본사 직접 영업 판별
+    const isHqPartner = !rawPartnerId || 
+                        rawPartnerId === 'SYSTEM' || 
+                        partnerId === HQ_PARTNER_ID || 
+                        partnerDb?.referral_code === 'HQ-0000' ||
+                        partnerDb?.role === 'hq_direct' ||
+                        partnerDb?.name?.includes('SoulPay HQ') ||
+                        partnerDb?.name?.includes('본사');
+
+    if (isHqPartner) {
+      // [시나리오 1] 본사 직접 영업 (HQ Direct)
+      // - 파트너 분구 없음 (대리점 0%, 영업자 0%)
+      // - PG 원가(1.5%)를 제외한 플랫폼 수수료(1.5%) 전액 본사 귀속
+      partnerRole = 'hq_direct';
+      agencyName = '플랫폼 본사';
+      agentName = '-';
+      agencyRate = 0.0;
+      agentRate = 0.0;
+      finalPlatformRate = contractRate - pgCostRate; // 예: 3.0% 계약 시 1.5% 전액 본사 귀속
+    } else if (partnerDb?.role === 'master_agency') {
+      // [시나리오 2] 대리점 직접 영업 (Agency Direct - 옵션 A: 직접유치 전액 수취)
+      // - 하위 영업자 없이 대리점이 직접 유치한 계약
+      // - 영업채널 풀(1.0%) 전액을 대리점이 수취 (영업자 배분 0%)
+      partnerRole = 'master_agency';
       agencyName = partnerDb?.name || '마스터 대리점';
-    } else if (partnerDb?.parent_id) {
-      try {
-        const { data: parent } = await supabase
-          .from('partners')
-          .select('name')
-          .eq('id', partnerDb.parent_id)
-          .maybeSingle();
-        if (parent) agencyName = parent.name;
-      } catch {}
+      agentName = '대리점 직접 유치';
+      agencyRate = channelPoolRate; // 1.0% 전액 대리점 수취! (옵션 A)
+      agentRate = 0.0;
+      finalPlatformRate = basePlatformRate; // 0.5% 플랫폼 기본 순수익
+    } else {
+      // [시나리오 3] 영업자 유치 영업 (Sales Agent Sales)
+      // - 소속 영업자가 직접 유치한 계약
+      // - 상위 대리점 오버라이딩 마진(기본 0.5%) + 영업자 실효마진(0.5%)
+      partnerRole = 'sales_agent';
+      agentName = partnerDb?.name || '소속 영업자';
+
+      // 상위 대리점 조회
+      let parentAgencyRate = 0.5;
+      if (partnerDb?.parent_id) {
+        try {
+          const { data: parent } = await supabase
+            .from('partners')
+            .select('name, agency_rate')
+            .eq('id', partnerDb.parent_id)
+            .maybeSingle();
+          if (parent) {
+            agencyName = parent.name;
+            if (parent.agency_rate != null) {
+              parentAgencyRate = Number(parent.agency_rate);
+            }
+          }
+        } catch {}
+      } else {
+        agencyName = '직속 대리점';
+      }
+
+      agencyRate = Math.min(channelPoolRate, parentAgencyRate); // 대리점 오버라이딩 마진 (예: 0.5%)
+      agentRate = Math.max(0, channelPoolRate - agencyRate);     // 영업자 실효마진 (예: 1.0 - 0.5 = 0.5%)
+      finalPlatformRate = basePlatformRate; // 0.5% 플랫폼 기본 순수익
     }
 
-    const partnerRole = partnerDb?.role || 'master_agency';
-    const contractRate = Number(tenantDb?.contract_rate || 3.0);
-    const agencyRate = Number(partnerDb?.agency_rate || 0.5);
-    const agentRate = partnerRole === 'sales_agent' ? 0.3 : 0.0;
-
     const grossAmount = Number(donation.amount || 0);
-    const pgFeeAmount = Math.round(grossAmount * 0.015);
-    const platformFeeAmount = Math.round(grossAmount * 0.005);
+    const pgFeeAmount = Math.round(grossAmount * (pgCostRate / 100));
+    const platformFeeAmount = Math.round(grossAmount * (finalPlatformRate / 100));
     const commissionAmount = Math.round(grossAmount * (contractRate / 100));
     const txDateIso = donation.createdAt ? new Date(donation.createdAt).toISOString() : new Date().toISOString();
     const currentMonth = txDateIso.slice(0, 7);
@@ -1348,26 +1402,60 @@ export function calcCommissionBreakdown(
     agencyRate?: number;
     masterAgencyId?: string;
     salesAgentId?: string;
+    partnerRole?: 'hq_direct' | 'master_agency' | 'sales_agent';
   }
 ): CommissionBreakdown {
   const f = FEE_CONSTANTS;
-  const contractRate     = options?.contractRate ?? f.defaultCustomerRate;
-  const agencyRate       = options?.agencyRate   ?? 0;
+  const contractRate = options?.contractRate ?? f.defaultCustomerRate;
 
-  const channelPoolRate  = Math.max(0, contractRate - f.pgCostRate - f.platformProfitRate);
-  const agentRate        = Math.max(0, channelPoolRate - agencyRate);
+  // 파트너 역할 판별
+  let role: 'hq_direct' | 'master_agency' | 'sales_agent' = options?.partnerRole ?? 'hq_direct';
+  if (!options?.partnerRole) {
+    if (options?.salesAgentId) {
+      role = 'sales_agent';
+    } else if (options?.masterAgencyId && options.masterAgencyId !== 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11') {
+      role = 'master_agency';
+    } else {
+      role = 'hq_direct';
+    }
+  }
 
-  const totalFeeAmount       = Math.round(donationAmount * contractRate       / 100);
-  const pgCostAmount         = Math.round(donationAmount * f.pgCostRate       / 100);
-  const platformProfitAmount = Math.round(donationAmount * f.platformProfitRate / 100);
-  const channelPoolAmount    = Math.round(donationAmount * channelPoolRate     / 100);
-  const agencyAmount         = Math.round(donationAmount * agencyRate          / 100);
-  const agentAmount          = channelPoolAmount - agencyAmount; // 잔여분 전부
+  const pgCostRate = f.pgCostRate; // 1.5% 고정
+  let platformProfitRate = f.platformProfitRate; // 0.5% (기본)
+  let channelPoolRate = Math.max(0, contractRate - pgCostRate - platformProfitRate); // 기본 1.0%
+  let agencyRate = 0;
+  let agentRate = 0;
+
+  if (role === 'hq_direct') {
+    // [시나리오 1] 본사 직접 영업: 파트너 분구 0%, PG 제외 전액(1.5%) 본사 귀속
+    channelPoolRate = 0;
+    agencyRate = 0;
+    agentRate = 0;
+    platformProfitRate = Math.max(0, contractRate - pgCostRate);
+  } else if (role === 'master_agency') {
+    // [시나리오 2] 대리점 직접 영업 (옵션 A): 하위 영업자 없이 대리점 직접 유치 -> 채널풀 전액(1.0%) 대리점 수취
+    agencyRate = channelPoolRate;
+    agentRate = 0;
+    platformProfitRate = f.platformProfitRate;
+  } else {
+    // [시나리오 3] 영업자 유치 영업: 대리점 오버라이딩(0.5%) + 영업자 순마진(0.5%)
+    agencyRate = options?.agencyRate ?? f.defaultAgencyRate;
+    agencyRate = Math.min(channelPoolRate, agencyRate);
+    agentRate = Math.max(0, channelPoolRate - agencyRate);
+    platformProfitRate = f.platformProfitRate;
+  }
+
+  const totalFeeAmount = Math.round(donationAmount * contractRate / 100);
+  const pgCostAmount = Math.round(donationAmount * pgCostRate / 100);
+  const platformProfitAmount = Math.round(donationAmount * platformProfitRate / 100);
+  const channelPoolAmount = Math.round(donationAmount * channelPoolRate / 100);
+  const agencyAmount = Math.round(donationAmount * agencyRate / 100);
+  const agentAmount = Math.round(donationAmount * agentRate / 100);
 
   return {
     contractRate,
-    pgCostRate:          f.pgCostRate,
-    platformProfitRate:  f.platformProfitRate,
+    pgCostRate,
+    platformProfitRate,
     channelPoolRate,
     agencyRate,
     agentRate,
@@ -1377,11 +1465,11 @@ export function calcCommissionBreakdown(
     channelPoolAmount,
     agencyAmount,
     agentAmount,
-    masterAgencyId:    options?.masterAgencyId,
-    salesAgentId:      options?.salesAgentId,
+    masterAgencyId: options?.masterAgencyId,
+    salesAgentId: options?.salesAgentId,
     // 백워드 호환 aliases
     masterAgencyAmount: agencyAmount,
-    salesAgentAmount:   agentAmount,
+    salesAgentAmount: agentAmount,
   };
 }
 
@@ -1893,115 +1981,80 @@ export async function updatePartner(id: string, updates: Partial<Partner>): Prom
 
 
 export async function getCommissionsByPartner(partnerId: string): Promise<PartnerCommission[]> {
-  // partner_commissions DB에서 직접 조회
   const sb = pgClient();
-  const { data: stored } = await sb
-    .from('partner_commissions')
-    .select('*')
-    .eq('partner_id', partnerId)
-    .order('created_at', { ascending: false });
-
-  if (stored && stored.length > 0) {
-    return stored.map((r: any) => ({
-      id: r.id, partnerId: r.partner_id, partnerRole: r.partner_role,
-      tenantId: r.tenant_id, tenantName: r.tenant_name,
-      donationId: r.donation_id, donationAmount: Number(r.donation_amount),
-      commissionAmount: Number(r.commission_amount),
-      commissionRate: Number(r.contract_rate ?? 0),
-      contractRate: Number(r.contract_rate ?? 0),
-      breakdown: calcCommissionBreakdown(Number(r.donation_amount), {
-        contractRate: Number(r.contract_rate ?? 3),
-        agencyRate: Number(r.agency_rate ?? 0),
-      }),
-      status: r.settlement_status ?? 'pending',
-      createdAt: r.created_at,
-    }));
-  }
-
-  // DB stored 없음 → partner_commissions에서 parent_id 기준으로도 조회 (sales_agent인 경우)
   const partner = await getPartnerById(partnerId);
   if (!partner) return [];
 
-  if (partner.role === 'sales_agent' && partner.parentId) {
-    // 영업자는 상위 대리점의 partner_commissions에서 agent_fee 기준 조회
-    const { data: agentRows } = await sb
-      .from('partner_commissions')
-      .select('*')
-      .eq('partner_id', partner.parentId)
-      .order('created_at', { ascending: false });
+  let query = sb.from('partner_commissions').select('*');
 
-    if (agentRows && agentRows.length > 0) {
-      return agentRows.map((r: any) => ({
-        id: r.id, partnerId: partnerId, partnerRole: 'sales_agent',
-        tenantId: r.tenant_id, tenantName: r.tenant_name,
-        donationId: r.donation_id, donationAmount: Number(r.donation_amount),
-        commissionAmount: Math.round(Number(r.donation_amount) * (Number(r.agent_rate ?? 0.5) / 100)),
-        commissionRate: Number(r.agent_rate ?? 0.5),
-        contractRate: Number(r.contract_rate ?? 3),
-        agencyRate: Number(r.agency_rate ?? 0.5),
-        agentRate: Number(r.agent_rate ?? 0.5),
+  if (partner.role === 'master_agency') {
+    // 대리점: 본인 직접 유치 건 + 하위 영업자 유치 건(오버라이딩)
+    const { data: subAgents } = await sb
+      .from('partners')
+      .select('id')
+      .eq('parent_id', partnerId);
+
+    const subAgentIds = (subAgents || []).map((a: any) => a.id);
+    if (subAgentIds.length > 0) {
+      query = query.or(`partner_id.eq.${partnerId},partner_id.in.(${subAgentIds.join(',')})`);
+    } else {
+      query = query.eq('partner_id', partnerId);
+    }
+  } else {
+    // 영업자: 본인 직접 유치 건
+    query = query.eq('partner_id', partnerId);
+  }
+
+  const { data: stored } = await query.order('created_at', { ascending: false });
+
+  if (stored && stored.length > 0) {
+    return stored.map((r: any) => {
+      const gross = Number(r.donation_amount || 0);
+      const contractRate = Number(r.contract_rate ?? 3.0);
+      const agencyRate = Number(r.agency_rate ?? 0.5);
+      const agentRate = Number(r.agent_rate ?? 0.5);
+
+      // 해당 파트너의 실 수취 수수료 계산
+      let myCommissionRate = 0;
+      let myCommissionAmount = 0;
+
+      if (partner.role === 'master_agency') {
+        // 대리점: 직접 유치 건은 agencyRate(1.0%), 영업자 건은 오버라이딩 agencyRate(0.5%)
+        myCommissionRate = agencyRate;
+        myCommissionAmount = Math.round(gross * (agencyRate / 100));
+      } else {
+        // 영업자: 본인 실효 수수료 agentRate (0.5%)
+        myCommissionRate = agentRate;
+        myCommissionAmount = Math.round(gross * (agentRate / 100));
+      }
+
+      return {
+        id: r.id,
+        partnerId: partnerId,
+        partnerRole: partner.role,
+        tenantId: r.tenant_id,
+        tenantName: r.tenant_name,
+        donationId: r.donation_id,
+        donationAmount: gross,
+        commissionAmount: myCommissionAmount,
+        commissionRate: myCommissionRate,
+        contractRate: contractRate,
+        agencyRate: agencyRate,
+        agentRate: agentRate,
+        breakdown: calcCommissionBreakdown(gross, {
+          contractRate: contractRate,
+          agencyRate: agencyRate,
+          partnerRole: r.partner_role,
+        }),
         status: r.settlement_status ?? 'pending',
         createdAt: r.created_at,
-      }));
-    }
+      };
+    });
   }
 
-  // 대리점인 경우에도 tenants 기반 fallback이 없으면 빈 배열 반환 (가짜 데이터 생성 금지)
-  const allTenants = await getAllTenants();
-  let targetTenants: Tenant[] = [];
-
-  if (partner.role === 'sales_agent') {
-    targetTenants = allTenants.filter(t =>
-      (t as any).registeredByPartnerId === partnerId
-    );
-  } else {
-    // master_agency: partner_commissions에서 직접 조회됐으므로 여기까지 올 경우 없음
-    return [];
-  }
-
-  const generated: PartnerCommission[] = [];
-
-  for (const t of targetTenants) {
-    const donations = await getDonationsByTenant(t.id);
-    // 커미션 집계: 실제 결제 완료(completed) 건만 대상 — pending/failed 건 제외
-    const activeDonations = donations.filter(d => d.paymentStatus === 'completed');
-    // 실제 거래가 없으면 해당 단체 건너뜀 (가짜 데이터 생성 금지)
-    if (activeDonations.length === 0) continue;
-
-    for (const d of activeDonations) {
-      const contractRate = (t as any).contractRate ?? 3.0;
-      const agencyRate = partner.agencyRate ?? 0.5;
-      
-      const breakdown = calcCommissionBreakdown(d.amount, {
-        contractRate,
-        agencyRate,
-        masterAgencyId: partner.role === 'master_agency' ? partner.id : partner.parentId,
-        salesAgentId: partner.role === 'sales_agent' ? partner.id : undefined,
-      });
-
-      const commRate = partner.role === 'master_agency' ? agencyRate : breakdown.agentRate;
-      const commAmount = partner.role === 'master_agency' ? breakdown.agencyAmount : breakdown.agentAmount;
-
-      generated.push({
-        id: `comm_${partner.id}_${d.id}`,
-        partnerId: partner.id,
-        partnerRole: partner.role,
-        tenantId: t.id,
-        tenantName: t.name,
-        donationId: d.id,
-        donationAmount: d.amount,
-        commissionAmount: commAmount > 0 ? commAmount : Math.round(d.amount * (commRate / 100)),
-        commissionRate: commRate,
-        contractRate,
-        breakdown,
-        status: d.paymentStatus === 'completed' ? 'settled' : 'pending',
-        createdAt: d.createdAt,
-      });
-    }
-  }
-
-  return generated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return [];
 }
+
 
 
 // ==================== SETTLEMENTS (PostgreSQL 직접 쿼리) ====================
@@ -2625,47 +2678,77 @@ export async function getAdminSettlementStatements(month: string): Promise<{
     if (commissions) {
       commissions.forEach((c: any) => {
         const cMonth = (c.created_at || '').slice(0, 7);
-        if (cMonth === month && c.partner_id) {
-          if (!partnerMap[c.partner_id]) {
-            const pInfo = partnerInfoMap[c.partner_id];
-            const resolvedName = pInfo?.name || pInfo?.corp_name || (c.partner_role === 'master_agency' ? c.agency_name : c.agent_name) || '영업대리점';
-            partnerMap[c.partner_id] = {
-              grossCommission: 0,
-              vatAmount: 0,
-              withholdingTax: 0,
-              netPayout: 0,
-              partnerName: resolvedName,
-              partnerRole: c.partner_role || pInfo?.role || 'agent',
-              businessType: pInfo?.business_type || 'individual',
-              bankName: pInfo?.bank_name || '',
-              accountNumber: pInfo?.account_number || '',
-              accountHolder: pInfo?.account_holder || resolvedName,
-            };
+        if (cMonth === month && c.settlement_status !== 'cancelled') {
+          const gross = Number(c.donation_amount) || 0;
+          const agencyFee = Math.round(gross * ((Number(c.agency_rate) || 0) / 100));
+          const agentFee = Math.round(gross * ((Number(c.agent_rate) || 0) / 100));
+
+          // [시나리오 2] 대리점 직접 영업 (Option A)
+          if (c.partner_role === 'master_agency' && c.partner_id) {
+            if (partnerMap[c.partner_id]) {
+              partnerMap[c.partner_id].grossCommission += agencyFee; // 옵션 A: 1.0% 전액 대리점 수취
+            }
           }
-          partnerMap[c.partner_id].grossCommission += Number(c.commission_amount) || 0;
-          partnerMap[c.partner_id].vatAmount += Number(c.vat_amount) || 0;
-          partnerMap[c.partner_id].netPayout += Number(c.net_amount || c.commission_amount) || 0;
+          // [시나리오 3] 영업자 유치 영업
+          else if (c.partner_role === 'sales_agent') {
+            // 영업자 본인 마진 (0.5%)
+            if (c.partner_id && partnerMap[c.partner_id]) {
+              partnerMap[c.partner_id].grossCommission += agentFee;
+            }
+            // 상위 대리점 오버라이딩 마진 (0.5%)
+            const agentInfo = partnerInfoMap[c.partner_id];
+            const parentAgencyId = agentInfo?.parent_id;
+            if (parentAgencyId && partnerMap[parentAgencyId]) {
+              partnerMap[parentAgencyId].grossCommission += agencyFee;
+            }
+          }
+          // [시나리오 1] hq_direct는 외부 파트너 지급액 0원 (본사 귀속)
         }
       });
     }
 
-    const partnerStatements = Object.entries(partnerMap).map(([pid, pdata], idx) => ({
-      id: `TAX-${month.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
-      month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
-      partnerId: pid,
-      partnerName: pdata.partnerName,
-      partnerRole: pdata.partnerRole,
-      businessType: pdata.businessType,
-      isCorporate: pdata.businessType === 'CORPORATE' || pdata.businessType === 'corporate',
-      grossCommission: pdata.grossCommission,
-      vatAmount: pdata.vatAmount,
-      withholdingTax: pdata.withholdingTax,
-      netPayout: pdata.netPayout,
-      status: 'ISSUED',
-      bankName: pdata.bankName,
-      accountNumber: pdata.accountNumber,
-      accountHolder: pdata.accountHolder,
-    }));
+    // 본사(HQ)는 파트너 정산서 목록에서 제외하고 순수 외부 파트너만 발급
+    const partnerStatements = Object.entries(partnerMap)
+      .filter(([pid, pdata]) => {
+        const pInfo = partnerInfoMap[pid];
+        return pInfo?.referral_code !== 'HQ-0000' && pdata.partnerRole !== 'hq_direct';
+      })
+      .map(([pid, pdata], idx) => {
+        const isCorp = pdata.businessType === 'CORPORATE' || pdata.businessType === 'corporate';
+        // 법인(세금계산서): 공급가액 + VAT 10%
+        // 개인(원천징수 3.3%): 사업소득세 3% + 지방소득세 0.3% 차감
+        let vatAmount = 0;
+        let withholdingTax = 0;
+        let netPayout = pdata.grossCommission;
+
+        if (pdata.grossCommission > 0) {
+          if (isCorp) {
+            vatAmount = Math.round(pdata.grossCommission * 0.1);
+            netPayout = pdata.grossCommission + vatAmount;
+          } else {
+            withholdingTax = Math.round(pdata.grossCommission * 0.033);
+            netPayout = pdata.grossCommission - withholdingTax;
+          }
+        }
+
+        return {
+          id: `TAX-${month.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
+          month: `${month.slice(0, 4)}년 ${month.slice(5, 7)}월`,
+          partnerId: pid,
+          partnerName: pdata.partnerName,
+          partnerRole: pdata.partnerRole,
+          businessType: pdata.businessType,
+          isCorporate: isCorp,
+          grossCommission: pdata.grossCommission,
+          vatAmount,
+          withholdingTax,
+          netPayout,
+          status: 'ISSUED',
+          bankName: pdata.bankName,
+          accountNumber: pdata.accountNumber,
+          accountHolder: pdata.accountHolder,
+        };
+      });
 
     return {
       tenantStatements,
