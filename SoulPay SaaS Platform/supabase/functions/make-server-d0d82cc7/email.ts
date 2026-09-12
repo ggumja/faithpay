@@ -363,7 +363,7 @@ export async function sendAdminNewApplicationEmail(params: AdminNewApplicationPa
       <p style="color:#374151;font-size:14px;margin:0 0 16px 0;">새로운 <strong>${applicationType} 신청</strong>이 접수되었습니다. 아래 내용을 확인하고 심사를 진행해 주세요.</p>
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">${rowsHtml}</table>
       <div style="text-align:center;margin-top:24px;">
-        <a href="https://app.soulpay.kr/admin" target="_blank" style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;">🔍 관리자 페이지에서 심사하기</a>
+        <a href="https://app.soulpay.kr/system/admin/partners" target="_blank" style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;">🔍 관리자 페이지에서 심사하기</a>
       </div>
     </td>
   </tr>
