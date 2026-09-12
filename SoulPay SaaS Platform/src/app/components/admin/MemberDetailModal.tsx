@@ -41,6 +41,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { escapeHtml } from '../../utils/escapeHtml';
 import { formatPhoneNumber } from '../../pages/admin/AdminAccountManagement';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 
@@ -151,7 +152,7 @@ export function MemberDetailModal({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>[국세청 별지 제45호 서식] 기부금 영수증 - ${member.name}</title>
+          <title>[국세청 별지 제45호 서식] 기부금 영수증 - ${escapeHtml(member.name)}</title>
           <style>
             @page { size: A4 portrait; margin: 15mm; }
             body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 15px; color: #000; font-size: 12px; line-height: 1.4; }
@@ -186,13 +187,13 @@ export function MemberDetailModal({
             <table class="form-table">
               <tr>
                 <th>성 명 (이름)</th>
-                <td style="width: 28%;"><strong>${member.name}</strong> ${member.baptismName ? `(${member.baptismName})` : ''}</td>
+                <td style="width: 28%;"><strong>${escapeHtml(member.name)}</strong> ${member.baptismName ? `(${escapeHtml(member.baptismName)})` : ''}</td>
                 <th>주민등록번호</th>
-                <td>${member.rrn || '850101-1****** (발급용)'}</td>
+                <td>${escapeHtml(member.rrn || '')}</td>
               </tr>
               <tr>
                 <th>주 소</th>
-                <td colspan="3">${member.address || '서울특별시 강남구 테헤란로 123 (주소 미입력)'}</td>
+                <td colspan="3">${escapeHtml(member.address || '주소 미입력')}</td>
               </tr>
             </table>
 
@@ -201,13 +202,13 @@ export function MemberDetailModal({
             <table class="form-table">
               <tr>
                 <th>단 체 명</th>
-                <td style="width: 28%;"><strong>${currentTenant?.name || '가맹 단체'}</strong></td>
+                <td style="width: 28%;"><strong>${escapeHtml(currentTenant?.name || '가맹 단체')}</strong></td>
                 <th>고유번호 / 사업자번호</th>
-                <td>${currentTenant?.uniqueNumber || currentTenant?.businessRegistrationNumber || '240-82-12345'}</td>
+                <td>${escapeHtml(currentTenant?.uniqueNumber || currentTenant?.businessRegistrationNumber || '')}</td>
               </tr>
               <tr>
                 <th>소재지 (주소)</th>
-                <td colspan="3">${currentTenant?.address || '서울특별시 종로구 우정국로 55'}</td>
+                <td colspan="3">${escapeHtml(currentTenant?.address || '')}</td>
               </tr>
               <tr>
                 <th>기부금 유형</th>
@@ -228,9 +229,9 @@ export function MemberDetailModal({
               </tr>
               <tr>
                 <th>최근 납부일</th>
-                <td>${member.lastDonation}</td>
+                <td>${escapeHtml(member.lastDonation)}</td>
                 <th>발급 일련번호</th>
-                <td>${receiptNo}</td>
+                <td>${escapeHtml(receiptNo)}</td>
               </tr>
             </table>
 
@@ -245,9 +246,9 @@ export function MemberDetailModal({
             </div>
 
             <div class="seal-wrapper">
-              <p style="margin-bottom: 8px; font-size: 12px;">발급일자: ${todayStr}</p>
+              <p style="margin-bottom: 8px; font-size: 12px;">발급일자: ${escapeHtml(todayStr)}</p>
               <p style="font-size: 16px; font-weight: bold; margin: 0;">
-                ${currentTenant?.name || '가맹 단체'} 대표 
+                ${escapeHtml(currentTenant?.name || '가맹 단체')} 대표 
                 <span class="seal-stamp">직인생략</span>
               </p>
             </div>
@@ -288,7 +289,7 @@ export function MemberDetailModal({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${currentTenant?.name || '가맹 단체'} - ${donationTerm} 확인증 / 영수증</title>
+          <title>${escapeHtml(currentTenant?.name || '가맹 단체')} - ${escapeHtml(donationTerm)} 확인증 / 영수증</title>
           <style>
             @page { size: A4 portrait; margin: 20mm; }
             body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; padding: 20px; color: #111; line-height: 1.6; }
@@ -312,30 +313,30 @@ export function MemberDetailModal({
         <body>
           <div class="receipt-box">
             <div class="header">
-              <h1>${donationTerm.toUpperCase()} 납부 확인증</h1>
-              <p>${currentTenant?.name || '가맹 단체명'} 공식 납부 영수 증명서</p>
+              <h1>${escapeHtml(donationTerm.toUpperCase())} 납부 확인증</h1>
+              <p>${escapeHtml(currentTenant?.name)} 공식 납부 영수 증명서</p>
             </div>
 
             <table class="info-table">
               <tr>
-                <th>${memberTerm} 성명</th>
-                <td><strong>${member.name}</strong> ${member.baptismName ? `(${member.baptismName})` : ''}</td>
+                <th>${escapeHtml(memberTerm)} 성명</th>
+                <td><strong>${escapeHtml(member.name)}</strong> ${member.baptismName ? `(${escapeHtml(member.baptismName)})` : ''}</td>
               </tr>
               <tr>
                 <th>연락처</th>
-                <td>${formatPhoneNumber(member.phone)}</td>
+                <td>${escapeHtml(formatPhoneNumber(member.phone))}</td>
               </tr>
               <tr>
                 <th>이메일</th>
-                <td>${member.email || '미등록'}</td>
+                <td>${escapeHtml(member.email)}</td>
               </tr>
               <tr>
-                <th>${donationTerm} 항목</th>
-                <td>${targetItemName}</td>
+                <th>${escapeHtml(donationTerm)} 항목</th>
+                <td>${escapeHtml(targetItemName)}</td>
               </tr>
               <tr>
                 <th>발급 일자</th>
-                <td>${todayStr}</td>
+                <td>${escapeHtml(todayStr)}</td>
               </tr>
             </table>
 
@@ -345,12 +346,12 @@ export function MemberDetailModal({
             </div>
 
             <div class="footer-msg">
-              <p>위 금액을 ${currentTenant?.name || '본 단체'}에 정성껏 납부하였음을 증명합니다.</p>
+              <p>위 금액을 ${escapeHtml(currentTenant?.name)}에 정성껏 납부하였음을 증명합니다.</p>
             </div>
 
             <div class="seal-area">
-              <p style="margin-bottom: 5px;">${todayStr}</p>
-              <p style="font-size: 16px;"><strong>${currentTenant?.name || '가맹 단체'} 대표 [직인생략]</strong></p>
+              <p style="margin-bottom: 5px;">${escapeHtml(todayStr)}</p>
+              <p style="font-size: 16px;"><strong>${escapeHtml(currentTenant?.name)} 대표 [직인생략]</strong></p>
             </div>
           </div>
 
