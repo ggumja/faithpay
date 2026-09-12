@@ -991,7 +991,7 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
       // 결제 완료 이메일 발송 (non-blocking: 이메일 실패 시 결제 응답 영향 없음)
       resolveEmail(donationData.email, donationData.phone, tenantId).then(async (resolvedTo) => {
         if (!resolvedTo) return;
-        const tenant = await db.getTenant(tenantId).catch(() => null);
+        const tenant = await db.getTenantById(tenantId).catch(() => null);
         return sendDonationReceiptEmail({
           to: resolvedTo,
           donorName: donationData.name || '헌금자',
@@ -1152,7 +1152,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
       // 결제 완료 이메일 발송 (non-blocking)
       resolveEmail(donorEmail, donorPhone, tenantId).then(async (resolvedTo) => {
         if (!resolvedTo) return;
-        const tenant = await db.getTenant(tenantId).catch(() => null);
+        const tenant = await db.getTenantById(tenantId).catch(() => null);
         return sendDonationReceiptEmail({
           to: resolvedTo,
           donorName: donorName || result.customerName || '헌금자',
@@ -1341,7 +1341,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
     // 정기결제 즉시청구 완료 이메일 발송 (non-blocking)
     resolveEmail(customerEmail, donorPhone || customerMobilePhone, tenantId).then(async (resolvedTo) => {
       if (!resolvedTo) return;
-      const billingTenant = await db.getTenant(tenantId).catch(() => null);
+      const billingTenant = await db.getTenantById(tenantId).catch(() => null);
       return sendDonationReceiptEmail({
         to: resolvedTo,
         donorName: customerName || '헌금자',
@@ -2777,7 +2777,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
             const rawEmail = donationData.email || meta.donorEmail || '';
             resolveEmail(rawEmail, donorPhone, tenantId).then(async (resolvedTo) => {
               if (!resolvedTo) return;
-              const tenantInfo = await db.getTenant(tenantId).catch(() => null);
+              const tenantInfo = await db.getTenantById(tenantId).catch(() => null);
               return sendDonationReceiptEmail({
                 to: resolvedTo,
                 donorName: donorName || '헌금자',
@@ -2825,7 +2825,7 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
     const tenantIdForUrl = meta.tenantId || donationData.tenantId;
     if (tenantIdForUrl) {
       try {
-        const tenant = await db.getTenant(tenantIdForUrl);
+        const tenant = await db.getTenantById(tenantIdForUrl);
         if (tenant?.slug) tenantSlug = tenant.slug;
       } catch (_) {}
     }
@@ -3411,7 +3411,7 @@ const handleCertCallback = async (c: any) => {
       if (donation) {
         if (donation.tenant_id) {
           try {
-            const tenant = await db.getTenant(donation.tenant_id);
+            const tenant = await db.getTenantById(donation.tenant_id);
             if (tenant?.slug) tenantSlug = tenant.slug;
           } catch (_) {}
         }
@@ -3434,7 +3434,7 @@ const handleCertCallback = async (c: any) => {
             const rawDonorPhone = updated.donor_phone || donation.donor_phone || '';
             resolveEmail(rawDonorEmail, rawDonorPhone, donation.tenant_id).then(async (resolvedTo) => {
               if (!resolvedTo) return;
-              const certTenant = await db.getTenant(donation.tenant_id).catch(() => null);
+              const certTenant = await db.getTenantById(donation.tenant_id).catch(() => null);
               return sendDonationReceiptEmail({
                 to: resolvedTo,
                 donorName: updated.donor_name || donation.donor_name || '헌금자',
