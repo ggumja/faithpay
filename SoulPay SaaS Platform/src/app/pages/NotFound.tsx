@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Home, ArrowLeft } from 'lucide-react';
+import { navigateToRootPortal } from '../utils/domainUtils';
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function NotFound() {
         <CardContent className="space-y-3">
           <Button
             className="w-full"
-            onClick={() => navigate('/')}
+            onClick={() => navigateToRootPortal('/', navigate)}
           >
             <Home className="h-4 w-4 mr-2" />
             홈으로 돌아가기
