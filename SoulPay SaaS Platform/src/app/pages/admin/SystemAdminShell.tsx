@@ -120,12 +120,6 @@ export default function SystemAdminShell() {
     return () => clearInterval(timer);
   }, []);
 
-
-  // 단체 관련 페이지일 때 자동 펼침
-  useEffect(() => {
-    if (['tenants','pending','tenantDetail'].includes(active)) setTenantsOpen(true);
-  }, [active]);
-
   // 인증 체크: system_admin 세션 없으면 로그인 페이지로 redirect
   useEffect(() => {
     if (!currentAdmin || currentAdmin.role !== 'system_admin') {
