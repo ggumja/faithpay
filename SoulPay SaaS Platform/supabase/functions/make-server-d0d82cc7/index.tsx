@@ -651,9 +651,51 @@ app.put("/make-server-d0d82cc7/tenants/:id/approve", async (c) => {
       return c.json({ success: false, error: 'Tenant not found' }, 404);
     }
 
+    // 승인과 동시에 tenant_admins 레코드 자동 생성 (contact 이메일 기준)
+    // → tenants.contact 와 tenant_admins 간 데이터 불일치 근본 차단
+    const sb = db.pgClient();
+    const approvedContactEmail = ((tenant as any).contact?.email || (tenant as any).contact_email || '').trim().toLowerCase();
+    const approvedContactName = (tenant as any).contact?.name || (tenant as any).contact_name || (tenant as any).name || '대표 관리자';
+
+    if (approvedContactEmail) {
+      // 이미 레코드가 있으면 이름·status만 갱신, 없으면 새로 생성
+      const { data: existingAdmin } = await sb
+        .from('tenant_admins')
+        .select('id')
+        .eq('tenant_id', id)
+        .eq('email', approvedContactEmail)
+        .maybeSingle();
+
+      if (!existingAdmin) {
+        // 초기 임시 비밀번호 생성
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+        const rb = crypto.getRandomValues(new Uint8Array(10));
+        const initPassword = Array.from(rb).map((b) => chars[b % chars.length]).join('');
+
+        const { error: insertErr } = await sb.from('tenant_admins').insert({
+          tenant_id: id,
+          email: approvedContactEmail,
+          password: initPassword,
+          name: approvedContactName,
+          phone: (tenant as any).contact?.phone || (tenant as any).contact_phone || '',
+          role: 'tenant_admin',
+          group_id: 'tenant_admin',
+          status: 'active',
+        });
+        if (insertErr) {
+          console.error('[approve] tenant_admins 자동 생성 실패:', insertErr.message);
+        } else {
+          console.log(`[approve] tenant_admins 자동 생성 완료 — tenant: ${id}, email: ${approvedContactEmail}`);
+        }
+      } else {
+        // 기존 레코드가 있으면 status 활성화
+        await sb.from('tenant_admins').update({ status: 'active', updated_at: new Date().toISOString() }).eq('id', existingAdmin.id);
+      }
+    }
+
     // 승인 결과 이메일 발송 — 비동기, 실패해도 승인은 정상 처리
-    const contactEmail = (tenant as any).contact_email || (tenant as any).email;
-    const contactName = (tenant as any).contact_name || (tenant as any).name || '담당자';
+    const contactEmail = (tenant as any).contact?.email || (tenant as any).contact_email || (tenant as any).email;
+    const contactName = (tenant as any).contact?.name || (tenant as any).contact_name || (tenant as any).name || '담당자';
     if (contactEmail) {
       sendApplicationResultEmail({ to: contactEmail, applicantName: contactName, applicationType: '단체', orgName: (tenant as any).name, approved: true, loginUrl: 'https://app.soulpay.kr' }).catch((e: any) => console.error('[Email] 단체 승인 결과 발송 실패:', e));
     }
