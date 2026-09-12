@@ -40,9 +40,9 @@ const PAGE_META: Record<string, { title: string; desc: string }> = {
 
 /* ─── style atoms ────────────────── */
 const S = {
-  inner:     'p-6',
-  title:     'text-[18px] font-semibold text-[var(--hm-ink)] mb-0.5',
-  sub:       'text-[12.5px] text-[var(--hm-ink-3)] mb-5',
+  inner:     'space-y-6 w-full',
+  title:     'text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100',
+  sub:       'text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed',
   statGrid:  'grid grid-cols-3 gap-3 mb-5',
   statCard:  'bg-[var(--hm-paper)] rounded-[10px] border border-[var(--hm-border)] px-4 py-3.5 flex items-center gap-3',
   tableWrap: 'bg-[var(--hm-paper)] rounded-[10px] border border-[var(--hm-border)] overflow-hidden',
@@ -191,19 +191,21 @@ export default function SystemAdminDashboard() {
   return (
     <div className={S.inner}>
       {/* ── 공통 페이지 헤더 ── */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div>
           <h1 className={S.title}>{meta.title}</h1>
           <p className={S.sub}>{meta.desc}</p>
         </div>
         {active === 'tenants' && (
-          <button
-            onClick={() => navigate('/system/admin/tenants/new')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-xs border-none"
-          >
-            <Plus size={14} />
-            <span>신규 단체 등록</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/system/admin/tenants/new')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-xs border-none"
+            >
+              <Plus size={14} />
+              <span>신규 단체 등록</span>
+            </button>
+          </div>
         )}
       </div>
 

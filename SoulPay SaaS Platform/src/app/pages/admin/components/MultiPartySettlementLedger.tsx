@@ -305,17 +305,17 @@ export default function MultiPartySettlementLedger() {
   return (
     <div className="w-full space-y-6">
       {/* ── 상단 헤더 ── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              통합 결제·거래 원장
-            </h2>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+              전체 결제 승인 원장
+            </h1>
             <Badge className="bg-blue-600 text-white font-bold text-xs px-2.5 py-0.5 border-none">
               실측 DB 100%
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
             가맹 단체별 실시간 결제 승인, 취소, 환불 및 수납 거래 상세 내역을 통합 조회·관리합니다.
           </p>
         </div>

@@ -43,9 +43,9 @@ const fmtDT = (s: string | undefined | null) => {
 /* ─── 스타일 상수 ─── */
 const S = {
   wrap: 'space-y-6 w-full',
-  header: 'flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-[var(--hm-border)]',
-  title: 'text-[20px] font-bold text-[var(--hm-ink)] tracking-tight',
-  sub: 'text-[12.5px] text-[var(--hm-ink-3)] mt-0.5',
+  header: 'flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800',
+  title: 'text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100',
+  sub: 'text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed',
   card: 'bg-[var(--hm-paper)] rounded-xl border border-[var(--hm-border)] p-5 shadow-xs transition-all',
   kpiGrid: 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3',
   kpiCard: 'bg-[var(--hm-paper)] rounded-xl border border-[var(--hm-border)] p-4 flex flex-col justify-between shadow-2xs hover:border-[var(--hm-accent)] transition-colors',

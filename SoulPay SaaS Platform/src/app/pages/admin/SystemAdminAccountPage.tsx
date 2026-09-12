@@ -175,16 +175,16 @@ export default function SystemAdminAccountPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-[20px] font-bold text-[var(--hm-ink)] flex items-center gap-2">
-            <Shield size={20} className="text-[var(--hm-accent)]" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+            <Shield className="h-6 w-6 text-blue-600" />
             시스템 관리자 계정 관리
           </h1>
-          <p className="text-[12px] text-[var(--hm-ink-3)] mt-1">
-            SoulPay 시스템에 접근할 수 있는 관리자 계정을 관리합니다. 총 {admins.length}명
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+            SoulPay SaaS 플랫폼에 접근할 수 있는 최고관리자 및 운영 관리자 계정을 통합 관리합니다. (총 {admins.length}명)
           </p>
         </div>
         <div className="flex items-center gap-2">

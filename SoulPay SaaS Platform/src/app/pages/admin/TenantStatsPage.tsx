@@ -129,12 +129,12 @@ export default function TenantStatsPage() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* Header Title & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">단체별 통계</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">단체별 통계</h1>
             {`${selectedYear}-${String(selectedMonth).padStart(2, '0')}` < new Date().toISOString().slice(0, 7) ? (
               <Badge variant="outline" className="bg-slate-100 text-slate-700 dark:bg-zinc-800 border-slate-300 text-[10.5px]">
                 🔒 마감 집계 완료 (캐시 스토어 직통)
@@ -145,7 +145,9 @@ export default function TenantStatsPage() {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">등록된 단체별 기부금/헌금 통계 및 수단별 집계 현황을 분석합니다.</p>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+            등록된 단체별 기부금/헌금 통계 및 수단별 집계 현황을 분석합니다.
+          </p>
         </div>
         <div className="flex items-center gap-2">
 

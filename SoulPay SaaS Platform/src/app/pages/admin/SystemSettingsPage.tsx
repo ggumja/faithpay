@@ -35,7 +35,7 @@ const EMPTY_ACCOUNT: PlatformAccount = {
 
 /* ── style atoms ── */
 const S = {
-  page:     'p-6 space-y-5',
+  page:     'space-y-6 w-full',
   card:     'bg-[var(--hm-paper)] rounded-[12px] border border-[var(--hm-border)] overflow-hidden',
   head:     'px-5 py-3 border-b border-[var(--hm-border)] flex items-center gap-2',
   label:    'text-[11px] font-semibold text-[var(--hm-ink-2)] mb-1 block',
@@ -423,6 +423,18 @@ export default function SystemSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('fee');
   return (
     <div className={S.page}>
+      {/* ── 헤더 ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+            시스템 설정
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+            PG사별 원가 수수료율, 플랫폼 마진 및 토스 지급대행 수수료 정산 계좌를 설정합니다.
+          </p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-1 border-b border-[var(--hm-border)]">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setActiveTab(key)}

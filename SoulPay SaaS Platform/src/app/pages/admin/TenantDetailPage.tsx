@@ -621,30 +621,32 @@ export default function TenantDetailPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-6 w-full">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/system/admin/tenants')}
-            className="shrink-0 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-[18px] font-semibold text-[var(--hm-ink)]">
-                {tenant?.name ?? '단체 상세 정보'}
-              </h1>
-              <span className="inline-flex items-center text-[10.5px] font-medium rounded-[5px] px-2 py-0.5 border border-purple-200 bg-purple-50 text-purple-700">
-                {getReligionLabel(tenant?.religionType)}
-              </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/system/admin/tenants')}
+              className="shrink-0 -ml-2 cursor-pointer"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                  {tenant?.name ?? '단체 상세 정보'}
+                </h1>
+                <span className="inline-flex items-center text-xs font-semibold rounded-md px-2 py-0.5 border border-purple-200 bg-purple-50 text-purple-700">
+                  {getReligionLabel(tenant?.religionType)}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+                단체의 기본 정보와 PG 결제 환경, 간편결제 연동 설정을 통합 관리합니다.
+              </p>
             </div>
-            <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">
-              단체의 기본 정보와 결제 설정을 관리하세요
-            </p>
           </div>
         </div>
 

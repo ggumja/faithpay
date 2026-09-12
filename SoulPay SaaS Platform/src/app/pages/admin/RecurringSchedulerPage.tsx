@@ -251,9 +251,9 @@ export default function RecurringSchedulerPage() {
   }, [recurringDonations, tenantFilter, searchTerm]);
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 w-full">
+    <div className="space-y-6 w-full">
       {/* ── 1. Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[var(--hm-border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
@@ -263,7 +263,7 @@ export default function RecurringSchedulerPage() {
               배치 모니터링
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
             전체 단체의 정기 약정 큐(일/주/월)와 나노페이 빌키 자동 승인 실행 내역을 실시간 모니터링하고 수동 배치 가동을 제어합니다.
           </p>
         </div>

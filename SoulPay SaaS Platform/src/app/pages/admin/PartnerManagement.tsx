@@ -266,17 +266,17 @@ export default function PartnerManagement() {
 
   /* ══════════════════════════════════════════════ */
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 w-full">
       {/* ── 1. 영업 대리점 (Tier-1) 페이지 ── */}
       {view === 'agency' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-purple-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                <Building2 className="h-6 w-6 text-purple-600" />
                 영업 대리점 (Tier-1) 목록
               </h1>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
                 플랫폼 직속 영업 대리점 목록을 관리하고 산하 소속 영업자 및 대리점 수수료율을 설정합니다.
               </p>
             </div>
@@ -343,14 +343,14 @@ export default function PartnerManagement() {
 
       {/* ── 2. 영업자 (Tier-2) 페이지 ── */}
       {view === 'agent' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-                <Users className="h-5 w-5 text-indigo-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                <Users className="h-6 w-6 text-indigo-600" />
                 영업자 (Tier-2) 목록
               </h1>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
                 각 대리점 산하 영업자 목록 및 관리 단체, 수수료 구조를 관리합니다.
               </p>
             </div>
@@ -417,14 +417,14 @@ export default function PartnerManagement() {
 
       {/* ── 3. 파트너 승인요청 목록 페이지 ── */}
       {view === 'pending' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-                <Clock className="h-5 w-5 text-amber-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                <Clock className="h-6 w-6 text-amber-600" />
                 파트너 승인요청 목록
               </h1>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
                 웹 제휴 신청서를 검토하여 영업 대리점 또는 영업자로 승인하거나 반려합니다.
               </p>
             </div>

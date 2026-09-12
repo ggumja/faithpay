@@ -20,7 +20,7 @@ const FEE = {
 
 /* ── style atoms ── */
 const S = {
-  page:     'space-y-5',
+  page:     'space-y-6 w-full',
 
   card:     'bg-[var(--hm-paper)] rounded-[12px] border border-[var(--hm-border)] overflow-hidden',
   head:     'px-5 py-3 border-b border-[var(--hm-border)] flex items-center gap-2',
@@ -106,15 +106,17 @@ export default function CommissionStatsPage() {
   return (
     <div className={S.page}>
       {/* ── 헤더 타이틀 & 액션 ── */}
-      <div className="flex items-center justify-between gap-4 mb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">수수료 통계</h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5">대리점 및 영업자별 정산 수수료 발생 및 수령 내역을 집계합니다.</p>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">대리점 및 영업자별 정산 수수료 발생 및 수령 내역을 집계합니다.</p>
         </div>
-        <button onClick={load} disabled={loading} className={S.btnGhost}>
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-          새로고침
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={load} disabled={loading} className={S.btnGhost}>
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+            새로고침
+          </button>
+        </div>
       </div>
 
 

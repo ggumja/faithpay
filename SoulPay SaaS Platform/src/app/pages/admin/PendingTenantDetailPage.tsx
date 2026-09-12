@@ -21,7 +21,7 @@ const RELIGION: Record<string, { label: string; emoji: string; color: string; bg
 };
 
 const S = {
-  page:       'p-6',
+  page:       'space-y-6 w-full',
   card:       'bg-[var(--hm-paper)] rounded-[12px] border border-[var(--hm-border)] overflow-hidden',
   head:       'px-5 py-3 border-b border-[var(--hm-border)] flex items-center gap-2',
   body:       'px-5 py-5',
@@ -161,30 +161,30 @@ export default function PendingTenantDetailPage() {
     <div className={S.page}>
 
       {/* ── 헤더 ── */}
-      <div className="flex items-center justify-between gap-4 mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         {/* 좌: 뒤로 + 제목 */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/system/admin/tenants/pending')}
             className="shrink-0 -ml-1 p-1.5 rounded-[7px] text-[var(--hm-ink-3)] hover:bg-[var(--hm-paper-2)] transition-colors cursor-pointer border-none bg-transparent"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={18} />
           </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-[18px] font-semibold text-[var(--hm-ink)] truncate">{tenant.name}</h1>
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-medium px-2 py-0.5 rounded-[5px] border border-amber-200 bg-amber-50 text-amber-700">
-                <Clock size={10} /> 심사 대기
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 truncate">{tenant.name}</h1>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-amber-700">
+                <Clock size={12} /> 심사 대기
               </span>
               <span
-                className="inline-flex items-center gap-1 text-[10.5px] font-medium px-2 py-0.5 rounded-[5px] border"
+                className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md border"
                 style={{ borderColor: rel.color + '44', background: rel.bg, color: rel.color }}
               >
                 {rel.emoji} {rel.label}
               </span>
             </div>
-            <p className="text-[12.5px] text-[var(--hm-ink-3)] mt-0.5">
-              신청일: {applyDate}
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+              신청 접수일시: {applyDate} · 슬러그: /{tenant.slug}
             </p>
           </div>
         </div>

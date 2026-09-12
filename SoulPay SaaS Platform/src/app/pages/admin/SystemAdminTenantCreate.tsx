@@ -251,28 +251,32 @@ export default function SystemAdminTenantCreate() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6 bg-slate-50 min-h-full font-sans w-full">
+    <div className="space-y-6 w-full">
       {/* 상단 헤더 & 뒤로가기 */}
-      <div className="space-y-1">
+      <div className="space-y-2 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate('/system/admin/tenants')}
-          className="text-slate-500 hover:text-slate-900 -ml-2 h-8 px-2 text-xs font-medium"
+          className="text-slate-500 hover:text-slate-900 -ml-2 h-8 px-2 text-xs font-medium cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> 단체 목록으로 돌아가기
         </Button>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            신규 단체 개설 및 등록
-          </h1>
-          <Badge className="bg-blue-600 text-white font-semibold text-xs px-2.5 py-0.5">
-            시스템 최고 관리자 전용
-          </Badge>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
+                신규 단체 개설 및 등록
+              </h1>
+              <Badge className="bg-blue-600 text-white font-semibold text-xs px-2.5 py-0.5">
+                시스템 최고 관리자 전용
+              </Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+              시스템 관리자 권한으로 가맹단체를 즉시 개설하고, 파트너 배정 및 관리자 마스터 계정을 발급합니다.
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-slate-500 font-medium">
-          시스템 관리자 권한으로 가맹단체를 즉시 개설하고, 파트너 배정 및 관리자 마스터 계정을 발급합니다.
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

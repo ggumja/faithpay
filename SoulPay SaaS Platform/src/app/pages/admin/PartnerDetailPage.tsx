@@ -466,45 +466,45 @@ export default function PartnerDetailPage() {
   const pendingSettlement = partnerStats?.pendingSettlement ?? commissions.filter(c => (c as any).status === 'pending').reduce((acc, c) => acc + c.commissionAmount, 0);
 
   return (
-    <div className="p-6 md:p-8 space-y-6 pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* ── 상단 네비게이션 & 제목 바 ── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/system/admin/partners')}
-            className="h-9 px-3 border-slate-200 hover:bg-slate-50 text-slate-600"
+            className="h-9 px-3 border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" /> 목록으로
           </Button>
 
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-[20px] font-extrabold text-slate-900 tracking-tight">{partner.name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">{partner.name}</h1>
               {isAgency ? (
-                <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-bold px-2 py-0.5 text-[11px]">
+                <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-bold px-2 py-0.5 text-xs">
                   🏢 Tier-1 영업 대리점
                 </Badge>
               ) : (
-                <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold px-2 py-0.5 text-[11px]">
+                <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold px-2 py-0.5 text-xs">
                   💼 Tier-2 영업자
                 </Badge>
               )}
-              {partner.status === 'active' && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10.5px]">🟢 활성</Badge>}
-              {partner.status === 'pending' && <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10.5px]">🟡 승인 대기</Badge>}
-              {partner.status === 'suspended' && <Badge className="bg-red-100 text-red-600 border-red-200 text-[10.5px]">🔴 정지</Badge>}
+              {partner.status === 'active' && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">🟢 활성</Badge>}
+              {partner.status === 'pending' && <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">🟡 승인 대기</Badge>}
+              {partner.status === 'suspended' && <Badge className="bg-red-100 text-red-600 border-red-200 text-xs">🔴 정지</Badge>}
             </div>
 
-            <div className="flex items-center gap-3 text-[12px] text-slate-500 mt-1">
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
               <span>추천 코드: <strong className="font-mono text-purple-700">{partner.referralCode}</strong></span>
               <button
                 onClick={() => { navigator.clipboard.writeText(partner.referralCode); toast.success('추천코드가 복사되었습니다.'); }}
                 className="text-slate-400 hover:text-slate-700 bg-transparent border-0 p-0 cursor-pointer"
               >
-                <Copy className="h-3 w-3 inline" />
+                <Copy className="h-3.5 w-3.5 inline" />
               </button>
-              <span className="font-mono text-[10.5px] text-slate-400">· ID: {partner.referralCode || partner.id.slice(0, 12)}</span>
+              <span className="font-mono text-[11px] text-slate-400">· ID: {partner.referralCode || partner.id.slice(0, 12)}</span>
               <span>· 가입일: {fmtDate(partner.createdAt)}</span>
             </div>
           </div>
