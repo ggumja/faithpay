@@ -429,18 +429,6 @@ export default function DonationComplete() {
           </div>
         </section>
 
-        {/* Messaging Notice */}
-        {formData.phone && (
-          <section 
-            className="p-4 rounded-xl border text-xs leading-relaxed"
-            style={{ background: ft.primaryBg, borderColor: ft.primaryBgStrong }}
-          >
-            <h4 className="font-bold mb-1" style={{ color: ft.primaryDark }}>알림톡 안내</h4>
-            <p className="text-zinc-650 dark:text-zinc-400 font-medium">
-              기재하신 연락처({formData.phone})로 카카오 알림톡 감사 메시지가 즉시 발송되었습니다. {formData.isRecurring && '자동 정기결제 해지 및 정보관리는 마이페이지 로그인 후 가능합니다.'}
-            </p>
-          </section>
-        )}
 
         {/* Action Sharing Buttons Grid */}
         <section className="grid grid-cols-2 gap-3 mt-2">
