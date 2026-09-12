@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Percent, Save, RefreshCw, Building, Landmark, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Percent, Save, RefreshCw, Building, Landmark, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsAPI } from '../../api/client';
 
 /* ── PG사 목록 및 기본 원가/마진 설정 ── */
 interface PGEntry {
@@ -25,14 +26,12 @@ const DEFAULT_PGS: PGEntry[] = [
 ];
 
 const EMPTY_ACCOUNT: PlatformAccount = {
-  bank: '',
+  bank: '088',
   accountNumber: '',
   holderName: '',
   businessNumber: '',
   payoutCycle: 'D+1',
 };
-
-// 참고: PG 수수료 및 계좌 설정은 DB 백엔드 API 연동 예정—현재는 빈 초기값으로 시작합니다.
 
 /* ── style atoms ── */
 const S = {
@@ -51,14 +50,50 @@ const TABS = [
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 
+/* ── 로딩 스켈레톤 ── */
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse px-5 py-6">
+      <div className="h-4 bg-[var(--hm-border)] rounded w-1/3" />
+      <div className="h-10 bg-[var(--hm-border)] rounded" />
+      <div className="h-10 bg-[var(--hm-border)] rounded" />
+    </div>
+  );
+}
+
 /* ── 수수료 설정 탭 ── */
 function FeeSettingsTab() {
   const [pgs, setPgs]       = useState<PGEntry[]>(DEFAULT_PGS.map(p => ({ ...p })));
   const [dirty, setDirty]   = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  // TODO: DB API 연동 시 useEffect(() => { fetchPgRates().then(setPgs); }, []); 시행
-  // 현재는 빈 0값 표시 — 역마진 방지 Guardrail 위한 수동 입력만 지원
+  // DB에서 PG 요율 로드
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError('');
+    settingsAPI.getPgRates().then((res) => {
+      if (cancelled) return;
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        // DB 값을 DEFAULT_PGS 기준으로 머지 (신규 PG가 추가된 경우 기본값 유지)
+        const merged = DEFAULT_PGS.map(def => {
+          const found = (res.data as PGEntry[]).find((d: PGEntry) => d.id === def.id);
+          return found ? { ...def, ...found } : def;
+        });
+        setPgs(merged);
+      }
+      // DB에 값이 없으면 DEFAULT_PGS(0값)로 유지 — 가상 데이터 사용 금지
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) {
+        setLoadError('PG 수수료 설정을 불러오는 데 실패했습니다. 페이지를 새로고침해 주세요.');
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const updatePgRate = (id: string, val: string) => {
     const n = parseFloat(val);
@@ -72,29 +107,33 @@ function FeeSettingsTab() {
     setDirty(true);
   };
 
-  const handleSaveAll = () => {
+  const handleSaveAll = async () => {
     setSaving(true);
-    // TODO: DB API 저장으로 대체 필요 (현재 메모리 state만 유지)
-    setTimeout(() => {
-      setDirty(false);
+    try {
+      const res = await settingsAPI.savePgRates(pgs);
+      if (res.success) {
+        setDirty(false);
+        toast.success('PG별 수수료 원가 및 플랫폼 마진율 설정이 저장되었습니다.');
+      } else {
+        toast.error(res.error ?? 'PG 수수료 설정 저장에 실패했습니다.');
+      }
+    } catch {
+      toast.error('PG 수수료 설정 저장 중 오류가 발생했습니다.');
+    } finally {
       setSaving(false);
-      toast.success('PG별 수수료 원가 및 플랫폼 마진율 설정이 저장되었습니다.');
-    }, 400);
+    }
   };
+
+  if (loading) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4">
-      {/* SA-H: DB 미연동 경고 배너 — 현재 저장 버튼은 메모리 state만 변경하며 DB에 저장되지 않습니다 */}
-      <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-[11.5px] text-amber-900">
-        <span className="text-base leading-none mt-0.5">⚠️</span>
-        <div>
-          <strong>DB 미연동 — 현재 저장 기능은 임시 상태입니다.</strong>
-          <div className="mt-0.5 text-amber-700">
-            저장 버튼을 눌러도 실제 데이터베이스에는 반영되지 않으며, 페이지를 새로고침하면 초기값(0)으로 초기화됩니다.
-            정식 운영 전 <code className="bg-amber-100 px-1 rounded">settingsAPI</code> 연동이 필요합니다.
-          </div>
+      {loadError && (
+        <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-red-50 border border-red-300 text-[11.5px] text-red-900">
+          <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-600" />
+          <span>{loadError}</span>
         </div>
-      </div>
+      )}
       <div className={S.card}>
         <div className={S.head}>
           <Building size={13} className="text-[var(--hm-accent)] shrink-0" />
@@ -196,44 +235,79 @@ function AccountSettingsTab() {
   const [account, setAccount] = useState<PlatformAccount>(EMPTY_ACCOUNT);
   const [dirty, setDirty]     = useState(false);
   const [saving, setSaving]   = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  // TODO: DB API 연동 시 useEffect(() => { fetchPlatformAccount().then(setAccount); }, []); 시행
+  // DB에서 플랫폼 계좌 로드
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError('');
+    settingsAPI.getPlatformAccount().then((res) => {
+      if (cancelled) return;
+      if (res.success && res.data && typeof res.data === 'object') {
+        const d = res.data as PlatformAccount;
+        // 필수 필드가 하나라도 있으면 DB 값으로 설정
+        if (d.accountNumber || d.holderName || d.bank) {
+          setAccount({ ...EMPTY_ACCOUNT, ...d });
+        }
+        // 없으면 EMPTY_ACCOUNT 유지 — 0건 상태 정직하게 표출
+      }
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) {
+        setLoadError('계좌 설정을 불러오는 데 실패했습니다. 페이지를 새로고침해 주세요.');
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleChange = (field: keyof PlatformAccount, val: string) => {
     setAccount(prev => ({ ...prev, [field]: val }));
     setDirty(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!account.accountNumber.trim() || !account.holderName.trim()) {
       toast.error('계좌번호와 예금주명을 입력해 주세요');
       return;
     }
 
     setSaving(true);
-    // TODO: DB API 저장으로 대체 필요 (현재 메모리 state만 유지)
-    setTimeout(() => {
-      const saved = { ...account, updatedAt: new Date().toISOString() };
-      setAccount(saved);
-      setDirty(false);
+    try {
+      const payload = {
+        bank: account.bank,
+        accountNumber: account.accountNumber.trim(),
+        holderName: account.holderName.trim(),
+        businessNumber: account.businessNumber.trim(),
+        payoutCycle: account.payoutCycle,
+      };
+      const res = await settingsAPI.savePlatformAccount(payload);
+      if (res.success) {
+        setAccount(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+        setDirty(false);
+        toast.success('토스 수수료 입금 계좌 설정이 성공적으로 저장되었습니다');
+      } else {
+        toast.error(res.error ?? '계좌 설정 저장에 실패했습니다.');
+      }
+    } catch {
+      toast.error('계좌 설정 저장 중 오류가 발생했습니다.');
+    } finally {
       setSaving(false);
-      toast.success('토스 수수료 입금 계좌 설정이 성공적으로 저장되었습니다');
-    }, 400);
+    }
   };
+
+  if (loading) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* SA-H: DB 미연동 경고 배너 — 현재 저장 버튼은 메모리 state만 변경하며 DB에 저장되지 않습니다 */}
-      <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-[11.5px] text-amber-900">
-        <span className="text-base leading-none mt-0.5">⚠️</span>
-        <div>
-          <strong>DB 미연동 — 현재 저장 기능은 임시 상태입니다.</strong>
-          <div className="mt-0.5 text-amber-700">
-            저장 버튼을 눌러도 실제 데이터베이스에는 반영되지 않으며, 페이지를 새로고침하면 초기값으로 초기화됩니다.
-            정식 운영 전 <code className="bg-amber-100 px-1 rounded">settingsAPI</code> 연동이 필요합니다.
-          </div>
+      {loadError && (
+        <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg bg-red-50 border border-red-300 text-[11.5px] text-red-900">
+          <AlertCircle size={14} className="mt-0.5 shrink-0 text-red-600" />
+          <span>{loadError}</span>
         </div>
-      </div>
+      )}
       <div className={S.card}>
         <div className={S.head}>
           <Landmark size={14} className="text-emerald-600 shrink-0" />
@@ -323,8 +397,9 @@ function AccountSettingsTab() {
           </div>
 
           {account.updatedAt && (
-            <div className="text-[11px] text-[var(--hm-ink-3)] pt-1">
-              최종 수정 일시: {new Date(account.updatedAt).toLocaleString('ko-KR')}
+            <div className="text-[11px] text-[var(--hm-ink-3)] pt-1 flex items-center gap-1">
+              <CheckCircle2 size={10} className="text-emerald-500" />
+              최종 저장: {new Date(account.updatedAt).toLocaleString('ko-KR')}
             </div>
           )}
         </div>

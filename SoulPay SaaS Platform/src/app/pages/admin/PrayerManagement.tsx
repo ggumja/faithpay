@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 import { donationAPI } from '../../api/client';
 import { useTenantTerms } from '../../hooks/useTenantTerms';
+import { escapeHtml } from '../../utils/escapeHtml';
+
 
 interface PrayerItem {
   id: string;
@@ -379,11 +381,11 @@ export default function PrayerManagement() {
                   (item) => `
                 <div class="card">
                   <div class="card-header">
-                    <span class="card-title">신청자: ${item.name}</span>
-                    <span class="card-item">[${item.item}]</span>
+                    <span class="card-title">신청자: ${escapeHtml(item.name)}</span>
+                    <span class="card-item">[${escapeHtml(item.item)}]</span>
                   </div>
-                  <div class="card-body">${item.prayer}</div>
-                  <div class="card-footer">접수일자: ${item.date} | SoulPay 정품 발급</div>
+                  <div class="card-body">${escapeHtml(item.prayer)}</div>
+                  <div class="card-footer">접수일자: ${escapeHtml(item.date)} | SoulPay 정품 발급</div>
                 </div>
               `
                 )

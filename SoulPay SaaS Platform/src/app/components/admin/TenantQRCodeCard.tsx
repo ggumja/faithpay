@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { Tenant, DonationItem } from '../../context/AppContext';
 import { getPayPortalUrl } from '../../utils/domainUtils';
 import { donationItemsAPI } from '../../api/client';
+import { escapeHtml } from '../../utils/escapeHtml';
 
 interface TenantQRCodeCardProps {
   tenant: Tenant;
@@ -249,7 +250,7 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
       <html lang="ko">
       <head>
         <meta charset="UTF-8" />
-        <title>${tenant.name} - ${termLabel} 현장 안내</title>
+        <title>${escapeHtml(tenant.name)} - ${escapeHtml(termLabel)} 현장 안내</title>
         <style>
           @page {
             size: A4 portrait;
@@ -401,11 +402,11 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
       <body>
         <div class="header">
           <div class="badge">ONLINE DONATION QR CODE</div>
-          <h1 class="title">${tenant.name}</h1>
-          <p class="subtitle">${termLabel}</p>
+          <h1 class="title">${escapeHtml(tenant.name)}</h1>
+          <p class="subtitle">${escapeHtml(termLabel)}</p>
           ${
             selectedTarget !== 'main'
-              ? `<div class="target-pill">지정 항목: ${selectedItemName}</div>`
+              ? `<div class="target-pill">지정 항목: ${escapeHtml(selectedItemName)}</div>`
               : ''
           }
         </div>
@@ -436,10 +437,10 @@ export function TenantQRCodeCard({ tenant, donationItems = [] }: TenantQRCodeCar
         </div>
 
         <div class="footer">
-          <div class="footer-name">${tenant.name}</div>
+          <div class="footer-name">${escapeHtml(tenant.name)}</div>
           <div class="footer-info">
-            ${tenant.address ? `주소: ${tenant.address}` : ''} 
-            ${tenant.contact?.phone ? `· 문의전화: ${tenant.contact.phone}` : ''}
+            ${tenant.address ? `주소: ${escapeHtml(tenant.address)}` : ''} 
+            ${tenant.contact?.phone ? `· 문의전화: ${escapeHtml(tenant.contact.phone)}` : ''}
           </div>
           <div class="footer-brand">Powered by SoulPay Fintech SaaS · 금융보안원 보안 규격 준수</div>
         </div>

@@ -1963,7 +1963,8 @@ export async function getCommissionsByPartner(partnerId: string): Promise<Partne
 
   for (const t of targetTenants) {
     const donations = await getDonationsByTenant(t.id);
-    const activeDonations = donations.filter(d => d.paymentStatus === 'completed' || d.paymentStatus === 'pending');
+    // 커미션 집계: 실제 결제 완료(completed) 건만 대상 — pending/failed 건 제외
+    const activeDonations = donations.filter(d => d.paymentStatus === 'completed');
     // 실제 거래가 없으면 해당 단체 건너뜀 (가짜 데이터 생성 금지)
     if (activeDonations.length === 0) continue;
 
@@ -2911,7 +2912,8 @@ export async function getHybridMonthlyStats(tenantId: string, year: number, mont
 
   for (const d of monthDonations) {
     const amt = Number(d.amount) || 0;
-    const status = d.paymentStatus || 'completed';
+    // GBL-FIX: paymentStatus가 없거나 unknown인 건은 집계에서 제외 — 'completed'로 위장하지 않음
+    const status = d.paymentStatus && d.paymentStatus.trim().length > 0 ? d.paymentStatus : 'unknown';
 
     if (status === 'completed') {
       totalAmount += amt;
@@ -3420,7 +3422,8 @@ export async function generateAndSaveDailyClosingSnapshot(
   };
 
   for (const d of donations) {
-    const rawStatus = String(d.payment_status || d.status || 'completed').toLowerCase();
+    // GBL-FIX: payment_status 없는 건은 'unknown'으로 처리 → isSuccess 조건 불충족 → 집계 제외
+    const rawStatus = String(d.payment_status || d.status || '').toLowerCase();
     const isSuccess =
       rawStatus === 'completed' ||
       rawStatus === 'success' ||

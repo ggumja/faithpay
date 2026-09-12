@@ -947,6 +947,19 @@ export const adminAPI = {
       silentFail: true,
     } as any);
   },
+
+  /** adminAPI.resetTenantAdminPassword: 시스템 관리자가 테넌트 관리자 계정 비밀번호를 임시 비밀번호로 초기화 */
+  async resetTenantAdminPassword(tenantId: string, adminEmail: string): Promise<APIResponse<{
+    adminName: string;
+    adminEmail: string;
+    tempPassword: string;
+    message: string;
+  }>> {
+    return fetchAPI(`/tenant-staff/${tenantId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ email: adminEmail }),
+    });
+  },
 };
 
 // ==================== PARTNER API ====================
@@ -1180,10 +1193,82 @@ export const partnerAPI = {
       method: 'DELETE',
     });
   },
+
+  /** partnerAPI.resetPassword: email + phone 본인 인증 후 임시 비밀번호 발급 */
+  async resetPassword(email: string, phone: string): Promise<APIResponse<{
+    message: string;
+    partnerName: string;
+    tempPassword: string;
+  }>> {
+    return fetchAPI('/partners/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), phone }),
+    });
+  },
 };
 
 
 
+// ==================== SETTINGS API ====================
+
+export const settingsAPI = {
+  /** 시스템 전체 설정 조회 — { pg_rates: [...], platform_account: {...}, ... } */
+  async getAll(): Promise<APIResponse<Record<string, any>>> {
+    return fetchAPI<Record<string, any>>('/settings');
+  },
+
+  /** 개별 키 조회 */
+  async get(key: string): Promise<APIResponse<any>> {
+    return fetchAPI<any>(`/settings/${key}`);
+  },
+
+  /** 개별 키 저장 (upsert) */
+  async set(key: string, value: any): Promise<APIResponse<any>> {
+    return fetchAPI<any>(`/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    });
+  },
+
+  /** PG 수수료 요율 저장 */
+  async savePgRates(pgRates: Array<{ id: string; name: string; rate: number; margin: number }>): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/settings/pg_rates', {
+      method: 'PUT',
+      body: JSON.stringify({ value: pgRates }),
+    });
+  },
+
+  /** PG 수수료 요율 조회 */
+  async getPgRates(): Promise<APIResponse<Array<{ id: string; name: string; rate: number; margin: number }>>> {
+    return fetchAPI('/settings/pg_rates');
+  },
+
+  /** 플랫폼 계좌 저장 */
+  async savePlatformAccount(account: {
+    bank: string;
+    accountNumber: string;
+    holderName: string;
+    businessNumber: string;
+    payoutCycle: string;
+  }): Promise<APIResponse<any>> {
+    return fetchAPI<any>('/settings/platform_account', {
+      method: 'PUT',
+      body: JSON.stringify({ value: account }),
+    });
+  },
+
+  /** 플랫폼 계좌 조회 */
+  async getPlatformAccount(): Promise<APIResponse<{
+    bank: string;
+    accountNumber: string;
+    holderName: string;
+    businessNumber: string;
+    payoutCycle: string;
+    updatedAt?: string;
+  }>> {
+    return fetchAPI('/settings/platform_account');
+  },
+};
 
 // ==================== STATISTICS API ====================
 
@@ -1270,27 +1355,6 @@ export const systemAdminAPI = {
 
 // Export all
 export type { Donation, PaymentConfig, MonthlyStats };
-
-// ==================== SETTINGS API ====================
-export const settingsAPI = {
-  /** 전체 시스템 설정 조회 { pg_rates, platform_margin, ... } */
-  async getAll(): Promise<APIResponse<Record<string, any>>> {
-    return fetchAPI<Record<string, any>>('/settings');
-  },
-
-  /** 개별 설정 값 조회 (미설정 시 404를 정상적인 empty 상태로 취급) */
-  async get(key: string): Promise<APIResponse<any>> {
-    return fetchAPI<any>(`/settings/${key}`, { silentFail: true } as any);
-  },
-
-  /** 설정 값 저장 (시스템 관리자 전용) */
-  async set(key: string, value: any): Promise<APIResponse<any>> {
-    return fetchAPI<any>(`/settings/${key}`, {
-      method: 'PUT',
-      body: JSON.stringify({ value }),
-    });
-  },
-};
 
 // ==================== TENANT ADMIN AUTH API ====================
 export const tenantAdminAPI = {
