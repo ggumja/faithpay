@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp, Tenant, getTenantPkCode } from '../../context/AppContext';
-import { tenantAPI, paymentAPI, adminAPI } from '../../api/client';
+import { tenantAPI, paymentAPI, adminAPI, partnerAPI } from '../../api/client';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../../components/PayBrandLogos';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -83,6 +83,10 @@ export default function TenantDetailPage() {
     isAvailable: false,
     message: '',
   });
+
+  // 영업 파트너 (대리점 / 영업자) 배정 상태
+  const [partners, setPartners] = useState<any[]>([]);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('SYSTEM');
 
   // Main Page Tab State ('basic' | 'payment' | 'easypay')
   const [activeTab, setActiveTab] = useState<'basic' | 'payment' | 'easypay'>('basic');
@@ -169,6 +173,18 @@ export default function TenantDetailPage() {
         setName(foundTenant.name);
         setReligionType(foundTenant.religionType);
         setSlug(foundTenant.slug);
+
+        // 파트너 목록 로드 및 현재 단체의 배정 파트너 설정
+        try {
+          const pRes = await partnerAPI.getAll();
+          if (pRes.success && Array.isArray(pRes.data)) {
+            setPartners(pRes.data);
+          }
+        } catch (e) {
+          console.warn('Failed to load partners:', e);
+        }
+
+        setSelectedPartnerId((foundTenant as any).registeredByPartnerId || 'SYSTEM');
 
         // DB payment_configs 테이블에서 최신 결제 설정 직접 조회
         let cfg = foundTenant.paymentConfig;
@@ -270,14 +286,23 @@ export default function TenantDetailPage() {
       const targetTenant = tenant || tenants.find(t => t.id === id || t.slug === id);
       const targetId = targetTenant?.id || id;
 
+      const assignedPartner = selectedPartnerId !== 'SYSTEM'
+        ? partners.find(p => p.id === selectedPartnerId)
+        : null;
+
       const result = await tenantAPI.update(targetId, {
         name,
         religionType,
         slug,
+        registeredByPartnerId: assignedPartner ? assignedPartner.id : '',
+        registeredByReferralCode: assignedPartner?.referralCode || (selectedPartnerId === 'SYSTEM' ? 'SYSTEM' : ''),
+        referralCode: assignedPartner?.referralCode || (selectedPartnerId === 'SYSTEM' ? 'SYSTEM' : ''),
+        registeredByPartnerName: assignedPartner?.name || (selectedPartnerId === 'SYSTEM' ? '플랫폼 본사' : ''),
+        registrationSource: assignedPartner ? (assignedPartner.role === 'master_agency' ? 'agency' : 'agent') : 'self',
       });
 
       if (result.success || result.data) {
-        toast.success('단체 정보가 수정되었습니다');
+        toast.success('단체 정보 및 파트너 배정이 수정되었습니다');
         await fetchTenants();
       } else {
         toast.error(result.error || '단체 정보 수정에 실패했습니다');
@@ -792,6 +817,103 @@ export default function TenantDetailPage() {
                 <p className="text-xs text-muted-foreground font-mono">
                   신도/기부자용 접속 URL: soulpay.kr/{slug}
                 </p>
+              </div>
+
+              {/* ── 영업 귀속 및 파트너 배정 (영업대리점 / 영업자) ── */}
+              <div className="md:col-span-2 border-t pt-4 mt-2 space-y-3 bg-blue-50/50 dark:bg-blue-950/20 p-4.5 rounded-xl border border-blue-100 dark:border-blue-900/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-blue-100 dark:border-blue-900/30 pb-2.5">
+                  <div>
+                    <Label className="text-sm font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-1.5">
+                      <Building2 className="h-4 w-4 text-blue-600" />
+                      영업 귀속 및 담당 파트너 배정
+                    </Label>
+                    <p className="text-[11.5px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      단체의 온라인 헌금/결제 발생 시, 지정된 영업대리점 및 영업자에게 금융망 자동 스플릿 수수료가 귀속 정산됩니다.
+                    </p>
+                  </div>
+                  {/* 현재 배정 상태 뱃지 */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-500 font-semibold">현재 귀속:</span>
+                    {(() => {
+                      const curPartner = partners.find(p => p.id === (tenant as any)?.registeredByPartnerId);
+                      if (!curPartner) {
+                        return (
+                          <Badge variant="outline" className="text-xs bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">
+                            미배정 (본사 직속)
+                          </Badge>
+                        );
+                      }
+                      const parentAgency = curPartner.role === 'sales_agent' && curPartner.parentId
+                        ? partners.find(p => p.id === curPartner.parentId)
+                        : null;
+                      return (
+                        <div className="flex items-center gap-1">
+                          <Badge className="text-xs bg-blue-600 text-white">
+                            {parentAgency ? `${parentAgency.name} ➔ ` : ''}{curPartner.name}
+                          </Badge>
+                          <span className="text-[11px] text-slate-500 font-mono">({curPartner.role === 'master_agency' ? '영업대리점' : '영업자'})</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                      담당 영업 파트너 변경 / 지정
+                    </Label>
+                    <select
+                      value={selectedPartnerId}
+                      onChange={e => setSelectedPartnerId(e.target.value)}
+                      className="w-full h-10 px-3 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold text-slate-900 dark:text-zinc-100 focus:outline-none focus:border-blue-500 shadow-2xs"
+                    >
+                      <option value="SYSTEM">🏢 플랫폼 본사 직접 관리 (미배정 / SYSTEM)</option>
+                      <optgroup label="🏛️ 영업대리점 (Tier-1)">
+                        {partners.filter(p => p.role === 'master_agency').map(p => (
+                          <option key={p.id} value={p.id}>
+                            대리점: {p.name} ({p.referralCode})
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="👤 영업자 (Tier-2)">
+                        {partners.filter(p => p.role === 'sales_agent').map(p => {
+                          const agency = partners.find(a => a.id === p.parentId);
+                          return (
+                            <option key={p.id} value={p.id}>
+                              영업자: {p.name} ({p.referralCode}){agency ? ` [소속: ${agency.name}]` : ''}
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  {/* 배정 시 예상 수수료 분구 경로 안내 */}
+                  <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 text-xs flex flex-col justify-center space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 block">선택된 파트너 분구 경로:</span>
+                    {(() => {
+                      if (selectedPartnerId === 'SYSTEM') {
+                        return <span className="text-xs text-slate-600 font-semibold">플랫폼 본사 (파트너 분구 없음)</span>;
+                      }
+                      const p = partners.find(item => item.id === selectedPartnerId);
+                      if (!p) return <span className="text-xs text-slate-400">선택된 정보 없음</span>;
+                      if (p.role === 'master_agency') {
+                        return (
+                          <span className="text-xs text-blue-700 dark:text-blue-400 font-bold">
+                            🏛️ 대리점: {p.name} (대리점 직속 관리, 요율: {p.agencyRate ?? p.commissionRate}%)
+                          </span>
+                        );
+                      }
+                      const agency = partners.find(a => a.id === p.parentId);
+                      return (
+                        <span className="text-xs text-purple-700 dark:text-purple-400 font-bold">
+                          🏛️ 대리점: {agency?.name || 'SoulPay 본사'} ➔ 👤 영업자: {p.name} (요율: {p.commissionRate}%)
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
 
               {/* 담당자 및 계정/사업자 정보 카드 섹션 */}

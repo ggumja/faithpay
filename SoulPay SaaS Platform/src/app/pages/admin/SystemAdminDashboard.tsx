@@ -14,7 +14,7 @@ import TenantStatsPage from './TenantStatsPage';
 import PartnerManagement from './PartnerManagement';
 import CommissionStatsPage from './CommissionStatsPage';
 import TransactionLedgerPage from './TransactionLedgerPage';
-import { tenantAPI } from '../../api/client';
+import { tenantAPI, partnerAPI } from '../../api/client';
 
 
 /* ─── active key ─────────────────── */
@@ -98,8 +98,49 @@ export default function SystemAdminDashboard() {
   }, [active]);
 
   const tenants = dbTenants;
+  const [partners, setPartners] = useState<any[]>([]);
 
+  useEffect(() => {
+    partnerAPI.getAll()
+      .then(res => {
+        if (res.success && Array.isArray(res.data)) {
+          setPartners(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
+  const getPartnerInfo = (t: any) => {
+    const partnerId = t.registeredByPartnerId;
+    if (!partnerId) {
+      return {
+        agency: '플랫폼 본사 직속',
+        agent: '-',
+        isDirect: true,
+      };
+    }
+    const partner = partners.find(p => p.id === partnerId);
+    if (!partner) {
+      return {
+        agency: t.registeredByPartnerName || '본사 직속',
+        agent: '-',
+        isDirect: true,
+      };
+    }
+    if (partner.role === 'master_agency') {
+      return {
+        agency: partner.name,
+        agent: '대리점 직속 관리',
+        isDirect: false,
+      };
+    }
+    const parentAgency = partners.find(p => p.id === partner.parentId);
+    return {
+      agency: parentAgency ? parentAgency.name : 'SoulPay 본사',
+      agent: partner.name,
+      isDirect: false,
+    };
+  };
 
   const religion = (t: string) =>
     ({ protestant: '기독교', catholic: '천주교', buddhist: '불교', charity: '구호/기부재단', general: '비영리/사회공헌' }[t] ?? t);
@@ -119,9 +160,7 @@ export default function SystemAdminDashboard() {
 
   const liveCnt = tList.filter(t => t.live).length;
 
-  // ── 대리점별 단체 묶음 그룹 생성 (DB 파트너 정보 기반, 하드코딩 완전 배제) ──
-  // 각 단체의 registeredByReferralCode / registeredByPartnerName 필드를 기반으로
-  // DB 파트너 목록과 교차 매칭하여 동적으로 그룹을 생성합니다.
+  // ── 대리점별 단체 묶음 그룹 생성 (DB 파트너 정보 기반) ──
   const agencyGroups: {
     id: string;
     name: string;
@@ -131,55 +170,49 @@ export default function SystemAdminDashboard() {
     items: (typeof tList[number] & { agentName: string; contractRate: number })[];
   }[] = [];
 
-  // DB 파트너 목록 기준 그룹 구성 (dbPartners 가 있을 경우)
-  // 현재 파트너 데이터는 PartnerManagement/CommissionStatsPage 에서 별도 로드하므로
-  // 여기서는 단체가 가진 referralCode 속성으로 그룹핑합니다.
-  const partnerCodeMap = new Map<string, { name: string; code: string; agents: string[] }>();
-  tList.forEach(t => {
-    const code = (t as any).registeredByReferralCode || (t as any).referralCode || '';
-    const partnerName = (t as any).registeredByPartnerName || '';
-    if (code && code !== 'SYSTEM' && partnerName) {
-      if (!partnerCodeMap.has(code)) {
-        partnerCodeMap.set(code, { name: partnerName, code, agents: [] });
-      }
-    }
-  });
+  const masterAgencies = partners.filter(p => p.role === 'master_agency');
+  const agencyAssignedSlugs = new Set<string>();
 
-  partnerCodeMap.forEach((partner, code) => {
-    const items = tList
-      .filter(t => {
-        const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
-        return ref === code;
-      })
-      .map(t => ({
+  masterAgencies.forEach(agency => {
+    const agentIds = partners.filter(p => p.parentId === agency.id).map(p => p.id);
+    const validPartnerIds = new Set([agency.id, ...agentIds]);
+
+    const items = tList.filter(t => {
+      const pid = (t as any).registeredByPartnerId;
+      const ref = (t as any).registeredByReferralCode || (t as any).referralCode;
+      return (pid && validPartnerIds.has(pid)) || (ref && (ref === agency.referralCode || partners.some(p => validPartnerIds.has(p.id) && p.referralCode === ref)));
+    }).map(t => {
+      agencyAssignedSlugs.add(t.slug);
+      const pid = (t as any).registeredByPartnerId;
+      const assigned = partners.find(p => p.id === pid);
+      return {
         ...t,
-        agentName: (t as any).registrationSource === 'agent'
-          ? `${(t as any).registeredByPartnerName || '영업자'} (영업자)`
-          : '대리점 본사 직접',
+        agentName: assigned && assigned.role === 'sales_agent' ? `${assigned.name} (영업자)` : '대리점 직속 관리',
         contractRate: (t as any).contractRate ?? 3.0,
-      }));
+      };
+    });
+
     agencyGroups.push({
-      id: `agency-${code.toLowerCase()}`,
-      name: partner.name,
-      code: partner.code,
-      rate: (tList.find(t => ((t as any).registeredByReferralCode || (t as any).referralCode) === code) as any)?.agencyRate ?? 0.5,
-      agentNames: partner.agents.length > 0 ? partner.agents : [partner.name],
+      id: `agency-${agency.id}`,
+      name: agency.name,
+      code: agency.referralCode || agency.name,
+      rate: agency.agencyRate ?? agency.commissionRate ?? 0.5,
+      agentNames: partners.filter(p => p.parentId === agency.id).map(p => p.name),
       items,
     });
   });
 
-  // 기타 대리점 미지정 단체 (referralCode 없는 단체)
-  const agencyAssignedSlugs = new Set(agencyGroups.flatMap(g => g.items.map(i => i.slug)));
+  // 기타 대리점 미지정 단체 (각원사 등 본사 직속)
   const directItems = tList.filter(t => !agencyAssignedSlugs.has(t.slug)).map(t => ({
     ...t,
-    agentName: '플랫폼 본사 직접',
+    agentName: '플랫폼 본사 직접 유치',
     contractRate: (t as any).contractRate ?? 3.0,
   }));
 
   if (directItems.length > 0) {
     agencyGroups.push({
       id: 'agency-direct',
-      name: '플랫폼 본사 직접 유치 관리',
+      name: '플랫폼 본사 직접 유치 관리 (미배정)',
       code: 'SYSTEM',
       rate: 0.0,
       agentNames: [],
@@ -268,8 +301,8 @@ export default function SystemAdminDashboard() {
               <Table>
                 <TableHeader className={S.thead}>
                   <TableRow>
-                    {['NO.','시스템 PK','단체명','접속 Slug (아이디)','단체 유형','연락처','PG사','MID','상태','작업'].map((h,i) => (
-                      <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===9?'text-center':''}`}>{h}</TableHead>
+                    {['NO.','시스템 PK','단체명','접속 Slug (아이디)','단체 유형','소속 대리점 / 영업자','연락처','PG사','MID','상태','작업'].map((h,i) => (
+                      <TableHead key={h} className={`${S.th} ${i===0?'text-center w-12':''} ${i===10?'text-center':''}`}>{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -300,6 +333,30 @@ export default function SystemAdminDashboard() {
                       </TableCell>
                       <TableCell className={S.td}>
                         <span className={S.chip('bg-transparent','text-[var(--hm-ink-2)]','border-[var(--hm-border)]')}>{religion(t.religionType)}</span>
+                      </TableCell>
+                      <TableCell className={`${S.td} text-[11.5px]`}>
+                        {(() => {
+                          const info = getPartnerInfo(t);
+                          if (info.isDirect) {
+                            return (
+                              <span className="text-slate-400 dark:text-zinc-500 font-medium text-[11px]">
+                                미배정 (본사 직속)
+                              </span>
+                            );
+                          }
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-bold text-blue-700 dark:text-blue-400 text-xs flex items-center gap-1">
+                                🏛️ {info.agency}
+                              </span>
+                              {info.agent && info.agent !== '-' && info.agent !== '대리점 직속 관리' && (
+                                <span className="text-[10.5px] text-slate-500 dark:text-zinc-400">
+                                  └ 👤 {info.agent}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className={`${S.td} text-[var(--hm-ink-2)] text-[12px]`}>{t.contact.phone}</TableCell>
                       <TableCell className={S.td}>
