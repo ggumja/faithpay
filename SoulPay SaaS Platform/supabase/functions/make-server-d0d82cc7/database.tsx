@@ -1074,10 +1074,174 @@ export async function getDonationsByTenant(tenantId: string): Promise<Donation[]
   return (data ?? []).map(rowToDonation);
 }
 
-export async function getAllDonations(): Promise<any[]> {
+export interface DonationsPagedOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  paymentType?: string;
+  tenantId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export async function getDonationsPaged(opts?: DonationsPagedOptions): Promise<{
+  items: any[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  summary: {
+    todayAmount: number;
+    todayCount: number;
+    monthAmount: number;
+    monthCount: number;
+    cancelAmount: number;
+    cancelCount: number;
+    recurringCount: number;
+    recurringRate: number;
+  };
+}> {
+  const sb = pgClient();
+  const page = Math.max(1, Number(opts?.page || 1));
+  const limit = Math.min(100, Math.max(1, Number(opts?.limit || 20)));
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  // 1. 페이징 쿼리 빌더
+  let query = sb.from('donations').select('*', { count: 'exact' });
+
+  // 상태 필터
+  if (opts?.status && opts.status !== 'ALL') {
+    query = query.eq('payment_status', opts.status.toLowerCase());
+  }
+
+  // 가맹단체 필터
+  if (opts?.tenantId && opts.tenantId !== 'ALL') {
+    query = query.eq('tenant_id', opts.tenantId);
+  }
+
+  // 결제 유형 필터
+  if (opts?.paymentType === 'RECURRING') {
+    query = query.eq('is_recurring', true);
+  } else if (opts?.paymentType === 'AUTH') {
+    query = query.eq('is_recurring', false);
+  } else if (opts?.paymentType === 'KIOSK') {
+    query = query.eq('device_type', 'KIOSK');
+  }
+
+  // 날짜 범위 필터
+  if (opts?.startDate) {
+    query = query.gte('created_at', `${opts.startDate}T00:00:00.000Z`);
+  }
+  if (opts?.endDate) {
+    query = query.lte('created_at', `${opts.endDate}T23:59:59.999Z`);
+  }
+
+  // 검색어 필터 (거래번호, TID, 기부자명, 연락처, 항목명)
+  if (opts?.search && opts.search.trim()) {
+    const q = opts.search.trim();
+    query = query.or(`id.ilike.%${q}%,transaction_id.ilike.%${q}%,donor_name.ilike.%${q}%,donor_phone.ilike.%${q}%,item_name.ilike.%${q}%,approve_no.ilike.%${q}%`);
+  }
+
+  // 2. 페이징 데이터 및 전체 KPI Summary 병렬 조회
+  const [pagedRes, summaryRes, tenantsRes] = await Promise.all([
+    query.order('created_at', { ascending: false }).range(from, to),
+    sb.from('donations').select('amount, payment_status, is_recurring, created_at'),
+    sb.from('tenants').select('id, slug, name, religion_type'),
+  ]);
+
+  const total = pagedRes.count ?? (pagedRes.data?.length ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  // 3. 테넌트 메타데이터 매핑
+  const tenantMap = new Map<string, any>();
+  for (const t of tenantsRes.data ?? []) {
+    tenantMap.set(String(t.id), t);
+    if (t.slug) tenantMap.set(t.slug, t);
+  }
+
+  const items = (pagedRes.data ?? []).map((d: any) => {
+    const base = rowToDonation(d);
+    const tenant = tenantMap.get(String(d.tenant_id));
+    return {
+      ...base,
+      deviceType: d.device_type || ((d.payment_method || '').includes('OffPG') || (d.payment_method || '').includes('키오스크') ? 'KIOSK' : 'WEB_MOBILE'),
+      pgProvider: d.pg_provider || (d.transaction_id && (d.transaction_id.startsWith('2609') || d.transaction_id.startsWith('NANO')) ? 'nanopay' : 'toss'),
+      tenantName: tenant?.name || d.tenant_name || '가맹 단체',
+      tenantSlug: tenant?.slug || '',
+      religionType: tenant?.religion_type || '',
+    };
+  });
+
+  // 4. 전체 실측 KPI 집계
+  const todayStr = new Date().toISOString().split('T')[0];
+  const currentMonthStr = todayStr.slice(0, 7);
+
+  let todayAmount = 0;
+  let todayCount = 0;
+  let monthAmount = 0;
+  let monthCount = 0;
+  let cancelAmount = 0;
+  let cancelCount = 0;
+  let recurringCount = 0;
+  let completedCount = 0;
+
+  for (const d of summaryRes.data ?? []) {
+    const isCompleted = d.payment_status === 'completed';
+    const isCancelled = d.payment_status === 'cancelled';
+    const amt = Number(d.amount || 0);
+    const dDateStr = d.created_at ? d.created_at.slice(0, 10) : '';
+    const dMonthStr = d.created_at ? d.created_at.slice(0, 7) : '';
+
+    if (isCompleted) {
+      completedCount += 1;
+      if (dDateStr === todayStr) {
+        todayAmount += amt;
+        todayCount += 1;
+      }
+      if (dMonthStr === currentMonthStr) {
+        monthAmount += amt;
+        monthCount += 1;
+      }
+      if (d.is_recurring) {
+        recurringCount += 1;
+      }
+    } else if (isCancelled) {
+      cancelAmount += amt;
+      cancelCount += 1;
+    }
+  }
+
+  const recurringRate = completedCount > 0 ? Math.round((recurringCount / completedCount) * 100) : 0;
+
+  return {
+    items,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages,
+    },
+    summary: {
+      todayAmount,
+      todayCount,
+      monthAmount,
+      monthCount,
+      cancelAmount,
+      cancelCount,
+      recurringCount,
+      recurringRate,
+    },
+  };
+}
+
+export async function getAllDonations(limit: number = 500): Promise<any[]> {
   const sb = pgClient();
   const [donationsRes, tenantsRes] = await Promise.all([
-    sb.from('donations').select('*').order('created_at', { ascending: false }),
+    sb.from('donations').select('*').order('created_at', { ascending: false }).limit(limit),
     sb.from('tenants').select('id, slug, name, religion_type'),
   ]);
 

@@ -608,6 +608,83 @@ export function normalizePaymentMethod(rawMethod?: string, isRecurring?: boolean
 }
 
 export const donationAPI = {
+  async getPaged(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    paymentType?: string;
+    tenantId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<APIResponse<{
+    items: Donation[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+    summary: {
+      todayAmount: number;
+      todayCount: number;
+      monthAmount: number;
+      monthCount: number;
+      cancelAmount: number;
+      cancelCount: number;
+      recurringCount: number;
+      recurringRate: number;
+    };
+  }>> {
+    const query = new URLSearchParams();
+    if (params?.page !== undefined) query.set('page', String(params.page));
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.search) query.set('search', params.search);
+    if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+    if (params?.paymentType && params.paymentType !== 'ALL') query.set('paymentType', params.paymentType);
+    if (params?.tenantId && params.tenantId !== 'ALL') query.set('tenantId', params.tenantId);
+    if (params?.startDate) query.set('startDate', params.startDate);
+    if (params?.endDate) query.set('endDate', params.endDate);
+
+    const qs = query.toString();
+    const endpoint = `/donations${qs ? `?${qs}` : '?page=1&limit=20'}`;
+    const res = await fetchAPI<any>(endpoint);
+    if (res.success && res.data) {
+      const items = Array.isArray(res.data) ? res.data : (res.data.items || []);
+      items.forEach((d: any) => {
+        if (d.paymentMethod) {
+          d.paymentMethod = normalizePaymentMethod(d.paymentMethod, d.isRecurring);
+        }
+      });
+      return {
+        success: true,
+        data: {
+          items,
+          pagination: res.pagination || {
+            total: items.length,
+            page: params?.page || 1,
+            limit: params?.limit || 20,
+            totalPages: Math.max(1, Math.ceil(items.length / (params?.limit || 20))),
+          },
+          summary: res.summary || {
+            todayAmount: 0,
+            todayCount: 0,
+            monthAmount: 0,
+            monthCount: 0,
+            cancelAmount: 0,
+            cancelCount: 0,
+            recurringCount: 0,
+            recurringRate: 0,
+          },
+        },
+      };
+    }
+    return {
+      success: false,
+      error: res.error || 'Failed to fetch paged donations',
+    };
+  },
+
   async getAll(): Promise<APIResponse<Donation[]>> {
     const res = await fetchAPI<Donation[]>('/donations');
     if (res.success && Array.isArray(res.data)) {

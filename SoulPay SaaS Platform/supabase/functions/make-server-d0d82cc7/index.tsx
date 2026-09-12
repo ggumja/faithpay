@@ -3895,9 +3895,37 @@ app.post("/make-server-d0d82cc7/donation-items/:tenantId", async (c) => {
 
 // ==================== DONATION ROUTES ====================
 
-// 모든 봉헌 내역 조회 (시스템 관리자용)
+// 모든 봉헌 내역 조회 (시스템 관리자용 - 페이징 및 실측 통계 지원)
 app.get("/make-server-d0d82cc7/donations", async (c) => {
   try {
+    const page = c.req.query('page');
+    const limit = c.req.query('limit');
+    const search = c.req.query('search');
+    const status = c.req.query('status');
+    const paymentType = c.req.query('paymentType');
+    const tenantId = c.req.query('tenantId');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+
+    if (page !== undefined || limit !== undefined) {
+      const result = await db.getDonationsPaged({
+        page: page ? parseInt(page, 10) : 1,
+        limit: limit ? parseInt(limit, 10) : 20,
+        search,
+        status,
+        paymentType,
+        tenantId,
+        startDate,
+        endDate,
+      });
+      return c.json({
+        success: true,
+        data: result.items,
+        pagination: result.pagination,
+        summary: result.summary,
+      });
+    }
+
     const donations = await db.getAllDonations();
     return c.json({ success: true, data: donations });
   } catch (error) {

@@ -69,7 +69,18 @@ export default function MultiPartySettlementLedger() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // 검색 및 다차원 필터 상태
+  // ── 서버 사이드 페이징 상태 ──
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(20);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+  });
+
+  // ── 검색 및 다차원 필터 상태 ──
+  const [searchQueryInput, setSearchQueryInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [paymentTypeFilter, setPaymentTypeFilter] = useState<string>('ALL');
@@ -77,26 +88,65 @@ export default function MultiPartySettlementLedger() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
+  // ── 전체 실측 KPI 집계 상태 (서버 제공) ──
+  const [stats, setStats] = useState({
+    todayAmount: 0,
+    todayCount: 0,
+    monthAmount: 0,
+    monthCount: 0,
+    cancelAmount: 0,
+    cancelCount: 0,
+    recurringCount: 0,
+    recurringRate: 0,
+  });
+
   // 거래 상세 보기 모달
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
 
-  // 실측 DB 데이터 로딩
+  // 검색어 입력 시 350ms 디바운스 적용
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchQueryInput);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQueryInput]);
+
+  // 실측 DB 페이징 데이터 로딩
   const fetchData = useCallback(async () => {
     setLoading(true);
     setApiError(null);
     try {
       const [donationRes, tenantRes] = await Promise.all([
-        donationAPI.getAll(),
-        tenantAPI.getAll().catch(() => ({ success: true, data: [] }))
+        donationAPI.getPaged({
+          page,
+          limit,
+          search: searchQuery,
+          status: statusFilter,
+          paymentType: paymentTypeFilter,
+          tenantId: tenantFilter,
+          startDate,
+          endDate,
+        }),
+        tenants.length === 0 ? tenantAPI.getAll().catch(() => ({ success: true, data: [] })) : Promise.resolve(null),
       ]);
 
-      if (donationRes.success && Array.isArray(donationRes.data)) {
-        setDonations(donationRes.data);
+      if (donationRes.success && donationRes.data) {
+        setDonations(donationRes.data.items || []);
+        setPagination(donationRes.data.pagination || {
+          total: donationRes.data.items?.length || 0,
+          page,
+          limit,
+          totalPages: 1,
+        });
+        if (donationRes.data.summary) {
+          setStats(donationRes.data.summary);
+        }
       } else {
         setApiError(donationRes.error || '거래 데이터를 불러오지 못했습니다.');
       }
 
-      if (tenantRes.success && Array.isArray(tenantRes.data)) {
+      if (tenantRes && tenantRes.success && Array.isArray(tenantRes.data)) {
         setTenants(tenantRes.data);
       }
     } catch (err: any) {
@@ -104,7 +154,7 @@ export default function MultiPartySettlementLedger() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit, searchQuery, statusFilter, paymentTypeFilter, tenantFilter, startDate, endDate, tenants.length]);
 
   useEffect(() => {
     fetchData();
@@ -115,6 +165,7 @@ export default function MultiPartySettlementLedger() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
+    setPage(1);
     if (preset === 'all') {
       setStartDate('');
       setEndDate('');
@@ -134,116 +185,12 @@ export default function MultiPartySettlementLedger() {
     }
   };
 
-  // 필터링된 거래 목록 계산
-  const filteredList = useMemo(() => {
-    return donations.filter((tx) => {
-      // 1. 검색어 필터
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matches =
-          (tx.id && tx.id.toLowerCase().includes(q)) ||
-          (tx.transactionId && tx.transactionId.toLowerCase().includes(q)) ||
-          (tx.approveNo && tx.approveNo.toLowerCase().includes(q)) ||
-          (tx.donorName && tx.donorName.toLowerCase().includes(q)) ||
-          (tx.donorPhone && tx.donorPhone.replace(/[^0-9]/g, '').includes(q.replace(/[^0-9]/g, ''))) ||
-          (tx.itemName && tx.itemName.toLowerCase().includes(q)) ||
-          (tx.tenantName && tx.tenantName.toLowerCase().includes(q)) ||
-          (tx.baptismName && tx.baptismName.toLowerCase().includes(q));
+  // 테이블 표출용 리스트 (서버 페이징 결과)
+  const displayList = donations;
 
-        if (!matches) return false;
-      }
-
-      // 2. 상태 필터
-      const rawStatus = (tx.paymentStatus || 'pending').toLowerCase();
-      if (statusFilter !== 'ALL' && rawStatus !== statusFilter.toLowerCase()) {
-        return false;
-      }
-
-      // 3. 결제 방식 필터
-      if (paymentTypeFilter === 'RECURRING' && !tx.isRecurring) return false;
-      if (paymentTypeFilter === 'AUTH' && tx.isRecurring) return false;
-      if (paymentTypeFilter === 'KIOSK' && tx.deviceType !== 'KIOSK') return false;
-
-      // 4. 가맹단체 필터
-      if (tenantFilter !== 'ALL' && tx.tenantId !== tenantFilter && tx.tenantSlug !== tenantFilter) {
-        return false;
-      }
-
-      // 5. 날짜 범위 필터 (KST 기준)
-      if (startDate || endDate) {
-        const txTime = tx.createdAt ? new Date(tx.createdAt).getTime() : 0;
-        if (startDate) {
-          const start = new Date(`${startDate}T00:00:00+09:00`).getTime();
-          if (txTime < start) return false;
-        }
-        if (endDate) {
-          const end = new Date(`${endDate}T23:59:59.999+09:00`).getTime();
-          if (txTime > end) return false;
-        }
-      }
-
-      return true;
-    });
-  }, [donations, searchQuery, statusFilter, paymentTypeFilter, tenantFilter, startDate, endDate]);
-
-  // 상단 실측 KPI 통계 계산
-  const stats = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const currentMonthStr = todayStr.slice(0, 7);
-
-    let todayAmount = 0;
-    let todayCount = 0;
-    let monthAmount = 0;
-    let monthCount = 0;
-    let cancelAmount = 0;
-    let cancelCount = 0;
-    let recurringCount = 0;
-
-    donations.forEach((d) => {
-      const isCompleted = d.paymentStatus === 'completed';
-      const isCancelled = d.paymentStatus === 'cancelled';
-      const amt = Number(d.amount || 0);
-      const dDateStr = d.createdAt ? d.createdAt.slice(0, 10) : '';
-      const dMonthStr = d.createdAt ? d.createdAt.slice(0, 7) : '';
-
-      if (isCompleted) {
-        if (dDateStr === todayStr) {
-          todayAmount += amt;
-          todayCount += 1;
-        }
-        if (dMonthStr === currentMonthStr) {
-          monthAmount += amt;
-          monthCount += 1;
-        }
-        if (d.isRecurring) {
-          recurringCount += 1;
-        }
-      }
-
-      if (isCancelled) {
-        cancelAmount += amt;
-        cancelCount += 1;
-      }
-    });
-
-    const totalSuccessCount = donations.filter((d) => d.paymentStatus === 'completed').length;
-    const recurringRate = totalSuccessCount > 0 ? ((recurringCount / totalSuccessCount) * 100).toFixed(1) : '0.0';
-
-    return {
-      todayAmount,
-      todayCount,
-      monthAmount,
-      monthCount,
-      cancelAmount,
-      cancelCount,
-      recurringCount,
-      recurringRate,
-    };
-  }, [donations]);
-
-  // CSV 내보내기 헬퍼
+  // CSV 내보내기 헬퍼 (현재 표시 페이지 기준)
   const handleExportCSV = () => {
-    if (filteredList.length === 0) {
+    if (displayList.length === 0) {
       toast.error('내보낼 거래 데이터가 없습니다.');
       return;
     }
@@ -268,7 +215,7 @@ export default function MultiPartySettlementLedger() {
       '취소사유',
     ];
 
-    const rows = filteredList.map((tx) => [
+    const rows = displayList.map((tx) => [
       `"${tx.id || ''}"`,
       `"${fmtDateTime(tx.createdAt)}"`,
       `"${tx.paymentStatus || ''}"`,
@@ -424,8 +371,8 @@ export default function MultiPartySettlementLedger() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchQueryInput}
+              onChange={(e) => setSearchQueryInput(e.target.value)}
               placeholder="거래번호, 승인번호, TID, 기부자명, 연락처, 항목 검색..."
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
             />
@@ -435,7 +382,10 @@ export default function MultiPartySettlementLedger() {
           <div className="md:col-span-2">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
               aria-label="거래 상태 필터"
               className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
@@ -451,7 +401,10 @@ export default function MultiPartySettlementLedger() {
           <div className="md:col-span-2">
             <select
               value={paymentTypeFilter}
-              onChange={(e) => setPaymentTypeFilter(e.target.value)}
+              onChange={(e) => {
+                setPaymentTypeFilter(e.target.value);
+                setPage(1);
+              }}
               aria-label="결제 방식 필터"
               className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
@@ -466,7 +419,10 @@ export default function MultiPartySettlementLedger() {
           <div className="md:col-span-4">
             <select
               value={tenantFilter}
-              onChange={(e) => setTenantFilter(e.target.value)}
+              onChange={(e) => {
+                setTenantFilter(e.target.value);
+                setPage(1);
+              }}
               aria-label="가맹 단체 필터"
               className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
@@ -489,7 +445,10 @@ export default function MultiPartySettlementLedger() {
             <input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
               aria-label="조회 시작일"
               className="px-2.5 py-1 text-xs bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md text-slate-800 dark:text-zinc-200"
             />
@@ -497,7 +456,10 @@ export default function MultiPartySettlementLedger() {
             <input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
               aria-label="조회 종료일"
               className="px-2.5 py-1 text-xs bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md text-slate-800 dark:text-zinc-200"
             />
@@ -528,7 +490,7 @@ export default function MultiPartySettlementLedger() {
         {/* 상단 건수 및 요약 인디케이터 */}
         <div className="px-5 py-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between text-xs">
           <div className="text-slate-600 dark:text-zinc-300 font-medium">
-            총 <strong className="text-blue-600 font-bold">{filteredList.length}건</strong>의 결제 거래 내역이 조회되었습니다.
+            총 <strong className="text-blue-600 font-bold">{pagination.total.toLocaleString()}건</strong>의 결제 거래 내역 중 현재 페이지 <strong className="text-slate-900 dark:text-white font-mono">{displayList.length}건</strong> 표시
           </div>
           <div className="text-[11px] text-slate-400">
             * 거래 행을 클릭하면 상세 결제 정보 및 PG 매출전표를 확인할 수 있습니다.
@@ -546,14 +508,14 @@ export default function MultiPartySettlementLedger() {
             {apiError}
           </div>
         )}
-        {!loading && !apiError && filteredList.length === 0 && (
+        {!loading && !apiError && displayList.length === 0 && (
           <div className="py-16 text-center text-xs text-slate-400">
             선택한 조건에 일치하는 결제 거래 내역이 없습니다.
           </div>
         )}
 
         {/* 데이터 테이블 */}
-        {!loading && !apiError && filteredList.length > 0 && (
+        {!loading && !apiError && displayList.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -571,7 +533,7 @@ export default function MultiPartySettlementLedger() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 text-xs font-medium">
-                {filteredList.map((tx) => {
+                {displayList.map((tx) => {
                   const religion = getReligionBadge(tx.religionType);
                   const isCompleted = tx.paymentStatus === 'completed';
                   const isCancelled = tx.paymentStatus === 'cancelled';
@@ -740,6 +702,111 @@ export default function MultiPartySettlementLedger() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── 서버 사이드 페이지네이션 바 ── */}
+        {!loading && pagination.total > 0 && (
+          <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            {/* 좌측: 건수 및 현재 범위 안내 */}
+            <div className="text-slate-500 dark:text-zinc-400 font-medium flex items-center gap-2">
+              <span>
+                총 <strong className="text-slate-900 dark:text-white font-mono">{pagination.total.toLocaleString()}</strong>건 중{' '}
+                <strong className="text-blue-600 font-mono">
+                  {Math.min(pagination.total, (page - 1) * limit + 1)}~{Math.min(pagination.total, (page - 1) * limit + displayList.length)}
+                </strong>건 표시
+              </span>
+              <span className="text-slate-300 dark:text-zinc-700">|</span>
+              <span>
+                <strong className="font-mono text-slate-800 dark:text-zinc-200">{page}</strong> / {pagination.totalPages} 페이지
+              </span>
+            </div>
+
+            {/* 중앙: 페이지 번호 버튼 */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage(1)}
+                className="px-2 py-1 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-700 font-medium cursor-pointer"
+                title="첫 페이지로"
+              >
+                &laquo;
+              </button>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                className="px-2.5 py-1 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-700 font-medium cursor-pointer"
+                title="이전 페이지"
+              >
+                &lsaquo; 이전
+              </button>
+
+              {/* 스마트 페이지 번호 목록 (최대 5개) */}
+              {(() => {
+                const totalP = pagination.totalPages;
+                let startP = Math.max(1, page - 2);
+                let endP = Math.min(totalP, startP + 4);
+                if (endP - startP < 4) {
+                  startP = Math.max(1, endP - 4);
+                }
+                const pageBtns = [];
+                for (let p = startP; p <= endP; p++) {
+                  pageBtns.push(
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      className={`min-w-[32px] px-2 py-1 rounded font-bold font-mono transition-colors cursor-pointer ${
+                        p === page
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                }
+                return pageBtns;
+              })()}
+
+              <button
+                type="button"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+                className="px-2.5 py-1 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-700 font-medium cursor-pointer"
+                title="다음 페이지"
+              >
+                다음 &rsaquo;
+              </button>
+              <button
+                type="button"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage(pagination.totalPages)}
+                className="px-2 py-1 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-zinc-700 font-medium cursor-pointer"
+                title="마지막 페이지로"
+              >
+                &raquo;
+              </button>
+            </div>
+
+            {/* 우측: 페이지당 건수 선택 */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400">페이지당:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="py-1 px-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-800 dark:text-zinc-200 focus:outline-hidden focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value={20}>20건씩 보기</option>
+                <option value={50}>50건씩 보기</option>
+                <option value={100}>100건씩 보기</option>
+              </select>
+            </div>
           </div>
         )}
       </div>
