@@ -908,7 +908,7 @@ async function alertCriticalError(context: string, error: any, meta?: Record<str
       },
       {
         type: 'context',
-        elements: [{ type: 'mrkdwn', text: '⚡ SoulPay 자동 모니터링 | <https://supabase.com/dashboard/project/aoognbmkstgrytkqsexy/functions|Supabase 로그 확인>' }],
+        elements: [{ type: 'mrkdwn', text: '⚡ SoulPay 자동 모니터링 | <https://supabase.com/dashboard/project/smxobwzwhprelpajnkoq/functions|Supabase 로그 확인>' }],
       },
     ],
   };
@@ -1799,8 +1799,9 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       transactionId: '',
     });
 
-    // 콜백 주소
-    const receiveUrl = `https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
+    // 콜백 주소 (Supabase URL 동적 참조)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://smxobwzwhprelpajnkoq.supabase.co';
+    const receiveUrl = `${supabaseUrl}/functions/v1/make-server-d0d82cc7/payment/process/cert/callback`;
 
     // Smallbee 표준 타임스탬프 (HHmmssSSS, KST 기준)
     const pad = (n: number, l = 2) => n.toString().padStart(l, '0');
@@ -2043,7 +2044,8 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/request", async (c) => {
     const cleanPhone = (donationData?.phone || "").replace(/[^0-9]/g, '');
     const userId = cleanPhone ? `u${cleanPhone}` : `u${Date.now().toString().slice(-10)}`;
     const timestamp = Date.now().toString();
-    const receiveUrl = "https://aoognbmkstgrytkqsexy.supabase.co/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback";
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://smxobwzwhprelpajnkoq.supabase.co';
+    const receiveUrl = `${supabaseUrl}/functions/v1/make-server-d0d82cc7/payment/process/billkey/callback`;
 
     // 공식 v2.2.1 규격: hashValue = SHA256(ver + loginId + shopcode + timestamp + API_KEY + "NANO").toLowerCase()
     const hashRaw = `${ver}${loginId}${shopcode}${timestamp}${NANO_API_KEY}NANO`;
