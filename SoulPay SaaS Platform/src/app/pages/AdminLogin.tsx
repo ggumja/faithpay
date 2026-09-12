@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -19,7 +19,20 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const activeTenant = tenants.find((t) => t.slug === tenantSlug || t.id === tenantSlug);
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const activeTenant = useMemo(() => {
+    if (!decodedSlug) return null;
+    return (
+      tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      ) || null
+    );
+  }, [decodedSlug, tenants]);
 
   // 다중 단체 관리 계정 (회계법인 등) 선택 모달
   const [multiTenantModalOpen, setMultiTenantModalOpen] = useState(false);
@@ -40,13 +53,10 @@ export default function AdminLogin() {
   const [resetDone, setResetDone] = useState(false);
 
   useEffect(() => {
-    if (tenantSlug) {
-      const tenant = tenants.find((t) => t.slug === tenantSlug);
-      if (tenant) {
-        setCurrentTenant(tenant);
-      }
+    if (activeTenant) {
+      setCurrentTenant(activeTenant);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [activeTenant, setCurrentTenant]);
 
   // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기
   // tenant.contact.tempPassword (초기 등록 비밀번호) + tenant_admins DB (리셋된 비밀번호) 병합
@@ -144,7 +154,12 @@ export default function AdminLogin() {
         return;
       }
 
-      const urlTenant = tenants.find((t) => t.slug === tenantSlug || t.id === tenantSlug);
+      const urlTenant = activeTenant || tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug)
+      );
       if (!urlTenant) {
         toast.error('등록되지 않은 단체입니다. 주소를 다시 확인해 주세요.');
         return;

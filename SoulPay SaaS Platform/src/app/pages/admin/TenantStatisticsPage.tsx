@@ -66,8 +66,37 @@ function getSnapshotPeriodKey(closingDate: string, unit: PeriodUnit): string {
 export default function TenantStatisticsPage() {
   const { tenantSlug } = useParams();
   const location = useLocation();
-  const { currentTenant, setCurrentTenant, tenants } = useApp();
-  const terms = useTenantTerms(currentTenant);
+  const { currentTenant, setCurrentTenant, tenants, currentAdmin } = useApp();
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const effectiveTenant = useMemo(() => {
+    if (decodedSlug) {
+      const found = tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      );
+      if (found) return found;
+    }
+    if (currentAdmin?.tenantId) {
+      const found = tenants.find(
+        (t) => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId
+      );
+      if (found) return found;
+    }
+    if (currentTenant && decodedSlug && (currentTenant.slug?.toLowerCase() === decodedSlug || currentTenant.id?.toLowerCase() === decodedSlug)) {
+      return currentTenant;
+    }
+    if (!decodedSlug && currentTenant) {
+      return currentTenant;
+    }
+    return null;
+  }, [decodedSlug, tenants, currentAdmin, currentTenant]);
+
+  const terms = useTenantTerms(effectiveTenant || currentTenant);
 
   // 🔴 DB 영구 적재 일별 마감 스냅샷 및 종합 통계 상태 (Full Scan 제거)
   const [dailySnapshots, setDailySnapshots] = useState<DailyClosingSummary[]>([]);
@@ -164,23 +193,19 @@ export default function TenantStatisticsPage() {
   };
 
   useEffect(() => {
-    const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
-    const tenant = tenants.find(
-      (t) =>
-        (t.slug && t.slug.toLowerCase() === decodedSlug) ||
-        (t.id && t.id.toLowerCase() === decodedSlug) ||
-        (t.name && t.name.toLowerCase() === decodedSlug) ||
-        (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
-    ) || currentTenant;
-
-    const targetKey = tenant?.id || tenant?.slug || decodedSlug;
-    if (tenant) {
-      setCurrentTenant(tenant);
+    if (effectiveTenant && effectiveTenant.id !== currentTenant?.id) {
+      setCurrentTenant(effectiveTenant);
     }
+  }, [effectiveTenant, currentTenant, setCurrentTenant]);
+
+  useEffect(() => {
+    const targetKey = effectiveTenant?.id || effectiveTenant?.slug || (decodedSlug ? decodedSlug : null);
     if (targetKey) {
       fetchData(targetKey);
+    } else {
+      setIsLoading(false);
     }
-  }, [tenantSlug, tenants, setCurrentTenant, currentTenant, periodSelection, currentPage, searchTerm]);
+  }, [effectiveTenant?.id, decodedSlug, periodSelection, currentPage, searchTerm]);
 
 
   // 마감 상세 목록 페이징 및 필터

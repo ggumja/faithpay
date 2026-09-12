@@ -304,7 +304,36 @@ export default function DonationHistory() {
   const { tenantSlug } = useParams();
   const location = useLocation();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-  const terms = useTenantTerms(currentTenant);
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const effectiveTenant = useMemo(() => {
+    if (decodedSlug) {
+      const found = tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      );
+      if (found) return found;
+    }
+    if (currentAdmin?.tenantId) {
+      const found = tenants.find(
+        (t) => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId
+      );
+      if (found) return found;
+    }
+    if (currentTenant && decodedSlug && (currentTenant.slug?.toLowerCase() === decodedSlug || currentTenant.id?.toLowerCase() === decodedSlug)) {
+      return currentTenant;
+    }
+    if (!decodedSlug && currentTenant) {
+      return currentTenant;
+    }
+    return null;
+  }, [decodedSlug, tenants, currentAdmin, currentTenant]);
+
+  const terms = useTenantTerms(effectiveTenant || currentTenant);
 
   const [donations, setDonations] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -426,43 +455,43 @@ export default function DonationHistory() {
   };
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
-    if (tenant) {
-      setCurrentTenant(tenant);
+    if (effectiveTenant && effectiveTenant.id !== currentTenant?.id) {
+      setCurrentTenant(effectiveTenant);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
-
+  }, [effectiveTenant, currentTenant, setCurrentTenant]);
 
   useEffect(() => {
+    const targetId = effectiveTenant?.id || (decodedSlug ? decodedSlug : null);
+    if (!targetId) return;
+
     const fetchDonations = async () => {
-      if (currentTenant) {
-        setIsLoading(true);
-        try {
-          const res = await donationAPI.getByTenant(currentTenant.id);
-          if (res.success && res.data) {
-            setDonations(assignSequentialDonationIds(res.data));
-          } else {
-            setDonations([]);
-          }
-        } catch (error) {
-          console.error(error);
+      setIsLoading(true);
+      try {
+        const res = await donationAPI.getByTenant(targetId);
+        if (res.success && res.data) {
+          setDonations(assignSequentialDonationIds(res.data));
+        } else {
           setDonations([]);
-        } finally {
-          setIsLoading(false);
         }
+      } catch (error) {
+        console.error(error);
+        setDonations([]);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchDonations();
-  }, [currentTenant]);
+  }, [effectiveTenant?.id, decodedSlug]);
 
   // ⚡ 1. 당일 실시간 핫 갱신 (Hot Real-time Polling)
   // 오늘(Today) 선택 모드일 때만 15초 마다 실시간 신규 결제 자동 수신!
   useEffect(() => {
-    if (!currentTenant || !isTodayMode) return;
+    const targetId = effectiveTenant?.id || (decodedSlug ? decodedSlug : null);
+    if (!targetId || !isTodayMode) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await donationAPI.getByTenant(currentTenant.id);
+        const res = await donationAPI.getByTenant(targetId);
         if (res.success && res.data) {
           setDonations(assignSequentialDonationIds(res.data));
         }
@@ -472,9 +501,9 @@ export default function DonationHistory() {
     }, 15000); // 15s quiet background poll when today mode active
 
     return () => clearInterval(interval);
-  }, [currentTenant, isTodayMode]);
+  }, [effectiveTenant?.id, decodedSlug, isTodayMode]);
 
-  if (!currentTenant) {
+  if (!effectiveTenant && !decodedSlug) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
         <div className="text-center space-y-3">
@@ -694,10 +723,11 @@ export default function DonationHistory() {
     const donationId = targetDonation?.id || donationOrId;
     const backendId = targetDonation?.originalId || targetDonation?.id || donationOrId;
     const effectiveReason = cancelReason || (cancelReasonType === '기타 직접 입력' ? (customCancelReason.trim() || '기타 사유') : cancelReasonType);
+    const tenantIdForCancel = effectiveTenant?.id || currentTenant?.id || decodedSlug;
 
     setIsCancelling(true);
     try {
-      const res = await paymentAPI.cancelPayment(currentTenant.id, backendId, effectiveReason);
+      const res = await paymentAPI.cancelPayment(tenantIdForCancel, backendId, effectiveReason);
       if (res.success) {
         if (cancelSubscriptionAlso && targetDonation) {
           let subId = targetDonation.subscriptionId || targetDonation.subscription_id || targetDonation.subId;
@@ -714,9 +744,9 @@ export default function DonationHistory() {
           // 2. Fallback: Query backend for active subscriptions by phone
           if (!subId && targetDonation.donorPhone) {
             try {
-              const subRes = await subscriptionAPI.getByPhone(targetDonation.donorPhone, currentTenant.id);
+              const subRes = await subscriptionAPI.getByPhone(targetDonation.donorPhone, tenantIdForCancel);
               if (subRes.success && subRes.data && subRes.data.length > 0) {
-                const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
+                const tenantSubs = subRes.data.filter((s: any) => s.tenantId === tenantIdForCancel || s.tenant_id === tenantIdForCancel || s.tenantId === (effectiveTenant?.slug || currentTenant?.slug));
                 const activeSub = tenantSubs.find((s: any) => s.status === 'active' || s.status !== 'cancelled');
                 if (activeSub) {
                   subId = activeSub.id;
@@ -754,7 +784,7 @@ export default function DonationHistory() {
         setCancelModalDonation(null);
 
         // refresh data from server
-        const refreshRes = await donationAPI.getByTenant(currentTenant.id);
+        const refreshRes = await donationAPI.getByTenant(tenantIdForCancel);
         if (refreshRes.success && refreshRes.data) {
           const serverList = assignSequentialDonationIds(refreshRes.data);
           setDonations(serverList.map(item => (item.id === donationId || item.originalId === backendId) ? { ...item, paymentStatus: 'cancelled' } : item));

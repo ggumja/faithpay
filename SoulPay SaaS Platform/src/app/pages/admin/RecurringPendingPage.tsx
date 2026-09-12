@@ -58,8 +58,37 @@ export interface SubscriptionRecord {
 export default function RecurringPendingPage() {
   const { tenantSlug } = useParams();
   const location = useLocation();
-  const { tenants, currentTenant, setCurrentTenant } = useApp();
-  const terms = useTenantTerms(currentTenant);
+  const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const effectiveTenant = useMemo(() => {
+    if (decodedSlug) {
+      const found = tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      );
+      if (found) return found;
+    }
+    if (currentAdmin?.tenantId) {
+      const found = tenants.find(
+        (t) => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId
+      );
+      if (found) return found;
+    }
+    if (currentTenant && decodedSlug && (currentTenant.slug?.toLowerCase() === decodedSlug || currentTenant.id?.toLowerCase() === decodedSlug)) {
+      return currentTenant;
+    }
+    if (!decodedSlug && currentTenant) {
+      return currentTenant;
+    }
+    return null;
+  }, [decodedSlug, tenants, currentAdmin, currentTenant]);
+
+  const terms = useTenantTerms(effectiveTenant || currentTenant);
 
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,15 +97,19 @@ export default function RecurringPendingPage() {
   const pageSize = 10;
 
   useEffect(() => {
-    if (!tenants || tenants.length === 0) return;
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
-    if (tenant) {
-      setCurrentTenant(tenant);
-      fetchSubscriptions(tenant.id);
+    if (effectiveTenant && effectiveTenant.id !== currentTenant?.id) {
+      setCurrentTenant(effectiveTenant);
+    }
+  }, [effectiveTenant, currentTenant, setCurrentTenant]);
+
+  useEffect(() => {
+    const targetId = effectiveTenant?.id || (decodedSlug ? decodedSlug : null);
+    if (targetId) {
+      fetchSubscriptions(targetId);
     } else {
       setIsLoading(false);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [effectiveTenant?.id, decodedSlug]);
 
   const fetchSubscriptions = async (tenantId: string) => {
     setIsLoading(true);

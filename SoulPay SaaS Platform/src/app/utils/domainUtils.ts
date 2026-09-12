@@ -122,25 +122,38 @@ export function isPagesPreview(): boolean {
 
 /**
  * 단체 관리자 포털 URL 반환
- * - VITE_ADMIN_URL 환경변수 지정 시: 해당 URL 기반
+ * - 로컬 개발 환경(localhost / 127.0.0.1): 단일 SPA 통합 라우터 환경이므로 항상 내부 관리자 로그인 경로 반환
+ * - VITE_ADMIN_URL 환경변수 지정 시: 해당 URL 기반 (단, localhost/동일 호스트인 경우 내부 SPA 경로 반환)
  * - 상용(pay.soulpay.kr): https://admin.soulpay.kr/:tenantSlug
  * - Pages 프리뷰(soulpay-pay.pages.dev): https://soulpay-admin.pages.dev/:tenantSlug
  * - 로컬/Dev(localhost, dev.soulpay.kr): /:tenantSlug/admin/login (또는 /admin/login)
  */
 export function getAdminPortalUrl(tenantSlug?: string): string {
-  // 1. 커스텀 환경변수 우선 확인
+  // 1. 로컬 개발 환경 (localhost / 127.0.0.1)
+  // 단일 SPA 통합 라우터(routes.tsx) 환경이므로 항상 내부 관리자 로그인 SPA 경로 반환
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
+      return tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
+    }
+  }
+
+  // 2. 커스텀 환경변수 우선 확인 (단, localhost 설정값인 경우 내부 SPA 경로 반환)
   const envAdminUrl = import.meta.env.VITE_ADMIN_URL;
   if (envAdminUrl && typeof envAdminUrl === 'string') {
     const base = envAdminUrl.replace(/\/$/, '');
+    if (base.includes('localhost') || base.includes('127.0.0.1')) {
+      return tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
+    }
     return tenantSlug ? `${base}/${tenantSlug}` : base;
   }
 
-  // 2. 상용 운영 환경
+  // 3. 상용 운영 환경
   if (isSoulPayProduction()) {
     return tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}` : 'https://admin.soulpay.kr';
   }
 
-  // 3. Cloudflare Pages 프리뷰 환경
+  // 4. Cloudflare Pages 프리뷰 환경
   if (isPagesPreview()) {
     const host = window.location.hostname.toLowerCase();
     if (host.includes('soulpay-pay')) {
@@ -150,7 +163,7 @@ export function getAdminPortalUrl(tenantSlug?: string): string {
     }
   }
 
-  // 4. 로컬 개발 환경 (localhost) 및 Dev/Staging 환경: SPA 내부 라우팅
+  // 5. 로컬 개발 환경 및 Dev/Staging 환경: SPA 내부 라우팅
   return tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
 }
 
@@ -162,10 +175,21 @@ export function getAdminPortalUrl(tenantSlug?: string): string {
  * - 로컬/Dev: /:tenantSlug
  */
 export function getPayPortalUrl(tenantSlug?: string): string {
+  // 로컬 개발 환경(localhost / 127.0.0.1)
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
+      return tenantSlug ? `/${tenantSlug}` : '/';
+    }
+  }
+
   // 1. 커스텀 환경변수 우선 확인
   const envPayUrl = import.meta.env.VITE_PAY_URL;
   if (envPayUrl && typeof envPayUrl === 'string') {
     const base = envPayUrl.replace(/\/$/, '');
+    if (base.includes('localhost') || base.includes('127.0.0.1')) {
+      return tenantSlug ? `/${tenantSlug}` : '/';
+    }
     return tenantSlug ? `${base}/${tenantSlug}` : base;
   }
 
@@ -195,17 +219,35 @@ export function getPayPortalUrl(tenantSlug?: string): string {
  */
 export function navigateToAdminPortal(tenantSlug?: string, navigate?: (to: string) => void): void {
   const targetUrl = getAdminPortalUrl(tenantSlug);
-  const isExternal = targetUrl.startsWith('http://') || targetUrl.startsWith('https://');
+  
+  // 외부 URL인지 안전하게 판정 (동일 origin인 경우 내부 SPA 라우팅 적용)
+  let isExternal = false;
+  if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+    if (typeof window !== 'undefined') {
+      try {
+        const urlObj = new URL(targetUrl, window.location.origin);
+        isExternal = urlObj.origin !== window.location.origin;
+      } catch {
+        isExternal = true;
+      }
+    } else {
+      isExternal = true;
+    }
+  }
 
   if (isExternal) {
     window.location.href = targetUrl;
     return;
   }
 
-  // 로컬/Dev 환경: React Router SPA navigate 사용
+  // 동일 도메인 / 로컬 SPA 환경: React Router SPA navigate 사용
+  const internalPath = targetUrl.startsWith('http://') || targetUrl.startsWith('https://')
+    ? new URL(targetUrl, window.location.origin).pathname
+    : targetUrl;
+
   if (navigate) {
-    navigate(targetUrl);
+    navigate(internalPath);
   } else {
-    window.location.href = targetUrl;
+    window.location.href = internalPath;
   }
 }
