@@ -412,70 +412,73 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
     const cleanEmail = email.trim().toLowerCase();
     const sb = db.pgClient();
 
-    // 1. 해당 테넌트의 해당 이메일 계정 존재 확인
-    const { data: staff, error: fetchError } = await sb
+    // 1. tenant_admins 테이블에서 먼저 조회
+    const { data: staff } = await sb
       .from("tenant_admins")
       .select("id, name, email, status")
       .eq("tenant_id", tenantId)
       .eq("email", cleanEmail)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !staff) {
-      return c.json({ success: false, error: "해당 테넌트에서 이메일과 일치하는 관리자 계정을 찾을 수 없습니다." }, 404);
-    }
-
-    // 2. 예측 불가능한 임시 비밀번호 생성 (10자)
+    // 2. 임시 비밀번호 생성 (10자, 예측 불가)
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
     const randomBytes = crypto.getRandomValues(new Uint8Array(10));
     const tempPassword = Array.from(randomBytes).map((b) => chars[b % chars.length]).join("");
 
-    // 3. tenant_admins 테이블에 임시 비밀번호 즉시 반영
-    const { error: updateError } = await sb
-      .from("tenant_admins")
-      .update({ password: tempPassword, updated_at: new Date().toISOString() })
-      .eq("id", staff.id);
+    // 3. 테넌트 정보 조회 (이름, slug, contact)
+    const { data: tenant } = await sb.from("tenants").select("name, slug, contact").eq("id", tenantId).single();
+    if (!tenant) {
+      return c.json({ success: false, error: "해당 단체를 찾을 수 없습니다." }, 404);
+    }
+    const tenantName = tenant.name;
+    const tenantSlug = tenant.slug || "";
+    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+    const contactEmail = (tenant.contact?.email || "").trim().toLowerCase();
 
-    if (updateError) {
-      console.error("[tenant-staff] reset-password DB error:", updateError);
-      return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
+    if (staff) {
+      // tenant_admins 레코드가 있으면 해당 레코드 비밀번호 업데이트
+      const { error: updateError } = await sb
+        .from("tenant_admins")
+        .update({ password: tempPassword, updated_at: new Date().toISOString() })
+        .eq("id", staff.id);
+      if (updateError) {
+        console.error("[tenant-staff] reset-password DB error:", updateError);
+        return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
+      }
+    } else if (contactEmail === cleanEmail) {
+      // tenant_admins에 없지만 tenants.contact.email과 일치하는 경우 → tenant_admins 레코드 생성
+      const { error: insertError } = await sb
+        .from("tenant_admins")
+        .insert({ tenant_id: tenantId, name: tenant.contact?.name || tenantName, email: cleanEmail, password: tempPassword, status: 'active', created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      if (insertError) {
+        console.error("[tenant-staff] reset-password insert error:", insertError);
+        return c.json({ success: false, error: "관리자 계정 생성 중 오류가 발생했습니다." }, 500);
+      }
+      console.log(`[tenant-staff] tenant_admins 레코드 신규 생성 — tenant: ${tenantId}, email: ${cleanEmail}`);
+    } else {
+      return c.json({ success: false, error: "해당 테넌트에서 이메일과 일치하는 관리자 계정을 찾을 수 없습니다." }, 404);
     }
 
-    // 4. 테넌트 이름 조회 후 관리자 이메일로 임시 비밀번호 발송
-    const { data: tenant } = await sb.from("tenants").select("name, slug").eq("id", tenantId).single();
-    const tenantName = tenant?.name || "SoulPay";
-    const tenantSlug = tenant?.slug || "";
-    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+    const adminName = staff?.name || tenant.contact?.name || tenantName;
 
     try {
-      await sendPasswordResetEmail({
-        to: cleanEmail,
-        partnerName: staff.name,
-        tenantName,
-        tempPassword,
-        loginUrl,
-      });
+      await sendPasswordResetEmail({ to: cleanEmail, partnerName: adminName, tenantName, tempPassword, loginUrl });
       console.log(`[tenant-staff] 임시 비밀번호 이메일 발송 완료 — ${cleanEmail}`);
     } catch (emailErr) {
-      // 이메일 발송 실패는 비밀번호 리셋 자체를 실패 처리하지 않음 (DB는 이미 반영됨)
       console.error("[tenant-staff] reset-password 이메일 발송 실패:", emailErr);
     }
 
-    console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
+    console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${adminName} (${cleanEmail})`);
     return c.json({
       success: true,
-      data: {
-        adminName: staff.name,
-        adminEmail: cleanEmail,
-        tempPassword,
-        message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.`,
-      },
+      data: { adminName, adminEmail: cleanEmail, tempPassword, message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.` },
     });
   } catch (err) {
     console.error("[tenant-staff] reset-password error:", err);
     return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
   }
 });
-// 클라이언트가 prefix 없이 호출하는 경우를 위한 동일 핸들러 직접 등록
+// 클라이언트가 prefix 없이 호출하는 경우 — 위 핸들러와 동일한 로직
 app.post("/tenant-staff/:tenantId/reset-password", async (c) => {
   try {
     const tenantId = c.req.param("tenantId");
@@ -488,47 +491,61 @@ app.post("/tenant-staff/:tenantId/reset-password", async (c) => {
     const cleanEmail = email.trim().toLowerCase();
     const sb = db.pgClient();
 
-    const { data: staff, error: fetchError } = await sb
+    const { data: staff } = await sb
       .from("tenant_admins")
       .select("id, name, email, status")
       .eq("tenant_id", tenantId)
       .eq("email", cleanEmail)
-      .single();
-
-    if (fetchError || !staff) {
-      return c.json({ success: false, error: "해당 테넌트에서 이메일과 일치하는 관리자 계정을 찾을 수 없습니다." }, 404);
-    }
+      .maybeSingle();
 
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
     const randomBytes = crypto.getRandomValues(new Uint8Array(10));
     const tempPassword = Array.from(randomBytes).map((b) => chars[b % chars.length]).join("");
 
-    const { error: updateError } = await sb
-      .from("tenant_admins")
-      .update({ password: tempPassword, updated_at: new Date().toISOString() })
-      .eq("id", staff.id);
+    const { data: tenant } = await sb.from("tenants").select("name, slug, contact").eq("id", tenantId).single();
+    if (!tenant) {
+      return c.json({ success: false, error: "해당 단체를 찾을 수 없습니다." }, 404);
+    }
+    const tenantName = tenant.name;
+    const tenantSlug = tenant.slug || "";
+    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+    const contactEmail = (tenant.contact?.email || "").trim().toLowerCase();
 
-    if (updateError) {
-      console.error("[tenant-staff] reset-password DB error:", updateError);
-      return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
+    if (staff) {
+      const { error: updateError } = await sb
+        .from("tenant_admins")
+        .update({ password: tempPassword, updated_at: new Date().toISOString() })
+        .eq("id", staff.id);
+      if (updateError) {
+        console.error("[tenant-staff] reset-password DB error:", updateError);
+        return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
+      }
+    } else if (contactEmail === cleanEmail) {
+      const { error: insertError } = await sb
+        .from("tenant_admins")
+        .insert({ tenant_id: tenantId, name: tenant.contact?.name || tenantName, email: cleanEmail, password: tempPassword, status: 'active', created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      if (insertError) {
+        console.error("[tenant-staff] reset-password insert error:", insertError);
+        return c.json({ success: false, error: "관리자 계정 생성 중 오류가 발생했습니다." }, 500);
+      }
+      console.log(`[tenant-staff] tenant_admins 레코드 신규 생성 — tenant: ${tenantId}, email: ${cleanEmail}`);
+    } else {
+      return c.json({ success: false, error: "해당 테넌트에서 이메일과 일치하는 관리자 계정을 찾을 수 없습니다." }, 404);
     }
 
-    const { data: tenant } = await sb.from("tenants").select("name, slug").eq("id", tenantId).single();
-    const tenantName = tenant?.name || "SoulPay";
-    const tenantSlug = tenant?.slug || "";
-    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+    const adminName = staff?.name || tenant.contact?.name || tenantName;
 
     try {
-      await sendPasswordResetEmail({ to: cleanEmail, partnerName: staff.name, tenantName, tempPassword, loginUrl });
+      await sendPasswordResetEmail({ to: cleanEmail, partnerName: adminName, tenantName, tempPassword, loginUrl });
       console.log(`[tenant-staff] 임시 비밀번호 이메일 발송 완료 — ${cleanEmail}`);
     } catch (emailErr) {
       console.error("[tenant-staff] reset-password 이메일 발송 실패:", emailErr);
     }
 
-    console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
+    console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${adminName} (${cleanEmail})`);
     return c.json({
       success: true,
-      data: { adminName: staff.name, adminEmail: cleanEmail, tempPassword, message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.` },
+      data: { adminName, adminEmail: cleanEmail, tempPassword, message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.` },
     });
   } catch (err) {
     console.error("[tenant-staff] reset-password error:", err);
