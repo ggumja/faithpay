@@ -244,3 +244,226 @@ export async function sendPasswordResetEmail(params: PasswordResetParams): Promi
 
   return sendEmail({ to, subject, html });
 }
+
+// ────────────────────────────────────────────────────
+// 단체/파트너 신청 접수 확인 이메일 (신청자 → 수신)
+// ────────────────────────────────────────────────────
+
+export interface ApplicationReceivedParams {
+  to: string;
+  applicantName: string;
+  applicationType: '단체' | '파트너';
+  orgName?: string; // 단체명 (단체 신청 시)
+}
+
+export async function sendApplicationReceivedEmail(params: ApplicationReceivedParams): Promise<SendEmailResult> {
+  const { to, applicantName, applicationType, orgName } = params;
+  const subject = `[SoulPay] ${applicationType} 신청이 접수되었습니다`;
+  const displayName = orgName ? `${orgName} (담당자: ${applicantName})` : applicantName;
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:32px 0;">
+<tr><td align="center">
+<table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);padding:28px 40px;text-align:center;">
+      <div style="color:#93c5fd;font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:8px;">SOULPAY</div>
+      <h1 style="color:#ffffff;font-size:20px;font-weight:800;margin:0;">${applicationType} 신청 접수 완료</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:36px 40px;">
+      <p style="color:#374151;font-size:15px;margin:0 0 20px 0;">
+        안녕하세요, <strong>${displayName}</strong> 님.<br/>
+        SoulPay <strong>${applicationType} 신청</strong>이 정상 접수되었습니다.
+      </p>
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:20px 24px;margin-bottom:20px;">
+        <p style="color:#1e40af;font-size:14px;font-weight:700;margin:0 0 8px 0;">📋 신청 접수 안내</p>
+        <ul style="color:#374151;font-size:13px;margin:0;padding-left:18px;line-height:1.8;">
+          <li>담당자 검토 후 <strong>영업일 기준 1~3일 내</strong> 심사 결과를 이메일로 안내드립니다.</li>
+          <li>추가 서류 또는 정보가 필요한 경우 별도 연락드릴 수 있습니다.</li>
+          <li>문의사항은 <a href="mailto:support@soulpay.kr" style="color:#2563eb;">support@soulpay.kr</a>로 연락해 주세요.</li>
+        </ul>
+      </div>
+      <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.7;">
+        본 메일은 신청 접수 확인을 위한 자동 발송 메일입니다.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 40px;text-align:center;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">
+        Powered by <strong>SoulPay</strong> · <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a>
+      </p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return sendEmail({ to, subject, html });
+}
+
+// ────────────────────────────────────────────────────
+// 관리자 알림 이메일 (새 신청 접수 시 → support@soulpay.kr)
+// ────────────────────────────────────────────────────
+
+export interface AdminNewApplicationParams {
+  applicationType: '단체' | '파트너';
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone: string;
+  orgName?: string;      // 단체명
+  region?: string;       // 지역
+  memo?: string;         // 메모/소개
+}
+
+export async function sendAdminNewApplicationEmail(params: AdminNewApplicationParams): Promise<SendEmailResult> {
+  const { applicationType, applicantName, applicantEmail, applicantPhone, orgName, region, memo } = params;
+  const adminEmail = 'support@soulpay.kr';
+  const subject = `[SoulPay 관리자] 새 ${applicationType} 신청 접수 — ${orgName || applicantName}`;
+
+  const rows = [
+    { label: '신청 유형', value: applicationType },
+    ...(orgName ? [{ label: '단체명', value: orgName }] : []),
+    { label: '담당자', value: applicantName },
+    { label: '이메일', value: applicantEmail },
+    { label: '연락처', value: applicantPhone },
+    ...(region ? [{ label: '지역', value: region }] : []),
+    ...(memo ? [{ label: '소개/메모', value: memo }] : []),
+    { label: '접수 시각', value: new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19) + ' (KST)' },
+  ];
+
+  const rowsHtml = rows.map((r, i) => `
+    <tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'};">
+      <td style="padding:10px 16px;color:#6b7280;font-size:13px;font-weight:600;width:30%;border-bottom:1px solid #e5e7eb;">${r.label}</td>
+      <td style="padding:10px 16px;color:#111827;font-size:13px;border-bottom:1px solid #e5e7eb;">${r.value}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:32px 0;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background:linear-gradient(135deg,#7c3aed 0%,#4f46e5 100%);padding:24px 40px;text-align:center;">
+      <div style="color:#ddd6fe;font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">SOULPAY ADMIN</div>
+      <h1 style="color:#ffffff;font-size:18px;font-weight:800;margin:0;">새 ${applicationType} 신청 접수</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:28px 40px;">
+      <p style="color:#374151;font-size:14px;margin:0 0 16px 0;">새로운 <strong>${applicationType} 신청</strong>이 접수되었습니다. 아래 내용을 확인하고 심사를 진행해 주세요.</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">${rowsHtml}</table>
+      <div style="text-align:center;margin-top:24px;">
+        <a href="https://app.soulpay.kr/admin" target="_blank" style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;">🔍 관리자 페이지에서 심사하기</a>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:14px 40px;text-align:center;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">SoulPay 자동 알림 · <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a></p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return sendEmail({ to: adminEmail, subject, html });
+}
+
+// ────────────────────────────────────────────────────
+// 단체/파트너 심사 결과 이메일 (승인 or 거절)
+// ────────────────────────────────────────────────────
+
+export interface ApplicationResultParams {
+  to: string;
+  applicantName: string;
+  applicationType: '단체' | '파트너';
+  orgName?: string;
+  approved: boolean;
+  rejectReason?: string;  // 거절 사유 (거절 시)
+  loginUrl?: string;      // 승인 시 로그인 URL
+  tempPassword?: string;  // 승인 시 초기 비밀번호
+}
+
+export async function sendApplicationResultEmail(params: ApplicationResultParams): Promise<SendEmailResult> {
+  const { to, applicantName, applicationType, orgName, approved, rejectReason, loginUrl, tempPassword } = params;
+  const displayName = orgName ? `${orgName} (${applicantName})` : applicantName;
+  const subject = approved
+    ? `[SoulPay] ${applicationType} 신청이 승인되었습니다 🎉`
+    : `[SoulPay] ${applicationType} 신청 심사 결과 안내`;
+
+  const approvedContent = `
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:20px 24px;margin-bottom:20px;text-align:center;">
+      <p style="color:#166534;font-size:16px;font-weight:800;margin:0 0 6px 0;">🎉 신청이 승인되었습니다!</p>
+      <p style="color:#15803d;font-size:13px;margin:0;">SoulPay ${applicationType}로 정식 등록되셨습니다.</p>
+    </div>
+    ${tempPassword ? `
+    <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:16px 24px;margin-bottom:20px;">
+      <p style="color:#9a3412;font-size:12px;font-weight:600;margin:0 0 6px 0;">초기 비밀번호</p>
+      <p style="color:#c2410c;font-size:22px;font-weight:900;margin:0;font-family:monospace;letter-spacing:3px;">${tempPassword}</p>
+      <p style="color:#92400e;font-size:12px;margin:8px 0 0 0;">⚠️ 로그인 후 즉시 비밀번호를 변경해 주세요.</p>
+    </div>` : ''}
+    ${loginUrl ? `<div style="text-align:center;margin-top:20px;">
+      <a href="${loginUrl}" target="_blank" style="display:inline-block;background:#16a34a;color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;">🚀 지금 시작하기</a>
+    </div>` : ''}`;
+
+  const rejectedContent = `
+    <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:20px 24px;margin-bottom:20px;">
+      <p style="color:#991b1b;font-size:15px;font-weight:700;margin:0 0 8px 0;">아쉽게도 이번 심사에서 승인이 어렵습니다.</p>
+      ${rejectReason ? `<p style="color:#7f1d1d;font-size:13px;margin:0;line-height:1.7;"><strong>사유:</strong> ${rejectReason}</p>` : ''}
+    </div>
+    <p style="color:#374151;font-size:13px;margin:0 0 16px 0;line-height:1.7;">
+      자세한 내용 또는 재신청 문의는 <a href="mailto:support@soulpay.kr" style="color:#2563eb;">support@soulpay.kr</a>로 연락해 주세요.
+    </p>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:32px 0;">
+<tr><td align="center">
+<table width="520" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background:linear-gradient(135deg,${approved ? '#166534 0%,#16a34a' : '#991b1b 0%,#dc2626'} 100%);padding:28px 40px;text-align:center;">
+      <div style="color:${approved ? '#bbf7d0' : '#fca5a5'};font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:8px;">SOULPAY</div>
+      <h1 style="color:#ffffff;font-size:20px;font-weight:800;margin:0;">${applicationType} 심사 결과 안내</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:36px 40px;">
+      <p style="color:#374151;font-size:15px;margin:0 0 20px 0;">
+        안녕하세요, <strong>${displayName}</strong> 님.<br/>
+        SoulPay ${applicationType} 신청 심사 결과를 안내드립니다.
+      </p>
+      ${approved ? approvedContent : rejectedContent}
+      <p style="color:#9ca3af;font-size:12px;margin:24px 0 0 0;line-height:1.7;">
+        본 메일은 자동 발송 메일입니다. 문의: <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a>
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 40px;text-align:center;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">
+        Powered by <strong>SoulPay</strong> · <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a>
+      </p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return sendEmail({ to, subject, html });
+}

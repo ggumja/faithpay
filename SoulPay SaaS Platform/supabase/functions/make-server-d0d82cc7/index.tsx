@@ -5,7 +5,7 @@ import { logger } from "npm:hono/logger";
 import * as db from "./database.tsx";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
-import { sendDonationReceiptEmail, sendPasswordResetEmail } from "./email.ts";
+import { sendDonationReceiptEmail, sendPasswordResetEmail, sendApplicationReceivedEmail, sendAdminNewApplicationEmail, sendApplicationResultEmail } from "./email.ts";
 
 /**
  * 이메일 주소 결정 헬퍼
@@ -451,6 +451,16 @@ app.post("/make-server-d0d82cc7/tenants", async (c) => {
   try {
     const body = await c.req.json();
     const tenant = await db.createTenant(body);
+
+    // 신청 접수 이메일 발송 (신청자 확인 + 관리자 알림) — 비동기, 실패해도 신청은 정상 처리
+    const contactEmail = body.contact_email || body.email;
+    const contactName = body.contact_name || body.name || '담당자';
+    const orgName = body.name;
+    if (contactEmail) {
+      sendApplicationReceivedEmail({ to: contactEmail, applicantName: contactName, applicationType: '단체', orgName }).catch((e: any) => console.error('[Email] 단체 신청 접수 확인 발송 실패:', e));
+    }
+    sendAdminNewApplicationEmail({ applicationType: '단체', applicantName: contactName, applicantEmail: contactEmail || '(미입력)', applicantPhone: body.contact_phone || body.phone || '(미입력)', orgName, region: body.region, memo: body.description || body.memo }).catch((e: any) => console.error('[Email] 관리자 단체 신청 알림 발송 실패:', e));
+
     return c.json({ success: true, data: tenant }, 201);
   } catch (error) {
     console.error('Error creating tenant:', error);
@@ -466,6 +476,14 @@ app.put("/make-server-d0d82cc7/tenants/:id/approve", async (c) => {
     if (!tenant) {
       return c.json({ success: false, error: 'Tenant not found' }, 404);
     }
+
+    // 승인 결과 이메일 발송 — 비동기, 실패해도 승인은 정상 처리
+    const contactEmail = (tenant as any).contact_email || (tenant as any).email;
+    const contactName = (tenant as any).contact_name || (tenant as any).name || '담당자';
+    if (contactEmail) {
+      sendApplicationResultEmail({ to: contactEmail, applicantName: contactName, applicationType: '단체', orgName: (tenant as any).name, approved: true, loginUrl: 'https://app.soulpay.kr' }).catch((e: any) => console.error('[Email] 단체 승인 결과 발송 실패:', e));
+    }
+
     return c.json({ success: true, data: tenant });
   } catch (error) {
     console.error('Error approving tenant:', error);
@@ -477,10 +495,20 @@ app.put("/make-server-d0d82cc7/tenants/:id/approve", async (c) => {
 app.put("/make-server-d0d82cc7/tenants/:id/reject", async (c) => {
   try {
     const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const rejectReason = (body as any).reason;
     const tenant = await db.rejectTenant(id);
     if (!tenant) {
       return c.json({ success: false, error: 'Tenant not found' }, 404);
     }
+
+    // 거절 결과 이메일 발송 — 비동기, 실패해도 거절은 정상 처리
+    const contactEmail = (tenant as any).contact_email || (tenant as any).email;
+    const contactName = (tenant as any).contact_name || (tenant as any).name || '담당자';
+    if (contactEmail) {
+      sendApplicationResultEmail({ to: contactEmail, applicantName: contactName, applicationType: '단체', orgName: (tenant as any).name, approved: false, rejectReason }).catch((e: any) => console.error('[Email] 단체 거절 결과 발송 실패:', e));
+    }
+
     return c.json({ success: true, data: tenant });
   } catch (error) {
     console.error('Error rejecting tenant:', error);
@@ -4211,6 +4239,11 @@ app.post("/make-server-d0d82cc7/partners/apply", async (c) => {
       ...body,
       status: 'pending', // 신규 신청은 심사 전 '대기' 상태로 등록
     });
+
+    // 신청 접수 이메일 발송 (신청자 확인 + 관리자 알림) — 비동기, 실패해도 신청은 정상 처리
+    sendApplicationReceivedEmail({ to: body.email, applicantName: body.name, applicationType: '파트너' }).catch((e: any) => console.error('[Email] 파트너 신청 접수 확인 발송 실패:', e));
+    sendAdminNewApplicationEmail({ applicationType: '파트너', applicantName: body.name, applicantEmail: body.email, applicantPhone: body.phone, memo: body.intro || body.memo }).catch((e: any) => console.error('[Email] 관리자 파트너 신청 알림 발송 실패:', e));
+
     return c.json({ success: true, data: partner }, 201);
   } catch (error: any) {
     console.error('Error applying partner:', error);
@@ -4276,11 +4309,21 @@ app.patch("/make-server-d0d82cc7/partners/:id", handleUpdatePartner);
 const handleUpdatePartnerStatus = async (c: any) => {
   try {
     const id = c.req.param('id');
-    const { status } = await c.req.json();
+    const body = await c.req.json();
+    const { status, rejectReason } = body;
     const partner = await db.updatePartnerStatus(id, status);
     if (!partner) {
       return c.json({ success: false, error: 'Partner not found' }, 404);
     }
+
+    // 승인(active) 또는 거절(rejected/suspended) 시 결과 이메일 발송 — 비동기, 실패해도 상태변경은 정상 처리
+    const partnerEmail = (partner as any).email;
+    const partnerName = (partner as any).name;
+    if (partnerEmail && (status === 'active' || status === 'rejected' || status === 'suspended')) {
+      const approved = status === 'active';
+      sendApplicationResultEmail({ to: partnerEmail, applicantName: partnerName, applicationType: '파트너', approved, rejectReason: approved ? undefined : (rejectReason || undefined), loginUrl: approved ? 'https://app.soulpay.kr/partner/login' : undefined }).catch((e: any) => console.error('[Email] 파트너 상태 변경 결과 발송 실패:', e));
+    }
+
     return c.json({ success: true, data: partner });
   } catch (error) {
     console.error('Error updating partner status:', error);
