@@ -1476,7 +1476,7 @@ export default function PaymentSelection() {
                   </div>
                   {paymentMethod === 'bank' && (
                     <div className="ml-6 animate-fade-in text-xs text-zinc-500 dark:text-zinc-400 font-medium flex flex-col gap-1">
-                      <p>· 입금하실 가상계좌 정보는 신청 완료 후에 화면과 알림톡으로 상세 제공됩니다.</p>
+                      <p>· 입금하실 가상계좌 정보는 신청 완료 후에 화면에서 상세 제공됩니다.</p>
                       <p>· 발급된 가상계좌로 24시간 이내 입금하시면 결제 처리가 자동 완료됩니다.</p>
                     </div>
                   )}

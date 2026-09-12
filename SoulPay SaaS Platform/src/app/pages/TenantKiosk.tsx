@@ -612,9 +612,9 @@ export default function TenantKiosk() {
                   <h2 className="text-3xl font-black text-[#191F28] group-hover:text-[#3182F6] transition-colors">
                     전화번호로 {terms.donation} (이력 연동)
                   </h2>
-                  <p className="text-sm sm:text-base text-[#4E5968] font-medium leading-relaxed">
-                    휴대폰 번호 11자리를 터치하면 {terms.donor} 성함이 자동 연결되고 **마이페이지 & 알림톡**이 발송됩니다.
-                  </p>
+                   <p className="text-sm sm:text-base text-[#4E5968] font-medium leading-relaxed">
+                     휴대폰 번호 11자리를 터치하면 {terms.donor} 성함이 자동 연결되고 **마이페이지**에서 이력을 확인하실 수 있습니다.
+                   </p>
                 </div>
 
                 <div className="flex items-center justify-between pt-5 border-t border-[#F2F4F6] text-[#3182F6] font-black text-base">
@@ -631,7 +631,7 @@ export default function TenantKiosk() {
           <div className="max-w-[#540px] mx-auto w-full space-y-7 text-center my-auto">
             <div className="space-y-2">
               <h2 className="text-3xl sm:text-4xl font-black text-[#191F28]">010 뒤 8자리 번호를 입력해 주세요</h2>
-              <p className="text-base sm:text-lg text-[#4E5968] font-semibold">{terms.donor} 정보 자동 매칭 및 알림톡 감사 메시지가 전송됩니다.</p>
+              <p className="text-base sm:text-lg text-[#4E5968] font-semibold">{terms.donor} 정보 자동 매칭 후 마이페이지에서 이력을 확인하실 수 있습니다.</p>
             </div>
 
             {/* 대형 전화번호 디스플레이 */}
@@ -1277,11 +1277,7 @@ export default function TenantKiosk() {
               <div className="flex justify-between"><span>{terms.donation} 항목:</span> <span className="text-[#191F28] font-bold">{selectedItem?.name || (ft.placeNoun === '사찰' ? '불전함 / 보시금' : ft.placeNoun === '성당' ? '주일 봉헌금' : '주일 헌금')}</span></div>
               <div className="flex justify-between"><span>결제 금액:</span> <span className="text-[#3182F6] font-black text-lg">{amount.toLocaleString()}원</span></div>
               <div className="flex justify-between"><span>결제 수단:</span> <span className="text-[#1B64DA] font-extrabold">{paymentType === 'CARD' ? '신용·체크카드 / 삼성·애플페이' : paymentType === 'KAKAO_PAY' ? '카카오페이 (QR/바코드)' : '네이버페이 (QR/바코드)'}</span></div>
-              {phone && (
-                <div className="pt-3 border-t border-[#E5E8EB] text-[#1B64DA] font-sans text-sm font-bold">
-                  📱 기재하신 번호({phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3')})로 감사 알림톡이 전송되었습니다.
-                </div>
-              )}
+
             </div>
 
             <p className="text-sm text-[#8B95A1]">
