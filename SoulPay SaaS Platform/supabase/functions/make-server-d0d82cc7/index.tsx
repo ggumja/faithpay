@@ -481,25 +481,22 @@ app.post("/tenant-staff/:tenantId/reset-password", async (c) => c.redirect(`/mak
 app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/change-password", async (c) => {
   try {
     const tenantId = c.req.param("tenantId");
-    const { email, currentPassword, newPassword } = await c.req.json();
+    const { email, newPassword } = await c.req.json();
 
-    if (!tenantId || !email || !currentPassword || !newPassword) {
-      return c.json({ success: false, error: "tenantId, email, currentPassword, newPassword는 모두 필수입니다." }, 400);
+    if (!tenantId || !email || !newPassword) {
+      return c.json({ success: false, error: "tenantId, email, newPassword는 모두 필수입니다." }, 400);
     }
     if (newPassword.length < 8) {
       return c.json({ success: false, error: "새 비밀번호는 8자 이상이어야 합니다." }, 400);
-    }
-    if (currentPassword === newPassword) {
-      return c.json({ success: false, error: "새 비밀번호는 현재 비밀번호와 달라야 합니다." }, 400);
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const sb = db.pgClient();
 
-    // 1. 계정 조회 및 현재 비밀번호 확인
+    // 1. 계정 조회 (로그인 세션 기반이므로 현재 비밀번호 확인 불필요)
     const { data: staff, error: fetchError } = await sb
       .from("tenant_admins")
-      .select("id, name, email, password, status")
+      .select("id, name, email, status")
       .eq("tenant_id", tenantId)
       .eq("email", cleanEmail)
       .single();
@@ -509,14 +506,6 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/change-password", async (
     }
     if (staff.status === "locked") {
       return c.json({ success: false, error: "잠긴 계정입니다. 시스템 관리자에게 문의하세요." }, 403);
-    }
-
-    // 현재 비밀번호 검증 — tenants.contact.tempPassword 도 fallback 허용
-    const { data: tenantRow } = await sb.from("tenants").select("contact").eq("id", tenantId).single();
-    const contactPw = (tenantRow?.contact as any)?.tempPassword || "";
-    const isCurrentValid = staff.password === currentPassword || contactPw === currentPassword;
-    if (!isCurrentValid) {
-      return c.json({ success: false, error: "현재 비밀번호가 올바르지 않습니다." }, 401);
     }
 
     // 2. 새 비밀번호로 업데이트

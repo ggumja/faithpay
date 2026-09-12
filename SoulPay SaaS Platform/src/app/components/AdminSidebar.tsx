@@ -51,31 +51,28 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
 
   // 🔑 비밀번호 변경 모달 상태
   const [isPwModalOpen, setIsPwModalOpen] = useState(false);
-  const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
-  const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [isPwChanging, setIsPwChanging] = useState(false);
 
   const openPwModal = () => {
-    setCurrentPw(''); setNewPw(''); setConfirmPw('');
-    setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false);
+    setNewPw(''); setConfirmPw('');
+    setShowNewPw(false); setShowConfirmPw(false);
     setIsPwModalOpen(true);
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentAdmin?.email || !currentTenant?.id) { toast.error('로그인 정보를 확인할 수 없습니다.'); return; }
-    if (!currentPw || !newPw || !confirmPw) { toast.error('모든 항목을 입력해 주세요.'); return; }
+    if (!newPw || !confirmPw) { toast.error('새 비밀번호를 입력해 주세요.'); return; }
     if (newPw.length < 8) { toast.error('새 비밀번호는 8자 이상이어야 합니다.'); return; }
-    if (newPw !== confirmPw) { toast.error('새 비밀번호와 확인 비밀번호가 일치하지 않습니다.'); return; }
-    if (currentPw === newPw) { toast.error('새 비밀번호는 현재 비밀번호와 달라야 합니다.'); return; }
+    if (newPw !== confirmPw) { toast.error('비밀번호가 일치하지 않습니다.'); return; }
     setIsPwChanging(true);
     try {
       const res = await adminAPI.changeTenantAdminPassword(
-        currentTenant.id, currentAdmin.email, currentPw, newPw
+        currentTenant.id, currentAdmin.email, newPw
       );
       if (res.success) {
         toast.success('✅ 비밀번호가 성공적으로 변경되었습니다.');
@@ -308,29 +305,11 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
               내 비밀번호 변경
             </DialogTitle>
             <DialogDescription className="text-xs">
-              현재 비밀번호를 확인한 후 새 비밀번호로 변경합니다. 8자 이상이어야 합니다.
+              새 비밀번호를 입력하세요. 8자 이상이어야 합니다.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleChangePassword} className="space-y-4 pt-2">
-            {/* 현재 비밀번호 */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-700">현재 비밀번호</Label>
-              <div className="relative">
-                <input
-                  type={showCurrentPw ? 'text' : 'password'}
-                  value={currentPw}
-                  onChange={(e) => setCurrentPw(e.target.value)}
-                  placeholder="현재 비밀번호 입력"
-                  autoComplete="current-password"
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button type="button" onClick={() => setShowCurrentPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                  {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
             {/* 새 비밀번호 */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-slate-700">새 비밀번호 <span className="text-slate-400 font-normal">(8자 이상)</span></Label>
@@ -374,7 +353,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
 
             <Button
               type="submit"
-              disabled={isPwChanging || !currentPw || !newPw || !confirmPw || newPw !== confirmPw}
+              disabled={isPwChanging || !newPw || !confirmPw || newPw !== confirmPw}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50"
             >
               {isPwChanging ? (
