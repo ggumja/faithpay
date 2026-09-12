@@ -475,7 +475,66 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
     return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
   }
 });
-app.post("/tenant-staff/:tenantId/reset-password", async (c) => c.redirect(`/make-server-d0d82cc7/tenant-staff/${c.req.param("tenantId")}/reset-password`));
+// 클라이언트가 prefix 없이 호출하는 경우를 위한 동일 핸들러 직접 등록
+app.post("/tenant-staff/:tenantId/reset-password", async (c) => {
+  try {
+    const tenantId = c.req.param("tenantId");
+    const { email } = await c.req.json();
+
+    if (!tenantId || !email) {
+      return c.json({ success: false, error: "tenantId와 email은 필수입니다." }, 400);
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const sb = db.pgClient();
+
+    const { data: staff, error: fetchError } = await sb
+      .from("tenant_admins")
+      .select("id, name, email, status")
+      .eq("tenant_id", tenantId)
+      .eq("email", cleanEmail)
+      .single();
+
+    if (fetchError || !staff) {
+      return c.json({ success: false, error: "해당 테넌트에서 이메일과 일치하는 관리자 계정을 찾을 수 없습니다." }, 404);
+    }
+
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+    const randomBytes = crypto.getRandomValues(new Uint8Array(10));
+    const tempPassword = Array.from(randomBytes).map((b) => chars[b % chars.length]).join("");
+
+    const { error: updateError } = await sb
+      .from("tenant_admins")
+      .update({ password: tempPassword, updated_at: new Date().toISOString() })
+      .eq("id", staff.id);
+
+    if (updateError) {
+      console.error("[tenant-staff] reset-password DB error:", updateError);
+      return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
+    }
+
+    const { data: tenant } = await sb.from("tenants").select("name, slug").eq("id", tenantId).single();
+    const tenantName = tenant?.name || "SoulPay";
+    const tenantSlug = tenant?.slug || "";
+    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+
+    try {
+      await sendPasswordResetEmail({ to: cleanEmail, partnerName: staff.name, tenantName, tempPassword, loginUrl });
+      console.log(`[tenant-staff] 임시 비밀번호 이메일 발송 완료 — ${cleanEmail}`);
+    } catch (emailErr) {
+      console.error("[tenant-staff] reset-password 이메일 발송 실패:", emailErr);
+    }
+
+    console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
+    return c.json({
+      success: true,
+      data: { adminName: staff.name, adminEmail: cleanEmail, tempPassword, message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.` },
+    });
+  } catch (err) {
+    console.error("[tenant-staff] reset-password error:", err);
+    return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
+  }
+});
 
 // ── 단체 관리자 비밀번호 직접 변경 (현재 비밀번호 확인 후 새 비밀번호로 교체) ──
 app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/change-password", async (c) => {
