@@ -3,6 +3,36 @@ import { createRoot } from "react-dom/client";
 import App from "./app/App.tsx";
 import "./styles/index.css";
 import { setupServiceWorker } from "./app/utils/pwaUtils";
+import * as Sentry from "@sentry/react";
+
+// ─── Sentry 에러 트래킹 초기화 ──────────────────────────────────────────────
+// VITE_SENTRY_DSN 환경변수 미설정 시 조용히 skip (개발 환경 무해)
+// .env.local에 VITE_SENTRY_DSN=https://xxxx@o.ingest.sentry.io/xxxx 추가
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,   // 'production' | 'development'
+    tracesSampleRate: 0.1,               // 10% 트레이스 — 무료 할당량(5k/월) 절약
+    replaysSessionSampleRate: 0,         // Session Replay 비활성 (할당량 절약)
+    replaysOnErrorSampleRate: 0,
+    ignoreErrors: [
+      // 네트워크 단순 오류 — 실제 버그 아님
+      'Network request failed',
+      'NetworkError',
+      'Failed to fetch',
+      'Load failed',
+      // 청크 로딩 오류 — 이미 별도 처리
+      'Failed to fetch dynamically imported module',
+      'Importing a module script failed',
+    ],
+    beforeSend(event) {
+      // localhost 개발 중 이벤트 전송 차단
+      if (window.location.hostname === 'localhost') return null;
+      return event;
+    },
+  });
+}
 
 // Service Worker 안전 등록 및 Dev 환경 자동 정리
 setupServiceWorker();

@@ -37,6 +37,7 @@ const TenantDesignSettings = lazy(() => import("./pages/admin/TenantDesignSettin
 const TenantDocumentsSettings = lazy(() => import("./pages/admin/TenantDocumentsSettings"));
 const RecurringPendingPage = lazy(() => import("./pages/admin/RecurringPendingPage"));
 const AdminAccountManagement = lazy(() => import("./pages/admin/AdminAccountManagement"));
+const SupportPage = lazy(() => import("./pages/admin/SupportPage"));
 const TenantAdminRouteGuard = lazy(() => import("./components/TenantAdminRouteGuard"));
 
 // ── [Group 3] 파트너 / 총판 관리자 포털 (Partner Portal) ──
@@ -286,6 +287,10 @@ export const router = createBrowserRouter([
           {
             path: "/:tenantSlug/admin/statistics",
             Component: TenantStatisticsPage,
+          },
+          {
+            path: "/:tenantSlug/admin/support",
+            Component: SupportPage,
           },
         ],
       },

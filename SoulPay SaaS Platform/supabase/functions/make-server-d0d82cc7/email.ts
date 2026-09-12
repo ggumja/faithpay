@@ -345,6 +345,10 @@ export async function sendAdminNewApplicationEmail(params: AdminNewApplicationPa
       <td style="padding:10px 16px;color:#111827;font-size:13px;border-bottom:1px solid #e5e7eb;">${r.value}</td>
     </tr>`).join('');
 
+  const reviewUrl = applicationType === '단체'
+    ? 'https://ops.soulpay.kr/system/admin/tenants/pending'
+    : 'https://ops.soulpay.kr/system/admin/partners';
+
   const html = `<!DOCTYPE html>
 <html lang="ko">
 <head><meta charset="UTF-8"/></head>
@@ -363,7 +367,7 @@ export async function sendAdminNewApplicationEmail(params: AdminNewApplicationPa
       <p style="color:#374151;font-size:14px;margin:0 0 16px 0;">새로운 <strong>${applicationType} 신청</strong>이 접수되었습니다. 아래 내용을 확인하고 심사를 진행해 주세요.</p>
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">${rowsHtml}</table>
       <div style="text-align:center;margin-top:24px;">
-        <a href="https://app.soulpay.kr/admin" target="_blank" style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;">🔍 관리자 페이지에서 심사하기</a>
+        <a href="${reviewUrl}" target="_blank" style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;">🔍 관리자 페이지에서 심사하기</a>
       </div>
     </td>
   </tr>
@@ -466,4 +470,247 @@ export async function sendApplicationResultEmail(params: ApplicationResultParams
 </html>`;
 
   return sendEmail({ to, subject, html });
+}
+
+// ─── 일일 결제 리포트 이메일 ────────────────────────────────────────────────
+// 매일 오전 9시 자동 발송 (pg_cron → Edge Function)
+export async function sendDailyReportEmail(params: {
+  reportDate: string;           // 예: '2026-09-12 (금)'
+  totalAmount: number;
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  recurringCount: number;
+  tenantBreakdown: Array<{ name: string; count: number; amount: number }>;
+}): Promise<SendEmailResult> {
+  const { reportDate, totalAmount, totalCount, successCount, failedCount, recurringCount, tenantBreakdown } = params;
+  const to = 'support@soulpay.kr';
+  const subject = `[SoulPay] 일일 결제 리포트 — ${reportDate}`;
+
+  const fmtAmt = (n: number) => n.toLocaleString('ko-KR') + '원';
+  const failRate = totalCount > 0 ? ((failedCount / totalCount) * 100).toFixed(1) : '0.0';
+  const statusColor = failedCount > 0 ? '#ef4444' : '#10b981';
+  const statusIcon = failedCount > 0 ? '⚠️' : '✅';
+
+  const tenantRows = tenantBreakdown.length > 0
+    ? tenantBreakdown.map(t => `
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#374151;">${t.name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;">${t.count}건</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#111827;font-weight:600;">${fmtAmt(t.amount)}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="3" style="padding:16px;text-align:center;color:#9ca3af;">결제 내역 없음</td></tr>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+
+  <!-- 헤더 -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);padding:28px 40px;">
+      <p style="margin:0;color:rgba(255,255,255,.8);font-size:12px;letter-spacing:.5px;text-transform:uppercase;">SoulPay 운영 리포트</p>
+      <h1 style="margin:4px 0 0;color:#ffffff;font-size:22px;font-weight:700;">일일 결제 현황</h1>
+      <p style="margin:4px 0 0;color:rgba(255,255,255,.7);font-size:13px;">${reportDate}</p>
+    </td>
+  </tr>
+
+  <!-- 주요 지표 -->
+  <tr>
+    <td style="padding:28px 40px 8px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td width="30%" style="padding:0 6px 0 0;">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#16a34a;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">총 결제금액</p>
+              <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#111827;">${fmtAmt(totalAmount)}</p>
+            </div>
+          </td>
+          <td width="23%" style="padding:0 6px;">
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#2563eb;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">총 건수</p>
+              <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#111827;">${successCount}건</p>
+            </div>
+          </td>
+          <td width="23%" style="padding:0 6px;">
+            <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#ea580c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">정기결제</p>
+              <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#111827;">${recurringCount}건</p>
+            </div>
+          </td>
+          <td width="24%" style="padding:0 0 0 6px;">
+            <div style="background:#${failedCount > 0 ? 'fef2f2;border:1px solid #fecaca' : 'f0fdf4;border:1px solid #bbf7d0'};border-radius:10px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:${statusColor};font-weight:600;text-transform:uppercase;letter-spacing:.5px;">${statusIcon} 실패</p>
+              <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#111827;">${failedCount}건</p>
+              <p style="margin:2px 0 0;font-size:10px;color:#6b7280;">실패율 ${failRate}%</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- 단체별 상세 -->
+  <tr>
+    <td style="padding:20px 40px 8px;">
+      <h3 style="margin:0 0 12px;font-size:14px;font-weight:600;color:#374151;">단체별 결제 현황</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:10px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:600;">단체명</th>
+            <th style="padding:10px 12px;text-align:right;font-size:12px;color:#6b7280;font-weight:600;">건수</th>
+            <th style="padding:10px 12px;text-align:right;font-size:12px;color:#6b7280;font-weight:600;">금액</th>
+          </tr>
+        </thead>
+        <tbody>${tenantRows}</tbody>
+      </table>
+    </td>
+  </tr>
+
+  <!-- 바로가기 -->
+  <tr>
+    <td style="padding:20px 40px 28px;text-align:center;">
+      <a href="https://app.soulpay.kr/admin" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">관리자 대시보드 바로가기</a>
+    </td>
+  </tr>
+
+  <!-- 푸터 -->
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">
+        Powered by <strong>SoulPay</strong> · <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a>
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return sendEmail({ to, subject, html });
+}
+
+// ─── 문의 이메일 ─────────────────────────────────────────────────────────────
+// 테넌트 관리자가 문의 폼 제출 시:
+//   1) support@soulpay.kr 에 문의 내용 발송
+//   2) 문의자에게 자동 접수 확인 회신
+export async function sendSupportInquiryEmail(params: {
+  senderName: string;
+  senderEmail: string;
+  tenantName: string;
+  category: string;
+  subject: string;
+  message: string;
+}): Promise<{ notifyOk: boolean; autoReplyOk: boolean }> {
+  const { senderName, senderEmail, tenantName, category, subject, message } = params;
+  const submittedAt = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+
+  // ── 운영팀 수신 이메일 ──────────────────────────────────────────────────────
+  const notifyHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 0;">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+  <tr>
+    <td style="background:linear-gradient(135deg,#6366f1,#4f46e5);padding:24px 36px;">
+      <p style="margin:0;color:rgba(255,255,255,.8);font-size:12px;">SoulPay 고객 문의</p>
+      <h1 style="margin:4px 0 0;color:#fff;font-size:20px;font-weight:700;">[${category}] ${subject}</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:28px 36px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 16px;font-size:12px;color:#6b7280;font-weight:600;width:90px;">단체명</td>
+          <td style="padding:10px 16px;font-size:14px;color:#111827;">${tenantName}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-size:12px;color:#6b7280;font-weight:600;border-top:1px solid #f3f4f6;">문의자</td>
+          <td style="padding:10px 16px;font-size:14px;color:#111827;border-top:1px solid #f3f4f6;">${senderName}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 16px;font-size:12px;color:#6b7280;font-weight:600;border-top:1px solid #f3f4f6;">이메일</td>
+          <td style="padding:10px 16px;border-top:1px solid #f3f4f6;"><a href="mailto:${senderEmail}" style="color:#4f46e5;font-size:14px;">${senderEmail}</a></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-size:12px;color:#6b7280;font-weight:600;border-top:1px solid #f3f4f6;">접수 시각</td>
+          <td style="padding:10px 16px;font-size:14px;color:#111827;border-top:1px solid #f3f4f6;">${submittedAt}</td>
+        </tr>
+      </table>
+      <h3 style="margin:0 0 10px;font-size:14px;font-weight:600;color:#374151;">문의 내용</h3>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${message}</div>
+      <div style="margin-top:20px;text-align:center;">
+        <a href="mailto:${senderEmail}?subject=Re: [${category}] ${subject}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:600;">답장하기</a>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:14px 36px;text-align:center;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">Powered by <strong>SoulPay</strong> · <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a></p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  // ── 자동 접수 확인 회신 ────────────────────────────────────────────────────
+  const autoReplyHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 0;">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+  <tr>
+    <td style="background:linear-gradient(135deg,#6366f1,#4f46e5);padding:24px 36px;">
+      <p style="margin:0;color:rgba(255,255,255,.8);font-size:12px;">SoulPay 고객지원</p>
+      <h1 style="margin:4px 0 0;color:#fff;font-size:20px;font-weight:700;">문의가 접수되었습니다 ✅</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:28px 36px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;">안녕하세요, <strong>${senderName}</strong>님.</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.7;">
+        문의 내용이 정상적으로 접수되었습니다.<br>
+        영업일 기준 <strong>1~2일 이내</strong>에 <strong>${senderEmail}</strong>로 답변 드리겠습니다.
+      </p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:20px;">
+        <p style="margin:0 0 6px;font-size:12px;color:#6b7280;font-weight:600;">접수 문의</p>
+        <p style="margin:0;font-size:14px;color:#111827;font-weight:600;">[${category}] ${subject}</p>
+        <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">${submittedAt}</p>
+      </div>
+      <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;">
+        긴급 문의는 <a href="mailto:support@soulpay.kr" style="color:#4f46e5;">support@soulpay.kr</a>로 직접 연락해 주세요.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:14px 36px;text-align:center;">
+      <p style="color:#9ca3af;font-size:11px;margin:0;">Powered by <strong>SoulPay</strong> · <a href="mailto:support@soulpay.kr" style="color:#6b7280;">support@soulpay.kr</a></p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  const [notifyResult, autoReplyResult] = await Promise.allSettled([
+    sendEmail({ to: 'support@soulpay.kr', subject: `[문의][${category}] ${subject} — ${tenantName}`, html: notifyHtml }),
+    sendEmail({ to: senderEmail, subject: `[SoulPay] 문의가 접수되었습니다: ${subject}`, html: autoReplyHtml }),
+  ]);
+
+  return {
+    notifyOk: notifyResult.status === 'fulfilled' && notifyResult.value.ok,
+    autoReplyOk: autoReplyResult.status === 'fulfilled' && autoReplyResult.value.ok,
+  };
 }

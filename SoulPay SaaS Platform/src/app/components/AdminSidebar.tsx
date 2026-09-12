@@ -1,4 +1,5 @@
 import { useNavigate, Link } from 'react-router';
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Separator } from './ui/separator';
 import {
@@ -17,9 +18,24 @@ import {
   Palette,
   ShieldCheck,
   TrendingUp,
+  LifeBuoy,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Save,
 } from 'lucide-react';
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
+import { adminAPI } from '../api/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Button } from './ui/button';
+import { Label } from './ui/label';
 
 import { useAdminPermissions } from '../hooks/useAdminPermissions';
 import { isAdminPortalDomain, getPayPortalUrl } from '../utils/domainUtils';
@@ -32,6 +48,44 @@ interface AdminSidebarProps {
 export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
   const navigate = useNavigate();
   const { currentAdmin, setCurrentAdmin, currentTenant, setCurrentTenant, tenants } = useApp();
+
+  // 🔑 비밀번호 변경 모달 상태
+  const [isPwModalOpen, setIsPwModalOpen] = useState(false);
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [isPwChanging, setIsPwChanging] = useState(false);
+
+  const openPwModal = () => {
+    setNewPw(''); setConfirmPw('');
+    setShowNewPw(false); setShowConfirmPw(false);
+    setIsPwModalOpen(true);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentAdmin?.email || !currentTenant?.id) { toast.error('로그인 정보를 확인할 수 없습니다.'); return; }
+    if (!newPw || !confirmPw) { toast.error('새 비밀번호를 입력해 주세요.'); return; }
+    if (newPw.length < 8) { toast.error('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (newPw !== confirmPw) { toast.error('비밀번호가 일치하지 않습니다.'); return; }
+    setIsPwChanging(true);
+    try {
+      const res = await adminAPI.changeTenantAdminPassword(
+        currentTenant.id, currentAdmin.email, newPw
+      );
+      if (res.success) {
+        toast.success('✅ 비밀번호가 성공적으로 변경되었습니다.');
+        setIsPwModalOpen(false);
+      } else {
+        toast.error(res.error || '비밀번호 변경에 실패했습니다.');
+      }
+    } catch {
+      toast.error('비밀번호 변경 중 오류가 발생했습니다.');
+    } finally {
+      setIsPwChanging(false);
+    }
+  };
   const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
   const effectiveTenant = (decodedSlug
     ? tenants.find(
@@ -211,7 +265,7 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
         return (
           <div className="mb-5 p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl shadow-2xs relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600" />
-            
+
             <div className="space-y-1.5 pt-0.5">
               <div className="flex items-center justify-between gap-2">
                 {effectiveTenant?.name && (
@@ -228,10 +282,90 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
               <p className="font-extrabold text-sm text-slate-900 truncate leading-snug">
                 {adminDisplayName}
               </p>
+
+              {/* 비밀번호 변경 버튼 */}
+              <button
+                onClick={openPwModal}
+                className="mt-1 w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold text-slate-500 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all"
+              >
+                <KeyRound className="h-3 w-3" />
+                비밀번호 변경
+              </button>
             </div>
           </div>
         );
       })()}
+
+      {/* 🔑 비밀번호 변경 모달 */}
+      <Dialog open={isPwModalOpen} onOpenChange={setIsPwModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-blue-500" />
+              내 비밀번호 변경
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              새 비밀번호를 입력하세요. 8자 이상이어야 합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleChangePassword} className="space-y-4 pt-2">
+            {/* 새 비밀번호 */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">새 비밀번호 <span className="text-slate-400 font-normal">(8자 이상)</span></Label>
+              <div className="relative">
+                <input
+                  type={showNewPw ? 'text' : 'password'}
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  placeholder="새 비밀번호 입력"
+                  autoComplete="new-password"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* 새 비밀번호 확인 */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">새 비밀번호 확인</Label>
+              <div className="relative">
+                <input
+                  type={showConfirmPw ? 'text' : 'password'}
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  placeholder="새 비밀번호 재입력"
+                  autoComplete="new-password"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button type="button" onClick={() => setShowConfirmPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {confirmPw && newPw && (
+                <p className={`text-xs mt-1 ${newPw === confirmPw ? 'text-green-600' : 'text-red-500'}`}>
+                  {newPw === confirmPw ? '✓ 비밀번호가 일치합니다' : '✗ 비밀번호가 일치하지 않습니다'}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isPwChanging || !newPw || !confirmPw || newPw !== confirmPw}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50"
+            >
+              {isPwChanging ? (
+                <span className="flex items-center gap-2"><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> 변경 중...</span>
+              ) : (
+                <span className="flex items-center gap-2"><Save className="h-4 w-4" /> 비밀번호 변경</span>
+              )}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Navigation Group Sections */}
       <nav className="space-y-4 flex-1">
@@ -411,6 +545,27 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
             </div>
           </div>
         )}
+
+        {/* 6. 고객 문의 (고정 링크 — 모든 관리자 노출) */}
+        <div className="space-y-1">
+          <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 tracking-wider">
+            지원
+          </div>
+          <div className="space-y-0.5">
+            <Link to={tenantSlug ? `/${tenantSlug}${prefix}/support` : `${prefix}/support`}>
+              <div
+                className={`w-full flex items-center px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
+                  normalizedCurrent.includes('/support')
+                    ? 'bg-indigo-50 text-indigo-600 font-bold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <LifeBuoy className={`h-4 w-4 mr-2.5 shrink-0 ${normalizedCurrent.includes('/support') ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span className="truncate">고객 문의</span>
+              </div>
+            </Link>
+          </div>
+        </div>
       </nav>
 
       <Separator className="my-4" />

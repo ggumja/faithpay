@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
-import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, Save, ShieldCheck, Users, Plus, Edit2, Layers } from 'lucide-react';
+import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, Save, ShieldCheck, Users, Plus, Edit2, Layers, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
 
@@ -476,13 +476,22 @@ export default function AdminAccountManagement() {
   };
 
   const handleResetPassword = async (staff: StaffAdminUser) => {
-    const defaultPw = generateTempPassword();
-    const nextList = staffList.map((s) => (s.id === staff.id ? { ...s, password: defaultPw } : s));
-    setStaffList(nextList);
-    // ✅ DB 즉시 반영
-    await persistStaffToDB(currentTenant.id, nextList);
-    toast.success(`[${staff.name}] 계정 비밀번호가 임시 비밀번호로 초기화되었습니다. (${defaultPw})`);
+    try {
+      const res = await adminAPI.resetTenantAdminPassword(currentTenant.id, staff.email);
+      if (res.success) {
+        toast.success(`[${staff.name}] 임시 비밀번호가 발급되어 ${staff.email}로 발송되었습니다.`);
+        // 로컬 staffList에도 새 비밀번호 반영 (UI 동기화)
+        if (res.data?.tempPassword) {
+          setStaffList((prev) => prev.map((s) => s.id === staff.id ? { ...s, password: res.data!.tempPassword } : s));
+        }
+      } else {
+        toast.error(res.error || '비밀번호 재설정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('비밀번호 재설정 중 오류가 발생했습니다.');
+    }
   };
+
 
   const handleDeleteStaff = async (id: string, name: string) => {
     if (staffList.length <= 1) {

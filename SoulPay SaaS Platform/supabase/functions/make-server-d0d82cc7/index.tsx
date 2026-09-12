@@ -5,7 +5,7 @@ import { logger } from "npm:hono/logger";
 import * as db from "./database.tsx";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
-import { sendDonationReceiptEmail, sendPasswordResetEmail, sendApplicationReceivedEmail, sendAdminNewApplicationEmail, sendApplicationResultEmail } from "./email.ts";
+import { sendDonationReceiptEmail, sendPasswordResetEmail, sendApplicationReceivedEmail, sendAdminNewApplicationEmail, sendApplicationResultEmail, sendDailyReportEmail, sendSupportInquiryEmail } from "./email.ts";
 
 /**
  * 이메일 주소 결정 헬퍼
@@ -132,9 +132,36 @@ async function verifyPaymentAmount(
 
 // ============================================================
 
-// Health check endpoint
-app.get("/make-server-d0d82cc7/health", (c) => {
-  return c.json({ status: "ok" });
+// Health check endpoint — DB 연결 + 점검모드 상태 포함
+app.get("/make-server-d0d82cc7/health", async (c) => {
+  const checks: Record<string, string> = {};
+  let maintenanceActive = false;
+
+  // DB 연결 확인 (system_settings 가벼운 조회)
+  try {
+    const sb = db.pgClient();
+    const { error } = await sb.from('system_settings').select('key').limit(1);
+    checks.db = error ? 'error' : 'ok';
+  } catch {
+    checks.db = 'error';
+  }
+
+  // 점검모드 상태 확인
+  try {
+    const maintenance = await checkGlobalPaymentMaintenance();
+    maintenanceActive = maintenance.isMaintenance;
+    checks.payment = maintenanceActive ? 'maintenance' : 'ok';
+  } catch {
+    checks.payment = 'unknown';
+  }
+
+  const allOk = checks.db === 'ok';
+  return c.json({
+    status: allOk ? 'ok' : 'degraded',
+    checks,
+    maintenance: maintenanceActive,
+    timestamp: new Date().toISOString(),
+  }, allOk ? 200 : 503);
 });
 
 // 🔧 일회성 패치: donations 테이블 누락 컬럼 추가
@@ -413,6 +440,26 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
       return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
     }
 
+    // 4. 테넌트 이름 조회 후 관리자 이메일로 임시 비밀번호 발송
+    const { data: tenant } = await sb.from("tenants").select("name, slug").eq("id", tenantId).single();
+    const tenantName = tenant?.name || "SoulPay";
+    const tenantSlug = tenant?.slug || "";
+    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+
+    try {
+      await sendPasswordResetEmail({
+        to: cleanEmail,
+        partnerName: staff.name,
+        tenantName,
+        tempPassword,
+        loginUrl,
+      });
+      console.log(`[tenant-staff] 임시 비밀번호 이메일 발송 완료 — ${cleanEmail}`);
+    } catch (emailErr) {
+      // 이메일 발송 실패는 비밀번호 리셋 자체를 실패 처리하지 않음 (DB는 이미 반영됨)
+      console.error("[tenant-staff] reset-password 이메일 발송 실패:", emailErr);
+    }
+
     console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
     return c.json({
       success: true,
@@ -420,7 +467,7 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
         adminName: staff.name,
         adminEmail: cleanEmail,
         tempPassword,
-        message: "임시 비밀번호가 발급되었습니다. 해당 관리자에게 안전한 채널로 전달해 주세요.",
+        message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.`,
       },
     });
   } catch (err) {
@@ -429,6 +476,57 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
   }
 });
 app.post("/tenant-staff/:tenantId/reset-password", async (c) => c.redirect(`/make-server-d0d82cc7/tenant-staff/${c.req.param("tenantId")}/reset-password`));
+
+// ── 단체 관리자 비밀번호 직접 변경 (현재 비밀번호 확인 후 새 비밀번호로 교체) ──
+app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/change-password", async (c) => {
+  try {
+    const tenantId = c.req.param("tenantId");
+    const { email, newPassword } = await c.req.json();
+
+    if (!tenantId || !email || !newPassword) {
+      return c.json({ success: false, error: "tenantId, email, newPassword는 모두 필수입니다." }, 400);
+    }
+    if (newPassword.length < 8) {
+      return c.json({ success: false, error: "새 비밀번호는 8자 이상이어야 합니다." }, 400);
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const sb = db.pgClient();
+
+    // 1. 계정 조회 (로그인 세션 기반이므로 현재 비밀번호 확인 불필요)
+    const { data: staff, error: fetchError } = await sb
+      .from("tenant_admins")
+      .select("id, name, email, status")
+      .eq("tenant_id", tenantId)
+      .eq("email", cleanEmail)
+      .single();
+
+    if (fetchError || !staff) {
+      return c.json({ success: false, error: "계정을 찾을 수 없습니다." }, 404);
+    }
+    if (staff.status === "locked") {
+      return c.json({ success: false, error: "잠긴 계정입니다. 시스템 관리자에게 문의하세요." }, 403);
+    }
+
+    // 2. 새 비밀번호로 업데이트
+    const { error: updateError } = await sb
+      .from("tenant_admins")
+      .update({ password: newPassword, updated_at: new Date().toISOString() })
+      .eq("id", staff.id);
+
+    if (updateError) {
+      console.error("[tenant-staff] change-password DB error:", updateError);
+      return c.json({ success: false, error: "비밀번호 변경 DB 반영에 실패했습니다." }, 500);
+    }
+
+    console.log(`[tenant-staff] 비밀번호 변경 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
+    return c.json({ success: true, data: { message: "비밀번호가 성공적으로 변경되었습니다." } });
+  } catch (err) {
+    console.error("[tenant-staff] change-password error:", err);
+    return c.json({ success: false, error: "비밀번호 변경 처리 중 오류가 발생했습니다." }, 500);
+  }
+});
+app.post("/tenant-staff/:tenantId/change-password", async (c) => c.redirect(`/make-server-d0d82cc7/tenant-staff/${c.req.param("tenantId")}/change-password`));
 
 
 // 특정 단체 조회 (by ID)  ← 와일드카드이므로 static 경로 뒤에 등록
@@ -643,6 +741,56 @@ async function checkGlobalPaymentMaintenance(): Promise<{ isMaintenance: boolean
   } catch (err) {
     console.warn('Failed to check global payment maintenance:', err);
     return { isMaintenance: false };
+  }
+}
+
+// ─── 장애 알림 헬퍼 — SLACK_ALERT_WEBHOOK Secret 필요, 미설정 시 silent skip ───
+// Supabase Dashboard > Edge Functions > Secrets에 SLACK_ALERT_WEBHOOK 등록
+async function alertCriticalError(context: string, error: any, meta?: Record<string, string>): Promise<void> {
+  const webhook = Deno.env.get('SLACK_ALERT_WEBHOOK');
+  if (!webhook) return; // Secret 미설정 시 skip
+
+  const metaStr = meta ? Object.entries(meta).map(([k, v]) => `• *${k}:* ${v}`).join('\n') : '';
+  const errorStr = typeof error === 'object' ? JSON.stringify(error, null, 2).slice(0, 500) : String(error).slice(0, 500);
+  const kstTime = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19);
+
+  const payload = {
+    text: `🚨 *SoulPay 결제 장애 알림*`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: '🚨 SoulPay 결제 장애 알림', emoji: true },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*상황:*\n${context}` },
+          { type: 'mrkdwn', text: `*발생 시각:*\n${kstTime} (KST)` },
+        ],
+      },
+      ...(metaStr ? [{
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*관련 정보:*\n${metaStr}` },
+      }] : []),
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*오류 내용:*\n\`\`\`${errorStr}\`\`\`` },
+      },
+      {
+        type: 'context',
+        elements: [{ type: 'mrkdwn', text: '⚡ SoulPay 자동 모니터링 | <https://supabase.com/dashboard/project/aoognbmkstgrytkqsexy/functions|Supabase 로그 확인>' }],
+      },
+    ],
+  };
+
+  try {
+    await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn('[Alert] 슬랙 알림 발송 실패:', e);
   }
 }
 
@@ -1034,10 +1182,13 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
       }).catch((e) => console.warn('[Email] 수동결제 영수증 발송 실패:', e?.message));
       return c.json({ success: true, data: donation });
     } else {
+      // 나노페이 결제 실패 — 슬랙 알림
+      alertCriticalError('나노페이 결제 승인 실패', { resultCode: result.resultCode, resultMsg: result.resultMsg }, { tenantId, amount: String(donationData?.amount), name: donationData?.name }).catch(() => {});
       return c.json({ success: false, error: result.resultMsg, data: result }, 400);
     }
   } catch (error) {
     console.error('Error processing manual payment:', error);
+    alertCriticalError('나노페이 수동결제 서버 오류', error, { tenantId }).catch(() => {});
     return c.json({ success: false, error: 'Failed to process payment' }, 500);
   }
 });
@@ -4743,6 +4894,12 @@ const handleRecurringBatchRun = async (c: any) => {
         });
       } catch (err: any) {
         console.error(`[Recurring Batch Scheduler] Failed for sub ${sub.id}:`, err);
+        // 정기결제 개별 실패 — 슬랙 알림 (비동기, 실패 무시)
+        alertCriticalError(
+          `정기결제 자동 승인 실패 (약정 ID: ${sub.id})`,
+          err,
+          { tenantId: sub.tenantId, donorName: sub.donorName, amount: String(sub.amount) }
+        ).catch(() => {});
         try {
           await db.createDonation({
             id: `don_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
@@ -4779,6 +4936,8 @@ const handleRecurringBatchRun = async (c: any) => {
     });
   } catch (error: any) {
     console.error('Error running recurring batch scheduler:', error);
+    // 배치 전체 실행 오류 — 슬랙 알림
+    alertCriticalError('정기결제 배치 스케줄러 전체 오류', error).catch(() => {});
     return c.json({ success: false, error: error?.message || 'Batch scheduler execution failed' }, 500);
   }
 };
@@ -4906,6 +5065,8 @@ const handleChargeSubscriptionNow = async (c: any) => {
     });
   } catch (error: any) {
     console.error('Error charging subscription now:', error);
+    // 즉시 청구 실패 — 슬랙 알림
+    alertCriticalError('정기결제 즉시 청구 실패', error).catch(() => {});
     return c.json({ success: false, error: error?.message || '결제 승인 처리 중 오류가 발생했습니다.' }, 500);
   }
 };
@@ -5162,4 +5323,121 @@ app.delete("/make-server-d0d82cc7/system-admins/:id", async (c) => {
 });
 
 export default app;
+
+// ─── 고객 문의 접수 API ──────────────────────────────────────────────────────
+// 테넌트 관리자 인앱 문의 폼 → support@soulpay.kr 발송 + 자동 접수 확인 회신
+app.post("/make-server-d0d82cc7/support/inquiry", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { senderName, senderEmail, tenantName, category, subject, message } = body;
+
+    if (!senderName || !senderEmail || !subject || !message) {
+      return c.json({ success: false, error: '필수 항목이 누락되었습니다.' }, 400);
+    }
+    if (message.length > 2000) {
+      return c.json({ success: false, error: '문의 내용은 2000자 이내로 작성해 주세요.' }, 400);
+    }
+
+    const result = await sendSupportInquiryEmail({
+      senderName: String(senderName),
+      senderEmail: String(senderEmail),
+      tenantName: String(tenantName || '미입력'),
+      category: String(category || '일반'),
+      subject: String(subject),
+      message: String(message),
+    });
+
+    return c.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('[Support Inquiry] Error:', error);
+    return c.json({ success: false, error: error?.message || '문의 접수 중 오류가 발생했습니다.' }, 500);
+  }
+});
+app.post("/support/inquiry", async (c) => {
+  return c.redirect("/make-server-d0d82cc7/support/inquiry", 308);
+});
+
+// ─── 일일 결제 리포트 트리거 ────────────────────────────────────────────────
+// pg_cron 또는 외부 스케줄러가 매일 09:00 KST에 POST로 호출
+// CRON_SECRET 헤더로 무단 호출 방지 (Supabase Secret에 DAILY_REPORT_SECRET 등록)
+app.post("/make-server-d0d82cc7/admin/daily-report", async (c) => {
+  // 시크릿 검증
+  const secret = Deno.env.get('DAILY_REPORT_SECRET');
+  if (secret) {
+    const provided = c.req.header('x-cron-secret');
+    if (provided !== secret) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+  }
+
+  try {
+    const sb = db.pgClient();
+    // KST 어제 날짜 계산 (UTC+9)
+    const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayKst = nowKst.toISOString().substring(0, 10);
+    const yesterdayKst = new Date(nowKst.getTime() - 86400000).toISOString().substring(0, 10);
+
+    // 어제 결제 완료 건 조회
+    const { data: donations, error } = await sb
+      .from('donations')
+      .select('id, amount, tenant_id, is_recurring, payment_status, donor_name')
+      .gte('created_at', `${yesterdayKst}T00:00:00+09:00`)
+      .lt('created_at', `${todayKst}T00:00:00+09:00`);
+
+    if (error) throw error;
+
+    const allRows = donations || [];
+    const successRows = allRows.filter((d: any) => d.payment_status === 'completed');
+    const failedRows  = allRows.filter((d: any) => d.payment_status === 'failed');
+    const recurringRows = successRows.filter((d: any) => d.is_recurring);
+
+    const totalAmount = successRows.reduce((s: number, d: any) => s + (Number(d.amount) || 0), 0);
+
+    // 단체별 집계 — tenant 이름 조회
+    const tenantIds: string[] = [...new Set(successRows.map((d: any) => d.tenant_id).filter(Boolean))] as string[];
+    const tenantMap: Record<string, string> = {};
+    if (tenantIds.length > 0) {
+      const { data: tenants } = await sb.from('tenants').select('id, name').in('id', tenantIds);
+      (tenants || []).forEach((t: any) => { tenantMap[t.id] = t.name; });
+    }
+
+    const breakdownMap: Record<string, { count: number; amount: number }> = {};
+    for (const d of successRows) {
+      const key = tenantMap[d.tenant_id] || d.tenant_id || '미분류';
+      if (!breakdownMap[key]) breakdownMap[key] = { count: 0, amount: 0 };
+      breakdownMap[key].count++;
+      breakdownMap[key].amount += Number(d.amount) || 0;
+    }
+    const tenantBreakdown = Object.entries(breakdownMap)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // 날짜 포맷 (예: 2026-09-12 (금))
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const yDate = new Date(`${yesterdayKst}T00:00:00+09:00`);
+    const reportDate = `${yesterdayKst} (${dayNames[yDate.getDay()]})`;
+
+    await sendDailyReportEmail({
+      reportDate,
+      totalAmount,
+      totalCount: allRows.length,
+      successCount: successRows.length,
+      failedCount: failedRows.length,
+      recurringCount: recurringRows.length,
+      tenantBreakdown,
+    });
+
+    return c.json({
+      success: true,
+      reportDate,
+      successCount: successRows.length,
+      failedCount: failedRows.length,
+      totalAmount,
+    });
+  } catch (error: any) {
+    console.error('[Daily Report] Error:', error);
+    return c.json({ success: false, error: error?.message || '리포트 생성 실패' }, 500);
+  }
+});
+
 Deno.serve(app.fetch);
