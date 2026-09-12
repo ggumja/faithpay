@@ -960,6 +960,14 @@ export const adminAPI = {
       body: JSON.stringify({ email: adminEmail }),
     });
   },
+
+  /** 단체 관리자 본인 비밀번호 변경 (현재 비밀번호 확인 후 새 비밀번호로 교체) */
+  async changeTenantAdminPassword(tenantId: string, email: string, currentPassword: string, newPassword: string): Promise<APIResponse<{ message: string }>> {
+    return fetchAPI(`/tenant-staff/${tenantId}/change-password`, {
+      method: 'POST',
+      body: JSON.stringify({ email, currentPassword, newPassword }),
+    });
+  },
 };
 
 // ==================== PARTNER API ====================

@@ -440,6 +440,26 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
       return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
     }
 
+    // 4. 테넌트 이름 조회 후 관리자 이메일로 임시 비밀번호 발송
+    const { data: tenant } = await sb.from("tenants").select("name, slug").eq("id", tenantId).single();
+    const tenantName = tenant?.name || "SoulPay";
+    const tenantSlug = tenant?.slug || "";
+    const loginUrl = tenantSlug ? `https://admin.soulpay.kr/${tenantSlug}/login` : `https://admin.soulpay.kr`;
+
+    try {
+      await sendPasswordResetEmail({
+        to: cleanEmail,
+        partnerName: staff.name,
+        tenantName,
+        tempPassword,
+        loginUrl,
+      });
+      console.log(`[tenant-staff] 임시 비밀번호 이메일 발송 완료 — ${cleanEmail}`);
+    } catch (emailErr) {
+      // 이메일 발송 실패는 비밀번호 리셋 자체를 실패 처리하지 않음 (DB는 이미 반영됨)
+      console.error("[tenant-staff] reset-password 이메일 발송 실패:", emailErr);
+    }
+
     console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
     return c.json({
       success: true,
@@ -447,7 +467,7 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
         adminName: staff.name,
         adminEmail: cleanEmail,
         tempPassword,
-        message: "임시 비밀번호가 발급되었습니다. 해당 관리자에게 안전한 채널로 전달해 주세요.",
+        message: `임시 비밀번호가 ${cleanEmail}로 발송되었습니다.`,
       },
     });
   } catch (err) {
@@ -456,6 +476,68 @@ app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c
   }
 });
 app.post("/tenant-staff/:tenantId/reset-password", async (c) => c.redirect(`/make-server-d0d82cc7/tenant-staff/${c.req.param("tenantId")}/reset-password`));
+
+// ── 단체 관리자 비밀번호 직접 변경 (현재 비밀번호 확인 후 새 비밀번호로 교체) ──
+app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/change-password", async (c) => {
+  try {
+    const tenantId = c.req.param("tenantId");
+    const { email, currentPassword, newPassword } = await c.req.json();
+
+    if (!tenantId || !email || !currentPassword || !newPassword) {
+      return c.json({ success: false, error: "tenantId, email, currentPassword, newPassword는 모두 필수입니다." }, 400);
+    }
+    if (newPassword.length < 8) {
+      return c.json({ success: false, error: "새 비밀번호는 8자 이상이어야 합니다." }, 400);
+    }
+    if (currentPassword === newPassword) {
+      return c.json({ success: false, error: "새 비밀번호는 현재 비밀번호와 달라야 합니다." }, 400);
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const sb = db.pgClient();
+
+    // 1. 계정 조회 및 현재 비밀번호 확인
+    const { data: staff, error: fetchError } = await sb
+      .from("tenant_admins")
+      .select("id, name, email, password, status")
+      .eq("tenant_id", tenantId)
+      .eq("email", cleanEmail)
+      .single();
+
+    if (fetchError || !staff) {
+      return c.json({ success: false, error: "계정을 찾을 수 없습니다." }, 404);
+    }
+    if (staff.status === "locked") {
+      return c.json({ success: false, error: "잠긴 계정입니다. 시스템 관리자에게 문의하세요." }, 403);
+    }
+
+    // 현재 비밀번호 검증 — tenants.contact.tempPassword 도 fallback 허용
+    const { data: tenantRow } = await sb.from("tenants").select("contact").eq("id", tenantId).single();
+    const contactPw = (tenantRow?.contact as any)?.tempPassword || "";
+    const isCurrentValid = staff.password === currentPassword || contactPw === currentPassword;
+    if (!isCurrentValid) {
+      return c.json({ success: false, error: "현재 비밀번호가 올바르지 않습니다." }, 401);
+    }
+
+    // 2. 새 비밀번호로 업데이트
+    const { error: updateError } = await sb
+      .from("tenant_admins")
+      .update({ password: newPassword, updated_at: new Date().toISOString() })
+      .eq("id", staff.id);
+
+    if (updateError) {
+      console.error("[tenant-staff] change-password DB error:", updateError);
+      return c.json({ success: false, error: "비밀번호 변경 DB 반영에 실패했습니다." }, 500);
+    }
+
+    console.log(`[tenant-staff] 비밀번호 변경 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
+    return c.json({ success: true, data: { message: "비밀번호가 성공적으로 변경되었습니다." } });
+  } catch (err) {
+    console.error("[tenant-staff] change-password error:", err);
+    return c.json({ success: false, error: "비밀번호 변경 처리 중 오류가 발생했습니다." }, 500);
+  }
+});
+app.post("/tenant-staff/:tenantId/change-password", async (c) => c.redirect(`/make-server-d0d82cc7/tenant-staff/${c.req.param("tenantId")}/change-password`));
 
 
 // 특정 단체 조회 (by ID)  ← 와일드카드이므로 static 경로 뒤에 등록
