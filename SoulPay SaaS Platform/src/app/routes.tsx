@@ -169,8 +169,11 @@ export const router = createBrowserRouter([
           { path: "/system/admin/settlement-center",   Component: SettlementOverviewPage },
           { path: "/system/admin/stats",            Component: TenantStatsPage },
 
-          { path: "/system/admin/partners",         Component: PartnerManagement    },
-          { path: "/system/admin/partners/:id",      Component: PartnerDetailPage    },
+          { path: "/system/admin/partners",         element: <Navigate to="/system/admin/partners/agencies" replace /> },
+          { path: "/system/admin/partners/agencies", Component: PartnerManagement },
+          { path: "/system/admin/partners/agents",   Component: PartnerManagement },
+          { path: "/system/admin/partners/pending",  Component: PartnerManagement },
+          { path: "/system/admin/partners/:id",      Component: PartnerDetailPage },
           { path: "/system/admin/commissions",      Component: CommissionStatsPage  },
           { path: "/system/admin/ledger",           Component: MultiPartySettlementLedger },
 

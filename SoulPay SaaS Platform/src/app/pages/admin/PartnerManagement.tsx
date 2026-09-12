@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
   Briefcase, Users, Plus, CheckCircle, FileText, Search,
   Building2, UserCheck, Ban, Copy, ChevronDown, ChevronUp, Eye, ExternalLink,
-  Clock, Trash2,
+  Clock, Trash2, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Partner, partnerAPI } from '../../api/client';
@@ -35,11 +35,18 @@ type TabKey = 'agency' | 'agent' | 'pending';
 
 export default function PartnerManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [tab, setTab] = useState<TabKey>('agency');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // URL 경로에 따른 현재 서브페이지 뷰
+  const view: TabKey = location.pathname.includes('/partners/agents')
+    ? 'agent'
+    : location.pathname.includes('/partners/pending')
+    ? 'pending'
+    : 'agency';
 
   // 등록 모달이 열릴 때 탭에 따라 역할 자동 설정
   const openModal = (forRole: 'master_agency' | 'sales_agent') => {
@@ -55,25 +62,25 @@ export default function PartnerManagement() {
     setIsModalOpen(true);
   };
 
-  useEffect(() => {
-    async function load() {
-      setIsLoading(true);
-      try {
-        const res = await partnerAPI.getAll();
-        if (res.success && Array.isArray(res.data)) {
-          // DB API 응답 데이터만 사용 (localStorage 덮어읽기 완전 제거)
-          setPartners(res.data);
-        } else {
-          setPartners([]);
-        }
-      } catch {
+  const loadPartners = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await partnerAPI.getAll();
+      if (res.success && Array.isArray(res.data)) {
+        setPartners(res.data);
+      } else {
         setPartners([]);
-      } finally {
-        setIsLoading(false);
       }
+    } catch {
+      setPartners([]);
+    } finally {
+      setIsLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    loadPartners();
+  }, [loadPartners]);
 
 
   // 등록 폼 상태
@@ -260,102 +267,208 @@ export default function PartnerManagement() {
   /* ══════════════════════════════════════════════ */
   return (
     <div className="space-y-5">
-      {/* 페이지 상단 헤더 */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">영업 파트너 관리</h1>
-        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">영업 파트너(대리점/영업자) 목록 및 수수료 구조를 관리합니다.</p>
-      </div>
-
-      {/* KPI 카드 */}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: '영업 대리점', value: `${agencies.length}개`, color: 'text-purple-600', bg: 'bg-purple-50', icon: Building2, targetTab: 'agency' as const },
-          { label: '영업자',     value: `${agents.length}명`,   color: 'text-indigo-600', bg: 'bg-indigo-50',  icon: Users, targetTab: 'agent' as const },
-          { label: '승인 대기',  value: `${pendingPartners.length}건`, color: 'text-amber-600',  bg: 'bg-amber-50',  icon: UserCheck, targetTab: 'pending' as const },
-          {
-            // SA-B: pendingAmount는 Partner DB 테이블에 없는 필드 — CommissionStatsPage에서 실 집계
-            label: '당월 정산 예정',
-            value: '0원',
-            color: 'text-emerald-600', bg: 'bg-emerald-50', icon: Briefcase, targetTab: null,
-          },
-        ].map(({ label, value, color, bg, icon: Icon, targetTab }) => (
-          <Card 
-            key={label} 
-            onClick={targetTab ? () => setTab(targetTab) : undefined}
-            className={`border-slate-200 transition-all ${targetTab ? 'cursor-pointer hover:border-slate-300 hover:shadow-xs' : ''}`}
-          >
-            <CardContent className="p-4">
-              <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mb-2`}>
-                <Icon className={`h-4 w-4 ${color}`} />
+      {/* ── 1. 영업 대리점 (Tier-1) 페이지 ── */}
+      {view === 'agency' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-purple-600" />
+                영업 대리점 (Tier-1) 목록
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                플랫폼 직속 영업 대리점 목록을 관리하고 산하 소속 영업자 및 대리점 수수료율을 설정합니다.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="대리점명·코드·연락처 검색"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="pl-8 h-8 text-xs w-48"
+                />
               </div>
-              <div className={`text-[20px] font-bold leading-none ${color}`}>{value}</div>
-              <div className="text-[10.5px] text-slate-400 mt-1 flex items-center justify-between">
-                <span>{label}</span>
-                {targetTab && <span className="text-[9.5px] text-slate-400 font-medium">보기 →</span>}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* 탭 + 검색 + 등록 버튼 */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* 탭 */}
-        <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
-          <button
-            onClick={() => setTab('agency')}
-            className={`px-4 py-1.5 rounded-lg text-[12.5px] font-bold transition-all cursor-pointer border-0
-              ${tab === 'agency' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent'}`}
-          >
-            🏢 영업 대리점 ({agencies.length})
-          </button>
-          <button
-            onClick={() => setTab('agent')}
-            className={`px-4 py-1.5 rounded-lg text-[12.5px] font-bold transition-all cursor-pointer border-0
-              ${tab === 'agent' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent'}`}
-          >
-            💼 영업자 ({agents.length})
-          </button>
-          <button
-            onClick={() => setTab('pending')}
-            className={`px-4 py-1.5 rounded-lg text-[12.5px] font-bold transition-all cursor-pointer border-0 flex items-center gap-1.5
-              ${tab === 'pending' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent'}`}
-          >
-            <span>🕒 신규 신청 / 승인 대기</span>
-            {pendingPartners.length > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10.5px] font-extrabold ${tab === 'pending' ? 'bg-amber-500 text-white' : 'bg-amber-200 text-amber-900'}`}>
-                {pendingPartners.length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* 검색 */}
-          <div className="relative">
-            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="이름·코드·연락처 검색"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-8 h-8 text-xs w-48"
-            />
+              <Button
+                size="sm"
+                className="text-xs font-bold cursor-pointer bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => openModal('master_agency')}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> 대리점 등록
+              </Button>
+            </div>
           </div>
-          {/* 등록 */}
-          <Button
-            size="sm"
-            className={`text-xs font-bold cursor-pointer ${tab === 'agency' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-            onClick={() => openModal(tab === 'agency' ? 'master_agency' : 'sales_agent')}
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" />
-            {tab === 'agency' ? '대리점 등록' : '영업자 등록'}
-          </Button>
-        </div>
-      </div>
 
-      {/* ══ 대리점 탭 ══ */}
-      {tab === 'agency' && (
+          {/* KPI 카드 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card className="border-slate-200">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                  <Building2 className="h-4.5 w-4.5 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-medium">전체 영업 대리점</div>
+                  <div className="text-[19px] font-bold text-purple-700 leading-none mt-0.5">{agencies.length}개</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                  <CheckCircle className="h-4.5 w-4.5 text-emerald-600" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-medium">정상 운영 (활성)</div>
+                  <div className="text-[19px] font-bold text-emerald-600 leading-none mt-0.5">
+                    {agencies.filter(p => p.status === 'active').length}개
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                  <Users className="h-4.5 w-4.5 text-indigo-600" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-medium">산하 총 영업자 수</div>
+                  <div className="text-[19px] font-bold text-indigo-600 leading-none mt-0.5">{agents.length}명</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2. 영업자 (Tier-2) 페이지 ── */}
+      {view === 'agent' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
+                <Users className="h-5 w-5 text-indigo-600" />
+                영업자 (Tier-2) 목록
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                각 대리점 산하 영업자 목록 및 관리 단체, 수수료 구조를 관리합니다.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="영업자명·코드·연락처 검색"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="pl-8 h-8 text-xs w-48"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="text-xs font-bold cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white"
+                onClick={() => openModal('sales_agent')}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> 영업자 등록
+              </Button>
+            </div>
+          </div>
+
+          {/* KPI 카드 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card className="border-slate-200">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                  <Users className="h-4.5 w-4.5 text-indigo-600" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-medium">전체 영업자</div>
+                  <div className="text-[19px] font-bold text-indigo-700 leading-none mt-0.5">{agents.length}명</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                  <CheckCircle className="h-4.5 w-4.5 text-emerald-600" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-medium">정상 활동 (활성)</div>
+                  <div className="text-[19px] font-bold text-emerald-600 leading-none mt-0.5">
+                    {agents.filter(p => p.status === 'active').length}명
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-slate-200">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                  <Building2 className="h-4.5 w-4.5 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-slate-500 font-medium">소속 대리점 수</div>
+                  <div className="text-[19px] font-bold text-purple-600 leading-none mt-0.5">{agencies.length}개</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. 신규 신청 / 승인 대기 페이지 ── */}
+      {view === 'pending' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-600" />
+                신규 파트너 신청 / 승인 대기 심사
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                웹 제휴 신청서를 검토하여 영업 대리점 또는 영업자로 승인하거나 반려합니다.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="신청자·코드·연락처·지역 검색"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="pl-8 h-8 text-xs w-48"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadPartners}
+                className="h-8 text-xs text-slate-600 font-medium cursor-pointer"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} /> 새로고침
+              </Button>
+            </div>
+          </div>
+
+          {/* 승인 대기 현황 배너 */}
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/60">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+              <Clock className="h-4.5 w-4.5 text-amber-600" />
+            </div>
+            <div>
+              <div className="text-[11px] text-amber-800 font-medium">심사 대기 중인 파트너 신청</div>
+              <div className="text-[19px] font-bold text-amber-600 leading-none mt-0.5">
+                {pendingPartners.length}건
+              </div>
+            </div>
+            <p className="ml-4 text-[12px] text-amber-800/70 hidden sm:block">
+              새로 접수된 파트너 정보를 검토한 후 승인 또는 반려를 진행하세요.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ══ 대리점 목록 테이블 ══ */}
+      {view === 'agency' && (
         <Card className="border-purple-100">
           <CardHeader className="pb-3">
             <CardTitle className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
@@ -468,8 +581,8 @@ export default function PartnerManagement() {
         </Card>
       )}
 
-      {/* ══ 영업자 탭 ══ */}
-      {tab === 'agent' && (
+      {/* ══ 영업자 목록 테이블 ══ */}
+      {view === 'agent' && (
         <Card className="border-indigo-100">
           <CardHeader className="pb-3">
             <CardTitle className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
@@ -594,8 +707,8 @@ export default function PartnerManagement() {
         </Card>
       )}
 
-      {/* ══ 신규 제휴 신청 / 승인 대기 탭 ══ */}
-      {tab === 'pending' && (
+      {/* ══ 신규 제휴 신청 / 승인 대기 심사 테이블 ══ */}
+      {view === 'pending' && (
         <Card className="border-amber-200 shadow-sm">
           <CardHeader className="pb-3 bg-amber-50/40 rounded-t-xl border-b border-amber-100">
             <CardTitle className="text-[14px] font-bold text-amber-950 flex items-center justify-between">

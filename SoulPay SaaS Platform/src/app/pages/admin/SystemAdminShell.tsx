@@ -5,14 +5,14 @@ import { useNavigate, useLocation, Outlet } from 'react-router';
 import { useApp } from '../../context/AppContext';
 
 import {
-  Building2, LogOut, BarChart3, Briefcase, TrendingUp,
+  Building2, LogOut, BarChart3, Briefcase, TrendingUp, Users,
   Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins, UserCog,
   LayoutDashboard, Activity, FileText,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
 import GlobalBroadcastModal from '../../components/GlobalBroadcastModal';
-import { tenantAPI } from '../../api/client';
+import { tenantAPI, partnerAPI } from '../../api/client';
 
 /* ─── active key ─────────────────────────────── */
 function useActiveKey(pathname: string) {
@@ -26,8 +26,11 @@ function useActiveKey(pathname: string) {
   if (pathname.includes('/settlement-audit')) return 'settlementAudit';
   if (pathname.includes('/settlement-overview') || pathname.includes('/settlement-center')) return 'settlementOverview';
   if (pathname.includes('/stats'))           return 'stats';
+  if (pathname.includes('/partners/agencies')) return 'partnerAgencies';
+  if (pathname.includes('/partners/agents'))   return 'partnerAgents';
+  if (pathname.includes('/partners/pending'))  return 'partnerPending';
   if (pathname.match(/\/partners\/.+/))      return 'partnerDetail';
-  if (pathname.includes('/partners'))        return 'partners';
+  if (pathname.includes('/partners'))        return 'partnerAgencies';
   if (pathname.includes('/commissions'))     return 'commissions';
   if (pathname.includes('/ledger'))          return 'ledger';
   if (pathname.includes('/settings'))        return 'settings';
@@ -50,8 +53,10 @@ const META: Record<string, { title: string; section: string }> = {
   scheduler:          { title: '정기결제 스케줄러',      section: '정산 및 수수료 관리' },
   stats:              { title: '단체별 통계',           section: '통계 분석' },
   commissions:        { title: '수수료 통계',           section: '통계 분석' },
-  partners:           { title: '영업 파트너 관리',      section: '파트너 관리' },
-  partnerDetail:      { title: '영업 파트너 상세 정보',  section: '파트너 관리' },
+  partnerAgencies:    { title: '영업 대리점 목록',       section: '영업 파트너 관리' },
+  partnerAgents:      { title: '영업자 목록',           section: '영업 파트너 관리' },
+  partnerPending:     { title: '신규 신청 / 승인 대기',   section: '영업 파트너 관리' },
+  partnerDetail:      { title: '영업 파트너 상세 정보',   section: '영업 파트너 관리' },
   settings:           { title: '설정',                  section: '시스템 설정' },
 };
 
@@ -90,6 +95,7 @@ export default function SystemAdminShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [partnerPendingCount, setPartnerPendingCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
 
@@ -117,6 +123,21 @@ export default function SystemAdminShell() {
         .catch(() => {});
     load();
     const timer = setInterval(load, 30_000); // 30초마다 갱신
+    return () => clearInterval(timer);
+  }, []);
+
+  // 파트너 승인 대기 건수 주기적 조회
+  useEffect(() => {
+    const loadPartners = () =>
+      partnerAPI.getAll()
+        .then(res => {
+          if (res.success && Array.isArray(res.data)) {
+            setPartnerPendingCount(res.data.filter(p => p.status === 'pending').length);
+          }
+        })
+        .catch(() => {});
+    loadPartners();
+    const timer = setInterval(loadPartners, 30_000);
     return () => clearInterval(timer);
   }, []);
 
@@ -237,13 +258,32 @@ export default function SystemAdminShell() {
 
             {/* 파트너 관리 */}
             <div className="space-y-0.5">
-              <p className={S.navSection}>파트너 관리</p>
+              <p className={S.navSection}>영업 파트너 관리</p>
               <button
-                onClick={() => navigate('/system/admin/partners')}
-                className={S.navItem(active === 'partners' || active === 'partnerDetail')}
+                onClick={() => navigate('/system/admin/partners/agencies')}
+                className={S.navItem(active === 'partnerAgencies')}
               >
-                <Briefcase size={13} className={active === 'partners' || active === 'partnerDetail' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">영업 파트너 관리</span>
+                <Building2 size={13} className={active === 'partnerAgencies' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">영업 대리점</span>
+              </button>
+              <button
+                onClick={() => navigate('/system/admin/partners/agents')}
+                className={S.navItem(active === 'partnerAgents')}
+              >
+                <Users size={13} className={active === 'partnerAgents' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">영업자</span>
+              </button>
+              <button
+                onClick={() => navigate('/system/admin/partners/pending')}
+                className={S.navItem(active === 'partnerPending')}
+              >
+                <Clock size={13} className={active === 'partnerPending' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">신규신청 / 승인대기</span>
+                {partnerPendingCount > 0 && (
+                  <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                    {partnerPendingCount}
+                  </span>
+                )}
               </button>
             </div>
           </nav>
