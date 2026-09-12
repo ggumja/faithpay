@@ -379,9 +379,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCurrentTenant(prev => {
           if (prev) {
             const found = dbTenants.find(t => t.id === prev.id || t.slug === prev.slug);
-            return found || dbTenants[0] || null;
+            if (found) return found;
           }
-          return dbTenants[0] || null;
+          // 1. 로그인된 관리자가 있을 경우 해당 관리자의 단체 매칭
+          if (currentAdmin?.tenantId) {
+            const adminTenant = dbTenants.find(t => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId);
+            if (adminTenant) return adminTenant;
+          }
+          // 2. 현재 브라우저 URL 경로에서 단체 슬러그 감지
+          if (typeof window !== 'undefined') {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const slugCandidate = pathParts[0];
+            if (slugCandidate && !['admin', 'partner', 'system', 'login', 'onboarding', 'auth'].includes(slugCandidate)) {
+              const urlTenant = dbTenants.find(t => t.slug?.toLowerCase() === slugCandidate.toLowerCase() || t.id?.toLowerCase() === slugCandidate.toLowerCase());
+              if (urlTenant) return urlTenant;
+            }
+          }
+          return null;
         });
       }
     } catch (error) {

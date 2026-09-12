@@ -55,7 +55,36 @@ export default function MemberManagement() {
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-  const terms = useTenantTerms(currentTenant);
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const effectiveTenant = useMemo(() => {
+    if (decodedSlug) {
+      const found = tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      );
+      if (found) return found;
+    }
+    if (currentAdmin?.tenantId) {
+      const found = tenants.find(
+        (t) => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId
+      );
+      if (found) return found;
+    }
+    if (currentTenant && decodedSlug && (currentTenant.slug?.toLowerCase() === decodedSlug || currentTenant.id?.toLowerCase() === decodedSlug)) {
+      return currentTenant;
+    }
+    if (!decodedSlug && currentTenant) {
+      return currentTenant;
+    }
+    return null;
+  }, [decodedSlug, tenants, currentAdmin, currentTenant]);
+
+  const terms = useTenantTerms(effectiveTenant || currentTenant);
 
   const [members, setMembers] = useState<MemberDetailData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,19 +107,19 @@ export default function MemberManagement() {
   const [memberAddressDetail, setMemberAddressDetail] = useState('');
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
-    if (tenant) {
-      setCurrentTenant(tenant);
+    if (effectiveTenant && effectiveTenant.id !== currentTenant?.id) {
+      setCurrentTenant(effectiveTenant);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [effectiveTenant, currentTenant, setCurrentTenant]);
 
   // Load & Aggregate Members from Donations
   useEffect(() => {
     async function loadMembers() {
-      if (!currentTenant) return;
+      const targetId = effectiveTenant?.id || (decodedSlug ? decodedSlug : null);
+      if (!targetId) return;
       setIsLoading(true);
       try {
-        const res = await donationAPI.getByTenant(currentTenant.id);
+        const res = await donationAPI.getByTenant(targetId);
         if (res.success && res.data) {
           const map = new Map<string, MemberDetailData>();
           

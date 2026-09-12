@@ -121,7 +121,36 @@ export default function MemberDetailPage() {
   const { tenantSlug, memberId } = useParams();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-  const terms = useTenantTerms(currentTenant);
+
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const effectiveTenant = useMemo(() => {
+    if (decodedSlug) {
+      const found = tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      );
+      if (found) return found;
+    }
+    if (currentAdmin?.tenantId) {
+      const found = tenants.find(
+        (t) => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId
+      );
+      if (found) return found;
+    }
+    if (currentTenant && decodedSlug && (currentTenant.slug?.toLowerCase() === decodedSlug || currentTenant.id?.toLowerCase() === decodedSlug)) {
+      return currentTenant;
+    }
+    if (!decodedSlug && currentTenant) {
+      return currentTenant;
+    }
+    return null;
+  }, [decodedSlug, tenants, currentAdmin, currentTenant]);
+
+  const terms = useTenantTerms(effectiveTenant || currentTenant);
 
   const [member, setMember] = useState<MemberDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -200,19 +229,19 @@ export default function MemberDetailPage() {
   }, [filteredDonationsHistory]);
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
-    if (tenant) {
-      setCurrentTenant(tenant);
+    if (effectiveTenant && effectiveTenant.id !== currentTenant?.id) {
+      setCurrentTenant(effectiveTenant);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [effectiveTenant, currentTenant, setCurrentTenant]);
 
   const loadMemberDetail = useCallback(async () => {
     {
-      if (!currentTenant || !memberId) return;
+      const targetId = effectiveTenant?.id || (decodedSlug ? decodedSlug : null);
+      if (!targetId || !memberId) return;
       setIsLoading(true);
 
       try {
-        const res = await donationAPI.getByTenant(currentTenant.id);
+        const res = await donationAPI.getByTenant(targetId);
         if (res.success && res.data) {
           // Aggregate or find matching member (by donation ID, raw phone, or stripped digits)
           const targetDigits = stripPhoneDigits(memberId);
@@ -226,7 +255,7 @@ export default function MemberDetailPage() {
           // If no donation record exists yet, check if member has active subscription
           if (!rawMatch && targetDigits.length >= 8) {
             try {
-              const subRes = await subscriptionAPI.getByPhone(targetDigits, currentTenant.id);
+              const subRes = await subscriptionAPI.getByPhone(targetDigits, targetId);
               if (subRes.success && subRes.data && subRes.data.length > 0) {
                 const tenantSubs = subRes.data.filter((s: any) => s.tenantId === currentTenant.id || s.tenant_id === currentTenant.id || s.tenantId === currentTenant.slug);
                 const firstSub = tenantSubs[0];

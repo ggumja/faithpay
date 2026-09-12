@@ -54,7 +54,35 @@ export default function SettlementReports() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const navigate = useNavigate();
   const { tenants, currentTenant, setCurrentTenant, currentAdmin } = useApp();
-  const terms = useTenantTerms(currentTenant);
+  const decodedSlug = tenantSlug ? decodeURIComponent(tenantSlug).trim().toLowerCase() : '';
+
+  const effectiveTenant = useMemo(() => {
+    if (decodedSlug) {
+      const found = tenants.find(
+        (t) =>
+          (t.slug && t.slug.toLowerCase() === decodedSlug) ||
+          (t.id && t.id.toLowerCase() === decodedSlug) ||
+          (t.name && t.name.toLowerCase() === decodedSlug) ||
+          (t.slug && decodeURIComponent(t.slug).toLowerCase() === decodedSlug)
+      );
+      if (found) return found;
+    }
+    if (currentAdmin?.tenantId) {
+      const found = tenants.find(
+        (t) => t.id === currentAdmin.tenantId || t.slug === currentAdmin.tenantId
+      );
+      if (found) return found;
+    }
+    if (currentTenant && decodedSlug && (currentTenant.slug?.toLowerCase() === decodedSlug || currentTenant.id?.toLowerCase() === decodedSlug)) {
+      return currentTenant;
+    }
+    if (!decodedSlug && currentTenant) {
+      return currentTenant;
+    }
+    return null;
+  }, [decodedSlug, tenants, currentAdmin, currentTenant]);
+
+  const terms = useTenantTerms(effectiveTenant || currentTenant);
 
   const [monthlySettlement, setMonthlySettlement] = useState<any[]>([]);
   const [dailySettlement, setDailySettlement] = useState<any[]>([]);
@@ -81,31 +109,32 @@ export default function SettlementReports() {
   });
 
   // PG 계약 수수료율 (단체별 설정값 반영, 기본 3.0%)
-  const contractRate = currentTenant?.paymentConfig?.contractRate ?? 3.0;
+  const contractRate = (effectiveTenant || currentTenant)?.paymentConfig?.contractRate ?? 3.0;
 
-  // Quick period presets
-  const setQuickPeriod = (type: 'today' | 'this_week' | 'this_month' | 'all') => {
+  // 빠른 기간 선택 핸들러
+  const handleQuickPeriodSelect = (type: 'today' | 'week' | 'month' | 'all') => {
     const now = new Date();
-    let start: Date | null = new Date();
-    let end: Date | null = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
     let label = '';
-    let unit: PeriodUnit = 'daily';
+    let unit: PeriodUnit = 'all';
 
     if (type === 'today') {
       start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-      label = `🔥 오늘 (${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일)`;
+      label = `🗓️ 오늘 (${now.toLocaleDateString('ko-KR')})`;
       unit = 'daily';
-    } else if (type === 'this_week') {
-      const dayOfWeek = now.getDay();
-      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset, 0, 0, 0, 0);
-      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
-      start = monday;
-      end = sunday;
-      label = `📅 이번 주 (${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()})`;
+    } else if (type === 'week') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      start = new Date(now.setDate(diff));
+      start.setHours(0, 0, 0, 0);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      label = `🗓️ 이번 주 (${start.getMonth() + 1}.${start.getDate()} ~ ${end.getMonth() + 1}.${end.getDate()})`;
       unit = 'weekly';
-    } else if (type === 'this_month') {
+    } else if (type === 'month') {
       start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       label = `🗓️ 이번 달 (${now.getFullYear()}년 ${now.getMonth() + 1}월)`;
@@ -122,17 +151,15 @@ export default function SettlementReports() {
   };
 
   useEffect(() => {
-    const tenant = tenants.find((t) => t.slug === tenantSlug);
-    if (tenant) {
-      setCurrentTenant(tenant);
+    if (effectiveTenant && effectiveTenant.id !== currentTenant?.id) {
+      setCurrentTenant(effectiveTenant);
     }
-  }, [tenantSlug, tenants, setCurrentTenant]);
+  }, [effectiveTenant, currentTenant, setCurrentTenant]);
 
   // DB에서 실제 결제 및 승인 취소 내역 조회 및 월별 정산 집계
   useEffect(() => {
-    // BUG-5 fix: currentTenant.id가 확보된 후에만 조회 (slug는 UUID가 아니므로 사용 금지)
-    if (!currentTenant?.id) return;
-    const targetTenantId = currentTenant.id;
+    const targetTenantId = effectiveTenant?.id || (decodedSlug ? decodedSlug : null);
+    if (!targetTenantId) return;
 
     const fetchRealSettlements = async () => {
       try {
@@ -147,7 +174,7 @@ export default function SettlementReports() {
           console.warn('paymentConfig load error:', e);
         }
 
-        const realConfig = loadedConfig || currentTenant?.paymentConfig;
+        const realConfig = loadedConfig || (effectiveTenant || currentTenant)?.paymentConfig;
         const currentContractRate = realConfig?.contractRate ?? 3.0;
         const currentSettlementCycle = realConfig?.payoutCycle || realConfig?.settlementCycle || 'D+1';
 
