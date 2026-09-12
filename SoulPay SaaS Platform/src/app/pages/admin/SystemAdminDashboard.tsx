@@ -196,7 +196,7 @@ export default function SystemAdminDashboard() {
           <h1 className={S.title}>{meta.title}</h1>
           <p className={S.sub}>{meta.desc}</p>
         </div>
-        {(active === 'tenants' || active === 'pending') && (
+        {active === 'tenants' && (
           <button
             onClick={() => navigate('/system/admin/tenants/new')}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-xs border-none"
@@ -253,13 +253,6 @@ export default function SystemAdminDashboard() {
                 🏢 영업대리점별 묶어보기 ({agencyGroups.length}개 대리점)
               </button>
             </div>
-            <button
-              onClick={() => navigate('/system/admin/tenants/new')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-xs border-none"
-            >
-              <Plus size={13} />
-              <span>신규 단체 등록</span>
-            </button>
           </div>
 
           {/* 1. 전체 단체 목록 뷰 */}

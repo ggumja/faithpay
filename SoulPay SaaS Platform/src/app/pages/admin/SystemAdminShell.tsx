@@ -62,7 +62,7 @@ const S = {
   brand:      'flex items-center gap-2.5 px-4 py-3.5 border-b border-[var(--hm-border)]',
   brandDot:   'w-7 h-7 rounded-lg bg-[var(--hm-accent)] flex items-center justify-center shrink-0 text-white text-[11px] font-bold',
   nav:        'flex-1 overflow-y-auto py-2 px-2 space-y-3',
-  navSection: 'text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--hm-ink-3)] px-2.5 pt-2 pb-0.5',
+  navSection: 'text-[11.5px] font-bold text-[var(--hm-ink-2)] px-2.5 pt-2.5 pb-1 tracking-normal',
   navParent:  (on: boolean) =>
     `w-full flex items-center gap-2 px-2.5 py-[7px] rounded-[6px] text-[12.5px] cursor-pointer border-none transition-colors text-left
      ${on ? 'bg-[var(--hm-accent-bg)] text-[var(--hm-accent)] font-medium' : 'bg-transparent text-[var(--hm-ink-2)] hover:bg-[var(--hm-paper-2)] hover:text-[var(--hm-ink)]'}`,
