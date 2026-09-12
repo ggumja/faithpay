@@ -93,7 +93,7 @@ export default function SupportPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8">
+        <div className="px-6 sm:px-10 py-8">
           {/* 헤더 */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
