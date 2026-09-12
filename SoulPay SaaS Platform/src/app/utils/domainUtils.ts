@@ -151,7 +151,7 @@ export function getAdminPortalUrl(tenantSlug?: string): string {
   }
 
   // 4. 로컬 개발 환경 (localhost) 및 Dev/Staging 환경: SPA 내부 라우팅
-  return tenantSlug ? `/${tenantSlug}/admin` : '/admin/login';
+  return tenantSlug ? `/${tenantSlug}/admin/login` : '/admin/login';
 }
 
 /**
