@@ -53,7 +53,7 @@ export default function AdminLogin() {
 
     const primaryEmail = tenant.contact.email.trim().toLowerCase();
     const primaryName = tenant.contact.name || tenant.name;
-    const primaryPw = tenant.tempPassword || ''; // 하드코딩 Fallback 제거
+    const primaryPw = (tenant.contact as any)?.tempPassword || tenant.tempPassword || '';
 
     return [
       {
