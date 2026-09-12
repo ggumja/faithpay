@@ -53,7 +53,7 @@ export default function AdminLogin() {
 
     const primaryEmail = tenant.contact.email.trim().toLowerCase();
     const primaryName = tenant.contact.name || tenant.name;
-    const primaryPw = tenant.tempPassword || 'admin1234!';
+    const primaryPw = tenant.tempPassword || ''; // 하드코딩 Fallback 제거
 
     return [
       {
@@ -87,9 +87,13 @@ export default function AdminLogin() {
       return { success: false, reason: 'locked', account: matchedAccount };
     }
 
-    // 비밀번호 검증 — DB 저장 비밀번호 또는 기본 초기 비밀번호만 허용
-    const expectedPassword = matchedAccount.password || 'admin1234!';
-    if (cleanPassword === expectedPassword || cleanPassword === 'admin1234!' || cleanPassword === 'admin1234') {
+    // 비밀번호 검증 — DB에 저장된 비밀번호와 정확히 일치해야 함
+    const expectedPassword = matchedAccount.password;
+    if (!expectedPassword) {
+      // 비밀번호가 설정되지 않은 계정 — 관리자에게 문의 유도
+      return { success: false, reason: 'wrong_password', account: matchedAccount };
+    }
+    if (cleanPassword === expectedPassword) {
       return { success: true, reason: 'ok', account: matchedAccount };
     }
 

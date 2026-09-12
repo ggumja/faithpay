@@ -506,7 +506,10 @@ app.post("/make-server-d0d82cc7/payment/cancel", async (c) => {
 
     if (isTossPayment) {
       // 🚀 토스페이먼츠 취소 API 연동 (https://api.tosspayments.com/v1/payments/{paymentKey}/cancel)
-      let secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
+      const secretKey = config?.secretKey;
+      if (!secretKey) {
+        return c.json({ success: false, error: 'PG 결제 설정이 완료되지 않았습니다. 단체 관리자에게 문의하세요.', code: 'PG_NOT_CONFIGURED' }, 500);
+      }
       const basicAuth = btoa(`${secretKey}:`);
       const idempotencyKey = `cancel_${donationId}_${Date.now()}`;
 
@@ -939,9 +942,13 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
 
     const { tenantId, paymentKey, orderId, amount, donorName, donorPhone, itemName, itemId } = await c.req.json();
     const config = await db.getPaymentConfig(tenantId);
-    
-    // 토스페이먼츠 시크릿 키 기본값 (toss secretKey)
-    let secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
+
+    // 토스페이먼츠 시크릿 키 — DB 설정 필수, 하드코딩 Fallback 금지
+    const secretKey = config?.secretKey;
+    if (!secretKey) {
+      console.error(`[Toss Confirm] tenantId=${tenantId} PG secretKey 미설정`);
+      return c.json({ success: false, error: 'PG 결제 설정이 완료되지 않았습니다. 단체 관리자에게 문의하세요.', code: 'PG_NOT_CONFIGURED' }, 500);
+    }
     const basicAuth = btoa(`${secretKey}:`);
 
     const tossResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
@@ -1021,7 +1028,11 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/issue", async (c) =
     }
 
     const config = await db.getPaymentConfig(tenantId);
-    const secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
+    const secretKey = config?.secretKey;
+    if (!secretKey) {
+      console.error(`[Toss BillKey Issue] tenantId=${tenantId} PG secretKey 미설정`);
+      return c.json({ success: false, error: 'PG 결제 설정이 완료되지 않았습니다.', code: 'PG_NOT_CONFIGURED' }, 500);
+    }
     const basicAuth = btoa(`${secretKey}:`);
 
     // Toss 빌링키 발급 API
@@ -1063,7 +1074,11 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
     }
 
     const config = await db.getPaymentConfig(tenantId);
-    const secretKey = config?.secretKey || "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
+    const secretKey = config?.secretKey;
+    if (!secretKey) {
+      console.error(`[Toss Billing Charge] tenantId=${tenantId} PG secretKey 미설정`);
+      return c.json({ success: false, error: 'PG 결제 설정이 완료되지 않았습니다.', code: 'PG_NOT_CONFIGURED' }, 500);
+    }
     const basicAuth = btoa(`${secretKey}:`);
 
     // Toss 빌링 결제 실행 API
@@ -1158,9 +1173,10 @@ app.get("/make-server-d0d82cc7/payment/settlements/toss/:tenantId", async (c) =>
     const dateType = c.req.query('dateType') || 'soldDate';
 
     const config = await db.getPaymentConfig(tenantId);
-    let secretKey = config?.secretKey || "test_sk_ZzO2771wYM0kPzW6kZ8V3E59125z";
+    const secretKey = config?.secretKey;
     if (!secretKey || secretKey.length < 10) {
-      secretKey = "test_sk_ZzO2771wYM0kPzW6kZ8V3E59125z";
+      console.error(`[Toss Settlement] tenantId=${tenantId} PG secretKey 미설정 또는 너무 짧음`);
+      return c.json({ success: false, error: 'PG 결제 설정이 완료되지 않았습니다.', code: 'PG_NOT_CONFIGURED' }, 500);
     }
 
     const authHeader = `Basic ${btoa(secretKey + ':')}`;
@@ -1212,15 +1228,18 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     // DB에서 테넌트 결제 설정 조회
     const config = await db.getPaymentConfig(tenantId);
     
-    // 테스트용 공식 지정 계정 및 암호화 키 정보 (100% 우선 적용)
-    let NANO_API_KEY = "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
-    let NANO_SECRET_KEY = "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
-    let NANO_IV = "vgqTyX5tBqnMXB68";
-    let shopcode = config?.mid || "240000006";
-    let loginId = config?.loginId || "smbtestshop";
-    let ver = config?.ver || "smbtest";
+    // 나노페이 키 — DB config 우선, 없으면 Supabase Secret(환경변수) 사용
+    const NANO_API_KEY_DEFAULT = Deno.env.get("NANO_API_KEY_TEST") || "2ATpmMwRycP14AwBe27mN8I9ZJfvqhDL";
+    const NANO_SECRET_KEY_DEFAULT = Deno.env.get("NANO_SECRET_KEY_TEST") || "UfS2tccZNyz3HYxXJDhZH52Ujorqp5km";
+    const NANO_IV_DEFAULT = Deno.env.get("NANO_IV_TEST") || "vgqTyX5tBqnMXB68";
+    let NANO_API_KEY = NANO_API_KEY_DEFAULT;
+    let NANO_SECRET_KEY = NANO_SECRET_KEY_DEFAULT;
+    let NANO_IV = NANO_IV_DEFAULT;
+    let shopcode = config?.mid || Deno.env.get("NANO_SHOPCODE_TEST") || "240000006";
+    let loginId = config?.loginId || Deno.env.get("NANO_LOGIN_ID_TEST") || "smbtestshop";
+    let ver = config?.ver || Deno.env.get("NANO_VER_TEST") || "smbtest";
 
-    // 만약 DB에 저장된 apiKey/secretKey가 빈값이거나 구형이면 최신 테스트키로 보장
+    // DB에 저장된 값이 있으면 우선 적용
     if (config?.apiKey && config.apiKey.length >= 10) NANO_API_KEY = config.apiKey;
     if (config?.secretKey && config.secretKey.length >= 10) NANO_SECRET_KEY = config.secretKey;
     if (config?.iv && config.iv.length >= 8) NANO_IV = config.iv;
@@ -2834,15 +2853,18 @@ const handleKakaoToken = async (c: any) => {
     if (!code || !redirectUri) {
       return c.json({ success: false, error: "code and redirectUri are required" }, 400);
     }
+    // 카카오 앱 키 — Supabase Secret에서 주입 (하드코딩 금지)
+    const KAKAO_CLIENT_ID = Deno.env.get("KAKAO_CLIENT_ID") || "9a0d1863232123049b37547090372fc5";
+    const KAKAO_CLIENT_SECRET = Deno.env.get("KAKAO_CLIENT_SECRET");
     const sendTokenRequest = async (includeSecret: boolean) => {
       const params: Record<string, string> = {
         grant_type: "authorization_code",
-        client_id: "9a0d1863232123049b37547090372fc5",
+        client_id: KAKAO_CLIENT_ID,
         redirect_uri: redirectUri,
         code,
       };
-      if (includeSecret) {
-        params.client_secret = "3HvXHSi9eKhC588GN0oq7QrJ1Ofa38Ol";
+      if (includeSecret && KAKAO_CLIENT_SECRET) {
+        params.client_secret = KAKAO_CLIENT_SECRET;
       }
       return fetch("https://kauth.kakao.com/oauth/token", {
         method: "POST",

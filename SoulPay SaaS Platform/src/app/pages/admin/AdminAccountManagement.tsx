@@ -28,6 +28,13 @@ import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet';
 import { Menu, UserCheck, UserPlus, Shield, KeyRound, Lock, Unlock, Trash2, Mail, Phone, Save, ShieldCheck, Users, Plus, Edit2, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminSidebar } from '../../components/AdminSidebar';
+
+/** 예측 불가능한 임시 비밀번호 자동 생성 (하드코딩 admin1234! 대체) */
+const generateTempPassword = (): string => {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join('');
+};
 import { useTenantTerms } from '../../hooks/useTenantTerms';
 import { RBACRouteGuard } from '../../components/RBACRouteGuard';
 import { adminAPI } from '../../api/client';
@@ -185,7 +192,7 @@ export default function AdminAccountManagement() {
             email: registeredEmail,
             phone: registeredPhone,
             groupId: 'tenant_admin',
-            password: tenant.tempPassword || 'admin1234!',
+            password: tenant.tempPassword || generateTempPassword(),
             status: 'active',
             createdAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
             lastLoginAt: tenant.appliedAt ? tenant.appliedAt.slice(0, 10) : '',
@@ -374,7 +381,7 @@ export default function AdminAccountManagement() {
       email: cleanEmail,
       phone: stripPhoneDigits(newPhone) || '미입력',
       groupId: selectedGroupId,
-      password: newPassword.trim() || 'admin1234!',
+      password: newPassword.trim() || generateTempPassword(),
       status: 'active',
       createdAt: new Date().toISOString().slice(0, 10),
       lastLoginAt: '방금 생성됨',
@@ -468,11 +475,11 @@ export default function AdminAccountManagement() {
   };
 
   const handleResetPassword = (staff: StaffAdminUser) => {
-    const defaultPw = 'admin1234!';
+    const defaultPw = generateTempPassword();
     setStaffList((prev) =>
       prev.map((s) => (s.id === staff.id ? { ...s, password: defaultPw } : s))
     );
-    toast.success(`[${staff.name}] 계정 비밀번호가 '${defaultPw}'로 초기화되었습니다.`);
+    toast.success(`[${staff.name}] 계정 비밀번호가 임시 비밀번호로 초기화되었습니다. (${defaultPw})`);
   };
 
   const handleDeleteStaff = (id: string, name: string) => {

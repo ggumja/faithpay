@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+
+# Environment (절대 커밋 금지)
+.env
+.env.local
+.env.production
+.env.staging
+.env.*.local
+
+# Supabase 키 파일 (절대 커밋 금지)
+utils/supabase/info.tsx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

@@ -92,6 +92,8 @@ export default defineConfig({
     outDir: target ? `dist/${target}` : 'dist',
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
+    // 프로덕션 빌드 시 console.log / debugger 자동 제거 (esbuild 기반)
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -108,6 +110,10 @@ export default defineConfig({
         },
       },
     },
+  },
+  esbuild: {
+    // 프로덕션 빌드 시 console.* 및 debugger 구문 제거
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
