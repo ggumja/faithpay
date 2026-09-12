@@ -15,7 +15,7 @@ import { adminAPI, partnerAPI } from '../../../api/client';
 import { Badge } from '../../../components/ui/badge';
 
 export default function SettlementStatementSection() {
-  const [activeSubTab, setActiveSubTab] = useState<'tenant' | 'partner'>('tenant');
+  const [activeSubTab, setActiveSubTab] = useState<'agency' | 'agent' | 'tenant'>('agency');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [tenantStatements, setTenantStatements] = useState<any[]>([]);
   const [partnerStatements, setPartnerStatements] = useState<any[]>([]);
@@ -24,7 +24,7 @@ export default function SettlementStatementSection() {
 
   // 인쇄 미리보기 모달 상태
   const [previewItem, setPreviewItem] = useState<{
-    type: 'tenant' | 'partner';
+    type: 'agency' | 'agent' | 'tenant';
     data: any;
   } | null>(null);
 
@@ -81,8 +81,12 @@ export default function SettlementStatementSection() {
     loadStatements();
   }, [selectedMonth]);
 
+  // 파트너 명세서를 대리점(agency)과 영업자(agent)로 분리
+  const agencyStatements = partnerStatements.filter(ps => ps.partnerRole === 'master_agency');
+  const agentStatements = partnerStatements.filter(ps => ps.partnerRole !== 'master_agency');
+
   // 인쇄 미리보기 모달 열기
-  const handleOpenPreview = (item: any, type: 'tenant' | 'partner') => {
+  const handleOpenPreview = (item: any, type: 'agency' | 'agent' | 'tenant') => {
     setPreviewItem({ type, data: item });
   };
 
@@ -118,20 +122,22 @@ export default function SettlementStatementSection() {
       URL.revokeObjectURL(url);
       toast.success('가맹단체 분구 대조표 CSV가 다운로드되었습니다.');
     } else {
-      if (partnerStatements.length === 0) {
-        toast.error('내보낼 대리점 대조 내역이 없습니다.');
+      const targetList = activeSubTab === 'agency' ? agencyStatements : agentStatements;
+      const roleName = activeSubTab === 'agency' ? '영업대리점' : '영업자';
+      if (targetList.length === 0) {
+        toast.error(`내보낼 ${roleName} 대조 내역이 없습니다.`);
         return;
       }
-      const headers = ['대조번호', '정산월', '대리점·영업자명', '구분', '사업자유형', '수수료원금(원)', '스플릿정산액(원)', '지급계좌'];
-      const rows = partnerStatements.map(ps => {
+      const headers = ['대조번호', '정산월', '파트너명', '구분', '사업자유형', '수수료원금(원)', '스플릿정산액(원)', '지급계좌'];
+      const rows = targetList.map(ps => {
         const name = ps.partnerName && ps.partnerName !== '파트너'
           ? ps.partnerName
-          : (ps.partnerRole === 'master_agency' ? '총판 대리점' : '영업자');
+          : (activeSubTab === 'agency' ? '총판 대리점' : '영업자');
         return [
           ps.id,
           ps.month,
           `"${name}"`,
-          ps.partnerRole === 'master_agency' ? '대리점' : '영업자',
+          activeSubTab === 'agency' ? '영업대리점' : '영업자',
           ps.isCorporate ? '법인' : '개인',
           ps.grossCommission,
           ps.netPayout || ps.grossCommission,
@@ -143,10 +149,10 @@ export default function SettlementStatementSection() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `SoulPay_영업대리점_수수료대조표_${selectedMonth}.csv`;
+      a.download = `SoulPay_${roleName}_수수료대조표_${selectedMonth}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('영업대리점 수수료 대조표 CSV가 다운로드되었습니다.');
+      toast.success(`${roleName} 수수료 대조표 CSV가 다운로드되었습니다.`);
     }
   };
 
@@ -180,8 +186,30 @@ export default function SettlementStatementSection() {
 
       {/* ── 안내 및 상단 컨트롤 바 ── */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-2xs">
-        {/* 서브 탭 전환 */}
-        <div className="flex gap-2">
+        {/* 서브 탭 전환: 영업대리점 ➔ 영업자 ➔ 단체 */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveSubTab('agency')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'agency'
+                ? 'bg-blue-600 text-white shadow-2xs'
+                : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            영업대리점 ({agencyStatements.length}건)
+          </button>
+          <button
+            onClick={() => setActiveSubTab('agent')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'agent'
+                ? 'bg-blue-600 text-white shadow-2xs'
+                : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            영업자 ({agentStatements.length}건)
+          </button>
           <button
             onClick={() => setActiveSubTab('tenant')}
             className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
@@ -191,18 +219,7 @@ export default function SettlementStatementSection() {
             }`}
           >
             <Building2 className="h-4 w-4" />
-            가맹단체 거래 대조표
-          </button>
-          <button
-            onClick={() => setActiveSubTab('partner')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
-              activeSubTab === 'partner'
-                ? 'bg-blue-600 text-white shadow-2xs'
-                : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            영업대리점 수수료 대조표
+            단체 ({tenantStatements.length}건)
           </button>
         </div>
 
@@ -241,20 +258,166 @@ export default function SettlementStatementSection() {
         <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
         <div className="space-y-0.5 leading-relaxed">
           <span className="font-bold text-slate-800 dark:text-zinc-200">
-            {activeSubTab === 'tenant' ? '가맹단체 정산금 대조 안내' : '영업대리점 수수료 대조 안내'}
+            {activeSubTab === 'agency' ? '영업대리점 수수료 대조 안내' : activeSubTab === 'agent' ? '영업자 수수료 대조 안내' : '가맹단체 정산금 대조 안내'}
           </span>
           <p className="text-[11.5px]">
-            {activeSubTab === 'tenant'
-              ? '본 대조표는 SoulPay 플랫폼을 통해 집계된 결제 승인 원금 기준입니다. 단체별 개별 계약 수수료, 부가세, 정산 주기(D+N) 차감 후 최종 실입금액은 가맹하신 PG사(나노/토스) 상점관리자 정산 내역에서 확인하실 수 있습니다.'
-              : '영업대리점 및 영업자 수수료는 PG사의 스플릿(Split) 정산 연동에 따라 지정 계좌로 분할 직입금됩니다. 원천징수 영수증 및 세금계산서 증빙은 PG사 정산 센터에서 발급 처리됩니다.'}
+            {activeSubTab === 'agency'
+              ? '영업대리점 수수료는 PG사의 금융망 자동 스플릿(Split) 정산 연동에 따라 지정 계좌로 분할 직입금됩니다. 세무 증빙(세금계산서/계산서)은 PG사 정산 센터에서 발급 처리됩니다.'
+              : activeSubTab === 'agent'
+              ? '영업자 수수료는 PG사의 스플릿(Split) 정산 연동에 따라 지정 계좌로 분할 직입금됩니다. 원천징수 영수증 및 소득 정산 증빙은 PG사 정산 센터에서 발급 처리됩니다.'
+              : '본 대조표는 SoulPay 플랫폼을 통해 집계된 결제 승인 원금 기준입니다. 단체별 개별 계약 수수료, 부가세, 정산 주기(D+N) 차감 후 최종 실입금액은 가맹하신 PG사(나노/토스) 상점관리자 정산 내역에서 확인하실 수 있습니다.'}
           </p>
         </div>
       </div>
 
       {error && <div className="p-4 rounded-xl bg-red-50 text-red-600 text-xs font-medium">{error}</div>}
 
-      {/* ── 1. 가맹단체 분구 대조표 ── */}
-      {activeSubTab === 'tenant' ? (
+      {/* ── 1. 영업대리점 수수료 분구 대조표 ── */}
+      {activeSubTab === 'agency' && (
+        <div className="space-y-3">
+          {!loading && agencyStatements.length === 0 && (
+            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800">
+              {selectedMonth} 기간에 발생한 영업대리점 수수료 분구 내역이 없습니다 (0건).
+            </div>
+          )}
+
+          {agencyStatements.map((ps: any) => {
+            const displayName = ps.partnerName && ps.partnerName !== '파트너'
+              ? ps.partnerName
+              : '총판 대리점';
+
+            return (
+              <div
+                key={ps.id}
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-4.5 space-y-3.5 shadow-2xs"
+              >
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3 gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-slate-400">분구코드: {ps.id}</span>
+                      <Badge variant="outline" className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200">
+                        영업대리점
+                      </Badge>
+                    </div>
+                    <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base mt-0.5">
+                      {displayName} <span className="text-xs font-normal text-slate-500">({ps.month} 발생분)</span>
+                    </h3>
+                    {ps.bankName && (
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                        {ps.bankName} {ps.accountNumber} {ps.accountHolder ? `(예금주: ${ps.accountHolder})` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOpenPreview({ ...ps, partnerName: displayName }, 'agency')}
+                      className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 rounded-lg flex items-center gap-1.5 cursor-pointer border-none"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> 인쇄 미리보기
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg">
+                    <span className="text-[11px] text-slate-500 block mb-0.5">수수료 발생 원금</span>
+                    <span className="font-bold font-mono text-slate-900 dark:text-zinc-100 text-sm">
+                      {ps.grossCommission.toLocaleString()}원
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg">
+                    <span className="text-[11px] text-purple-600 dark:text-purple-400 block mb-0.5">스플릿 정산 대상액</span>
+                    <span className="font-bold font-mono text-purple-700 dark:text-purple-300 text-sm">
+                      {(ps.netPayout || ps.grossCommission).toLocaleString()}원
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg col-span-2 sm:col-span-1">
+                    <span className="text-[11px] text-slate-500 block mb-0.5">지급 방식</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-xs">
+                      PG사 자동 스플릿 직입금
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── 2. 영업자 수수료 분구 대조표 ── */}
+      {activeSubTab === 'agent' && (
+        <div className="space-y-3">
+          {!loading && agentStatements.length === 0 && (
+            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800">
+              {selectedMonth} 기간에 발생한 영업자 수수료 분구 내역이 없습니다 (0건).
+            </div>
+          )}
+
+          {agentStatements.map((ps: any) => {
+            const displayName = ps.partnerName && ps.partnerName !== '파트너'
+              ? ps.partnerName
+              : '영업자';
+
+            return (
+              <div
+                key={ps.id}
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-4.5 space-y-3.5 shadow-2xs"
+              >
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3 gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-slate-400">분구코드: {ps.id}</span>
+                      <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-zinc-800">
+                        영업자
+                      </Badge>
+                    </div>
+                    <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base mt-0.5">
+                      {displayName} <span className="text-xs font-normal text-slate-500">({ps.month} 발생분)</span>
+                    </h3>
+                    {ps.bankName && (
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                        {ps.bankName} {ps.accountNumber} {ps.accountHolder ? `(예금주: ${ps.accountHolder})` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOpenPreview({ ...ps, partnerName: displayName }, 'agent')}
+                      className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 rounded-lg flex items-center gap-1.5 cursor-pointer border-none"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> 인쇄 미리보기
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg">
+                    <span className="text-[11px] text-slate-500 block mb-0.5">수수료 발생 원금</span>
+                    <span className="font-bold font-mono text-slate-900 dark:text-zinc-100 text-sm">
+                      {ps.grossCommission.toLocaleString()}원
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg">
+                    <span className="text-[11px] text-purple-600 dark:text-purple-400 block mb-0.5">스플릿 정산 대상액</span>
+                    <span className="font-bold font-mono text-purple-700 dark:text-purple-300 text-sm">
+                      {(ps.netPayout || ps.grossCommission).toLocaleString()}원
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg col-span-2 sm:col-span-1">
+                    <span className="text-[11px] text-slate-500 block mb-0.5">지급 방식</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-xs">
+                      PG사 자동 스플릿 직입금
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── 3. 가맹단체 분구 대조표 ── */}
+      {activeSubTab === 'tenant' && (
         <div className="space-y-3">
           {!loading && tenantStatements.length === 0 && (
             <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800">
@@ -312,77 +475,6 @@ export default function SettlementStatementSection() {
             </div>
           ))}
         </div>
-      ) : (
-        /* ── 2. 영업대리점 수수료 분구 대조표 ── */
-        <div className="space-y-3">
-          {!loading && partnerStatements.length === 0 && (
-            <div className="py-12 text-center text-xs text-slate-400 bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800">
-              {selectedMonth} 기간에 발생한 파트너 수수료 분구 내역이 없습니다 (0건).
-            </div>
-          )}
-
-          {partnerStatements.map((ps: any) => {
-            // "파트너"로 단순 표기되지 않도록 실제 상호/이름을 우선 표출
-            const displayName = ps.partnerName && ps.partnerName !== '파트너'
-              ? ps.partnerName
-              : (ps.partnerRole === 'master_agency' ? '총판 대리점' : '영업자');
-
-            return (
-              <div
-                key={ps.id}
-                className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-4.5 space-y-3.5 shadow-2xs"
-              >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3 gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-slate-400">분구코드: {ps.id}</span>
-                      <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-zinc-800">
-                        {ps.partnerRole === 'master_agency' ? '총판/대리점' : '영업자'}
-                      </Badge>
-                    </div>
-                    <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-base mt-0.5">
-                      {displayName} <span className="text-xs font-normal text-slate-500">({ps.month} 발생분)</span>
-                    </h3>
-                    {ps.bankName && (
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                        {ps.bankName} {ps.accountNumber} {ps.accountHolder ? `(예금주: ${ps.accountHolder})` : ''}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOpenPreview({ ...ps, partnerName: displayName }, 'partner')}
-                      className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 rounded-lg flex items-center gap-1.5 cursor-pointer border-none"
-                    >
-                      <Printer className="h-3.5 w-3.5" /> 인쇄 미리보기
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg">
-                    <span className="text-[11px] text-slate-500 block mb-0.5">수수료 발생 원금</span>
-                    <span className="font-bold font-mono text-slate-900 dark:text-zinc-100 text-sm">
-                      {ps.grossCommission.toLocaleString()}원
-                    </span>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg">
-                    <span className="text-[11px] text-purple-600 dark:text-purple-400 block mb-0.5">스플릿 정산 대상액</span>
-                    <span className="font-bold font-mono text-purple-700 dark:text-purple-300 text-sm">
-                      {(ps.netPayout || ps.grossCommission).toLocaleString()}원
-                    </span>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg col-span-2 sm:col-span-1">
-                    <span className="text-[11px] text-slate-500 block mb-0.5">지급 방식</span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-xs">
-                      PG사 자동 스플릿 직입금
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       )}
 
       {/* ── 🖨️ 정식 정산 대조표 인쇄 미리보기 모달 ── */}
@@ -394,7 +486,11 @@ export default function SettlementStatementSection() {
               <div className="flex items-center gap-2">
                 <FileCheck className="h-5 w-5 text-blue-600" />
                 <span className="font-bold text-sm text-slate-900 dark:text-zinc-100">
-                  {previewItem.type === 'tenant' ? '가맹단체 정산 대조 명세서 미리보기' : '영업대리점 수수료 분구 대조표 미리보기'}
+                  {previewItem.type === 'tenant'
+                    ? '가맹단체 정산 대조 명세서 미리보기'
+                    : previewItem.type === 'agency'
+                    ? '영업대리점 수수료 분구 대조표 미리보기'
+                    : '영업자 수수료 분구 대조표 미리보기'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -428,7 +524,9 @@ export default function SettlementStatementSection() {
                     <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 mt-1">
                       {previewItem.type === 'tenant'
                         ? '가맹단체 헌금 결제 및 분구 대조표'
-                        : '영업대리점 수수료 분구 대조 명세서'}
+                        : previewItem.type === 'agency'
+                        ? '영업대리점 수수료 분구 대조 명세서'
+                        : '영업자 수수료 분구 대조 명세서'}
                     </h2>
                   </div>
                   <div className="text-right text-[11px] text-slate-500 font-mono space-y-0.5">
@@ -445,7 +543,7 @@ export default function SettlementStatementSection() {
                       {previewItem.type === 'tenant' ? previewItem.data.name : previewItem.data.partnerName} 귀하
                     </div>
                     <div className="text-[11px] text-slate-600">
-                      대상 구분: {previewItem.type === 'tenant' ? '가맹 단체 (교회/성당/사찰)' : (previewItem.data.partnerRole === 'master_agency' ? '총판/대리점' : '영업자')}
+                      대상 구분: {previewItem.type === 'tenant' ? '가맹 단체 (교회/성당/사찰)' : previewItem.type === 'agency' ? '영업대리점 (총판/대리점)' : '영업자 (개인/사업자)'}
                     </div>
                   </div>
                   <div className="space-y-1.5 text-right">
