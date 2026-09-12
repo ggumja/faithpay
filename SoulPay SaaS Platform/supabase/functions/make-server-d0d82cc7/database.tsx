@@ -2588,9 +2588,17 @@ export async function getAdminSettlementStatements(month: string): Promise<{
     });
 
     // 2. 해당 월 파트너 정산 내역 조회 (실제 수수료 원장 기반)
-    const { data: commissions } = await supabase
-      .from('partner_commissions')
-      .select('*');
+    const [{ data: commissions }, { data: partnersData }] = await Promise.all([
+      supabase.from('partner_commissions').select('*'),
+      supabase.from('partners').select('*'),
+    ]);
+
+    const partnerInfoMap: Record<string, any> = {};
+    if (partnersData) {
+      partnersData.forEach((p: any) => {
+        partnerInfoMap[p.id] = p;
+      });
+    }
 
     const partnerMap: Record<string, any> = {};
     if (commissions) {
@@ -2598,18 +2606,24 @@ export async function getAdminSettlementStatements(month: string): Promise<{
         const cMonth = (c.created_at || '').slice(0, 7);
         if (cMonth === month && c.partner_id) {
           if (!partnerMap[c.partner_id]) {
+            const pInfo = partnerInfoMap[c.partner_id];
+            const resolvedName = pInfo?.name || pInfo?.corp_name || (c.partner_role === 'master_agency' ? c.agency_name : c.agent_name) || '영업대리점';
             partnerMap[c.partner_id] = {
               grossCommission: 0,
               vatAmount: 0,
               withholdingTax: 0,
               netPayout: 0,
-              partnerName: c.partner_name || '파트너',
-              partnerRole: c.partner_role || 'agent',
+              partnerName: resolvedName,
+              partnerRole: c.partner_role || pInfo?.role || 'agent',
+              businessType: pInfo?.business_type || 'individual',
+              bankName: pInfo?.bank_name || '',
+              accountNumber: pInfo?.account_number || '',
+              accountHolder: pInfo?.account_holder || resolvedName,
             };
           }
           partnerMap[c.partner_id].grossCommission += Number(c.commission_amount) || 0;
           partnerMap[c.partner_id].vatAmount += Number(c.vat_amount) || 0;
-          partnerMap[c.partner_id].netPayout += Number(c.net_amount) || 0;
+          partnerMap[c.partner_id].netPayout += Number(c.net_amount || c.commission_amount) || 0;
         }
       });
     }
@@ -2620,16 +2634,16 @@ export async function getAdminSettlementStatements(month: string): Promise<{
       partnerId: pid,
       partnerName: pdata.partnerName,
       partnerRole: pdata.partnerRole,
-      businessType: 'individual',
-      isCorporate: false,
+      businessType: pdata.businessType,
+      isCorporate: pdata.businessType === 'CORPORATE' || pdata.businessType === 'corporate',
       grossCommission: pdata.grossCommission,
       vatAmount: pdata.vatAmount,
       withholdingTax: pdata.withholdingTax,
       netPayout: pdata.netPayout,
       status: 'ISSUED',
-      bankName: '',
-      accountNumber: '',
-      accountHolder: pdata.partnerName,
+      bankName: pdata.bankName,
+      accountNumber: pdata.accountNumber,
+      accountHolder: pdata.accountHolder,
     }));
 
     return {
