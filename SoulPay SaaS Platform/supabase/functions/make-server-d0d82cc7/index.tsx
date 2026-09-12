@@ -5,6 +5,7 @@ import { logger } from "npm:hono/logger";
 import * as db from "./database.tsx";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
+import { sendDonationReceiptEmail, sendPasswordResetEmail } from "./email.ts";
 
 const app = new Hono();
 
@@ -963,6 +964,21 @@ app.post("/make-server-d0d82cc7/payment/process/manual", async (c) => {
         paymentMethod: '신용카드',
         transactionId: result.tranNo || result.apprNo,
       });
+      // 결제 완료 이메일 발송 (non-blocking: 이메일 실패 시 결제 응답 영향 없음)
+      if (donationData.email) {
+        const tenant = await db.getTenant(tenantId).catch(() => null);
+        sendDonationReceiptEmail({
+          to: donationData.email,
+          donorName: donationData.name || '헌금자',
+          tenantName: tenant?.name || tenantId,
+          itemName: donationData.itemName || '봉헌금',
+          amount: donationData.amount,
+          transactionId: result.tranNo || result.apprNo,
+          approveNo: result.apprNo,
+          paymentMethod: '신용카드',
+          isRecurring: donationData.isRecurring || false,
+        }).catch((e) => console.warn('[Email] 수동결제 영수증 발송 실패:', e?.message));
+      }
       return c.json({ success: true, data: donation });
     } else {
       return c.json({ success: false, error: result.resultMsg, data: result }, 400);
@@ -1057,7 +1073,7 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
       }, 503);
     }
 
-    const { tenantId, paymentKey, orderId, amount, donorName, donorPhone, itemName, itemId } = await c.req.json();
+    const { tenantId, paymentKey, orderId, amount, donorName, donorPhone, donorEmail, itemName, itemId } = await c.req.json();
     const config = await db.getPaymentConfig(tenantId);
 
     // ✅ 서버사이드 결제 금액 교차검증 (클라이언트 금액 조작 방지)
@@ -1107,6 +1123,22 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
         approveNo: approveNo,
         receiptUrl: result.receipt?.url,
       });
+
+      // 결제 완료 이메일 발송 (non-blocking)
+      if (donorEmail) {
+        const tenant = await db.getTenant(tenantId).catch(() => null);
+        sendDonationReceiptEmail({
+          to: donorEmail,
+          donorName: donorName || result.customerName || '헌금자',
+          tenantName: tenant?.name || tenantId,
+          itemName: result.orderName || itemName || '봉헌금',
+          amount: Number(amount),
+          transactionId: result.paymentKey,
+          approveNo: approveNo,
+          paymentMethod: result.method || 'card',
+          receiptUrl: result.receipt?.url,
+        }).catch((e) => console.warn('[Email] 토스 결제 영수증 발송 실패:', e?.message));
+      }
 
       return c.json({
         success: true,
@@ -1279,6 +1311,23 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
       approveNo,
       receiptUrl: result.receipt?.url || '',
     });
+
+    // 정기결제 즉시청구 완료 이메일 발송 (non-blocking)
+    if (customerEmail) {
+      const billingTenant = await db.getTenant(tenantId).catch(() => null);
+      sendDonationReceiptEmail({
+        to: customerEmail,
+        donorName: customerName || '헌금자',
+        tenantName: billingTenant?.name || tenantId,
+        itemName: itemName || orderName || '정기 봉헌금',
+        amount: Number(amount),
+        transactionId: result.paymentKey,
+        approveNo,
+        paymentMethod: '정기결제(토스)',
+        isRecurring: true,
+        receiptUrl: result.receipt?.url,
+      }).catch((e) => console.warn('[Email] 토스 빌링 charge 영수증 발송 실패:', e?.message));
+    }
 
     return c.json({
       success: true,
@@ -2696,6 +2745,24 @@ app.post("/make-server-d0d82cc7/payment/process/billkey/callback", async (c) => 
             approveNo: apprNo,
           });
 
+          // 정기결제 최초 결제 완료 이메일 발송 (non-blocking)
+          const recipientEmail = donationData.email || meta.donorEmail || '';
+          if (recipientEmail && firstPaymentCharged) {
+            db.getTenant(tenantId).then((tenantInfo) => {
+              return sendDonationReceiptEmail({
+                to: recipientEmail,
+                donorName: donorName || '헌금자',
+                tenantName: tenantInfo?.name || tenantId,
+                itemName,
+                amount,
+                transactionId: tranNo,
+                approveNo: apprNo,
+                paymentMethod: '카드 정기결제',
+                isRecurring: true,
+              });
+            }).catch((e) => console.warn('[Email] 나노페이 정기결제 최초 영수증 발송 실패:', e?.message));
+          }
+
           console.log("[NanoPG Callback] 1st donation record created:", donationRecord);
         }
 
@@ -3332,6 +3399,21 @@ const handleCertCallback = async (c: any) => {
               await db.recordDonationToLedger(updated);
             } catch (lErr) {
               console.warn('Failed to record ledger from cert callback:', lErr);
+            }
+            // 결제 완료 영수증 이메일 발송 (non-blocking)
+            const donorEmailAddr = updated.donor_email || donation.donor_email || '';
+            if (donorEmailAddr) {
+              const certTenant = await db.getTenant(donation.tenant_id).catch(() => null);
+              sendDonationReceiptEmail({
+                to: donorEmailAddr,
+                donorName: updated.donor_name || donation.donor_name || '헌금자',
+                tenantName: certTenant?.name || donation.tenant_id,
+                itemName: updated.item_name || donation.item_name || '봉헌금',
+                amount: updated.amount || donation.amount,
+                transactionId: tranNo,
+                approveNo: apprNo,
+                paymentMethod,
+              }).catch((e) => console.warn('[Email] cert 콜백 영수증 발송 실패:', e?.message));
             }
           }
           console.log(`✅ Certified payment successful for donation: ${donation.id} (method: ${paymentMethod}, cardSrc: ${cardSrc || 'N/A'})`);
@@ -4025,18 +4107,37 @@ app.post("/make-server-d0d82cc7/partners/reset-password", async (c) => {
       return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
     }
 
-    // 4. 성공 응답 — 임시 비밀번호는 보안상 응답에 포함하지 않음
-    //    관리자가 별도 채널(이메일/문자)로 전달하거나, 추후 이메일 발송 연동 예정
+    // 4. 이메일로 임시 비밀번호 발송
     console.log(`[Partners] 비밀번호 재설정 완료 — partner_id: ${partner.id}, name: ${partner.name}`);
-    return c.json({
-      success: true,
-      data: {
-        message: "비밀번호가 재설정되었습니다. 등록된 이메일로 임시 비밀번호가 발송되었습니다.",
-        partnerName: partner.name,
-        // 개발/운영 편의상 임시 비밀번호 포함 (추후 이메일 발송 연동 후 제거 예정)
-        tempPassword,
-      },
+    const emailResult = await sendPasswordResetEmail({
+      to: partner.email,
+      partnerName: partner.name,
+      tenantName: 'SoulPay 관리자',
+      tempPassword,
+      loginUrl: 'https://app.soulpay.kr/partner/login',
     });
+
+    if (emailResult.ok) {
+      // 이메일 발송 성공: 응답에 tempPassword 포함 안 함 (보안)
+      return c.json({
+        success: true,
+        data: {
+          message: '비밀번호가 재설정되었습니다. 등록된 이메일로 임시 비밀번호가 발송되었습니다.',
+          partnerName: partner.name,
+        },
+      });
+    } else {
+      // 이메일 발송 실패 (RESEND_API_KEY 미설정 등): 관리자 채널 전달용으로 tempPassword 포함
+      console.warn('[Partners] 이메일 발송 실패 — 응답에 tempPassword 임시 포함:', emailResult.error);
+      return c.json({
+        success: true,
+        data: {
+          message: '비밀번호가 재설정되었습니다. 이메일 발송에 실패했습니다. 관리자가 직접 전달해 주세요.',
+          partnerName: partner.name,
+          tempPassword, // RESEND_API_KEY 설정 후 이 필드는 자동으로 사라집니다
+        },
+      });
+    }
   } catch (err) {
     console.error("Partner reset-password error:", err);
     return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
