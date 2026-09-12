@@ -8,7 +8,7 @@ import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { ArrowLeft, Lock, Mail, Building2, ChevronRight, Phone, Search, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { isAdminPortalDomain } from '../utils/domainUtils';
+import { isAdminPortalDomain, navigateToPayPortal } from '../utils/domainUtils';
 import { adminAPI } from '../api/client';
 
 export default function AdminLogin() {
@@ -347,7 +347,7 @@ export default function AdminLogin() {
             variant="ghost"
             size="sm"
             className="text-slate-500 hover:text-slate-900 cursor-pointer font-semibold -ml-2 text-xs"
-            onClick={() => navigate(tenantSlug ? `/${tenantSlug}` : '/')}
+            onClick={() => navigateToPayPortal(tenantSlug || activeTenant?.slug, navigate)}
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" />
             {activeTenant?.name ? `${activeTenant.name} 홈으로` : (tenantSlug ? '단체 홈으로' : '메인으로')}
@@ -362,7 +362,14 @@ export default function AdminLogin() {
         {/* 중앙 로고 & 타이틀 헤더 */}
         <div className="text-center space-y-2">
           <div className="flex justify-center mb-1">
-            <a href="/" className="inline-block">
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToPayPortal(undefined, navigate);
+              }}
+              className="inline-block cursor-pointer"
+            >
               <img
                 src="/images/logo_soulpay.png"
                 alt="SoulPay"
