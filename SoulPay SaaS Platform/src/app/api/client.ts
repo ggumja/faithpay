@@ -968,6 +968,11 @@ export const adminAPI = {
       body: JSON.stringify({ email, newPassword }),
     });
   },
+
+  /** 정산 명세서 및 세무 자료 조회 (월별) */
+  async getStatements(month: string): Promise<APIResponse<{ tenantStatements: any[]; partnerStatements: any[] }>> {
+    return fetchAPI<{ tenantStatements: any[]; partnerStatements: any[] }>(`/admin/settlements/statements?month=${month}`);
+  },
 };
 
 // ==================== PARTNER API ====================
