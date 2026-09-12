@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams } from 'react-router';
-import { useAppContext } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
 import { MessageSquare, Send, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
-import { getApiBase } from '../../utils/domainUtils';
+import { API_BASE_URL } from '../../api/client';
 
 const CATEGORIES = [
   '결제/정산 문의',
@@ -18,11 +18,11 @@ type Status = 'idle' | 'loading' | 'success' | 'error';
 
 export default function SupportPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
-  const { user, tenant } = useAppContext();
+  const { currentAdmin, currentTenant } = useApp();
 
   const [form, setForm] = useState({
-    senderName: user?.name || '',
-    senderEmail: user?.email || '',
+    senderName: currentAdmin?.name || '',
+    senderEmail: currentAdmin?.email || '',
     category: CATEGORIES[0],
     subject: '',
     message: '',
@@ -42,13 +42,12 @@ export default function SupportPage() {
     setErrorMsg('');
 
     try {
-      const apiBase = getApiBase();
-      const res = await fetch(`${apiBase}/support/inquiry`, {
+      const res = await fetch(`${API_BASE_URL}/support/inquiry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          tenantName: tenant?.name || tenantSlug || '미입력',
+          tenantName: currentTenant?.name || tenantSlug || '미입력',
         }),
       });
       const data = await res.json();
