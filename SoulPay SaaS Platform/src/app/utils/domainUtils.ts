@@ -195,7 +195,7 @@ export function getPayPortalUrl(tenantSlug?: string): string {
 
   // 2. 상용 운영 환경
   if (isSoulPayProduction()) {
-    return tenantSlug ? `https://pay.soulpay.kr/${tenantSlug}` : 'https://pay.soulpay.kr';
+    return tenantSlug ? `https://pay.soulpay.kr/${tenantSlug}` : 'https://soulpay.kr';
   }
 
   // 3. Cloudflare Pages 프리뷰 환경
@@ -210,6 +210,46 @@ export function getPayPortalUrl(tenantSlug?: string): string {
 
   // 4. 로컬 개발 환경 및 Dev/Staging 환경: SPA 내부 라우팅
   return tenantSlug ? `/${tenantSlug}` : '/';
+}
+
+/**
+ * 기부자/신도 모바일 결제 포털(단체 홈)로 이동 핸들러
+ * - 상용(admin.soulpay.kr -> pay.soulpay.kr): window.location.href
+ * - 로컬/Dev SPA 환경: React Router navigate()로 페이지 깜빡임 없이 즉시 전환
+ */
+export function navigateToPayPortal(tenantSlug?: string, navigate?: (to: string) => void): void {
+  const targetUrl = getPayPortalUrl(tenantSlug);
+  
+  // 외부 URL인지 안전하게 판정 (동일 origin인 경우 내부 SPA 라우팅 적용)
+  let isExternal = false;
+  if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+    if (typeof window !== 'undefined') {
+      try {
+        const urlObj = new URL(targetUrl, window.location.origin);
+        isExternal = urlObj.origin !== window.location.origin;
+      } catch {
+        isExternal = true;
+      }
+    } else {
+      isExternal = true;
+    }
+  }
+
+  if (isExternal) {
+    window.location.href = targetUrl;
+    return;
+  }
+
+  // 동일 도메인 / 로컬 SPA 환경: React Router SPA navigate 사용
+  const internalPath = targetUrl.startsWith('http://') || targetUrl.startsWith('https://')
+    ? new URL(targetUrl, window.location.origin).pathname
+    : targetUrl;
+
+  if (navigate) {
+    navigate(internalPath);
+  } else {
+    window.location.href = internalPath;
+  }
 }
 
 /**

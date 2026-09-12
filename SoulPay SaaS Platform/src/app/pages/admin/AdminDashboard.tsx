@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link, Navigate } from 'react-router';
 import { useApp } from '../../context/AppContext';
 import { normalizePhoneNumber } from '../../utils/phoneUtils';
-import { isAdminPortalDomain } from '../../utils/domainUtils';
+import { isAdminPortalDomain, navigateToPayPortal } from '../../utils/domainUtils';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -374,7 +374,7 @@ export default function AdminDashboard() {
                 {effectiveTenant.name}
               </p>
             </div>
-            <Button variant="outline" onClick={() => navigate(`/${tenantSlug}`)}>
+            <Button variant="outline" onClick={() => navigateToPayPortal(tenantSlug || effectiveTenant.slug, navigate)}>
               {terms.donor} 페이지 보기
             </Button>
           </div>
