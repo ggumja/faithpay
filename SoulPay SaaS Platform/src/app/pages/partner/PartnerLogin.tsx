@@ -28,6 +28,8 @@ export default function PartnerLogin() {
   const [resetEmail, setResetEmail] = useState('');
   const [resetPhone, setResetPhone] = useState('');
   const [resetDone, setResetDone] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [tempPasswordResult, setTempPasswordResult] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +103,25 @@ export default function PartnerLogin() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: 비밀번호 재설정 이메일 발송 API (partnerAPI.resetPassword) 연동 필요
-    // 현재 백엔드 엔드포인트 미구현 — 관리자 문의 안내로 대체
-    toast.error('비밀번호 재설정 기능은 현재 준비 중입니다. 고객센터(support@soulpay.kr)로 문의해 주세요.');
+    if (!resetEmail.trim() || !resetPhone.trim()) {
+      toast.error('이메일과 연락처를 모두 입력해 주세요.');
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const res = await partnerAPI.resetPassword(resetEmail.trim(), resetPhone.trim());
+      if (res.success && res.data) {
+        setTempPasswordResult(res.data.tempPassword || '');
+        setResetDone(true);
+        toast.success(`[${res.data.partnerName}] 임시 비밀번호가 발급되었습니다.`);
+      } else {
+        toast.error(res.error ?? '비밀번호 재설정 처리 중 오류가 발생했습니다.');
+      }
+    } catch {
+      toast.error('비밀번호 재설정 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -349,22 +367,47 @@ export default function PartnerLogin() {
                 />
               </div>
 
-              <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl cursor-pointer">
-                비밀번호 재설정 링크 발송
+              <Button
+                type="submit"
+                disabled={isResetting}
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl cursor-pointer disabled:opacity-60"
+              >
+                {isResetting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    본인 인증 중...
+                  </span>
+                ) : '임시 비밀번호 발급'}
               </Button>
             </form>
           ) : (
             <div className="p-5 bg-blue-50/70 border border-blue-200 rounded-xl text-center space-y-3 my-2">
               <CheckCircle2 className="h-10 w-10 text-blue-600 mx-auto" />
               <div>
-                <h4 className="font-bold text-slate-900 text-sm">재설정 링크 발송 완료</h4>
+                <h4 className="font-bold text-slate-900 text-sm">임시 비밀번호 발급 완료</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  <span className="font-bold text-blue-600">{resetEmail}</span>(으)로 비밀번호 재설정 안내가 발송되었습니다. 메일함을 확인해 주세요.
+                  <span className="font-bold text-blue-600">{resetEmail}</span> 계정의 비밀번호가 아래 임시 비밀번호로 변경되었습니다.
                 </p>
               </div>
+              {tempPasswordResult && (
+                <div
+                  className="bg-white border border-blue-300 rounded-lg px-4 py-3 font-mono text-base font-bold text-blue-700 tracking-widest cursor-pointer select-all"
+                  title="클릭하여 복사"
+                  onClick={() => {
+                    navigator.clipboard.writeText(tempPasswordResult);
+                    toast.success('임시 비밀번호가 클립보드에 복사되었습니다.');
+                  }}
+                >
+                  {tempPasswordResult}
+                </div>
+              )}
+              <p className="text-xs text-slate-500">로그인 후 반드시 비밀번호를 변경해 주세요.</p>
               <Button
                 type="button"
-                onClick={() => setFindPwOpen(false)}
+                onClick={() => { setFindPwOpen(false); setResetDone(false); setTempPasswordResult(''); setResetEmail(''); setResetPhone(''); }}
                 className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
               >
                 확인

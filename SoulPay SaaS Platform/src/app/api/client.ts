@@ -1180,6 +1180,18 @@ export const partnerAPI = {
       method: 'DELETE',
     });
   },
+
+  /** partnerAPI.resetPassword: email + phone 본인 인증 후 임시 비밀번호 발급 */
+  async resetPassword(email: string, phone: string): Promise<APIResponse<{
+    message: string;
+    partnerName: string;
+    tempPassword: string;
+  }>> {
+    return fetchAPI('/partners/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), phone }),
+    });
+  },
 };
 
 

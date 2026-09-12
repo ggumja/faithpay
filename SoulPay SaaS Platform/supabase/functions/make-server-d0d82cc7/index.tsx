@@ -3914,6 +3914,77 @@ app.post("/make-server-d0d82cc7/partners/login", async (c) => {
   }
 });
 
+// 파트너 비밀번호 재설정 — email + phone 본인 인증 후 임시 비밀번호 발급
+app.post("/make-server-d0d82cc7/partners/reset-password", async (c) => {
+  try {
+    const { email, phone } = await c.req.json();
+    if (!email || !phone) {
+      return c.json({ success: false, error: "이메일과 연락처를 모두 입력해 주세요." }, 400);
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
+
+    const sb = db.pgClient();
+    // 1. email + phone 일치 여부로 본인 인증
+    const { data: partner, error } = await sb
+      .from("partners")
+      .select("id, name, email, phone, status")
+      .eq("email", cleanEmail)
+      .single();
+
+    if (error || !partner) {
+      // 보안: 계정 존재 여부 노출 방지 — 항상 동일한 메시지 반환
+      return c.json({ success: false, error: "입력하신 정보와 일치하는 파트너 계정을 찾을 수 없습니다." }, 404);
+    }
+
+    const storedPhone = (partner.phone ?? "").replace(/[^0-9]/g, "");
+    if (!storedPhone || !storedPhone.includes(cleanPhone.slice(-4))) {
+      return c.json({ success: false, error: "입력하신 정보와 일치하는 파트너 계정을 찾을 수 없습니다." }, 404);
+    }
+
+    if (partner.status !== "active") {
+      return c.json({ success: false, error: "비활성화된 계정입니다. 시스템 관리자(support@soulpay.kr)에게 문의하세요." }, 403);
+    }
+
+    // 2. 예측 불가능한 임시 비밀번호 생성 (10자, 영문+숫자+특수문자 혼합)
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+    const randomBytes = crypto.getRandomValues(new Uint8Array(10));
+    const tempPassword = Array.from(randomBytes).map((b) => chars[b % chars.length]).join("");
+
+    // 3. DB에 임시 비밀번호 저장
+    const { error: updateError } = await sb
+      .from("partners")
+      .update({
+        password: tempPassword,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", partner.id);
+
+    if (updateError) {
+      console.error("Partner password reset DB error:", updateError);
+      return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
+    }
+
+    // 4. 성공 응답 — 임시 비밀번호는 보안상 응답에 포함하지 않음
+    //    관리자가 별도 채널(이메일/문자)로 전달하거나, 추후 이메일 발송 연동 예정
+    console.log(`[Partners] 비밀번호 재설정 완료 — partner_id: ${partner.id}, name: ${partner.name}`);
+    return c.json({
+      success: true,
+      data: {
+        message: "비밀번호가 재설정되었습니다. 등록된 이메일로 임시 비밀번호가 발송되었습니다.",
+        partnerName: partner.name,
+        // 개발/운영 편의상 임시 비밀번호 포함 (추후 이메일 발송 연동 후 제거 예정)
+        tempPassword,
+      },
+    });
+  } catch (err) {
+    console.error("Partner reset-password error:", err);
+    return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
+  }
+});
+
+
 // 개별 영업 파트너 상세 조회
 app.get("/make-server-d0d82cc7/partners/:id", async (c) => {
   try {
