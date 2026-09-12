@@ -49,6 +49,64 @@ app.use(
 );
 
 
+// ==================== SECURITY UTILITIES ====================
+
+/** HTML 특수문자 escape — document.write/innerHTML에 사용자 입력값 주입 시 XSS 방지 */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
+ * 결제 금액 서버사이드 교차검증
+ * - DB의 donation_items.fixed_amount와 클라이언트 요청 금액을 비교
+ * - amountType이 'fixed'인 항목은 fixedAmount와 정확히 일치해야 함
+ * - amountType이 'flexible'인 항목은 최소 금액(100원) 이상이면 통과
+ * @returns null: 검증 통과 / string: 에러 메시지
+ */
+async function verifyPaymentAmount(
+  tenantId: string,
+  itemId: string,
+  requestedAmount: number
+): Promise<string | null> {
+  if (!itemId || itemId === 'general' || itemId === 'cert') return null;
+  if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+    return `결제 금액이 유효하지 않습니다. (요청 금액: ${requestedAmount}원)`;
+  }
+
+  try {
+    const items = await db.getDonationItems(tenantId);
+    const item = items.find((i) => i.id === itemId);
+
+    if (!item) {
+      console.warn(`[AmountVerify] tenantId=${tenantId} itemId=${itemId} — DB 항목 없음, 검증 생략`);
+      return null;
+    }
+    if (!item.enabled) {
+      return `비활성화된 결제 항목입니다. (항목: ${item.name})`;
+    }
+    if (item.amountType === 'fixed' && item.fixedAmount) {
+      if (requestedAmount !== item.fixedAmount) {
+        console.error(`[AmountVerify] 금액 불일치! tenantId=${tenantId} itemId=${itemId} expected=${item.fixedAmount} requested=${requestedAmount}`);
+        return `결제 금액이 지정 금액과 다릅니다. (지정: ${item.fixedAmount.toLocaleString()}원, 요청: ${requestedAmount.toLocaleString()}원)`;
+      }
+    }
+    if (requestedAmount < 100) {
+      return `결제 금액은 최소 100원 이상이어야 합니다. (요청: ${requestedAmount}원)`;
+    }
+  } catch (err) {
+    console.error('[AmountVerify] DB 조회 오류 — 검증 생략:', err);
+  }
+
+  return null;
+}
+
+// ============================================================
+
 // Health check endpoint
 app.get("/make-server-d0d82cc7/health", (c) => {
   return c.json({ status: "ok" });
@@ -943,6 +1001,13 @@ app.post("/make-server-d0d82cc7/payment/process/toss/confirm", async (c) => {
     const { tenantId, paymentKey, orderId, amount, donorName, donorPhone, itemName, itemId } = await c.req.json();
     const config = await db.getPaymentConfig(tenantId);
 
+    // ✅ 서버사이드 결제 금액 교차검증 (클라이언트 금액 조작 방지)
+    const amountVerifyError = await verifyPaymentAmount(tenantId, itemId, Number(amount));
+    if (amountVerifyError) {
+      console.error(`[Toss Confirm] 금액 검증 실패: ${amountVerifyError}`);
+      return c.json({ success: false, error: amountVerifyError, code: 'AMOUNT_MISMATCH' }, 400);
+    }
+
     // 토스페이먼츠 시크릿 키 — DB 설정 필수, 하드코딩 Fallback 금지
     const secretKey = config?.secretKey;
     if (!secretKey) {
@@ -1071,6 +1136,13 @@ app.post("/make-server-d0d82cc7/payment/process/toss/billing/charge", async (c) 
     const { tenantId, billingKey, customerKey, orderId, orderName, amount, customerName, customerEmail, customerMobilePhone, donorPhone, itemId, itemName, prayerText, baptismName, recurringInterval, recurringDay } = await c.req.json();
     if (!billingKey || !customerKey || !orderId || !amount) {
       return c.json({ success: false, error: 'billingKey, customerKey, orderId, amount가 필요합니다.' }, 400);
+    }
+
+    // ✅ 서버사이드 결제 금액 교차검증
+    const billingAmountVerifyError = await verifyPaymentAmount(tenantId, itemId, Number(amount));
+    if (billingAmountVerifyError) {
+      console.error(`[Toss Billing Charge] 금액 검증 실패: ${billingAmountVerifyError}`);
+      return c.json({ success: false, error: billingAmountVerifyError, code: 'AMOUNT_MISMATCH' }, 400);
     }
 
     const config = await db.getPaymentConfig(tenantId);
@@ -1224,7 +1296,18 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     }
 
     const { tenantId, donationData, deviceType, payWay } = await c.req.json();
-    
+
+    // ✅ 서버사이드 결제 금액 교차검증
+    const certAmountVerifyError = await verifyPaymentAmount(
+      tenantId,
+      donationData?.itemId || 'cert',
+      Number(donationData?.amount)
+    );
+    if (certAmountVerifyError) {
+      console.error(`[Cert Request] 금액 검증 실패: ${certAmountVerifyError}`);
+      return c.json({ success: false, error: certAmountVerifyError, code: 'AMOUNT_MISMATCH' }, 400);
+    }
+
     // DB에서 테넌트 결제 설정 조회
     const config = await db.getPaymentConfig(tenantId);
     
@@ -1280,9 +1363,10 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
     const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const timestamp = `${pad(kstDate.getUTCHours())}${pad(kstDate.getUTCMinutes())}${pad(kstDate.getUTCSeconds())}${pad(kstDate.getUTCMilliseconds(), 3)}`;
     const reqPayAmt = donationData.amount.toString();
-    const realDonorName = donationData?.name || donationData?.donorName || "신도";
+    // XSS 방지: 사용자 입력값은 HTML escape 처리 후 PG 폼에 삽입
+    const realDonorName = escapeHtml(donationData?.name || donationData?.donorName || "신도");
     const donorPhone = (donationData?.phone || donationData?.donorPhone || "").replace(/[^0-9]/g, '');
-    const donorEmail = donationData?.email ? String(donationData.email).trim() : "";
+    const donorEmail = donationData?.email ? escapeHtml(String(donationData.email).trim()) : "";
 
     // Smallbee 검증 완료 공식 해시: sha256(ver + loginId + shopcode + reqPayAmt + timestamp + apiKey + "NANO")
     const hashValue = crypto.createHash("sha256")
@@ -1297,7 +1381,7 @@ app.post("/make-server-d0d82cc7/payment/process/cert/request", async (c) => {
       orderTel: donorPhone,
       orderEmail: donorEmail,
       payWay: payWay || "card",
-      goodsName: donationData?.itemName || "SoulPay 봉헌금",
+      goodsName: escapeHtml(donationData?.itemName || "SoulPay 봉헌금"),
       reqPayAmt,
       receiveUrl,
       compOrderNo: tempDonationId,
