@@ -8,6 +8,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { ArrowRight, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { partnerAPI } from '../../api/client';
+import { navigateToRootPortal } from '../../utils/domainUtils';
 
 export default function PartnerApply() {
   const navigate = useNavigate();
@@ -70,7 +71,11 @@ export default function PartnerApply() {
           {/* Brand Logo */}
           <a
             href="/"
-            className="flex items-center text-decoration-none"
+            onClick={(e) => {
+              e.preventDefault();
+              navigateToRootPortal('/', navigate);
+            }}
+            className="flex items-center text-decoration-none cursor-pointer"
           >
             <img
               src="/images/logo_soulpay.png"
@@ -82,19 +87,19 @@ export default function PartnerApply() {
           {/* Action Links */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() => navigate('/')}
-              className="text-xs sm:text-sm font-medium text-[#4E5968] hover:text-[#191F28] px-3 py-1.5 rounded-lg hover:bg-[#F2F4F6] transition-colors"
+              onClick={() => navigateToRootPortal('/', navigate)}
+              className="text-xs sm:text-sm font-medium text-[#4E5968] hover:text-[#191F28] px-3 py-1.5 rounded-lg hover:bg-[#F2F4F6] transition-colors cursor-pointer"
             >
               홈으로
             </button>
             <button
               onClick={() => navigate('/partner/login')}
-              className="text-xs sm:text-sm font-medium text-[#4E5968] hover:text-[#191F28] px-3 py-1.5 rounded-lg hover:bg-[#F2F4F6] transition-colors"
+              className="text-xs sm:text-sm font-medium text-[#4E5968] hover:text-[#191F28] px-3 py-1.5 rounded-lg hover:bg-[#F2F4F6] transition-colors cursor-pointer"
             >
               영업자 로그인
             </button>
             <button
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigateToRootPortal('/onboarding', navigate)}
               className="h-9 px-3.5 sm:px-4 bg-[#191F28] hover:bg-[#333D4B] text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               서비스 신청

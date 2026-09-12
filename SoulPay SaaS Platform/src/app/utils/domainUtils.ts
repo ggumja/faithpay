@@ -291,3 +291,80 @@ export function navigateToAdminPortal(tenantSlug?: string, navigate?: (to: strin
     window.location.href = internalPath;
   }
 }
+
+/**
+ * 소울페이 메인 서비스 웹사이트(소개/랜딩/온보딩 등) URL 반환
+ * - 상용 환경: https://soulpay.kr${path}
+ * - Pages 프리뷰 환경: https://soulpay-pay.pages.dev${path}
+ * - 로컬 개발 환경(localhost): ${path}
+ */
+export function getRootPortalUrl(path: string = '/'): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  // 1. 로컬 개발 환경 (localhost / 127.0.0.1)
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
+      return normalizedPath;
+    }
+  }
+
+  // 2. 상용 운영 환경
+  if (isSoulPayProduction()) {
+    return `https://soulpay.kr${normalizedPath}`;
+  }
+
+  // 3. Cloudflare Pages 프리뷰 환경
+  if (isPagesPreview()) {
+    const host = window.location.hostname.toLowerCase();
+    if (host.includes('soulpay-admin') || host.includes('soulpay-partner')) {
+      const mainHost = host.replace('soulpay-admin', 'soulpay-pay').replace('soulpay-partner', 'soulpay-pay');
+      const protocol = window.location.protocol;
+      return `${protocol}//${mainHost}${normalizedPath}`;
+    }
+    const protocol = window.location.protocol;
+    return `${protocol}//${host}${normalizedPath}`;
+  }
+
+  // 4. 로컬/Dev SPA 환경
+  return normalizedPath;
+}
+
+/**
+ * 소울페이 메인 서비스 웹사이트(소개/랜딩 등)로 이동 핸들러
+ * - 서브도메인(partner.soulpay.kr, admin.soulpay.kr 등)에서 상용 메인(https://soulpay.kr)으로 이동 시: window.location.href
+ * - 로컬/통합 SPA 환경: React Router navigate()로 즉시 이동
+ */
+export function navigateToRootPortal(path: string = '/', navigate?: (to: string) => void): void {
+  const targetUrl = getRootPortalUrl(path);
+
+  let isExternal = false;
+  if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+    if (typeof window !== 'undefined') {
+      try {
+        const urlObj = new URL(targetUrl, window.location.origin);
+        isExternal = urlObj.origin !== window.location.origin;
+      } catch {
+        isExternal = true;
+      }
+    } else {
+      isExternal = true;
+    }
+  }
+
+  if (isExternal) {
+    window.location.href = targetUrl;
+    return;
+  }
+
+  const internalPath = targetUrl.startsWith('http://') || targetUrl.startsWith('https://')
+    ? new URL(targetUrl, window.location.origin).pathname
+    : targetUrl;
+
+  if (navigate) {
+    navigate(internalPath);
+  } else {
+    window.location.href = internalPath;
+  }
+}
+

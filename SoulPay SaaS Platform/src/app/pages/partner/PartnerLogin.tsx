@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { navigateToRootPortal } from '../../utils/domainUtils';
 
 export default function PartnerLogin() {
   const navigate = useNavigate();
@@ -134,7 +135,7 @@ export default function PartnerLogin() {
 
       {/* 뒤로가기 */}
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigateToRootPortal('/', navigate)}
         className="absolute top-5 left-5 flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-xs font-semibold transition-colors cursor-pointer border-0 bg-transparent"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> 홈으로
@@ -145,7 +146,14 @@ export default function PartnerLogin() {
         {/* 로고 및 헤더 */}
         <div className="text-center space-y-2">
           <div className="flex justify-center mb-1">
-            <a href="/" className="inline-block">
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToRootPortal('/', navigate);
+              }}
+              className="inline-block cursor-pointer"
+            >
               <img
                 src="/images/logo_soulpay.png"
                 alt="SoulPay"
