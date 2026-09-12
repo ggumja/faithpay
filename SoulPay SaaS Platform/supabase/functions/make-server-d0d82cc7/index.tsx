@@ -3775,7 +3775,7 @@ app.post("/make-server-d0d82cc7/kakaopay/ready", async (c) => {
       const kakaoRes = await fetch("https://open-api.kakaopay.com/online/v1/payment/ready", {
         method: "POST",
         headers: {
-          "Authorization": "SECRET_KEY DEV_SECRET_KEY",
+          "Authorization": `SECRET_KEY ${Deno.env.get("KAKAO_PAY_SECRET_KEY") || "DEV_SECRET_KEY"}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -3834,7 +3834,7 @@ app.post("/make-server-d0d82cc7/kakaopay/approve", async (c) => {
       const kakaoRes = await fetch("https://open-api.kakaopay.com/online/v1/payment/approve", {
         method: "POST",
         headers: {
-          "Authorization": "SECRET_KEY DEV_SECRET_KEY",
+          "Authorization": `SECRET_KEY ${Deno.env.get("KAKAO_PAY_SECRET_KEY") || "DEV_SECRET_KEY"}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
