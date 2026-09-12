@@ -145,16 +145,18 @@ export default function SystemAdminShell() {
           <nav className={S.nav}>
 
             {/* 통합 관제 — 대시보드 */}
-            <div>
+            <div className="space-y-0.5">
               <p className={S.navSection}>통합 관제</p>
               <button
                 onClick={() => navigate('/system/admin')}
                 className={S.navItem(active === 'dashboard')}
               >
-                <LayoutDashboard size={13} className={active === 'dashboard' ? 'text-white' : 'text-indigo-600'} />
-                <span className="font-semibold">대시보드 (통합 관제)</span>
+                <LayoutDashboard size={13} className={active === 'dashboard' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">대시보드 (통합 관제)</span>
               </button>
             </div>
+
+            <div className="border-t border-[var(--hm-border)] my-1.5" />
 
             {/* 단체 목록 관리 (직접 노출) */}
             <div className="space-y-0.5">
@@ -179,6 +181,8 @@ export default function SystemAdminShell() {
                 )}
               </button>
             </div>
+
+            <div className="border-t border-[var(--hm-border)] my-1.5" />
 
             {/* 정산 및 수수료 관리 */}
             <div className="space-y-0.5">
@@ -213,30 +217,33 @@ export default function SystemAdminShell() {
               </button>
             </div>
 
+            <div className="border-t border-[var(--hm-border)] my-1.5" />
+
             {/* 통계 분석 */}
-            <div>
+            <div className="space-y-0.5">
               <p className={S.navSection}>통계 분석</p>
               {[
                 { key: 'stats',       label: '단체별 통계',    Icon: TrendingUp, path: '/system/admin/stats'       },
                 { key: 'commissions', label: '수수료 통계',    Icon: Coins,      path: '/system/admin/commissions' },
               ].map(({ key, label, Icon, path }) => (
                 <button key={key} onClick={() => navigate(path)} className={S.navItem(active === key)}>
-                  <Icon size={13} className={active === key ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
-                  <span>{label}</span>
+                  <Icon size={13} className={active === key ? 'text-white' : 'text-blue-600'} />
+                  <span className="font-bold">{label}</span>
                 </button>
               ))}
             </div>
 
+            <div className="border-t border-[var(--hm-border)] my-1.5" />
 
             {/* 파트너 관리 */}
-            <div>
+            <div className="space-y-0.5">
               <p className={S.navSection}>파트너 관리</p>
               <button
                 onClick={() => navigate('/system/admin/partners')}
                 className={S.navItem(active === 'partners' || active === 'partnerDetail')}
               >
-                <Briefcase size={13} className={active === 'partners' || active === 'partnerDetail' ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
-                <span>영업 파트너 관리</span>
+                <Briefcase size={13} className={active === 'partners' || active === 'partnerDetail' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">영업 파트너 관리</span>
               </button>
             </div>
           </nav>
@@ -248,15 +255,15 @@ export default function SystemAdminShell() {
               onClick={() => navigate('/system/admin/system-admin-accounts')}
               className={S.navItem(active === 'sysAdmins')}
             >
-              <UserCog size={13} className={active === 'sysAdmins' ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
-              <span>관리자 계정</span>
+              <UserCog size={13} className={active === 'sysAdmins' ? 'text-white' : 'text-blue-600'} />
+              <span className="font-bold">관리자 계정</span>
             </button>
             <button
               onClick={() => navigate('/system/admin/settings')}
               className={S.navItem(active === 'settings')}
             >
-              <Settings size={13} className={active === 'settings' ? 'text-white' : 'text-[var(--hm-ink-3)]'} />
-              <span>설정</span>
+              <Settings size={13} className={active === 'settings' ? 'text-white' : 'text-blue-600'} />
+              <span className="font-bold">설정</span>
             </button>
           </div>
 
