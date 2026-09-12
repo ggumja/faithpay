@@ -671,6 +671,10 @@ app.put("/make-server-d0d82cc7/tenants/:id/approve", async (c) => {
         const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
         const rb = crypto.getRandomValues(new Uint8Array(10));
         const initPassword = Array.from(rb).map((b) => chars[b % chars.length]).join('');
+        const tenantSlugForUrl = (tenant as any).slug || '';
+        const adminLoginUrl = tenantSlugForUrl
+          ? `https://admin.soulpay.kr/${tenantSlugForUrl}/login`
+          : 'https://admin.soulpay.kr';
 
         const { error: insertErr } = await sb.from('tenant_admins').insert({
           tenant_id: id,
@@ -686,9 +690,17 @@ app.put("/make-server-d0d82cc7/tenants/:id/approve", async (c) => {
           console.error('[approve] tenant_admins 자동 생성 실패:', insertErr.message);
         } else {
           console.log(`[approve] tenant_admins 자동 생성 완료 — tenant: ${id}, email: ${approvedContactEmail}`);
+          // 임시 비밀번호를 승인 이메일과 함께 발송
+          sendPasswordResetEmail({
+            to: approvedContactEmail,
+            partnerName: approvedContactName,
+            tenantName: (tenant as any).name || '',
+            tempPassword: initPassword,
+            loginUrl: adminLoginUrl,
+          }).catch((e: any) => console.error('[approve] 임시 비밀번호 이메일 발송 실패:', e));
         }
       } else {
-        // 기존 레코드가 있으면 status 활성화
+        // 기존 레코드가 있으면 status 활성화 (비밀번호 변경 없음 → 이메일 발송 없음)
         await sb.from('tenant_admins').update({ status: 'active', updated_at: new Date().toISOString() }).eq('id', existingAdmin.id);
       }
     }
