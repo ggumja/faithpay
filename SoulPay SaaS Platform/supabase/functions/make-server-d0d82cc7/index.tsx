@@ -347,6 +347,65 @@ app.post("/tenant-staff/:tenantId", handleSaveTenantStaff);
 app.post("/make-server-d0d82cc7/tenants/:tenantId/staff", handleSaveTenantStaff);
 app.post("/tenants/:tenantId/staff", handleSaveTenantStaff);
 
+// 단체 관리자 비밀번호 리셋 — 시스템 관리자(ops)가 특정 테넌트 관리자 계정에 임시 비밀번호 발급
+app.post("/make-server-d0d82cc7/tenant-staff/:tenantId/reset-password", async (c) => {
+  try {
+    const tenantId = c.req.param("tenantId");
+    const { email } = await c.req.json();
+
+    if (!tenantId || !email) {
+      return c.json({ success: false, error: "tenantId와 email은 필수입니다." }, 400);
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const sb = db.pgClient();
+
+    // 1. 해당 테넌트의 해당 이메일 계정 존재 확인
+    const { data: staff, error: fetchError } = await sb
+      .from("tenant_admins")
+      .select("id, name, email, status")
+      .eq("tenant_id", tenantId)
+      .eq("email", cleanEmail)
+      .single();
+
+    if (fetchError || !staff) {
+      return c.json({ success: false, error: "해당 테넌트에서 이메일과 일치하는 관리자 계정을 찾을 수 없습니다." }, 404);
+    }
+
+    // 2. 예측 불가능한 임시 비밀번호 생성 (10자)
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+    const randomBytes = crypto.getRandomValues(new Uint8Array(10));
+    const tempPassword = Array.from(randomBytes).map((b) => chars[b % chars.length]).join("");
+
+    // 3. tenant_admins 테이블에 임시 비밀번호 즉시 반영
+    const { error: updateError } = await sb
+      .from("tenant_admins")
+      .update({ password: tempPassword, updated_at: new Date().toISOString() })
+      .eq("id", staff.id);
+
+    if (updateError) {
+      console.error("[tenant-staff] reset-password DB error:", updateError);
+      return c.json({ success: false, error: "비밀번호 재설정 DB 반영에 실패했습니다." }, 500);
+    }
+
+    console.log(`[tenant-staff] 비밀번호 리셋 완료 — tenant: ${tenantId}, admin: ${staff.name} (${cleanEmail})`);
+    return c.json({
+      success: true,
+      data: {
+        adminName: staff.name,
+        adminEmail: cleanEmail,
+        tempPassword,
+        message: "임시 비밀번호가 발급되었습니다. 해당 관리자에게 안전한 채널로 전달해 주세요.",
+      },
+    });
+  } catch (err) {
+    console.error("[tenant-staff] reset-password error:", err);
+    return c.json({ success: false, error: "비밀번호 재설정 처리 중 오류가 발생했습니다." }, 500);
+  }
+});
+app.post("/tenant-staff/:tenantId/reset-password", async (c) => c.redirect(`/make-server-d0d82cc7/tenant-staff/${c.req.param("tenantId")}/reset-password`));
+
+
 // 특정 단체 조회 (by ID)  ← 와일드카드이므로 static 경로 뒤에 등록
 app.get("/make-server-d0d82cc7/tenants/:id", async (c) => {
   try {

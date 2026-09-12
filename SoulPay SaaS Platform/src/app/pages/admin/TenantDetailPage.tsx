@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useApp, Tenant, getTenantPkCode } from '../../context/AppContext';
-import { tenantAPI, paymentAPI } from '../../api/client';
+import { tenantAPI, paymentAPI, adminAPI } from '../../api/client';
 import { KakaoPayLogo, NaverPayLogo, TossPayLogo } from '../../components/PayBrandLogos';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -290,16 +290,34 @@ export default function TenantDetailPage() {
     }
   };
 
-  const handleSendPasswordReset = (adminName: string, adminEmail: string) => {
-    // TODO: 실제 비밀번호 재설정 이메일 발송은 서버 API 호출로 처리해야 합니다.
-    // 현재는 UI 알림만 표시합니다.
-    toast.success(
-      `🔑 ${adminName} (${adminEmail}) 님께 비밀번호 재설정 요청이 접수되었습니다.`,
-      {
-        description: `서버 API 연동 후 실제 이메일/알림톡으로 발송됩니다.`,
-        duration: 5000,
+  const handleSendPasswordReset = async (adminName: string, adminEmail: string) => {
+    const targetTenant = tenant || tenants.find((t) => t.id === id || t.slug === id);
+    const targetTenantId = targetTenant?.id;
+
+    if (!targetTenantId) {
+      toast.error('단체 ID를 확인할 수 없습니다. 페이지를 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
+
+    try {
+      const res = await adminAPI.resetTenantAdminPassword(targetTenantId, adminEmail);
+      if (res.success && res.data) {
+        const { tempPassword } = res.data;
+        // 클립보드 자동 복사
+        try { await navigator.clipboard.writeText(tempPassword); } catch {}
+        toast.success(
+          `🔑 [${adminName}] 임시 비밀번호 발급 완료`,
+          {
+            description: `임시 PW: ${tempPassword} (클립보드 복사됨) — 안전한 채널로 전달해 주세요.`,
+            duration: 10000,
+          }
+        );
+      } else {
+        toast.error(res.error ?? '비밀번호 재설정 중 오류가 발생했습니다.');
       }
-    );
+    } catch {
+      toast.error('비밀번호 재설정 요청 중 오류가 발생했습니다.');
+    }
   };
 
   const handleSavePaymentConfig = async () => {
