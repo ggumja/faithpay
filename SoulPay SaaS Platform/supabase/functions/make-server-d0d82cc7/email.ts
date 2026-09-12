@@ -347,7 +347,7 @@ export async function sendAdminNewApplicationEmail(params: AdminNewApplicationPa
 
   const reviewUrl = applicationType === '단체'
     ? 'https://ops.soulpay.kr/system/admin/tenants/pending'
-    : 'https://opt.soulpay.kr/partners';
+    : 'https://ops.soulpay.kr/system/admin/partners';
 
   const html = `<!DOCTYPE html>
 <html lang="ko">
