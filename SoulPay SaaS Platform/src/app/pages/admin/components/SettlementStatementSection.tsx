@@ -11,7 +11,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { adminAPI } from '../../../api/client';
+import { adminAPI, partnerAPI } from '../../../api/client';
 import { Badge } from '../../../components/ui/badge';
 
 export default function SettlementStatementSection() {
@@ -32,10 +32,37 @@ export default function SettlementStatementSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminAPI.getStatements(selectedMonth);
+      const [res, partnersRes] = await Promise.all([
+        adminAPI.getStatements(selectedMonth),
+        partnerAPI.getAll().catch(() => ({ success: true, data: [] })),
+      ]);
+
+      const partnersMap = new Map<string, any>();
+      if (partnersRes.success && Array.isArray(partnersRes.data)) {
+        partnersRes.data.forEach((p: any) => {
+          partnersMap.set(p.id, p);
+        });
+      }
+
       if (res.success && res.data) {
         setTenantStatements(res.data.tenantStatements || []);
-        setPartnerStatements(res.data.partnerStatements || []);
+        const rawPartners = res.data.partnerStatements || [];
+        const enrichedPartners = rawPartners.map((ps: any) => {
+          const partnerObj = ps.partnerId ? partnersMap.get(ps.partnerId) : null;
+          const candidateName = partnerObj?.name || partnerObj?.corpName || ps.partnerName;
+          const finalName = candidateName && candidateName !== '파트너'
+            ? candidateName
+            : (ps.partnerRole === 'master_agency' ? '총판 대리점' : '영업자');
+          return {
+            ...ps,
+            partnerName: finalName,
+            bankName: ps.bankName || partnerObj?.bankName || '',
+            accountNumber: ps.accountNumber || partnerObj?.accountNumber || '',
+            accountHolder: ps.accountHolder || partnerObj?.accountHolder || finalName,
+            partnerRole: ps.partnerRole || partnerObj?.role || 'sales_agent',
+          };
+        });
+        setPartnerStatements(enrichedPartners);
       } else {
         setTenantStatements([]);
         setPartnerStatements([]);
