@@ -415,14 +415,14 @@ export default function PartnerManagement() {
         </div>
       )}
 
-      {/* ── 3. 신규 신청 / 승인 대기 페이지 ── */}
+      {/* ── 3. 파트너 승인요청 목록 페이지 ── */}
       {view === 'pending' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
                 <Clock className="h-5 w-5 text-amber-600" />
-                신규 파트너 신청 / 승인 대기 심사
+                파트너 승인요청 목록
               </h1>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                 웹 제휴 신청서를 검토하여 영업 대리점 또는 영업자로 승인하거나 반려합니다.
@@ -707,13 +707,13 @@ export default function PartnerManagement() {
         </Card>
       )}
 
-      {/* ══ 신규 제휴 신청 / 승인 대기 심사 테이블 ══ */}
+      {/* ══ 파트너 승인요청 목록 심사 테이블 ══ */}
       {view === 'pending' && (
         <Card className="border-amber-200 shadow-sm">
           <CardHeader className="pb-3 bg-amber-50/40 rounded-t-xl border-b border-amber-100">
             <CardTitle className="text-[14px] font-bold text-amber-950 flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-600" /> 신규 제휴 신청 / 승인 대기 목록
+                <Clock className="h-4 w-4 text-amber-600" /> 파트너 승인요청 목록
               </span>
               <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs px-2.5 py-0.5 font-bold">
                 총 {filteredPending.length}건 대기 중

@@ -42,21 +42,21 @@ function useActiveKey(pathname: string) {
 const META: Record<string, { title: string; section: string }> = {
   dashboard:          { title: '플랫폼 통합 대시보드',  section: '통합 관제' },
   sysAdmins:          { title: '시스템 관리자 계정',      section: '시스템 설정' },
-  tenants:            { title: '단체 목록',            section: '단체 목록 관리' },
-  tenantNew:          { title: '신규 단체 등록',         section: '단체 목록 관리' },
-  pending:            { title: '승인요청 목록',         section: '단체 목록 관리' },
-  pendingDetail:      { title: '입점 신청 상세 심사',   section: '단체 목록 관리' },
-  tenantDetail:       { title: '단체 상세 정보',        section: '단체 목록 관리' },
+  tenants:            { title: '단체 목록',            section: '단체 관리' },
+  tenantNew:          { title: '신규 단체 등록',         section: '단체 관리' },
+  pending:            { title: '승인요청 목록',         section: '단체 관리' },
+  pendingDetail:      { title: '입점 신청 상세 심사',   section: '단체 관리' },
+  tenantDetail:       { title: '단체 상세 정보',        section: '단체 관리' },
   settlementOverview: { title: '결제 및 분구 집계',      section: '정산 및 수수료 관리' },
   settlementAudit:    { title: '단체·대리점 분구 대조표',  section: '정산 및 수수료 관리' },
   ledger:             { title: '전체 결제 승인 원장',    section: '정산 및 수수료 관리' },
   scheduler:          { title: '정기결제 스케줄러',      section: '정산 및 수수료 관리' },
   stats:              { title: '단체별 통계',           section: '통계 분석' },
   commissions:        { title: '수수료 통계',           section: '통계 분석' },
-  partnerAgencies:    { title: '영업 대리점 목록',       section: '영업 파트너 관리' },
-  partnerAgents:      { title: '영업자 목록',           section: '영업 파트너 관리' },
-  partnerPending:     { title: '신규 신청 / 승인 대기',   section: '영업 파트너 관리' },
-  partnerDetail:      { title: '영업 파트너 상세 정보',   section: '영업 파트너 관리' },
+  partnerAgencies:    { title: '영업 대리점 목록',       section: '파트너 관리' },
+  partnerAgents:      { title: '영업자 목록',           section: '파트너 관리' },
+  partnerPending:     { title: '승인요청 목록',         section: '파트너 관리' },
+  partnerDetail:      { title: '영업 파트너 상세 정보',   section: '파트너 관리' },
   settings:           { title: '설정',                  section: '시스템 설정' },
 };
 
@@ -179,9 +179,9 @@ export default function SystemAdminShell() {
 
             <div className="border-t border-[var(--hm-border)] my-1.5" />
 
-            {/* 단체 목록 관리 (직접 노출) */}
+            {/* 단체 관리 (직접 노출) */}
             <div className="space-y-0.5">
-              <p className={S.navSection}>단체 목록 관리</p>
+              <p className={S.navSection}>단체 관리</p>
               <button
                 onClick={() => navigate('/system/admin/tenants')}
                 className={S.navItem(active === 'tenants' || active === 'tenantDetail' || active === 'tenantNew')}
@@ -205,9 +205,9 @@ export default function SystemAdminShell() {
 
             <div className="border-t border-[var(--hm-border)] my-1.5" />
 
-            {/* 영업 파트너 관리 */}
+            {/* 파트너 관리 */}
             <div className="space-y-0.5">
-              <p className={S.navSection}>영업 파트너 관리</p>
+              <p className={S.navSection}>파트너 관리</p>
               <button
                 onClick={() => navigate('/system/admin/partners/agencies')}
                 className={S.navItem(active === 'partnerAgencies')}
@@ -227,7 +227,7 @@ export default function SystemAdminShell() {
                 className={S.navItem(active === 'partnerPending')}
               >
                 <Clock size={13} className={active === 'partnerPending' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">신규신청 / 승인대기</span>
+                <span className="font-bold">승인요청 목록</span>
                 {partnerPendingCount > 0 && (
                   <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none">
                     {partnerPendingCount}
