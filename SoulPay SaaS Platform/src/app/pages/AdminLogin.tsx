@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ArrowLeft, Lock, Mail, Building2, ChevronRight, Phone, Search, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { isAdminPortalDomain } from '../utils/domainUtils';
+import { adminAPI } from '../api/client';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -47,36 +48,43 @@ export default function AdminLogin() {
     }
   }, [tenantSlug, tenants, setCurrentTenant]);
 
-  // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기 (Strict Initial Registration Lookup Only)
-  const getTenantStaffAccounts = (tenant: any): any[] => {
-    if (!tenant || !tenant.contact?.email) return [];
+  // 🔐 해당 단체에 등록된 관리자 스태프 계정 목록 가져오기
+  // tenant.contact.tempPassword (초기 등록 비밀번호) + tenant_admins DB (리셋된 비밀번호) 병합
+  const getTenantStaffAccounts = (tenant: any, dbStaff: any[] = []): any[] => {
+    if (!tenant || !tenant.contact?.email) return dbStaff;
 
     const primaryEmail = tenant.contact.email.trim().toLowerCase();
     const primaryName = tenant.contact.name || tenant.name;
     const primaryPw = (tenant.contact as any)?.tempPassword || tenant.tempPassword || '';
 
-    return [
-      {
-        id: `admin-${tenant.id}`,
-        name: primaryName,
-        email: primaryEmail,
-        password: primaryPw,
-        groupId: 'tenant_admin',
-        status: 'active',
-      },
-    ];
+    // DB에 동일 이메일 계정이 있으면 DB 비밀번호 우선 사용 (리셋된 비밀번호 반영)
+    const dbAccount = dbStaff.find((s: any) => s.email?.trim().toLowerCase() === primaryEmail);
+    const primaryAccount = {
+      id: dbAccount?.id || `admin-${tenant.id}`,
+      name: dbAccount?.name || primaryName,
+      email: primaryEmail,
+      password: dbAccount?.password || primaryPw,
+      groupId: dbAccount?.groupId || 'tenant_admin',
+      status: dbAccount?.status || 'active',
+    };
+
+    // DB 전용 추가 스태프 (대표 관리자 이메일과 다른 계정들)
+    const extraDbStaff = dbStaff.filter((s: any) => s.email?.trim().toLowerCase() !== primaryEmail);
+
+    return [primaryAccount, ...extraDbStaff];
   };
 
   // 🔐 특정 단체에 대해 이메일 및 비밀번호 엄격 검증
   const verifyTenantLogin = (
     emailVal: string,
     passwordVal: string,
-    tenant: any
+    tenant: any,
+    dbStaff: any[] = []
   ): { success: boolean; reason: 'ok' | 'unregistered' | 'locked' | 'wrong_password'; account?: any } => {
     const cleanEmail = emailVal.trim().toLowerCase();
     const cleanPassword = passwordVal.trim();
 
-    const staffAccounts = getTenantStaffAccounts(tenant);
+    const staffAccounts = getTenantStaffAccounts(tenant, dbStaff);
     const matchedAccount = staffAccounts.find((s) => s.email && s.email.trim().toLowerCase() === cleanEmail);
 
     if (!matchedAccount) {
@@ -107,7 +115,7 @@ export default function AdminLogin() {
     return staffAccounts.some((s) => s.email && s.email.trim().toLowerCase() === cleanEmail);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
 
@@ -143,7 +151,13 @@ export default function AdminLogin() {
       }
 
       if (urlTenant) {
-        const loginResult = verifyTenantLogin(cleanEmail, password, urlTenant);
+        // tenant_admins DB에서 스태프 목록 조회 (리셋된 비밀번호 반영)
+        let dbStaff: any[] = [];
+        try {
+          const staffRes = await adminAPI.getTenantStaff(urlTenant.id);
+          if (staffRes.success && Array.isArray(staffRes.data)) dbStaff = staffRes.data;
+        } catch {}
+        const loginResult = verifyTenantLogin(cleanEmail, password, urlTenant, dbStaff);
 
         if (loginResult.reason === 'unregistered') {
           // 타 단체 계정인지 체크
