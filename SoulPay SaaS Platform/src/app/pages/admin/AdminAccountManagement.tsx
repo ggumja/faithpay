@@ -110,16 +110,7 @@ export default function AdminAccountManagement() {
   const { tenants, currentTenant, setCurrentTenant, currentAdmin, setCurrentAdmin } = useApp();
   const terms = useTenantTerms(currentTenant?.orgType);
 
-  const [activeTab, setActiveTab] = useState<'accounts' | 'groups' | 'permissions' | 'my-password'>('accounts');
-
-  // 🔑 내 비밀번호 변경 State
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [showCurrentPw, setShowCurrentPw] = useState(false);
-  const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [isPwChanging, setIsPwChanging] = useState(false);
+  const [activeTab, setActiveTab] = useState<'accounts' | 'groups' | 'permissions'>('accounts');
   
   // 👥 관리자 그룹 (Roles/Groups) State
   const [adminGroups, setAdminGroups] = useState<AdminGroup[]>([
@@ -502,52 +493,6 @@ export default function AdminAccountManagement() {
   };
 
 
-  /** 내 비밀번호 직접 변경 핸들러 */
-  const handleChangeMyPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentAdmin?.email || !currentTenant?.id) {
-      toast.error('로그인 정보를 확인할 수 없습니다.');
-      return;
-    }
-    if (!currentPw || !newPw || !confirmPw) {
-      toast.error('모든 항목을 입력해 주세요.');
-      return;
-    }
-    if (newPw.length < 8) {
-      toast.error('새 비밀번호는 8자 이상이어야 합니다.');
-      return;
-    }
-    if (newPw !== confirmPw) {
-      toast.error('새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    if (currentPw === newPw) {
-      toast.error('새 비밀번호는 현재 비밀번호와 달라야 합니다.');
-      return;
-    }
-    setIsPwChanging(true);
-    try {
-      const res = await adminAPI.changeTenantAdminPassword(
-        currentTenant.id,
-        currentAdmin.email,
-        currentPw,
-        newPw
-      );
-      if (res.success) {
-        toast.success('✅ 비밀번호가 성공적으로 변경되었습니다.');
-        setCurrentPw('');
-        setNewPw('');
-        setConfirmPw('');
-      } else {
-        toast.error(res.error || '비밀번호 변경에 실패했습니다.');
-      }
-    } catch {
-      toast.error('비밀번호 변경 중 오류가 발생했습니다.');
-    } finally {
-      setIsPwChanging(false);
-    }
-  };
-
   const handleDeleteStaff = async (id: string, name: string) => {
     if (staffList.length <= 1) {
       toast.error('최소 1개 이상의 최고 관리자 계정이 유지되어야 합니다.');
@@ -648,10 +593,6 @@ export default function AdminAccountManagement() {
               <TabsTrigger value="groups" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
                 <Layers className="h-4 w-4" />
                 2. 관리자 권한 그룹 및 메뉴 설정 ({adminGroups.length}개)
-              </TabsTrigger>
-              <TabsTrigger value="my-password" className="gap-2 font-bold cursor-pointer text-xs sm:text-sm">
-                <KeyRound className="h-4 w-4" />
-                내 비밀번호 변경
               </TabsTrigger>
             </TabsList>
 
@@ -923,102 +864,6 @@ export default function AdminAccountManagement() {
                       })}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* 📌 TAB 3: 내 비밀번호 변경 */}
-            <TabsContent value="my-password" className="mt-6">
-              <Card className="max-w-md mx-auto border border-slate-200 dark:border-zinc-700 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-zinc-100">
-                    <KeyRound className="h-5 w-5 text-blue-500" />
-                    내 비밀번호 변경
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-500">
-                    현재 비밀번호를 확인한 후 새 비밀번호로 변경합니다. 새 비밀번호는 8자 이상이어야 합니다.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleChangeMyPassword} className="space-y-5">
-                    {/* 현재 비밀번호 */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">현재 비밀번호</Label>
-                      <div className="relative">
-                        <input
-                          type={showCurrentPw ? 'text' : 'password'}
-                          value={currentPw}
-                          onChange={(e) => setCurrentPw(e.target.value)}
-                          placeholder="현재 비밀번호 입력"
-                          autoComplete="current-password"
-                          className="w-full rounded-md border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 pr-10 text-sm text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button type="button" onClick={() => setShowCurrentPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 새 비밀번호 */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">새 비밀번호 <span className="text-slate-400 font-normal">(8자 이상)</span></Label>
-                      <div className="relative">
-                        <input
-                          type={showNewPw ? 'text' : 'password'}
-                          value={newPw}
-                          onChange={(e) => setNewPw(e.target.value)}
-                          placeholder="새 비밀번호 입력"
-                          autoComplete="new-password"
-                          className="w-full rounded-md border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 pr-10 text-sm text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 새 비밀번호 확인 */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-zinc-300">새 비밀번호 확인</Label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPw ? 'text' : 'password'}
-                          value={confirmPw}
-                          onChange={(e) => setConfirmPw(e.target.value)}
-                          placeholder="새 비밀번호 재입력"
-                          autoComplete="new-password"
-                          className="w-full rounded-md border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-2 pr-10 text-sm text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button type="button" onClick={() => setShowConfirmPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      {confirmPw && newPw && (
-                        <p className={`text-xs mt-1 ${newPw === confirmPw ? 'text-green-600' : 'text-red-500'}`}>
-                          {newPw === confirmPw ? '✓ 비밀번호가 일치합니다' : '✗ 비밀번호가 일치하지 않습니다'}
-                        </p>
-                      )}
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={isPwChanging || !currentPw || !newPw || !confirmPw || newPw !== confirmPw}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 disabled:opacity-50"
-                    >
-                      {isPwChanging ? (
-                        <span className="flex items-center gap-2"><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> 변경 중...</span>
-                      ) : (
-                        <span className="flex items-center gap-2"><Save className="h-4 w-4" /> 비밀번호 변경</span>
-                      )}
-                    </Button>
-
-                    <p className="text-xs text-slate-400 text-center">
-                      비밀번호를 잊으셨나요?{' '}
-                      <span className="text-blue-500 cursor-pointer hover:underline" onClick={() => window.location.href = `/${currentTenant?.slug}/admin/login`}>
-                        로그인 페이지에서 재설정
-                      </span>
-                    </p>
-                  </form>
                 </CardContent>
               </Card>
             </TabsContent>
