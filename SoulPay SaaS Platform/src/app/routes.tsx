@@ -55,6 +55,8 @@ const SystemAdminTenantCreate = lazy(() => import("./pages/admin/SystemAdminTena
 const PendingTenantDetailPage = lazy(() => import("./pages/admin/PendingTenantDetailPage"));
 const TenantDetailPage = lazy(() => import("./pages/admin/TenantDetailPage"));
 const SettlementCenterPage = lazy(() => import("./pages/admin/SettlementCenterPage"));
+const SettlementOverviewPage = lazy(() => import("./pages/admin/SettlementOverviewPage"));
+const SettlementAuditPage = lazy(() => import("./pages/admin/SettlementAuditPage"));
 const TenantStatsPage = lazy(() => import("./pages/admin/TenantStatsPage"));
 const PartnerManagement = lazy(() => import("./pages/admin/PartnerManagement"));
 const PartnerDetailPage = lazy(() => import("./pages/admin/PartnerDetailPage"));
@@ -162,7 +164,9 @@ export const router = createBrowserRouter([
           { path: "/system/admin/tenants/new",      Component: SystemAdminTenantCreate },
           { path: "/system/admin/tenants/pending",  Component: SystemAdminDashboard },
           { path: "/system/admin/tenants/pending/:id", Component: PendingTenantDetailPage },
-          { path: "/system/admin/settlement-center", Component: SettlementCenterPage },
+          { path: "/system/admin/settlement-overview", Component: SettlementOverviewPage },
+          { path: "/system/admin/settlement-audit",    Component: SettlementAuditPage },
+          { path: "/system/admin/settlement-center",   Component: SettlementOverviewPage },
           { path: "/system/admin/stats",            Component: TenantStatsPage },
 
           { path: "/system/admin/partners",         Component: PartnerManagement    },
