@@ -205,6 +205,39 @@ export default function SystemAdminShell() {
 
             <div className="border-t border-[var(--hm-border)] my-1.5" />
 
+            {/* 영업 파트너 관리 */}
+            <div className="space-y-0.5">
+              <p className={S.navSection}>영업 파트너 관리</p>
+              <button
+                onClick={() => navigate('/system/admin/partners/agencies')}
+                className={S.navItem(active === 'partnerAgencies')}
+              >
+                <Building2 size={13} className={active === 'partnerAgencies' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">영업 대리점</span>
+              </button>
+              <button
+                onClick={() => navigate('/system/admin/partners/agents')}
+                className={S.navItem(active === 'partnerAgents')}
+              >
+                <Users size={13} className={active === 'partnerAgents' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">영업자</span>
+              </button>
+              <button
+                onClick={() => navigate('/system/admin/partners/pending')}
+                className={S.navItem(active === 'partnerPending')}
+              >
+                <Clock size={13} className={active === 'partnerPending' ? 'text-white' : 'text-blue-600'} />
+                <span className="font-bold">신규신청 / 승인대기</span>
+                {partnerPendingCount > 0 && (
+                  <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                    {partnerPendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <div className="border-t border-[var(--hm-border)] my-1.5" />
+
             {/* 정산 및 수수료 관리 */}
             <div className="space-y-0.5">
               <p className={S.navSection}>정산 및 수수료 관리</p>
@@ -252,39 +285,6 @@ export default function SystemAdminShell() {
                   <span className="font-bold">{label}</span>
                 </button>
               ))}
-            </div>
-
-            <div className="border-t border-[var(--hm-border)] my-1.5" />
-
-            {/* 파트너 관리 */}
-            <div className="space-y-0.5">
-              <p className={S.navSection}>영업 파트너 관리</p>
-              <button
-                onClick={() => navigate('/system/admin/partners/agencies')}
-                className={S.navItem(active === 'partnerAgencies')}
-              >
-                <Building2 size={13} className={active === 'partnerAgencies' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">영업 대리점</span>
-              </button>
-              <button
-                onClick={() => navigate('/system/admin/partners/agents')}
-                className={S.navItem(active === 'partnerAgents')}
-              >
-                <Users size={13} className={active === 'partnerAgents' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">영업자</span>
-              </button>
-              <button
-                onClick={() => navigate('/system/admin/partners/pending')}
-                className={S.navItem(active === 'partnerPending')}
-              >
-                <Clock size={13} className={active === 'partnerPending' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">신규신청 / 승인대기</span>
-                {partnerPendingCount > 0 && (
-                  <span className="ml-auto bg-amber-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-                    {partnerPendingCount}
-                  </span>
-                )}
-              </button>
             </div>
           </nav>
 
