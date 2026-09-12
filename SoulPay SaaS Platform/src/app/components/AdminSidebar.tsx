@@ -17,6 +17,7 @@ import {
   Palette,
   ShieldCheck,
   TrendingUp,
+  LifeBuoy,
 } from 'lucide-react';
 import { useTenantTerms } from '../hooks/useTenantTerms';
 import { toast } from 'sonner';
@@ -411,6 +412,27 @@ export function AdminSidebar({ tenantSlug, currentPath }: AdminSidebarProps) {
             </div>
           </div>
         )}
+
+        {/* 6. 고객 문의 (고정 링크 — 모든 관리자 노출) */}
+        <div className="space-y-1">
+          <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 tracking-wider">
+            지원
+          </div>
+          <div className="space-y-0.5">
+            <Link to={tenantSlug ? `/${tenantSlug}${prefix}/support` : `${prefix}/support`}>
+              <div
+                className={`w-full flex items-center px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer ${
+                  normalizedCurrent.includes('/support')
+                    ? 'bg-indigo-50 text-indigo-600 font-bold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <LifeBuoy className={`h-4 w-4 mr-2.5 shrink-0 ${normalizedCurrent.includes('/support') ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span className="truncate">고객 문의</span>
+              </div>
+            </Link>
+          </div>
+        </div>
       </nav>
 
       <Separator className="my-4" />

@@ -5,7 +5,7 @@ import { logger } from "npm:hono/logger";
 import * as db from "./database.tsx";
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
-import { sendDonationReceiptEmail, sendPasswordResetEmail, sendApplicationReceivedEmail, sendAdminNewApplicationEmail, sendApplicationResultEmail, sendDailyReportEmail } from "./email.ts";
+import { sendDonationReceiptEmail, sendPasswordResetEmail, sendApplicationReceivedEmail, sendAdminNewApplicationEmail, sendApplicationResultEmail, sendDailyReportEmail, sendSupportInquiryEmail } from "./email.ts";
 
 /**
  * 이메일 주소 결정 헬퍼
@@ -5252,6 +5252,39 @@ app.delete("/make-server-d0d82cc7/system-admins/:id", async (c) => {
 });
 
 export default app;
+
+// ─── 고객 문의 접수 API ──────────────────────────────────────────────────────
+// 테넌트 관리자 인앱 문의 폼 → support@soulpay.kr 발송 + 자동 접수 확인 회신
+app.post("/make-server-d0d82cc7/support/inquiry", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { senderName, senderEmail, tenantName, category, subject, message } = body;
+
+    if (!senderName || !senderEmail || !subject || !message) {
+      return c.json({ success: false, error: '필수 항목이 누락되었습니다.' }, 400);
+    }
+    if (message.length > 2000) {
+      return c.json({ success: false, error: '문의 내용은 2000자 이내로 작성해 주세요.' }, 400);
+    }
+
+    const result = await sendSupportInquiryEmail({
+      senderName: String(senderName),
+      senderEmail: String(senderEmail),
+      tenantName: String(tenantName || '미입력'),
+      category: String(category || '일반'),
+      subject: String(subject),
+      message: String(message),
+    });
+
+    return c.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('[Support Inquiry] Error:', error);
+    return c.json({ success: false, error: error?.message || '문의 접수 중 오류가 발생했습니다.' }, 500);
+  }
+});
+app.post("/support/inquiry", async (c) => {
+  return c.redirect("/make-server-d0d82cc7/support/inquiry", 308);
+});
 
 // ─── 일일 결제 리포트 트리거 ────────────────────────────────────────────────
 // pg_cron 또는 외부 스케줄러가 매일 09:00 KST에 POST로 호출

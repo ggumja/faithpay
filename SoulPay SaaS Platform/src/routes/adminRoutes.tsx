@@ -20,6 +20,7 @@ const TenantDocumentsSettings = lazy(() => import("../app/pages/admin/TenantDocu
 const RecurringPendingPage = lazy(() => import("../app/pages/admin/RecurringPendingPage"));
 const AdminAccountManagement = lazy(() => import("../app/pages/admin/AdminAccountManagement"));
 const OnboardingFlow = lazy(() => import("../app/pages/OnboardingFlow"));
+const SupportPage = lazy(() => import("../app/pages/admin/SupportPage"));
 const NotFound = lazy(() => import("../app/pages/NotFound"));
 const TenantAdminRouteGuard = lazy(() => import("../app/components/TenantAdminRouteGuard"));
 
@@ -73,6 +74,8 @@ export const adminRouter = createBrowserRouter([
           { path: "/:tenantSlug/admin/recurring-pending", Component: RecurringPendingPage },
           { path: "/:tenantSlug/statistics", Component: TenantStatisticsPage },
           { path: "/:tenantSlug/admin/statistics", Component: TenantStatisticsPage },
+          { path: "/:tenantSlug/support", Component: SupportPage },
+          { path: "/:tenantSlug/admin/support", Component: SupportPage },
         ],
       },
       { path: "*", Component: NotFound },
