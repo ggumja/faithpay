@@ -2601,6 +2601,27 @@ export async function getAdminSettlementStatements(month: string): Promise<{
     }
 
     const partnerMap: Record<string, any> = {};
+    // 등록된 모든 활성 파트너 기본 세팅 (당월 실적 미발생 시에도 0건/0원으로 정상 대조 표출)
+    if (partnersData) {
+      partnersData
+        .filter((p: any) => p.status === 'active')
+        .forEach((p: any) => {
+          const resolvedName = p.name || p.corp_name || (p.role === 'master_agency' ? '영업대리점' : '영업자');
+          partnerMap[p.id] = {
+            grossCommission: 0,
+            vatAmount: 0,
+            withholdingTax: 0,
+            netPayout: 0,
+            partnerName: resolvedName,
+            partnerRole: p.role || 'sales_agent',
+            businessType: p.business_type || 'individual',
+            bankName: p.bank_name || '',
+            accountNumber: p.account_number || '',
+            accountHolder: p.account_holder || resolvedName,
+          };
+        });
+    }
+
     if (commissions) {
       commissions.forEach((c: any) => {
         const cMonth = (c.created_at || '').slice(0, 7);

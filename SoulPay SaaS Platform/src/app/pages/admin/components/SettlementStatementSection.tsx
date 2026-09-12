@@ -38,30 +38,85 @@ export default function SettlementStatementSection() {
       ]);
 
       const partnersMap = new Map<string, any>();
+      const activePartners: any[] = [];
       if (partnersRes.success && Array.isArray(partnersRes.data)) {
         partnersRes.data.forEach((p: any) => {
           partnersMap.set(p.id, p);
+          if (p.status === 'active') {
+            activePartners.push(p);
+          }
         });
       }
 
       if (res.success && res.data) {
         setTenantStatements(res.data.tenantStatements || []);
         const rawPartners = res.data.partnerStatements || [];
-        const enrichedPartners = rawPartners.map((ps: any) => {
-          const partnerObj = ps.partnerId ? partnersMap.get(ps.partnerId) : null;
-          const candidateName = partnerObj?.name || partnerObj?.corpName || ps.partnerName;
+
+        // DB에 등록된 활성 파트너를 기준으로 명세서 매핑 (실적 0건인 파트너도 정직하게 0원으로 표출)
+        const statementsByPartnerId = new Map<string, any>();
+        rawPartners.forEach((ps: any) => {
+          if (ps.partnerId) {
+            statementsByPartnerId.set(ps.partnerId, ps);
+          }
+        });
+
+        const enrichedPartners: any[] = activePartners.map((partner, idx) => {
+          const existingStatement = statementsByPartnerId.get(partner.id);
+          const candidateName = partner.name || partner.corpName || partner.corp_name;
           const finalName = candidateName && candidateName !== '파트너'
             ? candidateName
-            : (ps.partnerRole === 'master_agency' ? '총판 대리점' : '영업자');
+            : (partner.role === 'master_agency' ? '총판 대리점' : '영업자');
+
+          if (existingStatement) {
+            return {
+              ...existingStatement,
+              partnerName: finalName,
+              bankName: existingStatement.bankName || partner.bankName || partner.bank_name || '',
+              accountNumber: existingStatement.accountNumber || partner.accountNumber || partner.account_number || '',
+              accountHolder: existingStatement.accountHolder || partner.accountHolder || partner.account_holder || finalName,
+              partnerRole: partner.role || existingStatement.partnerRole || 'sales_agent',
+            };
+          }
+
+          // 당월 수수료 발생 내역이 아직 없는 파트너 (실제 DB 등록 파트너의 0건/0원 상태)
           return {
-            ...ps,
+            id: `TAX-${selectedMonth.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`,
+            month: `${selectedMonth.slice(0, 4)}년 ${selectedMonth.slice(5, 7)}월`,
+            partnerId: partner.id,
             partnerName: finalName,
-            bankName: ps.bankName || partnerObj?.bankName || '',
-            accountNumber: ps.accountNumber || partnerObj?.accountNumber || '',
-            accountHolder: ps.accountHolder || partnerObj?.accountHolder || finalName,
-            partnerRole: ps.partnerRole || partnerObj?.role || 'sales_agent',
+            partnerRole: partner.role || 'sales_agent',
+            businessType: partner.businessType || partner.business_type || 'individual',
+            isCorporate: (partner.businessType || partner.business_type || '').toUpperCase() === 'CORPORATE',
+            grossCommission: 0,
+            vatAmount: 0,
+            withholdingTax: 0,
+            netPayout: 0,
+            status: 'READY',
+            bankName: partner.bankName || partner.bank_name || '',
+            accountNumber: partner.accountNumber || partner.account_number || '',
+            accountHolder: partner.accountHolder || partner.account_holder || finalName,
           };
         });
+
+        // activePartners 목록 외에 rawPartners에 존재하는 레거시/기타 내역 보존
+        rawPartners.forEach((ps: any) => {
+          if (!activePartners.some(ap => ap.id === ps.partnerId)) {
+            const partnerObj = ps.partnerId ? partnersMap.get(ps.partnerId) : null;
+            const candidateName = partnerObj?.name || partnerObj?.corpName || ps.partnerName;
+            const finalName = candidateName && candidateName !== '파트너'
+              ? candidateName
+              : (ps.partnerRole === 'master_agency' ? '총판 대리점' : '영업자');
+            enrichedPartners.push({
+              ...ps,
+              partnerName: finalName,
+              bankName: ps.bankName || partnerObj?.bankName || '',
+              accountNumber: ps.accountNumber || partnerObj?.accountNumber || '',
+              accountHolder: ps.accountHolder || partnerObj?.accountHolder || finalName,
+              partnerRole: ps.partnerRole || partnerObj?.role || 'sales_agent',
+            });
+          }
+        });
+
         setPartnerStatements(enrichedPartners);
       } else {
         setTenantStatements([]);
