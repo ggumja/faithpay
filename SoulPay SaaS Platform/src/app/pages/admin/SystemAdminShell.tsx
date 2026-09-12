@@ -7,7 +7,7 @@ import { useApp } from '../../context/AppContext';
 import {
   Building2, LogOut, BarChart3, Briefcase, TrendingUp,
   Megaphone, Bell, Search, Menu, ChevronRight, ChevronDown, Clock, Settings, BookOpen, Landmark, Coins, UserCog,
-  LayoutDashboard, Activity, FileText, PlusCircle,
+  LayoutDashboard, Activity, FileText,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -161,17 +161,10 @@ export default function SystemAdminShell() {
               <p className={S.navSection}>단체 목록 관리</p>
               <button
                 onClick={() => navigate('/system/admin/tenants')}
-                className={S.navItem(active === 'tenants' || active === 'tenantDetail')}
+                className={S.navItem(active === 'tenants' || active === 'tenantDetail' || active === 'tenantNew')}
               >
-                <Building2 size={13} className={active === 'tenants' || active === 'tenantDetail' ? 'text-white' : 'text-blue-600'} />
+                <Building2 size={13} className={active === 'tenants' || active === 'tenantDetail' || active === 'tenantNew' ? 'text-white' : 'text-blue-600'} />
                 <span className="font-bold">단체 목록</span>
-              </button>
-              <button
-                onClick={() => navigate('/system/admin/tenants/new')}
-                className={S.navItem(active === 'tenantNew')}
-              >
-                <PlusCircle size={13} className={active === 'tenantNew' ? 'text-white' : 'text-blue-600'} />
-                <span className="font-bold">신규 단체 등록</span>
               </button>
               <button
                 onClick={() => navigate('/system/admin/tenants/pending')}
